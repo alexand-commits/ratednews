@@ -1,0 +1,10 @@
+{
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/" }
+  ],
+  "crons": [
+    { "path": "/api/ingest",    "schedule": "0 0 * * *"  },
+    { "path": "/api/score",     "schedule": "10 0 * * *" },
+    { "path": "/api/aggregate", "schedule": "30 0 * * *" }
+  ]
+}

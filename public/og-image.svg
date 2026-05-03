@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#FAFAF9"/>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="630" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#FAFAF9"/>
+      <stop offset="100%" stop-color="#F3F2F0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Coral accent bar -->
+  <rect x="0" y="0" width="1200" height="8" fill="#D85A30"/>
+
+  <!-- Logo -->
+  <text x="80" y="270" font-family="Georgia, serif" font-size="86" font-weight="700" fill="#1A1917">Rated</text>
+  <text x="334" y="270" font-family="Georgia, serif" font-size="86" font-weight="700" fill="#D85A30">News</text>
+
+  <!-- Tagline -->
+  <text x="82" y="320" font-family="system-ui, sans-serif" font-size="28" fill="#6B6760">Trust the source, not just the story</text>
+
+  <!-- Score pills -->
+  <rect x="82" y="370" width="180" height="44" rx="22" fill="#EAF3DE"/>
+  <text x="172" y="398" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="#3B6D11" text-anchor="middle">Accuracy Score</text>
+
+  <rect x="278" y="370" width="160" height="44" rx="22" fill="#E6F1FB"/>
+  <text x="358" y="398" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="#185FA5" text-anchor="middle">Bias Analysis</text>
+
+  <rect x="454" y="370" width="190" height="44" rx="22" fill="#FAECE7"/>
+  <text x="549" y="398" font-family="system-ui, sans-serif" font-size="16" font-weight="600" fill="#993C1D" text-anchor="middle">Headline Verdict</text>
+
+  <!-- Bottom note -->
+  <text x="82" y="480" font-family="system-ui, sans-serif" font-size="22" fill="#9E9B95">AI-powered · 13+ outlets · Updated daily</text>
+
+  <!-- Decorative right side -->
+  <rect x="820" y="120" width="300" height="390" rx="16" fill="white" stroke="#E5E3DF" stroke-width="1"/>
+  <rect x="820" y="120" width="300" height="390" rx="16" fill="white"/>
+  <text x="970" y="200" font-family="system-ui, sans-serif" font-size="14" fill="#9E9B95" text-anchor="middle">ACCURACY</text>
+  <text x="970" y="255" font-family="Georgia, serif" font-size="72" font-weight="700" fill="#639922" text-anchor="middle">84</text>
+  <rect x="856" y="275" width="228" height="6" rx="3" fill="#E5E3DF"/>
+  <rect x="856" y="275" width="192" height="6" rx="3" fill="#639922"/>
+  <text x="970" y="330" font-family="system-ui, sans-serif" font-size="13" fill="#9E9B95" text-anchor="middle">Highly credible · Centre</text>
+  <text x="970" y="370" font-family="system-ui, sans-serif" font-size="13" fill="#9E9B95" text-anchor="middle">✓ Fair headline</text>
+  <rect x="856" y="400" width="228" height="1" fill="#E5E3DF"/>
+  <text x="970" y="460" font-family="system-ui, sans-serif" font-size="13" fill="#9E9B95" text-anchor="middle">ratednews.vercel.app</text>
+</svg>

@@ -1,0 +1,139 @@
+import React from 'react'
+
+const SCORES = [
+  {
+    emoji: '🎯',
+    title: 'Accuracy Score',
+    range: '0 – 100',
+    color: 'var(--green)',
+    desc: 'How factually reliable an article appears based on its headline and summary. Mainstream outlets with clear, well-sourced reporting typically score 70–85. Lower scores indicate potential inaccuracies, unsupported claims, or fabricated content.',
+    bands: [
+      { label: '80–100', color: 'var(--green)',  text: 'Highly credible' },
+      { label: '60–79',  color: 'var(--amber)',  text: 'Generally reliable' },
+      { label: '0–59',   color: 'var(--red)',    text: 'Use caution' },
+    ],
+  },
+  {
+    emoji: '⚖️',
+    title: 'Partisan Intensity',
+    range: '0 – 100',
+    color: 'var(--blue)',
+    desc: 'How opinionated or one-sided the writing style is — regardless of which direction it leans. A calm, fact-based article scores low even if it has a political perspective. A heated opinion piece scores high even on a neutral topic.',
+    bands: [
+      { label: '0–30',   color: 'var(--green)',  text: 'Objective reporting' },
+      { label: '31–60',  color: 'var(--amber)',  text: 'Some framing detectable' },
+      { label: '61–100', color: 'var(--red)',    text: 'Strongly opinionated' },
+    ],
+  },
+  {
+    emoji: '🧭',
+    title: 'Political Lean',
+    range: 'Left · Centre · Right',
+    color: 'var(--purple)',
+    desc: 'The political direction of an article\'s framing — left, centre, or right. This is entirely separate from partisan intensity. A left-leaning article can be calm and objective (low intensity), or heated and one-sided (high intensity).',
+    bands: [
+      { label: '← Left',   color: 'var(--blue)',  text: 'Progressive or liberal framing' },
+      { label: '◉ Centre', color: 'var(--text2)', text: 'Balanced or no clear lean' },
+      { label: '→ Right',  color: 'var(--red)',   text: 'Conservative framing' },
+    ],
+  },
+  {
+    emoji: '📰',
+    title: 'Headline Verdict',
+    range: 'Fair · Misleading · Clickbait',
+    color: 'var(--amber)',
+    desc: 'Whether the headline accurately represents the article content. Only non-fair verdicts are flagged — fair headlines are the expected default and aren\'t shown to reduce noise.',
+    bands: [
+      { label: '✓ Fair',        color: 'var(--green)', text: 'Headline matches content' },
+      { label: '⚠ Misleading',  color: '#856404',      text: 'Headline implies something unsupported' },
+      { label: '✗ Clickbait',   color: 'var(--red)',   text: 'Exaggeration or withheld info to drive clicks' },
+    ],
+  },
+  {
+    emoji: '⭐',
+    title: 'Community Score',
+    range: '1 – 5 stars',
+    color: 'var(--amber)',
+    desc: 'The average star rating given by RatedNews readers. Community scores reflect reader perception and may differ from the AI score — both perspectives are shown.',
+    bands: [],
+  },
+]
+
+export default function AboutPage({ navigate }) {
+  return (
+    <div className="page-content">
+      <div className="container" style={{ maxWidth: 720 }}>
+        <button className="back-btn" onClick={() => navigate('feed')}>← Back to feed</button>
+
+        <div style={{ marginBottom: 32 }}>
+          <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 28, fontWeight: 700, marginBottom: 10 }}>
+            How RatedNews works
+          </h1>
+          <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.7 }}>
+            Every article on RatedNews is analysed by AI and rated by the community.
+            Here's what each score means and how to read them.
+          </p>
+        </div>
+
+        {/* How scoring works */}
+        <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px 24px', marginBottom: 24 }}>
+          <div className="section-label" style={{ marginBottom: 12 }}>The process</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[
+              { icon: '📡', step: '1. Ingestion', desc: 'Articles are pulled from RSS feeds across 13+ major news outlets daily.' },
+              { icon: '🤖', step: '2. AI analysis', desc: 'Each article is analysed by Claude (Anthropic\'s AI) for accuracy, bias direction, partisan intensity, headline fairness, and category.' },
+              { icon: '👥', step: '3. Community rating', desc: 'Readers can rate articles with star ratings and vote on accuracy, bias, and headline quality.' },
+              { icon: '📊', step: '4. Outlet scoring', desc: 'Outlet-level scores are aggregated from all their articles, giving you a long-term credibility picture.' },
+            ].map(s => (
+              <div key={s.step} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>{s.icon}</span>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 2 }}>{s.step}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5 }}>{s.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Score breakdowns */}
+        <div className="section-label" style={{ marginBottom: 16 }}>Score breakdown</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          {SCORES.map(s => (
+            <div key={s.title} style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+                <span style={{ fontSize: 22 }}>{s.emoji}</span>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 600 }}>{s.title}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>{s.range}</div>
+                </div>
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: s.bands.length ? 12 : 0 }}>
+                {s.desc}
+              </p>
+              {s.bands.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {s.bands.map(b => (
+                    <div key={b.label} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 12, fontWeight: 600, color: b.color, width: 90, flexShrink: 0 }}>{b.label}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text2)' }}>{b.text}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Disclaimer */}
+        <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 20px', marginTop: 24 }}>
+          <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>
+            <strong style={{ color: 'var(--text)' }}>Important note:</strong> AI scores are based on article headlines and summaries only — not the full article text. Scores reflect patterns in language and framing, not independent fact-checking. They are one signal among many and should be read alongside community ratings and your own judgement.
+          </div>
+        </div>
+
+        <div style={{ height: 24 }} />
+      </div>
+    </div>
+  )
+}
