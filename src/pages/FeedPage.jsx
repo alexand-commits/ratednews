@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import NewsCard from '../components/NewsCard'
 import Sidebar from '../components/Sidebar'
 import { timeAgo } from '../utils/helpers'
@@ -196,9 +196,32 @@ export default function FeedPage({
       })
   )
 
-  // Which list to display — DB results when search active, filtered otherwise
+  // Round-robin interleave by outlet so the feed isn't 25 BBCs then 25 CNNs.
+  // Only applied on the 'latest' sort — trending/top-rated have their own logic.
+  const interleaved = useMemo(() => {
+    if (sort !== 'latest') return filtered
+    const byOutlet = {}
+    for (const a of filtered) {
+      const key = a.outlet_id || 'unknown'
+      if (!byOutlet[key]) byOutlet[key] = []
+      byOutlet[key].push(a)
+    }
+    const queues = Object.values(byOutlet)
+    const result = []
+    let i = 0
+    while (result.length < filtered.length) {
+      const q = queues[i % queues.length]
+      if (q && q.length) result.push(q.shift())
+      i++
+      // Safety: if all queues empty, break
+      if (queues.every(q => !q.length)) break
+    }
+    return result
+  }, [filtered, sort])
+
+  // Which list to display — DB results when search active, interleaved otherwise
   const isSearchActive = dbResults !== null
-  const displayList    = isSearchActive ? dbResults : filtered
+  const displayList    = isSearchActive ? dbResults : interleaved
 
   const pulling = pullY > 0 || isRefreshing
   const readyToRelease = pullY >= PULL_THRESHOLD

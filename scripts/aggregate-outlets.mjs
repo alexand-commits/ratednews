@@ -24,8 +24,9 @@ dotenv.config({ path: join(__dirname, '../.env'), override: true })
 
 const SUPABASE_URL     = process.env.VITE_SUPABASE_URL
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
-const MIN_ARTICLES     = 3
+const MIN_ARTICLES     = 1
 const EDITORIAL        = 50  // neutral baseline
+const LOOKBACK_DAYS    = 7   // only score articles from the last 7 days
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   console.error('❌  Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env')
@@ -73,12 +74,16 @@ function starsToScore(avgStars) {
 async function run() {
   console.log('🔍  Fetching data…')
 
+  const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString()
+
   const [
     { data: articles,  error: artErr  },
     { data: outlets,   error: outErr  },
     { data: ratings,   error: ratErr  },
   ] = await Promise.all([
-    supabase.from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction').not('accuracy_score', 'is', null),
+    supabase.from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction')
+      .not('accuracy_score', 'is', null)
+      .gte('published_at', since),
     supabase.from('outlets').select('id, name'),
     supabase.from('outlet_ratings').select('outlet_id, overall_stars'),
   ])
@@ -87,7 +92,7 @@ async function run() {
   if (outErr) { console.error('❌  Outlets:', outErr.message); process.exit(1) }
   if (ratErr) { console.error('❌  Ratings:', ratErr.message); process.exit(1) }
 
-  console.log(`   ${articles.length} AI-scored articles, ${ratings.length} community ratings`)
+  console.log(`   ${articles.length} AI-scored articles (last ${LOOKBACK_DAYS} days), ${ratings.length} community ratings`)
 
   // Group articles by outlet
   const grouped = {}

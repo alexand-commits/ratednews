@@ -48,6 +48,37 @@ function extractSummary(item) {
   return raw.replace(/<[^>]*>/g, '').trim().slice(0, 500) || null
 }
 
+// ── Junk filter ───────────────────────────────────────────────────────────────
+// Titles matching any of these patterns are skipped at ingest time.
+// Keeps promotional, betting, and non-editorial content out of the feed.
+const JUNK_PATTERNS = [
+  // Sports betting & odds
+  /\bbonus code\b/i,
+  /\bbet\d+\b/i,                     // bet365, bet888 etc.
+  /\bbetting (tips?|odds|picks?|lines?|preview)\b/i,
+  /\bodds\b.*\bprediction\b/i,
+  /\bfree bets?\b/i,
+  /\bpromo code\b/i,
+  // Sponsored / advertorial
+  /\b(sponsored|advertorial|paid post|partner content|promoted)\b/i,
+  // Deals & commerce
+  /\b(best deals?|discount|coupon|% off|save \$|flash sale)\b/i,
+  /\bamazon (deals?|prime day)\b/i,
+  // Affiliate roundups
+  /^best \d+ /i,                      // "Best 10 VPNs for…"
+  /\b(buy now|shop now|order now)\b/i,
+  // Horoscopes & puzzles
+  /\b(horoscope|star sign|crossword answer|wordle answer|quiz)\b/i,
+  // Weather & traffic (very local, no editorial value)
+  /^(weather|traffic) (update|alert|warning|forecast)/i,
+  // Listicle bait with no news value
+  /\byou won't believe\b/i,
+]
+
+function isJunk(title) {
+  return JUNK_PATTERNS.some(re => re.test(title))
+}
+
 async function ingestOutlet(outlet) {
   if (!outlet.rss_url) {
     console.log(`  ⚠️  No rss_url set — skipping`)
@@ -80,6 +111,7 @@ async function ingestOutlet(outlet) {
     const url   = item.link || item.guid
     const title = item.title?.trim()
     if (!url || !title) continue
+    if (isJunk(title)) { skipped++; continue }
     if (existingUrls.has(url) || existingTitles.has(title)) { skipped++; continue }
 
     const { error } = await supabase.from('articles').insert({
