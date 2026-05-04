@@ -44,7 +44,6 @@ function getRegion(outlet) {
 function SuggestModal({ onClose, user, onLoginClick, showToast }) {
   const [name,    setName]    = useState('')
   const [website, setWebsite] = useState('')
-  const [rss,     setRss]     = useState('')
   const [reason,  setReason]  = useState('')
   const [loading, setLoading] = useState(false)
   const [done,    setDone]    = useState(false)
@@ -57,7 +56,6 @@ function SuggestModal({ onClose, user, onLoginClick, showToast }) {
       user_id:     user.id,
       outlet_name: name.trim(),
       website_url: website.trim() || null,
-      rss_url:     rss.trim() || null,
       reason:      reason.trim() || null,
     })
     setLoading(false)
@@ -147,20 +145,6 @@ function SuggestModal({ onClose, user, onLoginClick, showToast }) {
                   placeholder="https://theguardian.com"
                   value={website}
                   onChange={e => setWebsite(e.target.value)}
-                  style={{ width: '100%', borderRadius: 10 }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>
-                  RSS feed URL <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text3)' }}>(optional but helpful)</span>
-                </label>
-                <input
-                  className="compose-input"
-                  type="url"
-                  placeholder="https://theguardian.com/world/rss"
-                  value={rss}
-                  onChange={e => setRss(e.target.value)}
                   style={{ width: '100%', borderRadius: 10 }}
                 />
               </div>
