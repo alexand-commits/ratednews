@@ -1,21 +1,25 @@
 import React from 'react'
+import { useRouter } from 'next/router'
 
 const TABS = [
-  { page: 'feed',       icon: '🏠', label: 'Feed'     },
-  { page: 'rankings',   icon: '🏆', label: 'Rankings' },
-  { page: 'outlets',    icon: '📡', label: 'Outlets'  },
-  { page: 'categories', icon: '🗂', label: 'Browse'   },
+  { page: 'feed',       path: '/',           icon: '🏠', label: 'Feed'     },
+  { page: 'rankings',   path: '/rankings',   icon: '🏆', label: 'Rankings' },
+  { page: 'outlets',    path: '/outlets',    icon: '📡', label: 'Outlets'  },
+  { page: 'categories', path: '/categories', icon: '🗂', label: 'Browse'   },
 ]
 
-export default function BottomNav({ currentPage, navigate }) {
-  const activePage = ['article', 'outlet', 'profile'].includes(currentPage) ? null : currentPage
+const DETAIL_PATHS = ['/article', '/outlet', '/profile']
+
+export default function BottomNav({ navigate }) {
+  const router = useRouter()
+  const isDetail = DETAIL_PATHS.some(p => router.pathname.startsWith(p))
 
   return (
     <nav className="bottom-nav">
       {TABS.map(t => (
         <button
           key={t.page}
-          className={`bottom-nav-item${activePage === t.page ? ' active' : ''}`}
+          className={`bottom-nav-item${!isDetail && router.pathname === t.path ? ' active' : ''}`}
           onClick={() => navigate(t.page)}
         >
           <span className="bottom-nav-icon">{t.icon}</span>
