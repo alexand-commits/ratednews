@@ -101,9 +101,9 @@ function extractSummary(item) {
 }
 
 async function ingestOutlet(outlet) {
-  const feedUrl = RSS_FEEDS[outlet.name]
+  const feedUrl = RSS_FEEDS[outlet.name.trim()]
   if (!feedUrl) {
-    console.log(`  ⚠️  No RSS feed configured for "${outlet.name}" — skipping`)
+    console.log(`  ⚠️  No RSS feed configured for "${outlet.name}" (hex: ${Buffer.from(outlet.name).toString('hex')}) — skipping`)
     return { inserted: 0, skipped: 0, errors: 0 }
   }
 
