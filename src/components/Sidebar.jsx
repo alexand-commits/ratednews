@@ -1,6 +1,7 @@
 import React from 'react'
 import { scoreColor } from '../utils/helpers'
 import OutletLogo from './OutletLogo'
+import InfoTip from './InfoTip'
 
 export default function Sidebar({ outlets, navigate }) {
   const top5 = outlets.filter(o => (o.overall_score || 0) > 0).slice(0, 5)
@@ -38,56 +39,34 @@ export default function Sidebar({ outlets, navigate }) {
       </div>
       <div className="widget">
         <div className="widget-title">How ratings work</div>
-        <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, margin: '0 0 14px' }}>
-          Every outlet gets a trust score out of 100, combining three signals. The weight of each shifts as more community votes come in.
-        </p>
-
-        {/* Signal descriptions */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 14 }}>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-            <span style={{ fontSize: 16, flexShrink: 0 }}>🤖</span>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>AI analysis</div>
-              <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.5 }}>Every article is scored for accuracy, bias and headline fairness by Claude AI. These are averaged across all articles per outlet.</div>
-            </div>
+        <div className="rating-breakdown">
+          <div className="rb-row">
+            <span className="rb-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              Community
+              <InfoTip text="Readers rate outlets directly. Weight starts low and grows as more votes arrive — this protects against early manipulation. At 20+ votes it reaches full 40% weight." />
+            </span>
+            <div className="rb-bar-bg"><div className="rb-bar-fill" style={{ width: '40%', background: 'var(--coral)' }}></div></div>
+            <span className="rb-val" style={{ color: 'var(--coral-dark)' }}>40%</span>
           </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-            <span style={{ fontSize: 16, flexShrink: 0 }}>👥</span>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>Community ratings</div>
-              <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.5 }}>Readers rate outlets directly. Community weight grows as more votes arrive — protecting against early manipulation.</div>
-            </div>
+          <div className="rb-row">
+            <span className="rb-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              AI analysis
+              <InfoTip text="Every article is scored by Claude AI for accuracy, bias and headline fairness. Scores are averaged across all of an outlet's articles. AI carries 70% of the score until community votes build up." />
+            </span>
+            <div className="rb-bar-bg"><div className="rb-bar-fill" style={{ width: '35%', background: 'var(--blue)' }}></div></div>
+            <span className="rb-val" style={{ color: 'var(--blue)' }}>35%</span>
           </div>
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-            <span style={{ fontSize: 16, flexShrink: 0 }}>📋</span>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>Editorial baseline</div>
-              <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.5 }}>A neutral starting point applied equally to all outlets until editorial reviews are published.</div>
-            </div>
+          <div className="rb-row">
+            <span className="rb-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              Editorial
+              <InfoTip text="A neutral baseline applied equally to all outlets. This will be replaced by editorial reviews as the platform grows." />
+            </span>
+            <div className="rb-bar-bg"><div className="rb-bar-fill" style={{ width: '25%', background: 'var(--green)' }}></div></div>
+            <span className="rb-val" style={{ color: 'var(--green-dark)' }}>25%</span>
           </div>
         </div>
-
-        {/* Tier table */}
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.05em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 8 }}>Weighting by engagement</div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 1, borderRadius: 8, overflow: 'hidden', border: '0.5px solid var(--border)' }}>
-          {[
-            { label: 'No votes yet',  ai: 70, editorial: 30, community: 0  },
-            { label: '1–4 votes',     ai: 50, editorial: 30, community: 20 },
-            { label: '5–19 votes',    ai: 40, editorial: 25, community: 35 },
-            { label: '20+ votes',     ai: 35, editorial: 25, community: 40 },
-          ].map((tier, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '80px 1fr', fontSize: 11, background: i % 2 === 0 ? 'var(--bg)' : 'var(--surface)' }}>
-              <div style={{ padding: '7px 10px', color: 'var(--text3)', borderRight: '0.5px solid var(--border)' }}>{tier.label}</div>
-              <div style={{ padding: '7px 10px', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <span style={{ color: 'var(--blue)' }}>AI {tier.ai}%</span>
-                <span style={{ color: 'var(--green-dark)' }}>Ed {tier.editorial}%</span>
-                {tier.community > 0 && <span style={{ color: 'var(--coral)' }}>Comm {tier.community}%</span>}
-              </div>
-            </div>
-          ))}
-        </div>
-        <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 10, lineHeight: 1.5 }}>
-          This prevents a small number of votes from having an outsized effect early on, while still rewarding outlets that earn genuine community trust over time.
+        <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 10, lineHeight: 1.6, borderTop: '0.5px solid var(--border)', paddingTop: 10 }}>
+          Percentages shown are the target weights at full engagement. Hover the <span style={{ fontStyle: 'italic' }}>ⓘ</span> icons for details.
         </div>
       </div>
     </div>
