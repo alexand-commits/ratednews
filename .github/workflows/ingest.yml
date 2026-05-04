@@ -18,6 +18,8 @@ jobs:
 
       - run: npm ci
 
+      - run: head -20 scripts/ingest.mjs
+
       - run: node scripts/ingest.mjs
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
