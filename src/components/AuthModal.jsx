@@ -24,7 +24,11 @@ export default function AuthModal({ onClose, showToast }) {
     if (!email || !password) { setMessage({ type: 'error', text: 'Please enter your email and password.' }); return }
     if (password.length < 6) { setMessage({ type: 'error', text: 'Password must be at least 6 characters.' }); return }
     setLoading(true); setMessage(null)
-    const { error } = await db.auth.signUp({ email, password })
+    const { error } = await db.auth.signUp({
+      email,
+      password,
+      options: { emailRedirectTo: 'https://ratednews.com' },
+    })
     setLoading(false)
     if (error) { setMessage({ type: 'error', text: error.message }); return }
     setMessage({ type: 'success', text: 'Check your email for a confirmation link, then sign in.' })
