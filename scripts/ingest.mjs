@@ -27,29 +27,27 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
 // Map outlet names (must match exactly what's in your outlets table) to RSS feed URLs
 const RSS_FEEDS = {
-  'BBC':              'https://feeds.bbci.co.uk/news/rss.xml',
   'BBC News':         'https://feeds.bbci.co.uk/news/rss.xml',
-  'Reuters':          'https://news.google.com/rss/search?q=site:reuters.com&hl=en-US&gl=US&ceid=US:en',
+  'Reuters':          'https://feeds.reuters.com/reuters/topNews',
   'The Guardian':     'https://www.theguardian.com/world/rss',
-  'AP News':          'https://news.google.com/rss/search?q=site:apnews.com&hl=en-US&gl=US&ceid=US:en',
-  'AP New':           'https://news.google.com/rss/search?q=site:apnews.com&hl=en-US&gl=US&ceid=US:en',
+  'AP News':          'https://rsshub.app/apnews/topics/ap-top-news',
   'The Economist':    'https://www.economist.com/latest/rss.xml',
   'New York Times':   'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml',
-  'Washington Post':  'https://news.google.com/rss/search?q=site:washingtonpost.com&hl=en-US&gl=US&ceid=US:en',
+  'Washington Post':  'https://feeds.washingtonpost.com/rss/national',
   'Fox News':         'https://moxie.foxnews.com/google-publisher/latest.xml',
   'Al Jazeera':       'https://www.aljazeera.com/xml/rss/all.xml',
   'The Hill':         'https://thehill.com/feed/',
   'Politico':         'https://rss.politico.com/politics-news.xml',
   'Sky News':         'https://feeds.skynews.com/feeds/rss/home.xml',
   'Daily Mail':       'https://www.dailymail.co.uk/articles.rss',
-  'CNN':              'https://news.google.com/rss/search?q=site:cnn.com&hl=en-US&gl=US&ceid=US:en',
+  'CNN':              'https://rss.cnn.com/rss/edition.rss',
   'NBC News':         'https://feeds.nbcnews.com/nbcnews/public/news',
   'NPR':              'https://feeds.npr.org/1001/rss.xml',
   'The Independent':  'https://www.independent.co.uk/news/rss',
-  'The Telegraph':    'https://news.google.com/rss/search?q=site:telegraph.co.uk&hl=en-GB&gl=GB&ceid=GB:en',
+  'The Telegraph':    'https://www.telegraph.co.uk/rss.xml',
   'Breitbart':        'https://feeds.feedburner.com/breitbart',
   'Vox':              'https://www.vox.com/rss/index.xml',
-  'Financial Times':  'https://news.google.com/rss/search?q=site:ft.com&hl=en-US&gl=US&ceid=US:en',
+  'Financial Times':  'https://www.ft.com/rss/home/uk',
 }
 
 const parser = new Parser({
@@ -97,23 +95,29 @@ async function ingestOutlet(outlet) {
   const items = feed.items.slice(0, 25)
   let inserted = 0, skipped = 0, errors = 0
 
-  // Batch-check existing URLs to avoid N+1 queries
-  const urls = items.map(i => i.link || i.guid).filter(Boolean)
-  const { data: existing } = await supabase
-    .from('articles')
-    .select('url')
-    .in('url', urls)
+  // Batch-check existing URLs and titles for this outlet to avoid duplicates.
+  // We check both because Google News redirect URLs can change between runs,
+  // causing the same article to pass a URL-only check.
+  const urls   = items.map(i => i.link || i.guid).filter(Boolean)
+  const titles = items.map(i => i.title?.trim()).filter(Boolean)
 
-  const existingUrls = new Set((existing || []).map(r => r.url))
+  const [{ data: existingByUrl }, { data: existingByTitle }] = await Promise.all([
+    supabase.from('articles').select('url').in('url', urls),
+    supabase.from('articles').select('title').eq('outlet_id', outlet.id).in('title', titles),
+  ])
+
+  const existingUrls   = new Set((existingByUrl   || []).map(r => r.url))
+  const existingTitles = new Set((existingByTitle || []).map(r => r.title))
 
   for (const item of items) {
-    const url = item.link || item.guid
-    if (!url || !item.title) continue
-    if (existingUrls.has(url)) { skipped++; continue }
+    const url   = item.link || item.guid
+    const title = item.title?.trim()
+    if (!url || !title) continue
+    if (existingUrls.has(url) || existingTitles.has(title)) { skipped++; continue }
 
     const { error } = await supabase.from('articles').insert({
       outlet_id: outlet.id,
-      title: item.title.trim(),
+      title,
       url,
       summary: extractSummary(item),
       published_at: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
