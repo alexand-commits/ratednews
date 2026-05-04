@@ -10,9 +10,12 @@ const EDITORIAL        = 50
 
 function majorityDirection(counts) {
   const { left = 0, centre = 0, right = 0 } = counts
-  if (centre >= left && centre >= right) return 'centre'
-  if (left >= right) return 'left'
-  return 'right'
+  const total = left + centre + right
+  if (total === 0) return 'centre'
+  const leanScore = (right - left) / total
+  if (leanScore > 0.15) return 'right'
+  if (leanScore < -0.15) return 'left'
+  return 'centre'
 }
 
 function computeOverall({ accuracyScore, communityScore, voteCount }) {

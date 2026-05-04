@@ -38,9 +38,14 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
 function majorityDirection(counts) {
   const { left = 0, centre = 0, right = 0 } = counts
-  if (centre >= left && centre >= right) return 'centre'
-  if (left >= right) return 'left'
-  return 'right'
+  const total = left + centre + right
+  if (total === 0) return 'centre'
+  // Lean score: how much more right vs left, as a fraction of all articles
+  // e.g. Fox with 5% left, 65% centre, 30% right → leanScore = 0.25 → right
+  const leanScore = (right - left) / total
+  if (leanScore > 0.15) return 'right'
+  if (leanScore < -0.15) return 'left'
+  return 'centre'
 }
 
 function computeOverall({ accuracyScore, communityScore, voteCount }) {
@@ -138,7 +143,7 @@ async function run() {
     if (error) {
       console.error(`   ❌  ${u.name}: ${error.message}`)
     } else {
-      console.log(`   ✅  ${u.name.padEnd(25)} overall=${u.overall_score}  accuracy=${u.accuracy_score}  community=${u.communityScore} (${u.voteCount} votes)  [${tier}]`)
+      console.log(`   ✅  ${u.name.padEnd(25)} overall=${u.overall_score}  accuracy=${u.accuracy_score}  bias=${u.bias_direction.padEnd(6)}  community=${u.communityScore} (${u.voteCount} votes)  [${tier}]`)
       successCount++
     }
   }
