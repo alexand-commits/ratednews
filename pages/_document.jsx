@@ -10,6 +10,13 @@ export default function Document() {
         <meta name="robots" content="index, follow" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="apple-touch-icon" href="/favicon.svg" />
+        {/* Fallback OG image for any page that doesn't set its own */}
+        <meta property="og:image"        content="https://ratednews.com/og-image.png" />
+        <meta property="og:image:type"   content="image/png" />
+        <meta property="og:image:width"  content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card"        content="summary_large_image" />
+        <meta name="twitter:image"       content="https://ratednews.com/og-image.png" />
         <link
           href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap"
           rel="stylesheet"

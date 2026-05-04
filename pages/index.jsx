@@ -79,6 +79,12 @@ export default function Feed({ initialArticles, initialCount }) {
         <meta property="og:description" content="AI-powered bias and accuracy ratings for 50+ news outlets. Updated hourly." />
         <meta property="og:url"         content="https://ratednews.com/" />
         <meta property="og:type"        content="website" />
+        <meta property="og:image"       content="https://ratednews.com/og-image.png" />
+        <meta property="og:image:type"  content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card"       content="summary_large_image" />
+        <meta name="twitter:image"      content="https://ratednews.com/og-image.png" />
       </Head>
       <FeedPage
         articles={articles}
