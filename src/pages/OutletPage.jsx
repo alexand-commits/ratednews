@@ -35,7 +35,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
       .select('*')
       .eq('outlet_id', outletId)
       .order('published_at', { ascending: false })
-      .limit(10)
+      .limit(25)
       .then(({ data }) => setArticles(data || []))
 
     // Community ratings
@@ -206,24 +206,42 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
             <div className="score-grade">
               {score >= 90 ? 'High credibility' : score >= 75 ? 'Good credibility' : score >= 60 ? 'Mixed credibility' : 'Low credibility'}
             </div>
-            <button
-              onClick={() => { if (!user) { onLoginClick(); return } toggleFollow(outletId) }}
-              style={{
-                marginTop: 10,
-                padding: '7px 16px',
-                borderRadius: 20,
-                border: followedOutletIds.has(outletId) ? '1.5px solid var(--border)' : '1.5px solid var(--coral)',
-                background: followedOutletIds.has(outletId) ? 'var(--bg)' : 'var(--coral)',
-                color: followedOutletIds.has(outletId) ? 'var(--text2)' : '#fff',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-                transition: 'all 0.15s',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {followedOutletIds.has(outletId) ? '✓ Following' : '+ Follow'}
-            </button>
+            <div style={{ display: 'flex', gap: 6, marginTop: 10, justifyContent: 'center' }}>
+              <button
+                onClick={() => { if (!user) { onLoginClick(); return } toggleFollow(outletId) }}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 20,
+                  border: followedOutletIds.has(outletId) ? '1.5px solid var(--border)' : '1.5px solid var(--coral)',
+                  background: followedOutletIds.has(outletId) ? 'var(--bg)' : 'var(--coral)',
+                  color: followedOutletIds.has(outletId) ? 'var(--text2)' : '#fff',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {followedOutletIds.has(outletId) ? '✓ Following' : '+ Follow'}
+              </button>
+              <button
+                onClick={handleRateClick}
+                style={{
+                  padding: '7px 14px',
+                  borderRadius: 20,
+                  border: '1.5px solid var(--border2)',
+                  background: alreadyRated ? 'var(--bg)' : 'var(--surface)',
+                  color: alreadyRated ? 'var(--text3)' : 'var(--text2)',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: alreadyRated ? 'default' : 'pointer',
+                  transition: 'all 0.15s',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {alreadyRated ? '★ Rated' : '★ Rate'}
+              </button>
+            </div>
           </div>
         </div>
 
