@@ -18,7 +18,7 @@ const BIAS_LABELS = {
   right:  { label: '→ Right',  color: 'var(--red)'           },
 }
 
-export default function NewsCard({ article, index, onClick, navigate, isSaved, onSave }) {
+export default function NewsCard({ article, index, onClick, navigate }) {
   const outlet = article.outlets || {}
   const [bg, fg] = outletColor(outlet.name || 'X')
   const acc = article.accuracy_score || 0
@@ -83,15 +83,6 @@ export default function NewsCard({ article, index, onClick, navigate, isSaved, o
           <div className="score-mini" style={{ marginLeft: 'auto', color: 'var(--text3)' }}>
             💬 {commentCount}
           </div>
-          {onSave && (
-            <button
-              className={`save-btn${isSaved ? ' saved' : ''}`}
-              onClick={e => { e.stopPropagation(); onSave() }}
-              title={isSaved ? 'Remove from saved' : 'Save article'}
-            >
-              {isSaved ? '🔖' : '🔖'}
-            </button>
-          )}
         </div>
       </div>
     </div>

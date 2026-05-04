@@ -284,8 +284,6 @@ export default function FeedPage({
                     index={i}
                     onClick={() => navigate('article', { articleId: a.id })}
                     navigate={navigate}
-                    isSaved={savedArticleIds.has(a.id)}
-                    onSave={() => toggleSave(a.id)}
                   />
                 ))
               )}

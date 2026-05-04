@@ -5,7 +5,7 @@ import OutletLogo from '../components/OutletLogo'
 import RatingModal from '../components/RatingModal'
 import InfoTip from '../components/InfoTip'
 
-export default function ArticlePage({ articleId, allArticles, navigate, goBack, showToast, refreshArticle, user, onLoginClick }) {
+export default function ArticlePage({ articleId, allArticles, navigate, goBack, showToast, refreshArticle, user, onLoginClick, isSaved, toggleSave }) {
   const [comments, setComments] = useState([])
   const [commentInput, setCommentInput] = useState('')
   const [commentSort, setCommentSort] = useState('top')
@@ -327,8 +327,16 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               </div>
               <div style={{ fontSize: 11, color: 'var(--text2)' }}>{outlet.country || ''} · {timeAgo(article.published_at)}</div>
             </div>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
               <span className="ai-tag">AI scored</span>
+              <button
+                className={`save-btn${isSaved ? ' saved' : ''}`}
+                onClick={() => toggleSave(articleId)}
+                title={isSaved ? 'Remove from saved' : 'Save article'}
+                style={{ fontSize: 20 }}
+              >
+                🔖
+              </button>
             </div>
           </div>
 

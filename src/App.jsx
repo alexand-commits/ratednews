@@ -254,6 +254,8 @@ export default function App() {
           refreshArticle={refreshArticle}
           user={user}
           onLoginClick={() => setShowAuthModal(true)}
+          isSaved={savedArticleIds.has(selectedArticleId)}
+          toggleSave={toggleSave}
         />
       )}
       {currentPage === 'outlet' && (
