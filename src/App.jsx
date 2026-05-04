@@ -12,12 +12,14 @@ import OutletPage from './pages/OutletPage'
 import OutletsListPage from './pages/OutletsListPage'
 import RankingsPage from './pages/RankingsPage'
 import ProfilePage from './pages/ProfilePage'
+import PublicProfilePage from './pages/PublicProfilePage'
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('feed')
   const [prevPage, setPrevPage] = useState('feed')
   const [selectedArticleId, setSelectedArticleId] = useState(null)
   const [selectedOutletId, setSelectedOutletId] = useState(null)
+  const [selectedUserId, setSelectedUserId] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState('all')
   const [allArticles, setAllArticles] = useState([])
   const [allOutlets, setAllOutlets] = useState([])
@@ -124,6 +126,7 @@ export default function App() {
     setPrevPage(currentPage)
     if (opts.articleId !== undefined) setSelectedArticleId(opts.articleId)
     if (opts.outletId !== undefined) setSelectedOutletId(opts.outletId)
+    if (opts.userId !== undefined) setSelectedUserId(opts.userId)
     if (opts.category !== undefined) setSelectedCategory(opts.category)
     else if (page === 'feed' && !opts.category) setSelectedCategory('all')
     setCurrentPage(page)
@@ -189,6 +192,9 @@ export default function App() {
       )}
       {currentPage === 'profile' && (
         <ProfilePage user={user} navigate={navigate} showToast={showToast} followedOutletIds={followedOutletIds} allOutlets={allOutlets} toggleFollow={toggleFollow} />
+      )}
+      {currentPage === 'publicProfile' && (
+        <PublicProfilePage userId={selectedUserId} navigate={navigate} showToast={showToast} />
       )}
 
       {showAuthModal && (

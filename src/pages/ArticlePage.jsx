@@ -16,6 +16,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, showToas
   const [replyingTo, setReplyingTo] = useState(null) // comment id being replied to
   const [replyInputs, setReplyInputs] = useState({}) // { [commentId]: text }
   const [replies, setReplies] = useState({}) // { [parentId]: [reply, ...] }
+  const [userProfiles, setUserProfiles] = useState({}) // { [user_id]: username }
 
   const article = allArticles.find(a => a.id === articleId)
 
@@ -60,7 +61,23 @@ export default function ArticlePage({ articleId, allArticles, navigate, showToas
       .eq('article_id', articleId)
       .is('parent_id', null)
       .order('upvotes', { ascending: false })
-      .then(({ data }) => setComments(data || []))
+      .then(async ({ data }) => {
+        const loaded = data || []
+        setComments(loaded)
+        // Fetch usernames for all commenters
+        const ids = [...new Set(loaded.map(c => c.user_id).filter(Boolean))]
+        if (ids.length > 0) {
+          const { data: profiles } = await db
+            .from('profiles')
+            .select('user_id, username')
+            .in('user_id', ids)
+          if (profiles) {
+            const map = {}
+            profiles.forEach(p => { map[p.user_id] = p.username })
+            setUserProfiles(map)
+          }
+        }
+      })
 
     // Real-time: new comments on this article
     const channel = db
@@ -197,14 +214,24 @@ export default function ArticlePage({ articleId, allArticles, navigate, showToas
     const replyList = replies[c.id] || []
     const isExpanded = replies[c.id] !== undefined
     const isReplying = replyingTo === c.id
+    const username = c.user_id ? (userProfiles[c.user_id] || 'Community member') : 'Community member'
+    const initials = username.slice(0, 2).toUpperCase()
 
     return (
       <div className={isReply ? 'reply' : 'comment'}>
         <div className="comment-header">
           <div className="c-av" style={{ background: 'var(--purple-light)', color: 'var(--purple)' }}>
-            {(c.user_id || '?').slice(0, 2).toUpperCase()}
+            {initials}
           </div>
-          <span className="c-user">Community member</span>
+          <span
+            className="c-user"
+            style={{ cursor: c.user_id ? 'pointer' : 'default' }}
+            onClick={() => c.user_id && navigate('publicProfile', { userId: c.user_id })}
+            onMouseOver={e => { if (c.user_id) e.currentTarget.style.color = 'var(--coral)' }}
+            onMouseOut={e => e.currentTarget.style.color = ''}
+          >
+            {username}
+          </span>
           <span className="c-ts">{timeAgo(c.created_at)}</span>
         </div>
         <div className="c-text">{c.body || ''}</div>
