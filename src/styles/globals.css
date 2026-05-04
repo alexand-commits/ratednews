@@ -48,6 +48,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 /* PAGE TRANSITION */
 .page-content { animation: fadeIn 0.2s ease; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
 /* HEADER */
 .header { background: var(--surface); border-bottom: 0.5px solid var(--border); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }

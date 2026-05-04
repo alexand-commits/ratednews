@@ -150,6 +150,10 @@ export default function App() {
     setHasMoreArticles((data || []).length === FEED_BATCH)
   }
 
+  async function refreshFeed() {
+    await Promise.all([loadOutlets(), loadArticles()])
+  }
+
   async function loadMoreArticles() {
     if (loadingMore || !hasMoreArticles) return
     setLoadingMore(true)
@@ -236,7 +240,7 @@ export default function App() {
       <Toast message={toast.message} visible={toast.visible} />
 
       {currentPage === 'feed' && (
-        <FeedPage articles={allArticles} outlets={allOutlets} loading={loading} navigate={navigate} showToast={showToast} initialCategory={selectedCategory} initialRegion={selectedRegion} totalArticleCount={totalArticleCount} user={user} followedOutletIds={followedOutletIds} onLoginClick={() => setShowAuthModal(true)} loadMoreArticles={loadMoreArticles} hasMoreArticles={hasMoreArticles} loadingMore={loadingMore} savedArticleIds={savedArticleIds} toggleSave={toggleSave} />
+        <FeedPage articles={allArticles} outlets={allOutlets} loading={loading} navigate={navigate} showToast={showToast} initialCategory={selectedCategory} initialRegion={selectedRegion} totalArticleCount={totalArticleCount} user={user} followedOutletIds={followedOutletIds} onLoginClick={() => setShowAuthModal(true)} loadMoreArticles={loadMoreArticles} hasMoreArticles={hasMoreArticles} loadingMore={loadingMore} savedArticleIds={savedArticleIds} toggleSave={toggleSave} onRefresh={refreshFeed} />
       )}
       {currentPage === 'categories' && (
         <CategoryPage articles={allArticles} navigate={navigate} goBack={goBack} />
