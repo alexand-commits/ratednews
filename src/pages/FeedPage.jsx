@@ -183,6 +183,11 @@ export default function FeedPage({
     (feedTab === 'following' ? followingArticles : articles)
       .filter(a => category === 'all' || getArticleCategory(a) === category)
       .filter(a => region === 'all' || getArticleRegion(a) === region)
+      // In the global 'All' view, hide hyper-local stories so a reader in
+      // Las Vegas doesn't see "Sheffield council approves parking changes".
+      // When a specific region is selected the reader has opted in, so show
+      // everything from that region including local stories.
+      .filter(a => region !== 'all' || a.geographic_scope !== 'local')
       .slice()
       .sort((a, b) => {
         if (sort === 'trending')  return (b.comments?.[0]?.count || 0) - (a.comments?.[0]?.count || 0)

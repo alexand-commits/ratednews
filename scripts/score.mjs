@@ -74,6 +74,14 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
   Use "Culture" for arts, music, film, fashion, food, heritage, and lifestyle stories not covered by Entertainment.
   Use "World" for international news or stories that don't fit another category.
 
+- "geographic_scope": string, one of: "local", "national", "global".
+  How broad is the story's relevance to a general reader?
+  "local" = primarily about a specific city, town, county, or sub-national region with little wider significance
+    (e.g. "Manchester council approves new tram route", "Texas school district bans book", "Leeds hospital waiting times rise").
+  "national" = relevant across an entire country (e.g. "UK raises interest rates", "US Congress passes spending bill").
+  "global" = clear international significance or spans multiple countries (e.g. "NATO summit agrees new defence targets", "Global inflation hits 40-year high").
+  When in doubt between national and global, prefer "national".
+
 - "ai_summary": string. A 1–2 sentence neutral summary of what the article is about.
   Write as if summarising for someone who hasn't read it. Do not editoralise.
 
@@ -87,7 +95,7 @@ Summary: ${article.summary || '(no summary available)'}`
 
   const response = await anthropic.messages.create({
     model:      'claude-haiku-4-5',
-    max_tokens: 300,
+    max_tokens: 400,
     system: [
       {
         type: 'text',
@@ -114,18 +122,19 @@ Summary: ${article.summary || '(no summary available)'}`
   }
 
   // Validate required fields
-  const { accuracy_score, bias_score, bias_direction, headline_vote, category, ai_summary } = parsed
+  const { accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, ai_summary } = parsed
   if (
     typeof accuracy_score !== 'number' ||
     typeof bias_score !== 'number' ||
     !['left', 'centre', 'right'].includes(bias_direction) ||
     !['fair', 'misleading', 'clickbait'].includes(headline_vote) ||
-    !CATEGORIES.includes(category)
+    !CATEGORIES.includes(category) ||
+    !['local', 'national', 'global'].includes(geographic_scope)
   ) {
     throw new Error(`Unexpected response shape: ${raw.slice(0, 200)}`)
   }
 
-  return { accuracy_score, bias_score, bias_direction, headline_vote, category, ai_summary: ai_summary || null }
+  return { accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, ai_summary: ai_summary || null }
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -167,12 +176,13 @@ async function main() {
         const { error: updateError } = await supabase
           .from('articles')
           .update({
-            accuracy_score:  scores.accuracy_score,
-            bias_score:      scores.bias_score,
-            bias_direction:  scores.bias_direction,
-            headline_vote:   scores.headline_vote,
-            category:        scores.category,
-            ai_summary:      scores.ai_summary,
+            accuracy_score:    scores.accuracy_score,
+            bias_score:        scores.bias_score,
+            bias_direction:    scores.bias_direction,
+            headline_vote:     scores.headline_vote,
+            category:          scores.category,
+            geographic_scope:  scores.geographic_scope,
+            ai_summary:        scores.ai_summary,
           })
           .eq('id', article.id)
 
