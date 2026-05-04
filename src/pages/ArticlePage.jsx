@@ -479,12 +479,21 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
             </button>
             <button className="btn-outline" onClick={async () => {
               const shareUrl = `${window.location.origin}${window.location.pathname}?article=${articleId}`
+              // Build score summary line
+              const biasMap = { left: '← Left', centre: '◉ Centre', right: '→ Right' }
+              const scoreParts = [
+                acc   ? `🎯 Accuracy ${acc}/100` : null,
+                article.bias_direction ? `⚖️ ${biasMap[article.bias_direction]}` : null,
+                com > 0 ? `⭐ ${(com / 20).toFixed(1)}/5 community` : null,
+                article.headline_vote && article.headline_vote !== 'fair' ? `📰 ${article.headline_vote} headline` : null,
+              ].filter(Boolean).join(' · ')
+              const shareText = [scoreParts, article.ai_summary || ''].filter(Boolean).join('\n\n')
               if (navigator.share) {
                 try {
-                  await navigator.share({ title: article.title, text: article.ai_summary || article.title, url: shareUrl })
+                  await navigator.share({ title: article.title, text: shareText, url: shareUrl })
                 } catch (_) {}
               } else {
-                navigator.clipboard.writeText(shareUrl).then(() => showToast('Link copied!')).catch(() => showToast('Could not copy link'))
+                navigator.clipboard.writeText(`${article.title}\n${scoreParts}\n${shareUrl}`).then(() => showToast('Link copied!')).catch(() => showToast('Could not copy link'))
               }
             }}>↑ Share</button>
           </div>

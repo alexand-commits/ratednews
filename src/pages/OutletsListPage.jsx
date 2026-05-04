@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { scoreColor } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
+import { db } from '../lib/supabase'
 
 const BIAS_COLORS = {
   left:   'var(--blue, #3b82f6)',
@@ -40,11 +41,171 @@ function getRegion(outlet) {
   return 'International'
 }
 
-export default function OutletsListPage({ outlets, navigate, goBack }) {
+function SuggestModal({ onClose, user, onLoginClick, showToast }) {
+  const [name,    setName]    = useState('')
+  const [website, setWebsite] = useState('')
+  const [rss,     setRss]     = useState('')
+  const [reason,  setReason]  = useState('')
+  const [loading, setLoading] = useState(false)
+  const [done,    setDone]    = useState(false)
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    if (!name.trim()) return
+    setLoading(true)
+    const { error } = await db.from('outlet_suggestions').insert({
+      user_id:     user.id,
+      outlet_name: name.trim(),
+      website_url: website.trim() || null,
+      rss_url:     rss.trim() || null,
+      reason:      reason.trim() || null,
+    })
+    setLoading(false)
+    if (error) {
+      showToast('Something went wrong — please try again')
+    } else {
+      setDone(true)
+    }
+  }
+
+  return (
+    <div
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        zIndex: 1000, padding: 16,
+      }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div style={{
+        background: 'var(--surface)', borderRadius: 16, padding: 24,
+        width: '100%', maxWidth: 420,
+        boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+        animation: 'slideUp 0.2s ease',
+      }}>
+        {done ? (
+          <div style={{ textAlign: 'center', padding: '16px 0' }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
+            <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: 20, marginBottom: 8 }}>Thanks for the suggestion!</h3>
+            <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 20 }}>
+              We'll review <strong>{name}</strong> and add it if it meets our quality criteria.
+            </p>
+            <button
+              onClick={onClose}
+              style={{
+                background: 'var(--coral)', color: '#fff', border: 'none',
+                borderRadius: 10, padding: '10px 28px', fontWeight: 600,
+                fontSize: 14, cursor: 'pointer',
+              }}
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: 20, fontWeight: 700 }}>
+                  Suggest an outlet
+                </h3>
+                <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>
+                  Know a news source we're missing?
+                </p>
+              </div>
+              <button
+                onClick={onClose}
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  fontSize: 18, color: 'var(--text3)', lineHeight: 1, padding: 4,
+                }}
+              >✕</button>
+            </div>
+
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>
+                  Outlet name <span style={{ color: 'var(--coral)' }}>*</span>
+                </label>
+                <input
+                  className="compose-input"
+                  type="text"
+                  placeholder="e.g. The Guardian"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  required
+                  style={{ width: '100%', borderRadius: 10 }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>
+                  Website URL
+                </label>
+                <input
+                  className="compose-input"
+                  type="url"
+                  placeholder="https://theguardian.com"
+                  value={website}
+                  onChange={e => setWebsite(e.target.value)}
+                  style={{ width: '100%', borderRadius: 10 }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>
+                  RSS feed URL <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text3)' }}>(optional but helpful)</span>
+                </label>
+                <input
+                  className="compose-input"
+                  type="url"
+                  placeholder="https://theguardian.com/world/rss"
+                  value={rss}
+                  onChange={e => setRss(e.target.value)}
+                  style={{ width: '100%', borderRadius: 10 }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', display: 'block', marginBottom: 5 }}>
+                  Why should we add it?
+                </label>
+                <textarea
+                  className="compose-input"
+                  placeholder="Tell us why this outlet deserves a place on RatedNews..."
+                  value={reason}
+                  onChange={e => setReason(e.target.value)}
+                  rows={3}
+                  style={{ width: '100%', borderRadius: 10, resize: 'vertical', minHeight: 72, fontFamily: 'inherit' }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading || !name.trim()}
+                style={{
+                  background: loading || !name.trim() ? 'var(--border)' : 'var(--coral)',
+                  color: '#fff', border: 'none', borderRadius: 10,
+                  padding: '11px 0', fontWeight: 600, fontSize: 14,
+                  cursor: loading || !name.trim() ? 'not-allowed' : 'pointer',
+                  transition: 'background 0.15s', marginTop: 4,
+                }}
+              >
+                {loading ? 'Submitting…' : 'Submit suggestion'}
+              </button>
+            </form>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function OutletsListPage({ outlets, navigate, goBack, showToast, user, onLoginClick }) {
   const [search,  setSearch]  = useState('')
   const [region,  setRegion]  = useState('all')
   const [bias,    setBias]    = useState('all')
   const [sort,    setSort]    = useState('overall_score')
+  const [showSuggest, setShowSuggest] = useState(false)
 
   const filtered = outlets
     .filter(o => region === 'all' || getRegion(o) === region)
@@ -57,6 +218,11 @@ export default function OutletsListPage({ outlets, navigate, goBack }) {
     .slice()
     .sort((a, b) => (b[sort] || 0) - (a[sort] || 0))
 
+  function handleSuggestClick() {
+    if (!user) { onLoginClick(); return }
+    setShowSuggest(true)
+  }
+
   return (
     <div className="page-content">
       <div className="container">
@@ -64,12 +230,38 @@ export default function OutletsListPage({ outlets, navigate, goBack }) {
         {/* Header */}
         <div style={{ marginBottom: 20 }}>
           <button className="back-btn" onClick={goBack}>← Back</button>
-          <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
-            News Outlets
-          </h1>
-          <p style={{ fontSize: 13, color: 'var(--text2)' }}>
-            {filtered.length} of {outlets.length} outlets · rated by AI analysis and community
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+            <div>
+              <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
+                News Outlets
+              </h1>
+              <p style={{ fontSize: 13, color: 'var(--text2)' }}>
+                {filtered.length} of {outlets.length} outlets · rated by AI analysis and community
+              </p>
+            </div>
+            <button
+              onClick={handleSuggestClick}
+              style={{
+                flexShrink: 0,
+                background: 'var(--surface)',
+                border: '1px solid var(--border)',
+                borderRadius: 10,
+                padding: '7px 14px',
+                fontSize: 12,
+                fontWeight: 600,
+                color: 'var(--coral)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 5,
+                transition: 'border-color 0.15s',
+              }}
+              onMouseOver={e => e.currentTarget.style.borderColor = 'var(--coral)'}
+              onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
+            >
+              ➕ Suggest
+            </button>
+          </div>
         </div>
 
         {/* Search */}
@@ -206,7 +398,37 @@ export default function OutletsListPage({ outlets, navigate, goBack }) {
             })}
           </div>
         )}
+
+        {/* Suggest CTA at bottom */}
+        <div style={{
+          marginTop: 32, textAlign: 'center', padding: '20px',
+          border: '1px dashed var(--border)', borderRadius: 12,
+        }}>
+          <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 10 }}>
+            Don't see an outlet you trust?
+          </p>
+          <button
+            onClick={handleSuggestClick}
+            style={{
+              background: 'none', border: '1px solid var(--coral)',
+              color: 'var(--coral)', borderRadius: 10, padding: '8px 20px',
+              fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            ➕ Suggest an outlet
+          </button>
+        </div>
+
       </div>
+
+      {showSuggest && (
+        <SuggestModal
+          user={user}
+          onLoginClick={onLoginClick}
+          showToast={showToast}
+          onClose={() => setShowSuggest(false)}
+        />
+      )}
     </div>
   )
 }
