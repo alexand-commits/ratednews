@@ -42,8 +42,8 @@
   --shadow-md: 0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
 }
 
-html { overflow-x: hidden; }
-body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+html { overflow-x: hidden; overscroll-behavior: none; }
+body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; overflow-x: hidden; overscroll-behavior: none; }
 
 /* PAGE TRANSITION */
 .page-content { animation: fadeIn 0.2s ease; }
@@ -293,16 +293,11 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     border-top: 0.5px solid var(--border);
     z-index: 100;
     padding-bottom: env(safe-area-inset-bottom);
-  }
-  /* Fill the gap below the nav when the browser chrome appears */
-  .bottom-nav::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 0; right: 0;
-    height: 100vh;
-    background: var(--surface);
-    pointer-events: none;
+    /* Paint the nav background colour into the browser-chrome gap area */
+    box-shadow: 0 200px 0 200px var(--surface);
+    /* Force GPU compositing so the element tracks viewport resize instantly */
+    transform: translateZ(0);
+    will-change: transform;
   }
   .bottom-nav-item {
     flex: 1;
