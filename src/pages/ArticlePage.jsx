@@ -61,6 +61,26 @@ export default function ArticlePage({ articleId, allArticles, navigate, showToas
       .is('parent_id', null)
       .order('upvotes', { ascending: false })
       .then(({ data }) => setComments(data || []))
+
+    // Real-time: new comments on this article
+    const channel = db
+      .channel(`comments-${articleId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'comments',
+        filter: `article_id=eq.${articleId}`,
+      }, payload => {
+        if (!payload.new.parent_id) {
+          setComments(prev => {
+            if (prev.find(c => c.id === payload.new.id)) return prev
+            return [payload.new, ...prev]
+          })
+        }
+      })
+      .subscribe()
+
+    return () => { db.removeChannel(channel) }
   }, [articleId, user])
 
   if (!article) return null

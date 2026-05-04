@@ -53,6 +53,29 @@ export default function App() {
       window.history.replaceState({}, '', window.location.pathname)
     }
     Promise.all([loadOutlets(), loadArticles()]).then(() => setLoading(false))
+
+    // Real-time: new articles appear in feed automatically
+    const channel = db
+      .channel('new-articles')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'articles',
+      }, async payload => {
+        // Fetch the full article with outlet info
+        const { data } = await db
+          .from('articles')
+          .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+          .eq('id', payload.new.id)
+          .single()
+        if (data) {
+          setAllArticles(prev => [data, ...prev])
+          setTotalArticleCount(c => (c || 0) + 1)
+        }
+      })
+      .subscribe()
+
+    return () => { db.removeChannel(channel) }
   }, [])
 
   async function loadOutlets() {
