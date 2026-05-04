@@ -106,10 +106,12 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
      : 'Centre / Neutral')
     : (outlet.bias_direction || null)
 
-  // Needle position: prefer live AI average, fall back to outlet field
-  const needlePos = avgBiasScore !== null
-    ? Math.max(0, Math.min(100, avgBiasScore))
-    : Math.max(0, Math.min(100, 50 + ((outlet.bias_score || 50) - 50)))
+  // Needle position: weighted average of direction counts (left=0, centre=50, right=100)
+  // Falls back to outlet.bias_direction when no articles are scored yet
+  const dirTotal = biasBreakdown.left + biasBreakdown.centre + biasBreakdown.right
+  const needlePos = dirTotal > 0
+    ? Math.round((biasBreakdown.left * 0 + biasBreakdown.centre * 50 + biasBreakdown.right * 100) / dirTotal)
+    : outlet.bias_direction === 'left' ? 15 : outlet.bias_direction === 'right' ? 85 : 50
 
   // Community stats
   const totalRatings = outletRatings.length

@@ -7,7 +7,7 @@
  * Fetches articles that haven't been AI-scored yet, sends them to Claude
  * in batches, and writes back:
  *   accuracy_score   (0–100)
- *   bias_score       (0–100, where 50 = centre, 0 = far-left, 100 = far-right)
+ *   bias_score       (0–100 partisan intensity — 0 = objective, 100 = very partisan, independent of direction)
  *   bias_direction   ('left' | 'centre' | 'right')
  *   headline_vote    ('fair' | 'misleading' | 'clickbait')
  *   ai_summary       (1–2 sentence neutral summary)
