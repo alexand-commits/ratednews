@@ -1,12 +1,12 @@
 // api/aggregate.js — Vercel Serverless Function + Cron
-// Aggregates article AI scores up to outlet level.
-// Called daily by Vercel cron after /api/score finishes.
+// Aggregates article AI scores up to outlet level with tiered community weighting.
 
 const { createClient } = require('@supabase/supabase-js')
 
 const SUPABASE_URL     = process.env.VITE_SUPABASE_URL
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const MIN_ARTICLES     = 3
+const EDITORIAL        = 50
 
 function majorityDirection(counts) {
   const { left = 0, centre = 0, right = 0 } = counts
@@ -15,13 +15,15 @@ function majorityDirection(counts) {
   return 'right'
 }
 
-function computeOverall({ accuracyScore, communityScore = 0 }) {
-  const editorial = 50
-  return Math.round(
-    communityScore * 0.40 +
-    accuracyScore  * 0.35 +
-    editorial      * 0.25
-  )
+function computeOverall({ accuracyScore, communityScore, voteCount }) {
+  if (voteCount === 0)  return Math.round(accuracyScore * 0.70 + EDITORIAL * 0.30)
+  if (voteCount < 5)   return Math.round(accuracyScore * 0.50 + EDITORIAL * 0.30 + communityScore * 0.20)
+  if (voteCount < 20)  return Math.round(accuracyScore * 0.40 + EDITORIAL * 0.25 + communityScore * 0.35)
+  return Math.round(accuracyScore * 0.35 + EDITORIAL * 0.25 + communityScore * 0.40)
+}
+
+function starsToScore(avgStars) {
+  return Math.round(((avgStars - 1) / 4) * 100)
 }
 
 module.exports = async function handler(req, res) {
@@ -31,27 +33,32 @@ module.exports = async function handler(req, res) {
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
-  // Fetch all AI-scored articles
-  const { data: articles, error: artErr } = await supabase
-    .from('articles')
-    .select('outlet_id, accuracy_score, bias_score, bias_direction')
-    .not('accuracy_score', 'is', null)
+  const [
+    { data: articles, error: artErr },
+    { data: outlets,  error: outErr },
+    { data: ratings,  error: ratErr },
+  ] = await Promise.all([
+    supabase.from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction').not('accuracy_score', 'is', null),
+    supabase.from('outlets').select('id, name'),
+    supabase.from('outlet_ratings').select('outlet_id, overall_stars'),
+  ])
 
   if (artErr) return res.status(500).json({ error: artErr.message })
-
-  // Fetch all outlets
-  const { data: outlets, error: outErr } = await supabase
-    .from('outlets')
-    .select('id, name, community_score')
-
   if (outErr) return res.status(500).json({ error: outErr.message })
+  if (ratErr) return res.status(500).json({ error: ratErr.message })
 
-  // Group articles by outlet
   const grouped = {}
   for (const a of articles) {
     if (!a.outlet_id) continue
     if (!grouped[a.outlet_id]) grouped[a.outlet_id] = []
     grouped[a.outlet_id].push(a)
+  }
+
+  const ratingsByOutlet = {}
+  for (const r of ratings) {
+    if (!r.outlet_id) continue
+    if (!ratingsByOutlet[r.outlet_id]) ratingsByOutlet[r.outlet_id] = []
+    ratingsByOutlet[r.outlet_id].push(r)
   }
 
   const results = { updated: 0, skipped: 0, errors: [] }
@@ -64,13 +71,14 @@ module.exports = async function handler(req, res) {
     const avgBias     = Math.round(arts.reduce((s, a) => s + (a.bias_score || 50), 0) / arts.length)
 
     const dirCounts = {}
-    for (const a of arts) {
-      const d = a.bias_direction || 'centre'
-      dirCounts[d] = (dirCounts[d] || 0) + 1
-    }
+    for (const a of arts) { const d = a.bias_direction || 'centre'; dirCounts[d] = (dirCounts[d] || 0) + 1 }
     const biasDirection = majorityDirection(dirCounts)
-    const communityScore = outlet.community_score || 0
-    const overall = computeOverall({ accuracyScore: avgAccuracy, communityScore })
+
+    const outletRatings  = ratingsByOutlet[outlet.id] || []
+    const voteCount      = outletRatings.length
+    const avgStars       = voteCount ? outletRatings.reduce((s, r) => s + (r.overall_stars || 0), 0) / voteCount : 0
+    const communityScore = voteCount ? starsToScore(avgStars) : 0
+    const overall        = computeOverall({ accuracyScore: avgAccuracy, communityScore, voteCount })
 
     const { error } = await supabase
       .from('outlets')
