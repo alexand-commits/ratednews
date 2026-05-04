@@ -42,7 +42,7 @@
   --shadow-md: 0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
 }
 
-html { overflow-x: hidden; overscroll-behavior: none; }
+html { overscroll-behavior: none; }
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; overflow-x: hidden; overscroll-behavior: none; }
 
 /* PAGE TRANSITION */
