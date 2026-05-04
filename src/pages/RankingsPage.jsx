@@ -85,8 +85,10 @@ export default function RankingsPage({ outlets, navigate, goBack, user }) {
     .slice()
     .sort((a, b) => (b[activeTab.key] || 0) - (a[activeTab.key] || 0))
 
-  const avgScore  = sorted.length ? Math.round(sorted.reduce((s, o) => s + (o[activeTab.key] || 0), 0) / sorted.length) : 0
-  const topOutlet = sorted[0]
+  // Only average outlets that have actually been rated — zeros are missing data, not low scores
+  const ratedOutlets = sorted.filter(o => o[activeTab.key] > 0)
+  const avgScore  = ratedOutlets.length ? Math.round(ratedOutlets.reduce((s, o) => s + o[activeTab.key], 0) / ratedOutlets.length) : 0
+  const topOutlet = ratedOutlets[0]
 
   return (
     <div className="page-content">
@@ -126,7 +128,7 @@ export default function RankingsPage({ outlets, navigate, goBack, user }) {
                 <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140 }}>
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Average</div>
                   <div style={{ fontSize: 22, fontWeight: 700, color: tab === 'rated' ? 'var(--text)' : scoreColor(avgScore) }}>{avgScore}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text2)' }}>across {sorted.length} outlets</div>
+                  <div style={{ fontSize: 12, color: 'var(--text2)' }}>across {ratedOutlets.length} rated outlets</div>
                 </div>
                 <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140 }}>
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total ratings</div>
