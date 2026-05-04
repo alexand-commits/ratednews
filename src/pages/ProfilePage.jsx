@@ -189,12 +189,14 @@ function TopicBreakdown({ ratings }) {
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-export default function ProfilePage({ user, navigate, followedOutletIds = new Set() }) {
+export default function ProfilePage({ user, navigate, followedOutletIds = new Set(), allOutlets = [], toggleFollow }) {
   const [articleRatings, setArticleRatings] = useState([])
   const [outletRatings, setOutletRatings]   = useState([])
   const [comments, setComments]             = useState([])
   const [loading, setLoading]               = useState(true)
   const [tab, setTab]                       = useState('ratings')
+
+  const followedOutlets = allOutlets.filter(o => followedOutletIds.has(o.id))
 
   useEffect(() => {
     if (!user) return
@@ -345,6 +347,9 @@ export default function ProfilePage({ user, navigate, followedOutletIds = new Se
           <div className={`tab${tab === 'comments' ? ' active' : ''}`} onClick={() => setTab('comments')}>
             Comments {comments.length > 0 && <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({comments.length})</span>}
           </div>
+          <div className={`tab${tab === 'following' ? ' active' : ''}`} onClick={() => setTab('following')}>
+            Following {followedOutlets.length > 0 && <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({followedOutlets.length})</span>}
+          </div>
         </div>
 
         {loading ? (
@@ -411,6 +416,52 @@ export default function ProfilePage({ user, navigate, followedOutletIds = new Se
                   </>
                 )}
               </>
+            )}
+          </div>
+        ) : tab === 'following' ? (
+          /* Following tab */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {followedOutlets.length === 0 ? (
+              <div className="empty-state">
+                <h3>Not following anyone yet</h3>
+                <p>Follow outlets you trust to keep track of them here.</p>
+                <button className="btn-outline" style={{ marginTop: 12, fontSize: 13 }} onClick={() => navigate('outlets')}>
+                  Browse outlets →
+                </button>
+              </div>
+            ) : (
+              followedOutlets.map(outlet => {
+                const score = outlet.overall_score || 0
+                return (
+                  <div
+                    key={outlet.id}
+                    style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
+                    onClick={() => navigate('outlet', { outletId: outlet.id })}
+                    onMouseOver={e => e.currentTarget.style.borderColor = 'var(--coral)'}
+                    onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                  >
+                    <OutletLogo name={outlet.name} size={40} borderRadius={10} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 3 }}>{outlet.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>
+                        {outlet.country || 'Global'} · {outlet.bias_direction ? `${outlet.bias_direction.charAt(0).toUpperCase() + outlet.bias_direction.slice(1)} bias` : 'Centre bias'}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                      <div style={{ fontSize: 20, fontWeight: 700, color: score >= 70 ? 'var(--green-dark)' : score >= 50 ? 'var(--amber)' : 'var(--red)' }}>{score}</div>
+                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>Trust score</div>
+                    </div>
+                    <button
+                      onClick={e => { e.stopPropagation(); toggleFollow(outlet.id) }}
+                      style={{ fontSize: 11, padding: '5px 12px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text2)', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}
+                      onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--red)'; e.currentTarget.style.color = 'var(--red)' }}
+                      onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text2)' }}
+                    >
+                      Unfollow
+                    </button>
+                  </div>
+                )
+              })
             )}
           </div>
         ) : (

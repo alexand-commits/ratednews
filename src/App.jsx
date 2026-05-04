@@ -188,7 +188,7 @@ export default function App() {
         <RankingsPage outlets={allOutlets} navigate={navigate} showToast={showToast} />
       )}
       {currentPage === 'profile' && (
-        <ProfilePage user={user} navigate={navigate} showToast={showToast} followedOutletIds={followedOutletIds} />
+        <ProfilePage user={user} navigate={navigate} showToast={showToast} followedOutletIds={followedOutletIds} allOutlets={allOutlets} toggleFollow={toggleFollow} />
       )}
 
       {showAuthModal && (
