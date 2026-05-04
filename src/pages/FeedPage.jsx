@@ -160,15 +160,36 @@ export default function FeedPage({
 
   const followingArticles = articles.filter(a => followedOutletIds.has(a.outlet_id))
 
-  const filtered = (feedTab === 'following' ? followingArticles : articles)
-    .filter(a => category === 'all' || getArticleCategory(a) === category)
-    .filter(a => region === 'all' || getArticleRegion(a) === region)
-    .slice()
-    .sort((a, b) => {
-      if (sort === 'trending')  return (b.comments?.[0]?.count || 0) - (a.comments?.[0]?.count || 0)
-      if (sort === 'top-rated') return (b.accuracy_score || 0) - (a.accuracy_score || 0)
-      return new Date(b.published_at) - new Date(a.published_at)
-    })
+  // Deduplicate similar stories from the same outlet — keeps the most recent,
+  // hides older articles that share 3+ significant words in their title
+  function dedupeRelated(list) {
+    const kept = []
+    for (const article of list) {
+      const words = new Set(
+        article.title.toLowerCase().split(/\W+/).filter(w => w.length > 4)
+      )
+      const hasSimilar = kept.some(k => {
+        if (k.outlet_id !== article.outlet_id) return false
+        const overlap = k.title.toLowerCase().split(/\W+/)
+          .filter(w => w.length > 4 && words.has(w)).length
+        return overlap >= 3
+      })
+      if (!hasSimilar) kept.push(article)
+    }
+    return kept
+  }
+
+  const filtered = dedupeRelated(
+    (feedTab === 'following' ? followingArticles : articles)
+      .filter(a => category === 'all' || getArticleCategory(a) === category)
+      .filter(a => region === 'all' || getArticleRegion(a) === region)
+      .slice()
+      .sort((a, b) => {
+        if (sort === 'trending')  return (b.comments?.[0]?.count || 0) - (a.comments?.[0]?.count || 0)
+        if (sort === 'top-rated') return (b.accuracy_score || 0) - (a.accuracy_score || 0)
+        return new Date(b.published_at) - new Date(a.published_at)
+      })
+  )
 
   // Which list to display — DB results when search active, filtered otherwise
   const isSearchActive = dbResults !== null
