@@ -141,8 +141,8 @@ function SuggestModal({ onClose, user, onLoginClick, showToast }) {
                 </label>
                 <input
                   className="compose-input"
-                  type="url"
-                  placeholder="https://theguardian.com"
+                  type="text"
+                  placeholder="theguardian.com"
                   value={website}
                   onChange={e => setWebsite(e.target.value)}
                   style={{ width: '100%', borderRadius: 10 }}
