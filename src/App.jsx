@@ -24,6 +24,9 @@ export default function App() {
   const [allArticles, setAllArticles] = useState([])
   const [allOutlets, setAllOutlets] = useState([])
   const [totalArticleCount, setTotalArticleCount] = useState(null)
+  const [articlesOffset, setArticlesOffset] = useState(0)
+  const [hasMoreArticles, setHasMoreArticles] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState({ message: '', visible: false })
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark')
@@ -110,16 +113,37 @@ export default function App() {
     setAllOutlets(data || [])
   }
 
+  const FEED_BATCH = 50
+
   async function loadArticles() {
     const [{ data }, { count }] = await Promise.all([
       db.from('articles')
         .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
         .order('published_at', { ascending: false })
-        .limit(100),
+        .range(0, FEED_BATCH - 1),
       db.from('articles').select('*', { count: 'exact', head: true }),
     ])
     setAllArticles(data || [])
     setTotalArticleCount(count || 0)
+    setArticlesOffset(FEED_BATCH)
+    setHasMoreArticles((data || []).length === FEED_BATCH)
+  }
+
+  async function loadMoreArticles() {
+    if (loadingMore || !hasMoreArticles) return
+    setLoadingMore(true)
+    const { data } = await db.from('articles')
+      .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+      .order('published_at', { ascending: false })
+      .range(articlesOffset, articlesOffset + FEED_BATCH - 1)
+    if (data && data.length > 0) {
+      setAllArticles(prev => [...prev, ...data])
+      setArticlesOffset(prev => prev + FEED_BATCH)
+      setHasMoreArticles(data.length === FEED_BATCH)
+    } else {
+      setHasMoreArticles(false)
+    }
+    setLoadingMore(false)
   }
 
   function navigate(page, opts = {}) {
@@ -186,7 +210,7 @@ export default function App() {
       <Toast message={toast.message} visible={toast.visible} />
 
       {currentPage === 'feed' && (
-        <FeedPage articles={allArticles} outlets={allOutlets} loading={loading} navigate={navigate} showToast={showToast} initialCategory={selectedCategory} totalArticleCount={totalArticleCount} user={user} followedOutletIds={followedOutletIds} onLoginClick={() => setShowAuthModal(true)} />
+        <FeedPage articles={allArticles} outlets={allOutlets} loading={loading} navigate={navigate} showToast={showToast} initialCategory={selectedCategory} totalArticleCount={totalArticleCount} user={user} followedOutletIds={followedOutletIds} onLoginClick={() => setShowAuthModal(true)} loadMoreArticles={loadMoreArticles} hasMoreArticles={hasMoreArticles} loadingMore={loadingMore} />
       )}
       {currentPage === 'categories' && (
         <CategoryPage articles={allArticles} navigate={navigate} goBack={goBack} />

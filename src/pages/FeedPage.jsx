@@ -60,7 +60,7 @@ function getArticleRegion(article) {
   return 'int'
 }
 
-export default function FeedPage({ articles, outlets, loading, navigate, initialCategory = 'all', totalArticleCount, user, followedOutletIds = new Set(), onLoginClick }) {
+export default function FeedPage({ articles, outlets, loading, navigate, initialCategory = 'all', totalArticleCount, user, followedOutletIds = new Set(), onLoginClick, loadMoreArticles, hasMoreArticles, loadingMore }) {
   const [category, setCategory] = useState(initialCategory)
   const [region, setRegion]     = useState('all')
   const [search, setSearch]     = useState('')
@@ -199,6 +199,20 @@ export default function FeedPage({ articles, outlets, loading, navigate, initial
                 filtered.map((a, i) => (
                   <NewsCard key={a.id} article={a} index={i} onClick={() => navigate('article', { articleId: a.id })} navigate={navigate} />
                 ))
+              )}
+
+              {/* Load more — only show on All tab with no active search/filter */}
+              {feedTab === 'all' && !search && filtered.length > 0 && (hasMoreArticles || loadingMore) && (
+                <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                  <button
+                    className="btn-outline"
+                    onClick={loadMoreArticles}
+                    disabled={loadingMore}
+                    style={{ fontSize: 13, padding: '10px 28px', opacity: loadingMore ? 0.6 : 1 }}
+                  >
+                    {loadingMore ? 'Loading…' : 'Load more stories'}
+                  </button>
+                </div>
               )}
             </div>
           </div>

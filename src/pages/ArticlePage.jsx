@@ -17,8 +17,9 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   const [replyInputs, setReplyInputs] = useState({}) // { [commentId]: text }
   const [replies, setReplies] = useState({}) // { [parentId]: [reply, ...] }
   const [userProfiles, setUserProfiles] = useState({}) // { [user_id]: username }
+  const [fetchedArticle, setFetchedArticle] = useState(null)
 
-  const article = allArticles.find(a => a.id === articleId)
+  const article = allArticles.find(a => a.id === articleId) || fetchedArticle
 
   useEffect(() => {
     if (!articleId) return
@@ -99,6 +100,19 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
     return () => { db.removeChannel(channel) }
   }, [articleId, user])
+
+  // If article isn't in the local cache (e.g. older than the loaded feed window),
+  // fetch it directly from the DB so we never show a blank page
+  useEffect(() => {
+    if (!articleId) return
+    if (allArticles.find(a => a.id === articleId)) { setFetchedArticle(null); return }
+    setFetchedArticle(null)
+    db.from('articles')
+      .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+      .eq('id', articleId)
+      .single()
+      .then(({ data }) => { if (data) setFetchedArticle(data) })
+  }, [articleId])
 
   if (!article) return null
 
