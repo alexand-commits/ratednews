@@ -188,14 +188,14 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
           <div className="outlet-hero-info">
             <div className="outlet-hero-name">{outlet.name}</div>
             <div className="outlet-meta-chips">
-              <span className="meta-chip">🌍 {outlet.country || 'Unknown'}</span>
+              <span className="meta-chip"><span>🌍</span>{outlet.country || 'Unknown'}</span>
               <span className="meta-chip">{outlet.type || 'News outlet'}</span>
               <span className="meta-chip">Global</span>
             </div>
             <div className="outlet-desc">{outlet.description || ''}</div>
             <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-              <span className="meta-chip">🤖 AI analysed</span>
-              <span className="meta-chip">✓ Editorially verified</span>
+              <span className="meta-chip"><span>🤖</span>AI analysed</span>
+              <span className="meta-chip"><span>✓</span>Editorially verified</span>
             </div>
           </div>
           <div style={{ textAlign: 'center', flexShrink: 0 }}>

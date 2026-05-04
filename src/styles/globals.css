@@ -164,7 +164,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .outlet-hero-info { flex: 1; }
 .outlet-hero-name { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; margin-bottom: 6px; }
 .outlet-meta-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
-.meta-chip { font-size: 11px; background: var(--bg2); padding: 3px 10px; border-radius: 20px; color: var(--text2); }
+.meta-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; background: var(--bg2); padding: 3px 10px; border-radius: 20px; color: var(--text2); line-height: 1.4; }
 .outlet-desc { font-size: 13px; color: var(--text2); line-height: 1.6; }
 .big-score { font-size: 52px; font-weight: 500; line-height: 1; color: var(--green); }
 .big-score-label { font-size: 11px; color: var(--text2); margin-top: 4px; }
