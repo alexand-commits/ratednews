@@ -162,6 +162,7 @@ async function ingestOutlet(outlet) {
 
 async function main() {
   console.log('🚀 RatedNews RSS Ingestion')
+  console.log(`📦 RSS_FEEDS has ${Object.keys(RSS_FEEDS).length} outlets configured`)
   console.log('===========================\n')
 
   const { data: outlets, error } = await supabase.from('outlets').select('id, name')
