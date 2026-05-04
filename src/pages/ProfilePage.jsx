@@ -315,7 +315,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                       onKeyDown={e => { if (e.key === 'Enter') saveUsername(); if (e.key === 'Escape') setEditingName(false) }}
                       placeholder="Your username"
                       maxLength={20}
-                      style={{ fontSize: 15, fontWeight: 600, padding: '4px 10px', borderRadius: 8, border: `1.5px solid ${nameError ? 'var(--red)' : 'var(--coral)'}`, background: 'var(--bg)', color: 'var(--text)', outline: 'none', width: 160 }}
+                      style={{ fontSize: 16, fontWeight: 600, padding: '4px 10px', borderRadius: 8, border: `1.5px solid ${nameError ? 'var(--red)' : 'var(--coral)'}`, background: 'var(--bg)', color: 'var(--text)', outline: 'none', width: 160 }}
                     />
                     <button
                       onClick={saveUsername}

@@ -280,7 +280,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
           <div style={{ display: 'flex', gap: 8, marginTop: 10, paddingLeft: 4 }}>
             <input
               className="compose-input"
-              style={{ fontSize: 12, padding: '6px 10px' }}
+              style={{ padding: '6px 10px' }}
               placeholder={`Reply to comment...`}
               value={replyInputs[c.id] || ''}
               onChange={e => setReplyInputs(prev => ({ ...prev, [c.id]: e.target.value }))}
