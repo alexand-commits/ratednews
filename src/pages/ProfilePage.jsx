@@ -189,10 +189,11 @@ function TopicBreakdown({ ratings, noMargin = false }) {
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-export default function ProfilePage({ user, navigate, goBack, followedOutletIds = new Set(), allOutlets = [], toggleFollow }) {
+export default function ProfilePage({ user, navigate, goBack, showToast, followedOutletIds = new Set(), allOutlets = [], toggleFollow, savedArticleIds = new Set(), toggleSave }) {
   const [articleRatings, setArticleRatings] = useState([])
   const [outletRatings, setOutletRatings]   = useState([])
   const [comments, setComments]             = useState([])
+  const [savedItems, setSavedItems]         = useState([])
   const [loading, setLoading]               = useState(true)
   const [tab, setTab]                       = useState('ratings')
   const [profile, setProfile]               = useState(null)
@@ -219,11 +220,16 @@ export default function ProfilePage({ user, navigate, goBack, followedOutletIds 
         .select('*, articles(id, title), outlets(id, name)')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
-    ]).then(([{ data: prof }, { data: ar }, { data: or }, { data: co }]) => {
+      db.from('saved_articles')
+        .select('*, articles(id, title, published_at, category, ai_summary, outlets(name, country))')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
+    ]).then(([{ data: prof }, { data: ar }, { data: or }, { data: co }, { data: sv }]) => {
       setProfile(prof)
       setArticleRatings(ar || [])
       setOutletRatings(or || [])
       setComments(co || [])
+      setSavedItems(sv || [])
       setLoading(false)
     })
   }, [user])
@@ -350,10 +356,11 @@ export default function ProfilePage({ user, navigate, goBack, followedOutletIds 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 10, marginBottom: 16 }}>
             {[
               { value: articleRatings.length,   label: 'Articles rated' },
-              { value: outletRatings.length,   label: 'Outlets rated'  },
-              { value: followedOutletIds.size, label: 'Following'      },
-              { value: comments.length,        label: 'Comments'       },
-              { value: daysActive,             label: 'Days active'    },
+              { value: outletRatings.length,    label: 'Outlets rated'  },
+              { value: followedOutletIds.size,  label: 'Following'      },
+              { value: savedItems.length,       label: 'Saved'          },
+              { value: comments.length,         label: 'Comments'       },
+              { value: daysActive,              label: 'Days active'    },
               ...(avgStars ? [{ value: `${avgStars}★`, label: 'Avg rating', color: 'var(--amber)' }] : []),
             ].map(({ value, label, color }) => (
               <div key={label} style={{ background: 'var(--bg)', borderRadius: 8, padding: '10px 8px', textAlign: 'center' }}>
@@ -418,6 +425,9 @@ export default function ProfilePage({ user, navigate, goBack, followedOutletIds 
         <div className="tabs" style={{ marginBottom: 16 }}>
           <div className={`tab${tab === 'ratings' ? ' active' : ''}`} onClick={() => setTab('ratings')}>
             Ratings {totalRatings > 0 && <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({totalRatings})</span>}
+          </div>
+          <div className={`tab${tab === 'saved' ? ' active' : ''}`} onClick={() => setTab('saved')}>
+            Saved {savedItems.length > 0 && <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({savedItems.length})</span>}
           </div>
           <div className={`tab${tab === 'comments' ? ' active' : ''}`} onClick={() => setTab('comments')}>
             Comments {comments.length > 0 && <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({comments.length})</span>}
@@ -491,6 +501,61 @@ export default function ProfilePage({ user, navigate, goBack, followedOutletIds 
                   </>
                 )}
               </>
+            )}
+          </div>
+        ) : tab === 'saved' ? (
+          /* Saved articles tab */
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {savedItems.length === 0 ? (
+              <div className="empty-state">
+                <h3>No saved articles yet</h3>
+                <p>Tap 🔖 on any article to save it for later.</p>
+                <button className="btn-outline" style={{ marginTop: 12, fontSize: 13 }} onClick={() => navigate('feed')}>Browse articles</button>
+              </div>
+            ) : (
+              savedItems.map(s => {
+                const article = s.articles
+                if (!article) return null
+                return (
+                  <div
+                    key={s.id}
+                    style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', cursor: 'pointer' }}
+                    onClick={() => navigate('article', { articleId: article.id })}
+                    onMouseOver={e => e.currentTarget.style.borderColor = 'var(--coral)'}
+                    onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                  >
+                    <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>
+                      {article.outlets?.name || 'Unknown outlet'} · saved {timeAgo(s.created_at)}
+                    </div>
+                    <div style={{ fontSize: 14, fontFamily: 'Playfair Display, serif', lineHeight: 1.4, marginBottom: article.ai_summary ? 6 : 0 }}>
+                      {article.title || 'Article'}
+                    </div>
+                    {article.ai_summary && (
+                      <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5, fontStyle: 'italic', marginBottom: 8,
+                        display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                        {article.ai_summary}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      {article.category && (
+                        <span style={{ fontSize: 11, color: 'var(--text3)' }}>{article.category}</span>
+                      )}
+                      <button
+                        onClick={e => {
+                          e.stopPropagation()
+                          toggleSave(article.id)
+                          setSavedItems(prev => prev.filter(x => x.id !== s.id))
+                        }}
+                        style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, border: '1px solid var(--border)', background: 'none', color: 'var(--text3)', cursor: 'pointer', marginLeft: 'auto' }}
+                        onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--red)'; e.currentTarget.style.color = 'var(--red)' }}
+                        onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text3)' }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
             )}
           </div>
         ) : tab === 'following' ? (

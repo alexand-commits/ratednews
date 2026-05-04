@@ -112,6 +112,9 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .score-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .score-mini { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text2); white-space: nowrap; flex-shrink: 0; }
 @media (max-width: 768px) { .score-row { gap: 6px; } }
+.save-btn { background: none; border: none; cursor: pointer; padding: 0 2px; font-size: 14px; line-height: 1; opacity: 0.3; transition: opacity 0.15s, transform 0.1s; flex-shrink: 0; }
+.save-btn:hover { opacity: 0.7; }
+.save-btn.saved { opacity: 1; transform: scale(1.15); }
 .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
 .dot-g { background: var(--green); }
 .dot-a { background: var(--amber); }

@@ -34,6 +34,7 @@ export default function App() {
   const [session, setSession] = useState(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const [followedOutletIds, setFollowedOutletIds] = useState(new Set())
+  const [savedArticleIds, setSavedArticleIds]   = useState(new Set())
 
   // Theme
   useEffect(() => {
@@ -45,12 +46,12 @@ export default function App() {
   useEffect(() => {
     db.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
-      if (session?.user) loadFollows(session.user.id)
+      if (session?.user) { loadFollows(session.user.id); loadSaves(session.user.id) }
     })
     const { data: { subscription } } = db.auth.onAuthStateChange((_event, session) => {
       setSession(session)
-      if (session?.user) loadFollows(session.user.id)
-      else setFollowedOutletIds(new Set())
+      if (session?.user) { loadFollows(session.user.id); loadSaves(session.user.id) }
+      else { setFollowedOutletIds(new Set()); setSavedArticleIds(new Set()) }
     })
     return () => subscription.unsubscribe()
   }, [])
@@ -58,6 +59,25 @@ export default function App() {
   async function loadFollows(userId) {
     const { data } = await db.from('follows').select('outlet_id').eq('user_id', userId)
     setFollowedOutletIds(new Set((data || []).map(f => f.outlet_id)))
+  }
+
+  async function loadSaves(userId) {
+    const { data } = await db.from('saved_articles').select('article_id').eq('user_id', userId)
+    setSavedArticleIds(new Set((data || []).map(r => r.article_id)))
+  }
+
+  async function toggleSave(articleId) {
+    if (!user) { setShowAuthModal(true); return }
+    const isSaved = savedArticleIds.has(articleId)
+    if (isSaved) {
+      await db.from('saved_articles').delete().eq('user_id', user.id).eq('article_id', articleId)
+      setSavedArticleIds(prev => { const n = new Set(prev); n.delete(articleId); return n })
+      showToast('Removed from saved')
+    } else {
+      await db.from('saved_articles').insert({ user_id: user.id, article_id: articleId })
+      setSavedArticleIds(prev => new Set([...prev, articleId]))
+      showToast('Article saved!')
+    }
   }
 
   async function toggleFollow(outletId) {
@@ -216,7 +236,7 @@ export default function App() {
       <Toast message={toast.message} visible={toast.visible} />
 
       {currentPage === 'feed' && (
-        <FeedPage articles={allArticles} outlets={allOutlets} loading={loading} navigate={navigate} showToast={showToast} initialCategory={selectedCategory} initialRegion={selectedRegion} totalArticleCount={totalArticleCount} user={user} followedOutletIds={followedOutletIds} onLoginClick={() => setShowAuthModal(true)} loadMoreArticles={loadMoreArticles} hasMoreArticles={hasMoreArticles} loadingMore={loadingMore} />
+        <FeedPage articles={allArticles} outlets={allOutlets} loading={loading} navigate={navigate} showToast={showToast} initialCategory={selectedCategory} initialRegion={selectedRegion} totalArticleCount={totalArticleCount} user={user} followedOutletIds={followedOutletIds} onLoginClick={() => setShowAuthModal(true)} loadMoreArticles={loadMoreArticles} hasMoreArticles={hasMoreArticles} loadingMore={loadingMore} savedArticleIds={savedArticleIds} toggleSave={toggleSave} />
       )}
       {currentPage === 'categories' && (
         <CategoryPage articles={allArticles} navigate={navigate} goBack={goBack} />
@@ -246,7 +266,7 @@ export default function App() {
         <RankingsPage outlets={allOutlets} navigate={navigate} goBack={goBack} showToast={showToast} />
       )}
       {currentPage === 'profile' && (
-        <ProfilePage user={user} navigate={navigate} goBack={goBack} showToast={showToast} followedOutletIds={followedOutletIds} allOutlets={allOutlets} toggleFollow={toggleFollow} />
+        <ProfilePage user={user} navigate={navigate} goBack={goBack} showToast={showToast} followedOutletIds={followedOutletIds} allOutlets={allOutlets} toggleFollow={toggleFollow} savedArticleIds={savedArticleIds} toggleSave={toggleSave} />
       )}
       {currentPage === 'publicProfile' && (
         <PublicProfilePage userId={selectedUserId} navigate={navigate} goBack={goBack} showToast={showToast} />
