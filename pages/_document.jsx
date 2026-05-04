@@ -8,6 +8,8 @@ export default function Document() {
       <Head>
         <meta name="theme-color" content="#D85A30" />
         <meta name="robots" content="index, follow" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/favicon.svg" />
         <link
           href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap"
           rel="stylesheet"
