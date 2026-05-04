@@ -199,7 +199,9 @@ async function main() {
   console.log(`✅ Total scored: ${totalScored}  ❌ Total failed: ${totalFailed}`)
 }
 
-main().catch(err => {
-  console.error('Fatal:', err)
-  process.exit(1)
-})
+main()
+  .then(() => process.exit(0))
+  .catch(err => {
+    console.error('Fatal:', err)
+    process.exit(1)
+  })
