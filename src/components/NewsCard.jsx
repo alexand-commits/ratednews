@@ -20,14 +20,13 @@ const BIAS_LABELS = {
 
 export default function NewsCard({ article, index, onClick, navigate }) {
   const outlet = article.outlets || {}
-  const [bg, fg] = outletColor(outlet.name || 'X')
-  const acc = article.accuracy_score || 0
-  const bias = article.bias_direction
-  const com = article.community_score || 0
+  const [bg] = outletColor(outlet.name || 'X')
+  const acc       = article.accuracy_score || 0
+  const bias      = article.bias_direction
   const commentCount = article.comments?.[0]?.count || 0
-  const hlBadge = article.headline_vote ? HEADLINE_BADGES[article.headline_vote] : null
+  const hlBadge   = article.headline_vote ? HEADLINE_BADGES[article.headline_vote] : null
   const biasLabel = bias ? BIAS_LABELS[bias] : null
-  const scored = acc > 0
+  const scored    = acc > 0
 
   function handleOutletClick(e) {
     if (!navigate || !outlet.id) return
@@ -37,52 +36,43 @@ export default function NewsCard({ article, index, onClick, navigate }) {
 
   return (
     <div className="news-card" onClick={onClick}>
-      <div className="news-card-thumb" style={{ background: bg, color: fg }}>
-        {article.image_url
-          ? <img src={article.image_url} alt="" onError={e => { e.target.style.display = 'none' }} />
-          : '📰'}
+      <div className="outlet-row">
+        <span className="outlet-badge" onClick={handleOutletClick}>
+          <span className="outlet-dot" style={{ background: bg }} />
+          {outlet.name || 'Unknown'}
+        </span>
+        <span className="ts">{timeAgo(article.published_at)}</span>
       </div>
-      <div className="news-card-body">
-        <div className="outlet-row">
-          {/* Outlet chip — coloured dot + name, links to outlet page */}
-          <span className="outlet-badge" onClick={handleOutletClick}>
-            <span className="outlet-dot" style={{ background: bg }} />
-            {outlet.name || 'Unknown'}
-          </span>
-          <span className="ts">{timeAgo(article.published_at)}</span>
-        </div>
 
-        <div className="news-headline">{article.title || 'Untitled'}</div>
+      <div className="news-headline">{article.title || 'Untitled'}</div>
 
-        {/* Headline verdict badge — sits under headline, only shown if non-fair */}
-        {hlBadge && (
-          <span style={{
-            display: 'inline-block', fontSize: 10, fontWeight: 600,
-            padding: '2px 8px', borderRadius: 20, marginBottom: 6,
-            background: hlBadge.bg, color: hlBadge.color,
-          }}>
-            {hlBadge.label}
-          </span>
-        )}
+      {hlBadge && (
+        <span style={{
+          display: 'inline-block', fontSize: 10, fontWeight: 600,
+          padding: '2px 8px', borderRadius: 20, marginBottom: 6,
+          background: hlBadge.bg, color: hlBadge.color,
+        }}>
+          {hlBadge.label}
+        </span>
+      )}
 
-        {article.ai_summary
-          ? <div className="news-summary" style={{ fontStyle: 'italic', color: 'var(--text2)' }}>{article.ai_summary}</div>
-          : article.summary && <div className="news-summary">{article.summary}</div>
-        }
+      {article.ai_summary
+        ? <div className="news-summary" style={{ fontStyle: 'italic', color: 'var(--text2)' }}>{article.ai_summary}</div>
+        : article.summary && <div className="news-summary">{article.summary}</div>
+      }
 
-        <div className="score-row">
-          {index < 2 && <span className="trending-chip">↑ Trending</span>}
-          {article.category && (
-            <div className="score-mini" style={{ color: 'var(--text3)' }}>
-              {CATEGORY_EMOJI[article.category] || '📰'} {article.category}
-            </div>
-          )}
-          {biasLabel && scored && (
-            <div className="score-mini" style={{ color: biasLabel.color }}>{biasLabel.label}</div>
-          )}
-          <div className="score-mini" style={{ marginLeft: 'auto', color: 'var(--text3)' }}>
-            💬 {commentCount}
+      <div className="score-row">
+        {index < 2 && <span className="trending-chip">↑ Trending</span>}
+        {article.category && (
+          <div className="score-mini" style={{ color: 'var(--text3)' }}>
+            {CATEGORY_EMOJI[article.category] || '📰'} {article.category}
           </div>
+        )}
+        {biasLabel && scored && (
+          <div className="score-mini" style={{ color: biasLabel.color }}>{biasLabel.label}</div>
+        )}
+        <div className="score-mini" style={{ marginLeft: 'auto', color: 'var(--text3)' }}>
+          💬 {commentCount}
         </div>
       </div>
     </div>
