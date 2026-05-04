@@ -377,7 +377,26 @@ export default function FeedPage({
 
             <div className="feed">
               {loading || (isSearchActive && dbLoading) ? (
-                [0, 1, 2].map(i => <div key={i} className="skeleton skeleton-card" />)
+                [0, 1, 2].map(i => (
+                  <div key={i} className="skeleton-news-card">
+                    {/* Outlet row */}
+                    <div className="skeleton-row">
+                      <div className="skeleton-dot skeleton-shimmer" />
+                      <div className="skeleton-line skeleton-shimmer" style={{ width: 80, height: 10 }} />
+                      <div className="skeleton-line skeleton-shimmer" style={{ width: 40, height: 10, marginLeft: 'auto' }} />
+                    </div>
+                    {/* Headline — two lines */}
+                    <div className="skeleton-line skeleton-shimmer" style={{ width: '92%', height: 14 }} />
+                    <div className="skeleton-line skeleton-shimmer" style={{ width: '68%', height: 14 }} />
+                    {/* Summary line */}
+                    <div className="skeleton-line skeleton-shimmer" style={{ width: '100%', height: 10 }} />
+                    {/* Badge row */}
+                    <div className="skeleton-row">
+                      <div className="skeleton-line skeleton-shimmer" style={{ width: 44, height: 20, borderRadius: 20 }} />
+                      <div className="skeleton-line skeleton-shimmer" style={{ width: 56, height: 20, borderRadius: 20 }} />
+                    </div>
+                  </div>
+                ))
               ) : displayList.length === 0 && feedTab === 'following' && followedOutletIds.size === 0 ? (
                 <div className="empty-state">
                   <h3>You're not following anyone yet</h3>
