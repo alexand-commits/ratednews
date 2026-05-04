@@ -22,7 +22,9 @@ export default function BottomNav({ navigate }) {
           className={`bottom-nav-item${!isDetail && router.pathname === t.path ? ' active' : ''}`}
           onClick={() => navigate(t.page)}
         >
-          <span className="bottom-nav-icon">{t.icon}</span>
+          <span className="bottom-nav-icon-wrap">
+            <span className="bottom-nav-icon">{t.icon}</span>
+          </span>
           <span className="bottom-nav-label">{t.label}</span>
         </button>
       ))}

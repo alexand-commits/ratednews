@@ -13,9 +13,15 @@ const CATEGORY_EMOJI = {
 }
 
 const BIAS_LABELS = {
-  left:   { label: '← Left',   color: 'var(--blue, #3b82f6)' },
-  centre: { label: '◉ Centre', color: 'var(--text3)'         },
-  right:  { label: '→ Right',  color: 'var(--red)'           },
+  left:   { label: '← Left',   cls: 'score-badge score-badge-bias-left'   },
+  centre: { label: '◉ Centre', cls: 'score-badge score-badge-bias-centre' },
+  right:  { label: '→ Right',  cls: 'score-badge score-badge-bias-right'  },
+}
+
+function accBadgeClass(score) {
+  if (score >= 70) return 'score-badge score-badge-green'
+  if (score >= 50) return 'score-badge score-badge-amber'
+  return 'score-badge score-badge-red'
 }
 
 export default function NewsCard({ article, index, onClick, navigate }) {
@@ -63,13 +69,16 @@ export default function NewsCard({ article, index, onClick, navigate }) {
 
       <div className="score-row">
         {index < 2 && <span className="trending-chip">↑ Trending</span>}
+        {scored && (
+          <span className={accBadgeClass(acc)}>✦ {acc}</span>
+        )}
+        {biasLabel && scored && (
+          <span className={biasLabel.cls}>{biasLabel.label}</span>
+        )}
         {article.category && (
           <div className="score-mini" style={{ color: 'var(--text3)' }}>
             {CATEGORY_EMOJI[article.category] || '📰'} {article.category}
           </div>
-        )}
-        {biasLabel && scored && (
-          <div className="score-mini" style={{ color: biasLabel.color }}>{biasLabel.label}</div>
         )}
         <div className="score-mini" style={{ marginLeft: 'auto', color: 'var(--text3)' }}>
           💬 {commentCount}
