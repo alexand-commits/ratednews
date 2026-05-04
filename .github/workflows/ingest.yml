@@ -19,7 +19,7 @@ jobs:
 
       - run: npm ci
 
-      - run: head -20 scripts/ingest.mjs
+      - run: git log --oneline -3 && echo "---" && head -10 scripts/ingest.mjs
 
       - run: node scripts/ingest.mjs
         env:
