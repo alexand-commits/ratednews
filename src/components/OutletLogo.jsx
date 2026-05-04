@@ -38,7 +38,7 @@ const OUTLET_DOMAINS = {
   'Time':                     'time.com',
   'USA Today':                'usatoday.com',
   'The Daily Beast':          'thedailybeast.com',
-  // International
+  // International — existing
   'Al Jazeera':               'aljazeera.com',
   'Deutsche Welle':           'dw.com',
   'France 24':                'france24.com',
@@ -46,6 +46,25 @@ const OUTLET_DOMAINS = {
   'CBC News':                 'cbc.ca',
   'South China Morning Post': 'scmp.com',
   'Times of India':           'timesofindia.com',
+  // International — new
+  'Euronews':                 'euronews.com',
+  'Le Monde':                 'lemonde.fr',
+  'Der Spiegel':              'spiegel.de',
+  'El País':                  'elpais.com',
+  'Irish Times':              'irishtimes.com',
+  'RTÉ News':                 'rte.ie',
+  'Haaretz':                  'haaretz.com',
+  'The Jerusalem Post':       'jpost.com',
+  'Arab News':                'arabnews.com',
+  'The Japan Times':          'japantimes.co.jp',
+  'NHK World':                'nhk.or.jp',
+  'Nikkei Asia':              'asia.nikkei.com',
+  'The Straits Times':        'straitstimes.com',
+  'Sydney Morning Herald':    'smh.com.au',
+  'Kyiv Independent':         'kyivindependent.com',
+  'The Moscow Times':         'themoscowtimes.com',
+  'The Globe and Mail':       'theglobeandmail.com',
+  'CNBC':                     'cnbc.com',
 }
 
 export default function OutletLogo({ name = '', size = 32, borderRadius = 8, style = {} }) {
