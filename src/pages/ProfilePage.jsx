@@ -152,34 +152,34 @@ const CATEGORY_EMOJIS = {
   Crime: '⚖️', Travel: '✈️', Education: '🎓', World: '🌍',
 }
 
-function TopicBreakdown({ ratings }) {
+function TopicBreakdown({ ratings, noMargin = false }) {
   const counts = {}
   ratings.forEach(r => {
     const cat = r.articles?.category
     if (cat) counts[cat] = (counts[cat] || 0) + 1
   })
-  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6)
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 4)
   if (entries.length === 0) return null
   const max = entries[0][1]
 
-  const COLORS = ['#D85A30', '#185FA5', '#639922', '#8B5CF6', '#F59E0B', '#EC4899']
+  const COLORS = ['#D85A30', '#185FA5', '#639922', '#8B5CF6']
 
   return (
-    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 20px', marginBottom: 16 }}>
+    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 20px', marginBottom: noMargin ? 0 : 16 }}>
       <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 12 }}>
-        Topics you follow
+        Topics rated
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {entries.map(([cat, count], i) => {
           const pct = Math.round((count / max) * 100)
           return (
-            <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 16, width: 24, textAlign: 'center', flexShrink: 0 }}>{CATEGORY_EMOJIS[cat] || '📰'}</span>
-              <span style={{ fontSize: 13, fontWeight: 500, minWidth: 100, flexShrink: 0 }}>{cat}</span>
-              <div style={{ flex: 1, height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
+            <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 15, width: 22, textAlign: 'center', flexShrink: 0 }}>{CATEGORY_EMOJIS[cat] || '📰'}</span>
+              <span style={{ fontSize: 12, fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat}</span>
+              <div style={{ width: 48, height: 5, background: 'var(--border)', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
                 <div style={{ height: '100%', width: `${pct}%`, background: COLORS[i % COLORS.length], borderRadius: 3, transition: 'width 0.5s ease' }} />
               </div>
-              <span style={{ fontSize: 11, color: 'var(--text3)', minWidth: 32, textAlign: 'right', flexShrink: 0 }}>{count}</span>
+              <span style={{ fontSize: 11, color: 'var(--text3)', width: 18, textAlign: 'right', flexShrink: 0 }}>{count}</span>
             </div>
           )
         })}
@@ -271,7 +271,7 @@ export default function ProfilePage({ user, navigate, goBack, followedOutletIds 
     const name = r.articles?.outlets?.name
     if (name) outletCounts[name] = (outletCounts[name] || 0) + 1
   })
-  const mediaDiet = Object.entries(outletCounts).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  const mediaDiet = Object.entries(outletCounts).sort((a, b) => b[1] - a[1]).slice(0, 4)
 
   function RatingBadges({ accuracy, bias, headline }) {
     return (
@@ -384,27 +384,31 @@ export default function ProfilePage({ user, navigate, goBack, followedOutletIds 
           <>
             <ActivityChart ratings={articleRatings} outletRatings={outletRatings} comments={comments} />
             <BiasFingerprint ratings={articleRatings} />
-            <TopicBreakdown ratings={articleRatings} />
 
-            {/* Media diet */}
-            {mediaDiet.length > 0 && (
-              <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 20px', marginBottom: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 12 }}>Your media diet</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {mediaDiet.map(([name, count]) => {
-                    const pct = Math.round((count / articleRatings.length) * 100)
-                    return (
-                      <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <OutletLogo name={name} size={26} borderRadius={6} />
-                        <span style={{ fontSize: 13, fontWeight: 500, minWidth: 110, flexShrink: 0 }}>{name}</span>
-                        <div style={{ flex: 1, height: 5, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${pct}%`, background: 'var(--coral)', borderRadius: 3, transition: 'width 0.5s ease' }} />
-                        </div>
-                        <span style={{ fontSize: 11, color: 'var(--text3)', minWidth: 40, textAlign: 'right', flexShrink: 0 }}>{count} rated</span>
-                      </div>
-                    )
-                  })}
-                </div>
+            {/* Topics rated + Media diet — side by side */}
+            {(articleRatings.length > 0) && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
+                <TopicBreakdown ratings={articleRatings} noMargin />
+                {mediaDiet.length > 0 && (
+                  <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 20px' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 12 }}>Media diet</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {mediaDiet.map(([name, count]) => {
+                        const pct = Math.round((count / articleRatings.length) * 100)
+                        return (
+                          <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <OutletLogo name={name} size={22} borderRadius={5} />
+                            <span style={{ fontSize: 12, fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                            <div style={{ width: 48, height: 5, background: 'var(--border)', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
+                              <div style={{ height: '100%', width: `${pct}%`, background: 'var(--coral)', borderRadius: 3, transition: 'width 0.5s ease' }} />
+                            </div>
+                            <span style={{ fontSize: 11, color: 'var(--text3)', width: 18, textAlign: 'right', flexShrink: 0 }}>{count}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </>

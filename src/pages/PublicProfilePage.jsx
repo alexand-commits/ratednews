@@ -81,7 +81,7 @@ function TopicBreakdown({ ratings }) {
     const cat = r.articles?.category
     if (cat) counts[cat] = (counts[cat] || 0) + 1
   })
-  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 6)
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 4)
   if (entries.length === 0) return null
   const max = entries[0][1]
   const COLORS = ['#D85A30', '#185FA5', '#639922', '#8B5CF6', '#F59E0B', '#EC4899']
@@ -89,7 +89,7 @@ function TopicBreakdown({ ratings }) {
   return (
     <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 20px', marginBottom: 16 }}>
       <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 12 }}>
-        Topics they follow
+        Topics rated
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         {entries.map(([cat, count], i) => {
