@@ -54,7 +54,7 @@ const SCORES = [
     title: 'Community Score',
     range: '1 – 5 stars',
     color: 'var(--amber)',
-    desc: 'The average star rating given by RatedNews readers. Community scores reflect reader perception and may differ from the AI score — both perspectives are shown.',
+    desc: 'The average star rating given by RatedNews readers. A single early rating carries limited weight — influence grows as more votes arrive, reaching full weight at 20+ ratings. This protects outlets from being unfairly boosted or buried by a handful of votes.',
     bands: [],
   },
 ]
@@ -80,10 +80,10 @@ export default function AboutPage({ navigate, goBack }) {
           <div className="section-label" style={{ marginBottom: 12 }}>The process</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
-              { icon: '📡', step: '1. Ingestion', desc: 'Articles are pulled from RSS feeds across 13+ major news outlets daily.' },
-              { icon: '🤖', step: '2. AI analysis', desc: 'Each article is analysed by Claude (Anthropic\'s AI) for accuracy, bias direction, partisan intensity, headline fairness, and category.' },
-              { icon: '👥', step: '3. Community rating', desc: 'Readers can rate articles with star ratings and vote on accuracy, bias, and headline quality.' },
-              { icon: '📊', step: '4. Outlet scoring', desc: 'Outlet-level scores are aggregated from all their articles, giving you a long-term credibility picture.' },
+              { icon: '📡', step: '1. Ingestion', desc: 'Articles are pulled hourly from RSS feeds across 21 major news outlets spanning the US, UK and international press.' },
+              { icon: '🤖', step: '2. AI analysis', desc: 'Each article is analysed by Claude (Anthropic\'s AI) for accuracy, partisan intensity, political lean, headline fairness, and topic category.' },
+              { icon: '👥', step: '3. Community rating', desc: 'Readers can rate articles with 1–5 stars and vote on accuracy, bias, and headline quality. Outlets can also be rated directly.' },
+              { icon: '📊', step: '4. Outlet scoring', desc: 'Outlet trust scores are recalculated every hour from all scored articles. The weight of community votes grows as more ratings arrive — protecting against early manipulation.' },
             ].map(s => (
               <div key={s.step} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
                 <span style={{ fontSize: 20, flexShrink: 0 }}>{s.icon}</span>
@@ -94,6 +94,42 @@ export default function AboutPage({ navigate, goBack }) {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* Trust score weighting */}
+        <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px 24px', marginBottom: 24 }}>
+          <div className="section-label" style={{ marginBottom: 4 }}>How the trust score is weighted</div>
+          <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 16 }}>
+            An outlet's overall trust score is a weighted blend of AI analysis, community ratings, and an editorial baseline. The community's influence grows gradually as more votes arrive — this prevents a small number of early votes from skewing the score.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {[
+              { votes: 'No community votes', ai: 70, editorial: 30, community: 0,  tag: 'AI-led' },
+              { votes: '1–4 votes',          ai: 50, editorial: 30, community: 20, tag: 'Early' },
+              { votes: '5–19 votes',         ai: 40, editorial: 25, community: 35, tag: 'Growing' },
+              { votes: '20+ votes',          ai: 35, editorial: 25, community: 40, tag: 'Full weight' },
+            ].map(t => (
+              <div key={t.votes} style={{ background: 'var(--bg)', borderRadius: 8, padding: '10px 14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>{t.votes}</span>
+                  <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--border)', padding: '1px 8px', borderRadius: 20 }}>{t.tag}</span>
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <div title={`AI ${t.ai}%`} style={{ height: 6, width: `${t.ai}%`, background: 'var(--blue, #3b82f6)', borderRadius: 3 }} />
+                  <div title={`Editorial ${t.editorial}%`} style={{ height: 6, width: `${t.editorial}%`, background: 'var(--green)', borderRadius: 3 }} />
+                  {t.community > 0 && <div title={`Community ${t.community}%`} style={{ height: 6, width: `${t.community}%`, background: 'var(--coral)', borderRadius: 3 }} />}
+                </div>
+                <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 10, color: 'var(--text3)' }}>
+                  <span style={{ color: 'var(--blue, #3b82f6)' }}>■ AI {t.ai}%</span>
+                  <span style={{ color: 'var(--green)' }}>■ Editorial {t.editorial}%</span>
+                  {t.community > 0 && <span style={{ color: 'var(--coral)' }}>■ Community {t.community}%</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: 12, lineHeight: 1.5 }}>
+            The editorial baseline is a neutral 50/100 applied equally to all outlets. It will be replaced by independent editorial reviews as the platform grows.
+          </p>
         </div>
 
         {/* Score breakdowns */}
