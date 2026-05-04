@@ -66,7 +66,7 @@ export default function AuthModal({ onClose, showToast }) {
               <input
                 type="email"
                 className="compose-input"
-                style={{ width: '100%', padding: '10px 14px', fontSize: 13 }}
+                style={{ width: '100%', padding: '10px 14px' }}
                 placeholder="you@example.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -78,7 +78,7 @@ export default function AuthModal({ onClose, showToast }) {
               <input
                 type="password"
                 className="compose-input"
-                style={{ width: '100%', padding: '10px 14px', fontSize: 13 }}
+                style={{ width: '100%', padding: '10px 14px' }}
                 placeholder={tab === 'signup' ? 'At least 6 characters' : '••••••••'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
