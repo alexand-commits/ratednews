@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800">
+  <!-- Dark background -->
+  <rect width="800" height="800" fill="#1A1917"/>
+
+  <!-- Coral top bar -->
+  <rect x="0" y="0" width="800" height="10" fill="#D85A30"/>
+
+  <!-- Wordmark -->
+  <text x="400" y="380" font-family="Georgia, serif" font-size="120" font-weight="700" fill="white" text-anchor="middle">Rated</text>
+  <text x="400" y="500" font-family="Georgia, serif" font-size="120" font-weight="700" fill="#D85A30" text-anchor="middle">News</text>
+
+  <!-- Tagline -->
+  <text x="400" y="570" font-family="system-ui, sans-serif" font-size="26" fill="#6B6760" text-anchor="middle">Trust the source</text>
+
+  <!-- Coral bottom bar -->
+  <rect x="0" y="790" width="800" height="10" fill="#D85A30"/>
+</svg>

@@ -111,7 +111,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, showToas
     if (!body) return
     const { data, error } = await db
       .from('comments')
-      .insert({ article_id: articleId, body, upvotes: 0, downvotes: 0, ...(user ? { user_id: user.id } : {}) })
+      .insert({ article_id: articleId, body, upvotes: 0, downvotes: 0, user_id: user.id })
       .select()
     if (error) { showToast('Could not post comment'); return }
     setCommentInput('')
