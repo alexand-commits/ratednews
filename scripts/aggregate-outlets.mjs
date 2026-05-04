@@ -26,7 +26,7 @@ const SUPABASE_URL     = process.env.VITE_SUPABASE_URL
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const MIN_ARTICLES     = 1
 const EDITORIAL        = 50  // neutral baseline
-const LOOKBACK_DAYS    = 7   // only score articles from the last 7 days
+const LOOKBACK_DAYS    = 30  // rolling 30-day window for outlet score calculation
 
 if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
   console.error('❌  Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env')
@@ -76,14 +76,30 @@ async function run() {
 
   const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
+  // Paginate articles to avoid Supabase's 1000-row default limit
+  async function fetchAllArticles() {
+    const PAGE = 1000
+    let all = [], from = 0
+    while (true) {
+      const { data, error } = await supabase
+        .from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction')
+        .not('accuracy_score', 'is', null)
+        .gte('published_at', since)
+        .range(from, from + PAGE - 1)
+      if (error) return { data: null, error }
+      all = all.concat(data || [])
+      if (!data || data.length < PAGE) break
+      from += PAGE
+    }
+    return { data: all, error: null }
+  }
+
   const [
     { data: articles,  error: artErr  },
     { data: outlets,   error: outErr  },
     { data: ratings,   error: ratErr  },
   ] = await Promise.all([
-    supabase.from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction')
-      .not('accuracy_score', 'is', null)
-      .gte('published_at', since),
+    fetchAllArticles(),
     supabase.from('outlets').select('id, name'),
     supabase.from('outlet_ratings').select('outlet_id, overall_stars'),
   ])
