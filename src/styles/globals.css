@@ -294,6 +294,16 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     z-index: 100;
     padding-bottom: env(safe-area-inset-bottom);
   }
+  /* Fill the gap below the nav when the browser chrome appears */
+  .bottom-nav::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    height: 100vh;
+    background: var(--surface);
+    pointer-events: none;
+  }
   .bottom-nav-item {
     flex: 1;
     display: flex;
@@ -313,7 +323,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   .bottom-nav-icon { font-size: 20px; line-height: 1; }
   .bottom-nav-label { font-size: 10px; font-weight: 500; }
   /* Push page content up so it's not hidden behind the nav */
-  .page-content { padding-bottom: 70px; }
+  .page-content { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
 }
 
 /* NOTIFICATION */
