@@ -8,8 +8,8 @@ export default function Outlets() {
   return (
     <>
       <Head>
-        <title>News Outlets — RatedNews</title>
-        <meta name="description" content="Browse all tracked news outlets on RatedNews. See AI-powered bias ratings, accuracy scores, and headline fairness for 50+ outlets including BBC, CNN, Fox News and more." />
+        <title>News Outlet Bias Ratings — BBC, CNN, Fox News & More — RatedNews</title>
+        <meta name="description" content="Browse bias ratings and accuracy scores for 50+ major news outlets including BBC, CNN, Fox News, The Guardian and Wall Street Journal. See which outlets report fairly and which lean left or right." />
         <link rel="canonical" href="https://ratednews.com/outlets" />
       </Head>
       <OutletsListPage

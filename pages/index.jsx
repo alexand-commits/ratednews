@@ -72,11 +72,11 @@ export default function Feed({ initialArticles, initialCount }) {
   return (
     <>
       <Head>
-        <title>RatedNews — Know the bias before you read the story</title>
-        <meta name="description" content="AI-powered media bias and accuracy ratings for 50+ news outlets including BBC, CNN, Fox News and The Guardian. Every article scored hourly for accuracy, bias direction, and headline fairness." />
+        <title>RatedNews — Trust the source, not just the story</title>
+        <meta name="description" content="AI-powered bias and accuracy ratings for 50+ news outlets including BBC, CNN, Fox News and The Guardian. Every article scored for accuracy, political bias, and headline fairness — updated hourly." />
         <link rel="canonical" href="https://ratednews.com/" />
-        <meta property="og:title"       content="RatedNews — Know the bias before you read the story" />
-        <meta property="og:description" content="AI-powered media bias and accuracy ratings for 50+ news outlets. Updated hourly." />
+        <meta property="og:title"       content="RatedNews — Trust the source, not just the story" />
+        <meta property="og:description" content="AI-powered bias and accuracy ratings for 50+ news outlets. Updated hourly." />
         <meta property="og:url"         content="https://ratednews.com/" />
         <meta property="og:type"        content="website" />
       </Head>

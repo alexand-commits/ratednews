@@ -8,8 +8,8 @@ export default function Categories() {
   return (
     <>
       <Head>
-        <title>Browse by Category — RatedNews</title>
-        <meta name="description" content="Browse news by category on RatedNews — Politics, Business, Tech, Sport, Health, Environment and more. Every story rated for bias and accuracy." />
+        <title>Rated News by Topic — Politics, Business, Tech & More — RatedNews</title>
+        <meta name="description" content="Browse rated news stories by topic — Politics, Business, Tech, Health, Sport, Environment and more. Every article scored for bias and accuracy across 50+ outlets." />
         <link rel="canonical" href="https://ratednews.com/categories" />
       </Head>
       <CategoryPage navigate={navigate} goBack={goBack} />

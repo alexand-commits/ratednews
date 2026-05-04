@@ -8,8 +8,8 @@ export default function Rankings() {
   return (
     <>
       <Head>
-        <title>Outlet Rankings — RatedNews</title>
-        <meta name="description" content="See how news outlets rank for accuracy, bias, and headline fairness. AI-powered rankings updated hourly across 50+ UK, US, and international outlets." />
+        <title>News Outlet Bias & Accuracy Rankings — RatedNews</title>
+        <meta name="description" content="Which news outlets are most accurate and least biased? RatedNews ranks 50+ UK, US and international outlets by accuracy score, political bias, and headline fairness — updated hourly." />
         <link rel="canonical" href="https://ratednews.com/rankings" />
       </Head>
       <RankingsPage
