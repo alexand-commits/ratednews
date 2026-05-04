@@ -196,6 +196,10 @@ export default function ProfilePage({ user, navigate, goBack, followedOutletIds 
   const [loading, setLoading]               = useState(true)
   const [tab, setTab]                       = useState('ratings')
   const [profile, setProfile]               = useState(null)
+  const [editingName, setEditingName]       = useState(false)
+  const [nameInput, setNameInput]           = useState('')
+  const [nameSaving, setNameSaving]         = useState(false)
+  const [nameError, setNameError]           = useState('')
 
   const followedOutlets = allOutlets.filter(o => followedOutletIds.has(o.id))
 
@@ -223,6 +227,30 @@ export default function ProfilePage({ user, navigate, goBack, followedOutletIds 
       setLoading(false)
     })
   }, [user])
+
+  async function saveUsername() {
+    const val = nameInput.trim()
+    if (!val) { setNameError('Username cannot be empty'); return }
+    if (val.length < 3) { setNameError('At least 3 characters'); return }
+    if (val.length > 20) { setNameError('Max 20 characters'); return }
+    if (!/^[a-zA-Z0-9_]+$/.test(val)) { setNameError('Letters, numbers and underscores only'); return }
+    setNameSaving(true)
+    setNameError('')
+    // Uniqueness check
+    const { data: existing } = await db
+      .from('profiles')
+      .select('user_id')
+      .eq('username', val)
+      .neq('user_id', user.id)
+      .maybeSingle()
+    if (existing) { setNameError('Username already taken'); setNameSaving(false); return }
+    const { error } = await db.from('profiles').update({ username: val }).eq('user_id', user.id)
+    if (error) { setNameError('Could not save — try again'); setNameSaving(false); return }
+    setProfile(p => ({ ...p, username: val }))
+    setEditingName(false)
+    setNameSaving(false)
+    showToast('Username updated!')
+  }
 
   if (!user) { navigate('feed'); return null }
 
@@ -271,7 +299,47 @@ export default function ProfilePage({ user, navigate, goBack, followedOutletIds 
               {initials}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{displayName}</div>
+              {editingName ? (
+                <div style={{ marginBottom: 6 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
+                    <input
+                      autoFocus
+                      value={nameInput}
+                      onChange={e => { setNameInput(e.target.value); setNameError('') }}
+                      onKeyDown={e => { if (e.key === 'Enter') saveUsername(); if (e.key === 'Escape') setEditingName(false) }}
+                      placeholder="Your username"
+                      maxLength={20}
+                      style={{ fontSize: 15, fontWeight: 600, padding: '4px 10px', borderRadius: 8, border: `1.5px solid ${nameError ? 'var(--red)' : 'var(--coral)'}`, background: 'var(--bg)', color: 'var(--text)', outline: 'none', width: 160 }}
+                    />
+                    <button
+                      onClick={saveUsername}
+                      disabled={nameSaving}
+                      style={{ fontSize: 12, padding: '4px 12px', borderRadius: 8, border: 'none', background: 'var(--coral)', color: '#fff', cursor: 'pointer', opacity: nameSaving ? 0.6 : 1 }}
+                    >
+                      {nameSaving ? '…' : 'Save'}
+                    </button>
+                    <button
+                      onClick={() => { setEditingName(false); setNameError('') }}
+                      style={{ fontSize: 12, padding: '4px 8px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text2)', cursor: 'pointer' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {nameError && <div style={{ fontSize: 11, color: 'var(--red)', marginLeft: 2 }}>{nameError}</div>}
+                  <div style={{ fontSize: 10, color: 'var(--text3)', marginLeft: 2 }}>3–20 chars · letters, numbers, underscores</div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                  <div style={{ fontSize: 16, fontWeight: 600 }}>{displayName}</div>
+                  <button
+                    onClick={() => { setNameInput(displayName); setEditingName(true); setNameError('') }}
+                    title="Edit username"
+                    style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, border: '1px solid var(--border)', background: 'none', color: 'var(--text3)', cursor: 'pointer', lineHeight: 1.4 }}
+                  >
+                    Edit
+                  </button>
+                </div>
+              )}
               <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 9px', borderRadius: 20, background: 'var(--bg)', border: `1.5px solid ${trust.color}`, color: trust.color, whiteSpace: 'nowrap' }}>
                 {trust.emoji} {trust.label}
               </span>
