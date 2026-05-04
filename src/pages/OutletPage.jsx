@@ -5,7 +5,7 @@ import OutletLogo from '../components/OutletLogo'
 import OutletRatingModal from '../components/OutletRatingModal'
 import InfoTip from '../components/InfoTip'
 
-export default function OutletPage({ outletId, allOutlets, navigate, prevPage, showToast, user, onLoginClick, followedOutletIds = new Set(), toggleFollow }) {
+export default function OutletPage({ outletId, allOutlets, navigate, goBack, showToast, user, onLoginClick, followedOutletIds = new Set(), toggleFollow }) {
   const [articles, setArticles] = useState([])
   const [activeTab, setActiveTab] = useState('overview')
   const [outletRatings, setOutletRatings] = useState([])
@@ -79,8 +79,6 @@ export default function OutletPage({ outletId, allOutlets, navigate, prevPage, s
   const biasPos = Math.max(0, Math.min(100, 50 + ((outlet.bias_score || 50) - 50)))
   const similar = allOutlets.filter(o => o.id !== outletId && o.country === outlet?.country).slice(0, 4)
 
-  const backLabel = prevPage === 'article' ? '← Back to article' : '← All outlets'
-  const backDest  = prevPage === 'article' ? 'article' : 'outlets'
 
   // AI aggregate scores derived from fetched articles
   const scoredArticles = articles.filter(a => a.accuracy_score > 0)
@@ -183,7 +181,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, prevPage, s
   return (
     <div className="page-content">
       <div className="container">
-        <button className="back-btn" onClick={() => navigate(backDest)}>{backLabel}</button>
+        <button className="back-btn" onClick={goBack}>← Back</button>
 
         <div className="outlet-hero">
           <OutletLogo name={outlet.name} size={64} borderRadius={14} />

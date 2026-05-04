@@ -20,7 +20,7 @@ const BIAS_LABELS = {
   right:  '→ Right',
 }
 
-export default function RankingsPage({ outlets, navigate }) {
+export default function RankingsPage({ outlets, navigate, goBack }) {
   const [tab, setTab]       = useState('credibility')
   const [region, setRegion] = useState('all')
 
@@ -40,7 +40,7 @@ export default function RankingsPage({ outlets, navigate }) {
   return (
     <div className="page-content">
       <div className="container" style={{ maxWidth: 800 }}>
-        <button className="back-btn" onClick={() => navigate('feed')}>← Back to feed</button>
+        <button className="back-btn" onClick={goBack}>← Back</button>
 
         <div style={{ marginBottom: 24 }}>
           <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 26, fontWeight: 700, marginBottom: 6 }}>

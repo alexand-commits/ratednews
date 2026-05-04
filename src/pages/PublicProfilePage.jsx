@@ -143,7 +143,7 @@ function MediaDiet({ ratings }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function PublicProfilePage({ userId, navigate, showToast }) {
+export default function PublicProfilePage({ userId, navigate, goBack, showToast }) {
   const [profile, setProfile]         = useState(null)
   const [articleRatings, setArticleRatings] = useState([])
   const [comments, setComments]       = useState([])
@@ -180,7 +180,7 @@ export default function PublicProfilePage({ userId, navigate, showToast }) {
     return (
       <div className="page-content">
         <div className="container" style={{ maxWidth: 700 }}>
-          <button className="back-btn" onClick={() => navigate('feed')}>← Back</button>
+          <button className="back-btn" onClick={goBack}>← Back</button>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div className="skeleton" style={{ height: 120, borderRadius: 12 }} />
             <div className="skeleton" style={{ height: 80, borderRadius: 12 }} />
@@ -195,7 +195,7 @@ export default function PublicProfilePage({ userId, navigate, showToast }) {
     return (
       <div className="page-content">
         <div className="container" style={{ maxWidth: 700 }}>
-          <button className="back-btn" onClick={() => navigate('feed')}>← Back</button>
+          <button className="back-btn" onClick={goBack}>← Back</button>
           <div className="empty-state">
             <h3>Profile not found</h3>
             <p>This user hasn't set up a public profile yet.</p>
@@ -231,7 +231,7 @@ export default function PublicProfilePage({ userId, navigate, showToast }) {
   return (
     <div className="page-content">
       <div className="container" style={{ maxWidth: 700 }}>
-        <button className="back-btn" onClick={() => navigate('feed')}>← Back</button>
+        <button className="back-btn" onClick={goBack}>← Back</button>
 
         {/* Hero */}
         <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>

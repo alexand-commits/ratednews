@@ -189,18 +189,20 @@ function TopicBreakdown({ ratings }) {
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-export default function ProfilePage({ user, navigate, followedOutletIds = new Set(), allOutlets = [], toggleFollow }) {
+export default function ProfilePage({ user, navigate, goBack, followedOutletIds = new Set(), allOutlets = [], toggleFollow }) {
   const [articleRatings, setArticleRatings] = useState([])
   const [outletRatings, setOutletRatings]   = useState([])
   const [comments, setComments]             = useState([])
   const [loading, setLoading]               = useState(true)
   const [tab, setTab]                       = useState('ratings')
+  const [profile, setProfile]               = useState(null)
 
   const followedOutlets = allOutlets.filter(o => followedOutletIds.has(o.id))
 
   useEffect(() => {
     if (!user) return
     Promise.all([
+      db.from('profiles').select('username').eq('user_id', user.id).maybeSingle(),
       db.from('ratings')
         .select('*, articles(id, title, category, bias_direction, outlets(name))')
         .eq('user_id', user.id)
@@ -213,7 +215,8 @@ export default function ProfilePage({ user, navigate, followedOutletIds = new Se
         .select('*, articles(id, title), outlets(id, name)')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
-    ]).then(([{ data: ar }, { data: or }, { data: co }]) => {
+    ]).then(([{ data: prof }, { data: ar }, { data: or }, { data: co }]) => {
+      setProfile(prof)
       setArticleRatings(ar || [])
       setOutletRatings(or || [])
       setComments(co || [])
@@ -223,7 +226,7 @@ export default function ProfilePage({ user, navigate, followedOutletIds = new Se
 
   if (!user) { navigate('feed'); return null }
 
-  const displayName  = user.email ? user.email.split('@')[0] : 'User'
+  const displayName  = profile?.username || 'Reader'
   const initials     = displayName.slice(0, 2).toUpperCase()
   const memberSince  = new Date(user.created_at).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
   const totalRatings = articleRatings.length + outletRatings.length
@@ -259,7 +262,7 @@ export default function ProfilePage({ user, navigate, followedOutletIds = new Se
   return (
     <div className="page-content">
       <div className="container" style={{ maxWidth: 700 }}>
-        <button className="back-btn" onClick={() => navigate('feed')}>← Back to feed</button>
+        <button className="back-btn" onClick={goBack}>← Back</button>
 
         {/* Hero card */}
         <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>

@@ -59,11 +59,11 @@ const SCORES = [
   },
 ]
 
-export default function AboutPage({ navigate }) {
+export default function AboutPage({ navigate, goBack }) {
   return (
     <div className="page-content">
       <div className="container" style={{ maxWidth: 720 }}>
-        <button className="back-btn" onClick={() => navigate('feed')}>← Back to feed</button>
+        <button className="back-btn" onClick={goBack}>← Back</button>
 
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 28, fontWeight: 700, marginBottom: 10 }}>

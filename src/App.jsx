@@ -16,7 +16,7 @@ import PublicProfilePage from './pages/PublicProfilePage'
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('feed')
-  const [prevPage, setPrevPage] = useState('feed')
+  const [pageHistory, setPageHistory] = useState([]) // stack of {page, articleId, outletId, userId, category}
   const [selectedArticleId, setSelectedArticleId] = useState(null)
   const [selectedOutletId, setSelectedOutletId] = useState(null)
   const [selectedUserId, setSelectedUserId] = useState(null)
@@ -123,13 +123,37 @@ export default function App() {
   }
 
   function navigate(page, opts = {}) {
-    setPrevPage(currentPage)
+    // Push current state onto history stack before navigating
+    setPageHistory(prev => [...prev, {
+      page: currentPage,
+      articleId: selectedArticleId,
+      outletId: selectedOutletId,
+      userId: selectedUserId,
+      category: selectedCategory,
+    }])
     if (opts.articleId !== undefined) setSelectedArticleId(opts.articleId)
     if (opts.outletId !== undefined) setSelectedOutletId(opts.outletId)
     if (opts.userId !== undefined) setSelectedUserId(opts.userId)
     if (opts.category !== undefined) setSelectedCategory(opts.category)
     else if (page === 'feed' && !opts.category) setSelectedCategory('all')
     setCurrentPage(page)
+    window.scrollTo(0, 0)
+  }
+
+  function goBack() {
+    if (pageHistory.length === 0) {
+      setCurrentPage('feed')
+      setSelectedCategory('all')
+      window.scrollTo(0, 0)
+      return
+    }
+    const prev = pageHistory[pageHistory.length - 1]
+    setPageHistory(h => h.slice(0, -1))
+    setSelectedArticleId(prev.articleId)
+    setSelectedOutletId(prev.outletId)
+    setSelectedUserId(prev.userId)
+    setSelectedCategory(prev.category || 'all')
+    setCurrentPage(prev.page)
     window.scrollTo(0, 0)
   }
 
@@ -165,16 +189,17 @@ export default function App() {
         <FeedPage articles={allArticles} outlets={allOutlets} loading={loading} navigate={navigate} showToast={showToast} initialCategory={selectedCategory} totalArticleCount={totalArticleCount} user={user} followedOutletIds={followedOutletIds} onLoginClick={() => setShowAuthModal(true)} />
       )}
       {currentPage === 'categories' && (
-        <CategoryPage articles={allArticles} navigate={navigate} />
+        <CategoryPage articles={allArticles} navigate={navigate} goBack={goBack} />
       )}
       {currentPage === 'about' && (
-        <AboutPage navigate={navigate} />
+        <AboutPage navigate={navigate} goBack={goBack} />
       )}
       {currentPage === 'article' && (
         <ArticlePage
           articleId={selectedArticleId}
           allArticles={allArticles}
           navigate={navigate}
+          goBack={goBack}
           showToast={showToast}
           refreshArticle={refreshArticle}
           user={user}
@@ -182,19 +207,19 @@ export default function App() {
         />
       )}
       {currentPage === 'outlet' && (
-        <OutletPage outletId={selectedOutletId} allOutlets={allOutlets} prevPage={prevPage} navigate={navigate} showToast={showToast} user={user} onLoginClick={() => setShowAuthModal(true)} followedOutletIds={followedOutletIds} toggleFollow={toggleFollow} />
+        <OutletPage outletId={selectedOutletId} allOutlets={allOutlets} goBack={goBack} navigate={navigate} showToast={showToast} user={user} onLoginClick={() => setShowAuthModal(true)} followedOutletIds={followedOutletIds} toggleFollow={toggleFollow} />
       )}
       {currentPage === 'outlets' && (
-        <OutletsListPage outlets={allOutlets} navigate={navigate} showToast={showToast} />
+        <OutletsListPage outlets={allOutlets} navigate={navigate} goBack={goBack} showToast={showToast} />
       )}
       {currentPage === 'rankings' && (
-        <RankingsPage outlets={allOutlets} navigate={navigate} showToast={showToast} />
+        <RankingsPage outlets={allOutlets} navigate={navigate} goBack={goBack} showToast={showToast} />
       )}
       {currentPage === 'profile' && (
-        <ProfilePage user={user} navigate={navigate} showToast={showToast} followedOutletIds={followedOutletIds} allOutlets={allOutlets} toggleFollow={toggleFollow} />
+        <ProfilePage user={user} navigate={navigate} goBack={goBack} showToast={showToast} followedOutletIds={followedOutletIds} allOutlets={allOutlets} toggleFollow={toggleFollow} />
       )}
       {currentPage === 'publicProfile' && (
-        <PublicProfilePage userId={selectedUserId} navigate={navigate} showToast={showToast} />
+        <PublicProfilePage userId={selectedUserId} navigate={navigate} goBack={goBack} showToast={showToast} />
       )}
 
       {showAuthModal && (

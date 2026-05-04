@@ -5,7 +5,7 @@ import OutletLogo from '../components/OutletLogo'
 import RatingModal from '../components/RatingModal'
 import InfoTip from '../components/InfoTip'
 
-export default function ArticlePage({ articleId, allArticles, navigate, showToast, refreshArticle, user, onLoginClick }) {
+export default function ArticlePage({ articleId, allArticles, navigate, goBack, showToast, refreshArticle, user, onLoginClick }) {
   const [comments, setComments] = useState([])
   const [commentInput, setCommentInput] = useState('')
   const [commentSort, setCommentSort] = useState('top')
@@ -299,7 +299,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, showToas
     <>
     <div className="page-content">
       <div className="container">
-        <button className="back-btn" onClick={() => navigate('feed')}>← Back to feed</button>
+        <button className="back-btn" onClick={goBack}>← Back</button>
 
         <div className="article-preview-card">
           <div className="article-outlet-row">
