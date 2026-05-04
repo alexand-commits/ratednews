@@ -129,6 +129,7 @@ export default function App() {
         toggleTheme={() => setIsDark(d => !d)}
         user={user}
         onLoginClick={() => setShowAuthModal(true)}
+        onSignOut={async () => { await db.auth.signOut(); showToast('Signed out'); navigate('feed') }}
       />
       <Toast message={toast.message} visible={toast.visible} />
 

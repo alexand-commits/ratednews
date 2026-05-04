@@ -21,7 +21,7 @@ function calcDaysActive(ratings, comments) {
   return days.size
 }
 
-export default function ProfilePage({ user, navigate, showToast }) {
+export default function ProfilePage({ user, navigate }) {
   const [articleRatings, setArticleRatings] = useState([])
   const [outletRatings, setOutletRatings]   = useState([])
   const [comments, setComments]             = useState([])
@@ -50,12 +50,6 @@ export default function ProfilePage({ user, navigate, showToast }) {
       setLoading(false)
     })
   }, [user])
-
-  async function handleSignOut() {
-    await db.auth.signOut()
-    showToast('Signed out')
-    navigate('feed')
-  }
 
   if (!user) { navigate('feed'); return null }
 
@@ -100,78 +94,50 @@ export default function ProfilePage({ user, navigate, showToast }) {
         <button className="back-btn" onClick={() => navigate('feed')}>← Back to feed</button>
 
         {/* Hero card */}
-        <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: 24, marginBottom: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 18, flexWrap: 'wrap' }}>
-            <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'var(--coral)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 700, flexShrink: 0 }}>
+        <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
+          {/* Top row: avatar + name + badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
+            <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--coral)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, flexShrink: 0 }}>
               {initials}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 2 }}>
-                <div style={{ fontSize: 18, fontWeight: 600 }}>{displayName}</div>
-                <span style={{ fontSize: 12, fontWeight: 600, padding: '2px 10px', borderRadius: 20, background: 'var(--bg)', border: `1.5px solid ${trust.color}`, color: trust.color }}>
-                  {trust.emoji} {trust.label}
-                </span>
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>Member since {memberSince}</div>
-
-              {/* Stats row */}
-              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 20, fontWeight: 700 }}>{articleRatings.length}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>Articles rated</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 20, fontWeight: 700 }}>{outletRatings.length}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>Outlets rated</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 20, fontWeight: 700 }}>{comments.length}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>Comments</div>
-                </div>
-                <div style={{ textAlign: 'center' }}>
-                  <div style={{ fontSize: 20, fontWeight: 700 }}>{daysActive}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)' }}>Days active</div>
-                </div>
-                {avgStars && (
-                  <div style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--amber)' }}>{avgStars}★</div>
-                    <div style={{ fontSize: 11, color: 'var(--text3)' }}>Avg rating</div>
-                  </div>
-                )}
-              </div>
-
-              {/* Trust progress bar */}
-              {trust.next && (
-                <div style={{ marginTop: 16 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>
-                    <span>{totalContrib} contributions</span>
-                    <span>{trust.nextAt - totalContrib} more to {trust.next}</span>
-                  </div>
-                  <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
-                    <div style={{
-                      height: '100%',
-                      width: `${Math.min(100, (totalContrib / trust.nextAt) * 100)}%`,
-                      background: trust.color,
-                      borderRadius: 2,
-                      transition: 'width 0.6s ease'
-                    }} />
-                  </div>
-                </div>
-              )}
-              {!trust.next && (
-                <div style={{ marginTop: 14, fontSize: 12, color: trust.color, fontWeight: 600 }}>
-                  🏅 Maximum trust level reached — thank you for contributing!
-                </div>
-              )}
+              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{displayName}</div>
+              <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 9px', borderRadius: 20, background: 'var(--bg)', border: `1.5px solid ${trust.color}`, color: trust.color, whiteSpace: 'nowrap' }}>
+                {trust.emoji} {trust.label}
+              </span>
             </div>
-            <button
-              className="btn-outline"
-              style={{ fontSize: 12, padding: '7px 14px', color: 'var(--red)', borderColor: 'var(--red)', flexShrink: 0 }}
-              onClick={handleSignOut}
-            >
-              Sign out
-            </button>
           </div>
+
+          {/* Stats grid — 2 cols on mobile, 4 on desktop */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 12, marginBottom: 16 }}>
+            {[
+              { value: articleRatings.length, label: 'Articles rated' },
+              { value: outletRatings.length,  label: 'Outlets rated'  },
+              { value: comments.length,        label: 'Comments'       },
+              { value: daysActive,             label: 'Days active'    },
+              ...(avgStars ? [{ value: `${avgStars}★`, label: 'Avg rating', color: 'var(--amber)' }] : []),
+            ].map(({ value, label, color }) => (
+              <div key={label} style={{ background: 'var(--bg)', borderRadius: 8, padding: '10px 8px', textAlign: 'center' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: color || 'var(--text)' }}>{value}</div>
+                <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 2 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Trust progress */}
+          {trust.next ? (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>
+                <span>{totalContrib} contributions</span>
+                <span>{trust.nextAt - totalContrib} more to reach <strong>{trust.next}</strong></span>
+              </div>
+              <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${Math.min(100, (totalContrib / trust.nextAt) * 100)}%`, background: trust.color, borderRadius: 2, transition: 'width 0.6s ease' }} />
+              </div>
+            </div>
+          ) : (
+            <div style={{ fontSize: 12, color: trust.color, fontWeight: 600 }}>🏅 Maximum trust level reached!</div>
+          )}
         </div>
 
         {/* Media diet */}
