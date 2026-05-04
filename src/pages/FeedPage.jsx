@@ -4,19 +4,21 @@ import Sidebar from '../components/Sidebar'
 import { timeAgo } from '../utils/helpers'
 
 const CATEGORIES = [
-  { value: 'all',           label: 'All'            },
-  { value: 'Politics',      label: '🏛 Politics'     },
-  { value: 'Business',      label: '📈 Business'     },
-  { value: 'Sport',         label: '⚽ Sport'         },
-  { value: 'Tech',          label: '💻 Tech'          },
-  { value: 'Science',       label: '🔬 Science'       },
-  { value: 'Health',        label: '🏥 Health'        },
-  { value: 'Environment',   label: '🌱 Environment'   },
-  { value: 'Entertainment', label: '🎬 Entertainment' },
-  { value: 'Crime',         label: '⚖️ Crime'         },
-  { value: 'Travel',        label: '✈️ Travel'        },
-  { value: 'Education',     label: '🎓 Education'     },
-  { value: 'World',         label: '🌍 World'         },
+  { value: 'all',            label: 'All'               },
+  { value: 'Politics',       label: '🏛 Politics'        },
+  { value: 'Business',       label: '📈 Business'        },
+  { value: 'Sport',          label: '⚽ Sport'            },
+  { value: 'Tech',           label: '💻 Tech'             },
+  { value: 'Science',        label: '🔬 Science'          },
+  { value: 'Health',         label: '🏥 Health'           },
+  { value: 'Environment',    label: '🌱 Environment'      },
+  { value: 'Entertainment',  label: '🎬 Entertainment'    },
+  { value: 'Crime',          label: '🔍 Crime'            },
+  { value: 'Travel',         label: '✈️ Travel'           },
+  { value: 'Education',      label: '🎓 Education'        },
+  { value: 'War & Conflict', label: '⚔️ War & Conflict'   },
+  { value: 'Culture',        label: '🎨 Culture'          },
+  { value: 'World',          label: '🌍 World'            },
 ]
 
 // Keyword fallback for articles not yet AI-categorised
@@ -30,9 +32,11 @@ function guessCategory(article) {
   if (/\b(climate|environment|emission|carbon|pollution|wildlife|species|ocean|fossil fuel|renewable|net zero)\b/.test(text)) return 'Environment'
   if (/\b(research|study|space|nasa|science|planet|asteroid|discovery|experiment|physics|biology)\b/.test(text)) return 'Science'
   if (/\b(film|movie|music|celebrity|award|oscar|bafta|tv show|streaming|festival|album|actor|actress)\b/.test(text)) return 'Entertainment'
-  if (/\b(crime|murder|arrest|police|court|sentence|prison|fraud|theft|attack|shooting|trial)\b/.test(text)) return 'Crime'
+  if (/\b(war|conflict|military|troops|missile|bomb|battle|invasion|ceasefire|soldier|drone|strike|frontline|combat|siege|nato|warfare|armed forces)\b/.test(text)) return 'War & Conflict'
+  if (/\b(crime|murder|arrest|police|court|sentence|prison|fraud|theft|shooting|trial)\b/.test(text)) return 'Crime'
   if (/\b(travel|tourism|flight|hotel|visa|destination|holiday|airport|airline)\b/.test(text)) return 'Travel'
   if (/\b(school|university|student|teacher|education|exam|degree|tuition|college|campus)\b/.test(text)) return 'Education'
+  if (/\b(art|culture|museum|gallery|theatre|theater|literature|book|exhibition|heritage|architecture|fashion|design|cuisine|tradition)\b/.test(text)) return 'Culture'
   return 'World'
 }
 
@@ -60,9 +64,9 @@ function getArticleRegion(article) {
   return 'int'
 }
 
-export default function FeedPage({ articles, outlets, loading, navigate, initialCategory = 'all', totalArticleCount, user, followedOutletIds = new Set(), onLoginClick, loadMoreArticles, hasMoreArticles, loadingMore }) {
+export default function FeedPage({ articles, outlets, loading, navigate, initialCategory = 'all', initialRegion = 'all', totalArticleCount, user, followedOutletIds = new Set(), onLoginClick, loadMoreArticles, hasMoreArticles, loadingMore }) {
   const [category, setCategory] = useState(initialCategory)
-  const [region, setRegion]     = useState('all')
+  const [region, setRegion]     = useState(initialRegion)
   const [search, setSearch]     = useState('')
   const [sort, setSort]         = useState('latest')
   const [feedTab, setFeedTab]   = useState('all') // 'all' | 'following'

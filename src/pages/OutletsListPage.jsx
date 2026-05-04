@@ -63,6 +63,7 @@ export default function OutletsListPage({ outlets, navigate, goBack }) {
 
         {/* Header */}
         <div style={{ marginBottom: 20 }}>
+          <button className="back-btn" onClick={goBack}>← Back</button>
           <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
             News Outlets
           </h1>

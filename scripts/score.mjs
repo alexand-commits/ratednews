@@ -43,7 +43,7 @@ const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY })
 const BATCH_SIZE = 20
 
 // ── System prompt (cached — never changes between articles) ─────────────────
-const CATEGORIES = ['Politics', 'Business', 'Sport', 'Tech', 'Science', 'Health', 'Environment', 'Entertainment', 'Crime', 'Travel', 'Education', 'World']
+const CATEGORIES = ['Politics', 'Business', 'Sport', 'Tech', 'Science', 'Health', 'Environment', 'Entertainment', 'Crime', 'Travel', 'Education', 'War & Conflict', 'Culture', 'World']
 
 const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article you receive, return a JSON object with these exact fields:
 
@@ -68,8 +68,10 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
   "misleading" = headline implies something not supported by the summary.
   "clickbait" = headline uses emotional bait, exaggeration, or withholds key info to drive clicks.
 
-- "category": string, one of: "Politics", "Business", "Sport", "Tech", "Science", "Health", "Environment", "Entertainment", "Crime", "Travel", "Education", "World".
+- "category": string, one of: "Politics", "Business", "Sport", "Tech", "Science", "Health", "Environment", "Entertainment", "Crime", "Travel", "Education", "War & Conflict", "Culture", "World".
   Pick the single best-fitting category for this article's subject matter.
+  Use "War & Conflict" for stories about armed conflict, military operations, wars, or geopolitical tensions involving military force.
+  Use "Culture" for arts, music, film, fashion, food, heritage, and lifestyle stories not covered by Entertainment.
   Use "World" for international news or stories that don't fit another category.
 
 - "ai_summary": string. A 1–2 sentence neutral summary of what the article is about.

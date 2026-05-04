@@ -16,11 +16,12 @@ import PublicProfilePage from './pages/PublicProfilePage'
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('feed')
-  const [pageHistory, setPageHistory] = useState([]) // stack of {page, articleId, outletId, userId, category}
+  const [pageHistory, setPageHistory] = useState([]) // stack of {page, articleId, outletId, userId, category, region}
   const [selectedArticleId, setSelectedArticleId] = useState(null)
   const [selectedOutletId, setSelectedOutletId] = useState(null)
   const [selectedUserId, setSelectedUserId] = useState(null)
   const [selectedCategory, setSelectedCategory] = useState('all')
+  const [selectedRegion, setSelectedRegion] = useState('all')
   const [allArticles, setAllArticles] = useState([])
   const [allOutlets, setAllOutlets] = useState([])
   const [totalArticleCount, setTotalArticleCount] = useState(null)
@@ -154,12 +155,15 @@ export default function App() {
       outletId: selectedOutletId,
       userId: selectedUserId,
       category: selectedCategory,
+      region: selectedRegion,
     }])
     if (opts.articleId !== undefined) setSelectedArticleId(opts.articleId)
     if (opts.outletId !== undefined) setSelectedOutletId(opts.outletId)
     if (opts.userId !== undefined) setSelectedUserId(opts.userId)
     if (opts.category !== undefined) setSelectedCategory(opts.category)
     else if (page === 'feed' && !opts.category) setSelectedCategory('all')
+    if (opts.region !== undefined) setSelectedRegion(opts.region)
+    else if (page === 'feed' && !opts.region) setSelectedRegion('all')
     setCurrentPage(page)
     window.scrollTo(0, 0)
   }
@@ -168,6 +172,7 @@ export default function App() {
     if (pageHistory.length === 0) {
       setCurrentPage('feed')
       setSelectedCategory('all')
+      setSelectedRegion('all')
       window.scrollTo(0, 0)
       return
     }
@@ -177,6 +182,7 @@ export default function App() {
     setSelectedOutletId(prev.outletId)
     setSelectedUserId(prev.userId)
     setSelectedCategory(prev.category || 'all')
+    setSelectedRegion(prev.region || 'all')
     setCurrentPage(prev.page)
     window.scrollTo(0, 0)
   }
@@ -210,7 +216,7 @@ export default function App() {
       <Toast message={toast.message} visible={toast.visible} />
 
       {currentPage === 'feed' && (
-        <FeedPage articles={allArticles} outlets={allOutlets} loading={loading} navigate={navigate} showToast={showToast} initialCategory={selectedCategory} totalArticleCount={totalArticleCount} user={user} followedOutletIds={followedOutletIds} onLoginClick={() => setShowAuthModal(true)} loadMoreArticles={loadMoreArticles} hasMoreArticles={hasMoreArticles} loadingMore={loadingMore} />
+        <FeedPage articles={allArticles} outlets={allOutlets} loading={loading} navigate={navigate} showToast={showToast} initialCategory={selectedCategory} initialRegion={selectedRegion} totalArticleCount={totalArticleCount} user={user} followedOutletIds={followedOutletIds} onLoginClick={() => setShowAuthModal(true)} loadMoreArticles={loadMoreArticles} hasMoreArticles={hasMoreArticles} loadingMore={loadingMore} />
       )}
       {currentPage === 'categories' && (
         <CategoryPage articles={allArticles} navigate={navigate} goBack={goBack} />
