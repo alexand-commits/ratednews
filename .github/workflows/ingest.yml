@@ -19,8 +19,6 @@ jobs:
 
       - run: npm ci
 
-      - run: git log --oneline -3 && echo "---" && head -10 scripts/ingest.mjs
-
       - run: node scripts/ingest.mjs
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
