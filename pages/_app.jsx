@@ -24,6 +24,17 @@ export default function App({ Component, pageProps }) {
   const [savedArticleIds,  setSavedArticleIds]  = useState(new Set())
   const [allOutlets,       setAllOutlets]       = useState([])
 
+  // ── Google Analytics page-view tracking ─────────────────────────────────
+  useEffect(() => {
+    const handleRouteChange = (url) => {
+      if (typeof window.gtag === 'function') {
+        window.gtag('config', 'G-FK738TW9V4', { page_path: url })
+      }
+    }
+    router.events.on('routeChangeComplete', handleRouteChange)
+    return () => router.events.off('routeChangeComplete', handleRouteChange)
+  }, [router.events])
+
   // ── Theme ───────────────────────────────────────────────────────────────
   useEffect(() => {
     const stored = localStorage.getItem('theme')
