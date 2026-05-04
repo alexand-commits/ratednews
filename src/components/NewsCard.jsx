@@ -50,7 +50,6 @@ export default function NewsCard({ article, index, onClick, navigate }) {
             {outlet.name || 'Unknown'}
           </span>
           <span className="ts">{timeAgo(article.published_at)}</span>
-          {index < 2 && <span className="trending-chip">↑ Trending</span>}
         </div>
 
         <div className="news-headline">{article.title || 'Untitled'}</div>
@@ -72,6 +71,7 @@ export default function NewsCard({ article, index, onClick, navigate }) {
         }
 
         <div className="score-row">
+          {index < 2 && <span className="trending-chip">↑ Trending</span>}
           {article.category && (
             <div className="score-mini" style={{ color: 'var(--text3)' }}>
               {CATEGORY_EMOJI[article.category] || '📰'} {article.category}
