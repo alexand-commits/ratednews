@@ -27,6 +27,7 @@ export default function App() {
   const [isDark, setIsDark] = useState(() => localStorage.getItem('theme') === 'dark')
   const [session, setSession] = useState(null)
   const [showAuthModal, setShowAuthModal] = useState(false)
+  const [followedOutletIds, setFollowedOutletIds] = useState(new Set())
 
   // Theme
   useEffect(() => {
@@ -36,12 +37,36 @@ export default function App() {
 
   // Auth session
   useEffect(() => {
-    db.auth.getSession().then(({ data: { session } }) => setSession(session))
+    db.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      if (session?.user) loadFollows(session.user.id)
+    })
     const { data: { subscription } } = db.auth.onAuthStateChange((_event, session) => {
       setSession(session)
+      if (session?.user) loadFollows(session.user.id)
+      else setFollowedOutletIds(new Set())
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  async function loadFollows(userId) {
+    const { data } = await db.from('follows').select('outlet_id').eq('user_id', userId)
+    setFollowedOutletIds(new Set((data || []).map(f => f.outlet_id)))
+  }
+
+  async function toggleFollow(outletId) {
+    if (!user) return
+    const isFollowing = followedOutletIds.has(outletId)
+    if (isFollowing) {
+      await db.from('follows').delete().eq('user_id', user.id).eq('outlet_id', outletId)
+      setFollowedOutletIds(prev => { const n = new Set(prev); n.delete(outletId); return n })
+      showToast('Unfollowed')
+    } else {
+      await db.from('follows').insert({ user_id: user.id, outlet_id: outletId })
+      setFollowedOutletIds(prev => new Set([...prev, outletId]))
+      showToast('Following!')
+    }
+  }
 
   // Data + deep link
   useEffect(() => {
@@ -134,7 +159,7 @@ export default function App() {
       <Toast message={toast.message} visible={toast.visible} />
 
       {currentPage === 'feed' && (
-        <FeedPage articles={allArticles} outlets={allOutlets} loading={loading} navigate={navigate} showToast={showToast} initialCategory={selectedCategory} totalArticleCount={totalArticleCount} />
+        <FeedPage articles={allArticles} outlets={allOutlets} loading={loading} navigate={navigate} showToast={showToast} initialCategory={selectedCategory} totalArticleCount={totalArticleCount} user={user} followedOutletIds={followedOutletIds} onLoginClick={() => setShowAuthModal(true)} />
       )}
       {currentPage === 'categories' && (
         <CategoryPage articles={allArticles} navigate={navigate} />
@@ -154,7 +179,7 @@ export default function App() {
         />
       )}
       {currentPage === 'outlet' && (
-        <OutletPage outletId={selectedOutletId} allOutlets={allOutlets} prevPage={prevPage} navigate={navigate} showToast={showToast} user={user} onLoginClick={() => setShowAuthModal(true)} />
+        <OutletPage outletId={selectedOutletId} allOutlets={allOutlets} prevPage={prevPage} navigate={navigate} showToast={showToast} user={user} onLoginClick={() => setShowAuthModal(true)} followedOutletIds={followedOutletIds} toggleFollow={toggleFollow} />
       )}
       {currentPage === 'outlets' && (
         <OutletsListPage outlets={allOutlets} navigate={navigate} showToast={showToast} />
@@ -163,7 +188,7 @@ export default function App() {
         <RankingsPage outlets={allOutlets} navigate={navigate} showToast={showToast} />
       )}
       {currentPage === 'profile' && (
-        <ProfilePage user={user} navigate={navigate} showToast={showToast} />
+        <ProfilePage user={user} navigate={navigate} showToast={showToast} followedOutletIds={followedOutletIds} />
       )}
 
       {showAuthModal && (

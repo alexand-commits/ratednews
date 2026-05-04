@@ -60,13 +60,16 @@ function getArticleRegion(article) {
   return 'int'
 }
 
-export default function FeedPage({ articles, outlets, loading, navigate, initialCategory = 'all', totalArticleCount }) {
+export default function FeedPage({ articles, outlets, loading, navigate, initialCategory = 'all', totalArticleCount, user, followedOutletIds = new Set(), onLoginClick }) {
   const [category, setCategory] = useState(initialCategory)
   const [region, setRegion]     = useState('all')
   const [search, setSearch]     = useState('')
   const [sort, setSort]         = useState('latest')
+  const [feedTab, setFeedTab]   = useState('all') // 'all' | 'following'
 
-  const filtered = articles
+  const followingArticles = articles.filter(a => followedOutletIds.has(a.outlet_id))
+
+  const filtered = (feedTab === 'following' ? followingArticles : articles)
     .filter(a => category === 'all' || getArticleCategory(a) === category)
     .filter(a => region === 'all' || getArticleRegion(a) === region)
     .filter(a => !search ||
@@ -106,6 +109,22 @@ export default function FeedPage({ articles, outlets, loading, navigate, initial
             </div>
           )
         })()}
+
+        {/* Feed tabs — All / My Feed */}
+        <div className="tabs" style={{ marginBottom: 14 }}>
+          <div className={`tab${feedTab === 'all' ? ' active' : ''}`} onClick={() => setFeedTab('all')}>
+            All stories
+          </div>
+          <div
+            className={`tab${feedTab === 'following' ? ' active' : ''}`}
+            onClick={() => {
+              if (!user) { onLoginClick(); return }
+              setFeedTab('following')
+            }}
+          >
+            My feed {user && followedOutletIds.size > 0 && <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({followedOutletIds.size})</span>}
+          </div>
+        </div>
 
         {/* Search */}
         <div className="search-bar">
@@ -160,6 +179,14 @@ export default function FeedPage({ articles, outlets, loading, navigate, initial
             <div className="feed">
               {loading ? (
                 [0, 1, 2].map(i => <div key={i} className="skeleton skeleton-card" />)
+              ) : filtered.length === 0 && feedTab === 'following' && followedOutletIds.size === 0 ? (
+                <div className="empty-state">
+                  <h3>You're not following anyone yet</h3>
+                  <p>Follow outlets you trust to build your personal feed.</p>
+                  <button className="btn-outline" style={{ marginTop: 12, fontSize: 13 }} onClick={() => navigate('outlets')}>
+                    Browse outlets →
+                  </button>
+                </div>
               ) : filtered.length === 0 ? (
                 <div className="empty-state">
                   <h3>No {category} articles yet</h3>

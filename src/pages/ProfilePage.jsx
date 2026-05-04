@@ -189,7 +189,7 @@ function TopicBreakdown({ ratings }) {
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
-export default function ProfilePage({ user, navigate }) {
+export default function ProfilePage({ user, navigate, followedOutletIds = new Set() }) {
   const [articleRatings, setArticleRatings] = useState([])
   const [outletRatings, setOutletRatings]   = useState([])
   const [comments, setComments]             = useState([])
@@ -276,8 +276,9 @@ export default function ProfilePage({ user, navigate }) {
           {/* Stats grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 10, marginBottom: 16 }}>
             {[
-              { value: articleRatings.length, label: 'Articles rated' },
-              { value: outletRatings.length,  label: 'Outlets rated'  },
+              { value: articleRatings.length,   label: 'Articles rated' },
+              { value: outletRatings.length,   label: 'Outlets rated'  },
+              { value: followedOutletIds.size, label: 'Following'      },
               { value: comments.length,        label: 'Comments'       },
               { value: daysActive,             label: 'Days active'    },
               ...(avgStars ? [{ value: `${avgStars}★`, label: 'Avg rating', color: 'var(--amber)' }] : []),

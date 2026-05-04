@@ -5,7 +5,7 @@ import OutletLogo from '../components/OutletLogo'
 import OutletRatingModal from '../components/OutletRatingModal'
 import InfoTip from '../components/InfoTip'
 
-export default function OutletPage({ outletId, allOutlets, navigate, prevPage, showToast, user, onLoginClick }) {
+export default function OutletPage({ outletId, allOutlets, navigate, prevPage, showToast, user, onLoginClick, followedOutletIds = new Set(), toggleFollow }) {
   const [articles, setArticles] = useState([])
   const [activeTab, setActiveTab] = useState('overview')
   const [outletRatings, setOutletRatings] = useState([])
@@ -206,6 +206,24 @@ export default function OutletPage({ outletId, allOutlets, navigate, prevPage, s
             <div className="score-grade">
               {score >= 90 ? 'High credibility' : score >= 75 ? 'Good credibility' : score >= 60 ? 'Mixed credibility' : 'Low credibility'}
             </div>
+            <button
+              onClick={() => { if (!user) { onLoginClick(); return } toggleFollow(outletId) }}
+              style={{
+                marginTop: 10,
+                padding: '7px 16px',
+                borderRadius: 20,
+                border: followedOutletIds.has(outletId) ? '1.5px solid var(--border)' : '1.5px solid var(--coral)',
+                background: followedOutletIds.has(outletId) ? 'var(--bg)' : 'var(--coral)',
+                color: followedOutletIds.has(outletId) ? 'var(--text2)' : '#fff',
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {followedOutletIds.has(outletId) ? '✓ Following' : '+ Follow'}
+            </button>
           </div>
         </div>
 
