@@ -143,14 +143,22 @@ async function main() {
   console.log('========================\n')
 
   let totalScored = 0, totalFailed = 0, batch = 1
+  const skippedIds = new Set()   // articles that failed — excluded from future fetches
 
   while (true) {
-    const { data: articles, error } = await supabase
+    let query = supabase
       .from('articles')
       .select('id, title, summary, outlets(name)')
       .is('accuracy_score', null)
       .order('published_at', { ascending: false })
       .limit(BATCH_SIZE)
+
+    // Exclude any IDs that have already failed this run to avoid infinite loops
+    if (skippedIds.size > 0) {
+      query = query.not('id', 'in', `(${[...skippedIds].join(',')})`)
+    }
+
+    const { data: articles, error } = await query
 
     if (error) {
       console.error('Failed to fetch articles:', error.message)
@@ -188,6 +196,7 @@ async function main() {
 
         if (updateError) {
           console.log(`❌ DB error: ${updateError.message}`)
+          skippedIds.add(article.id)
           failed++
         } else {
           console.log(`✅ acc=${scores.accuracy_score} bias=${scores.bias_direction}(${scores.bias_score}) hl=${scores.headline_vote}`)
@@ -195,6 +204,7 @@ async function main() {
         }
       } catch (err) {
         console.log(`❌ ${err.message}`)
+        skippedIds.add(article.id)
         failed++
       }
 
@@ -205,6 +215,10 @@ async function main() {
     totalFailed += failed
     console.log(`\nBatch ${batch} done — ✅ ${scored}  ❌ ${failed}`)
     batch++
+  }
+
+  if (skippedIds.size > 0) {
+    console.log(`\n⚠️  Skipped ${skippedIds.size} articles that failed scoring (will retry next run)`)
   }
 
   console.log(`\n========================`)
