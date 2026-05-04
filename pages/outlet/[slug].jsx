@@ -29,6 +29,41 @@ export default function OutletDetail({ outlet }) {
         <meta property="og:description" content={`${outlet.name} has an accuracy score of ${outlet.overall_score ?? '–'}/100 on RatedNews. See the full breakdown.`} />
         <meta property="og:url"         content={`https://ratednews.com/outlet/${canonicalSlug}`} />
         <meta property="og:type"        content="website" />
+
+        {/* Organisation structured data — helps Google understand the page
+            and can trigger rich results for outlet-related searches */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type':    'NewsMediaOrganization',
+            name:        outlet.name,
+            description: outlet.description || `${outlet.name} is a news outlet tracked and rated by RatedNews for accuracy, political bias, and headline fairness.`,
+            url:         `https://ratednews.com/outlet/${canonicalSlug}`,
+            ...(outlet.country === 'UK' && { areaServed: 'GB' }),
+            ...(outlet.country === 'US' && { areaServed: 'US' }),
+            aggregateRating: outlet.overall_score ? {
+              '@type':      'AggregateRating',
+              ratingValue:  outlet.overall_score,
+              bestRating:   100,
+              worstRating:  0,
+              ratingCount:  outlet.total_articles || 1,
+              reviewAspect: 'Accuracy and impartiality',
+            } : undefined,
+            additionalProperty: [
+              outlet.bias_direction && {
+                '@type': 'PropertyValue',
+                name:    'Political bias',
+                value:   outlet.bias_direction,
+              },
+              outlet.overall_score && {
+                '@type': 'PropertyValue',
+                name:    'Accuracy score',
+                value:   `${outlet.overall_score}/100`,
+              },
+            ].filter(Boolean),
+          })}}
+        />
       </Head>
       <OutletPage
         outletId={outlet.id}
