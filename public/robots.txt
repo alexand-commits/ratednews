@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# Private pages — no SEO value
+Disallow: /profile
+Disallow: /profile/
+
+# Sitemap
+Sitemap: https://ratednews.com/sitemap.xml
