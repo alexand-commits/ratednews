@@ -239,17 +239,51 @@ export default function FeedPage({
 
   // Trending topics — top keywords from recent article titles
   const STOP_WORDS = useMemo(() => new Set([
+    // Articles, conjunctions, prepositions
     'the','a','an','and','or','but','in','on','at','to','for','of','with','by','from',
     'as','is','was','are','were','been','be','have','has','had','do','does','did',
     'will','would','could','should','may','might','that','this','these','those',
     'it','its','he','she','they','we','you','i','his','her','their','our','your','my',
     'what','who','how','when','where','why','which','about','after','before','between',
     'into','through','over','under','up','out','off','down','if','than','then','so',
-    'because','while','although','though','however','says','said','say','new','first',
-    'last','more','most','also','just','now','like','one','two','three','us','uk',
-    'year','years','per','cent','after','back','says','amid','amid','report','reports',
-    'warns','calls','hits','gets','makes','takes','gives','sees','shows','faces',
-    'amid','plans','set','told','tell','here','there','they','their','being','its',
+    'because','while','although','though','however','here','there','being',
+    // Generic news verbs & filler
+    'says','said','say','told','tell','warn','warns','claims','claim','calls','hits',
+    'gets','makes','takes','gives','sees','shows','faces','plans','sets','amid',
+    'reports','report','reveals','reveal','urges','urge','slams','blasts','backs',
+    'push','pushes','pull','pulls','rise','rises','fell','fall','falls','drops',
+    'drop','surge','surges','jump','jumps','soar','soars','grow','grows','cuts','cut',
+    'deal','deals','bill','bills','move','moves','open','close','lead','hold','keep',
+    'turn','show','seek','seeks','back','call','face','want','wants','need','needs',
+    'look','looks','come','goes','puts','puts','join','joins','help','helps',
+    // Generic descriptors
+    'new','first','last','more','most','also','just','now','like','one','two','three',
+    'high','low','big','old','top','key','set','due','via','yet','ask','use','add',
+    'long','full','free','live','real','good','well','even','next','left','right',
+    'amid','week','days','time','home','life','work','month','year','years','per','cent',
+    // Common abbreviations already filtered by length, but just in case
+    'us','uk',
+  ]), [])
+
+  // Common first names — prevent "John", "Peter" etc. appearing as trending chips
+  const COMMON_NAMES = useMemo(() => new Set([
+    'john','james','mary','peter','paul','david','sarah','michael','george','robert',
+    'william','richard','charles','donald','boris','tony','mark','chris','kevin','gary',
+    'alan','nick','kate','emma','anna','lisa','jane','helen','laura','sophie','joe',
+    'jack','harry','henry','oliver','emily','grace','alice','thomas','daniel','matthew',
+    'andrew','joshua','ryan','adam','luke','alex','sam','ben','tom','tim','jim','bob',
+    'bill','mike','phil','andy','dave','steve','sean','jake','liam','owen','evan',
+    'neil','eric','carl','dean','joel','wade','reed','leon','hugo','ivan','igor',
+    'mary','rose','ruth','anne','june','dawn','hope','jade','amy','eva','mia','zoe',
+  ]), [])
+
+  // Sensitive standalone group/identity terms — meaningful in a headline with context
+  // but inappropriate/misleading as decontextualised clickable chips
+  const SENSITIVE_STANDALONE = useMemo(() => new Set([
+    'jews','jewish','muslims','christians','catholics','protestants',
+    'blacks','whites','latinos','hispanics','asians','arabs',
+    'immigrants','migrants','refugees','foreigners','natives',
+    'gays','lesbians','trans','queer',
   ]), [])
 
   const trendingTopics = useMemo(() => {
@@ -259,17 +293,22 @@ export default function FeedPage({
         .toLowerCase()
         .replace(/[^a-z\s]/g, ' ')
         .split(/\s+/)
-        .filter(w => w.length > 3 && !STOP_WORDS.has(w))
+        .filter(w =>
+          w.length > 3 &&
+          !STOP_WORDS.has(w) &&
+          !COMMON_NAMES.has(w) &&
+          !SENSITIVE_STANDALONE.has(w)
+        )
       for (const word of words) {
         freq[word] = (freq[word] || 0) + 1
       }
     }
     return Object.entries(freq)
-      .filter(([, count]) => count >= 2)
+      .filter(([, count]) => count >= 3)  // raised from 2 → 3 for stronger relevance signal
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12)
       .map(([word]) => word.charAt(0).toUpperCase() + word.slice(1))
-  }, [articles, STOP_WORDS])
+  }, [articles, STOP_WORDS, COMMON_NAMES, SENSITIVE_STANDALONE])
 
   // Which list to display — DB results when search active, interleaved otherwise
   const isSearchActive = dbResults !== null
