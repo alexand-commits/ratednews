@@ -99,6 +99,16 @@ const JUNK_PATTERNS = [
   // Extremely short titles are usually malformed feed entries
 ]
 
+const MAX_ARTICLE_AGE_DAYS = 3  // skip articles whose pubDate is older than this
+
+function isTooOld(pubDate) {
+  if (!pubDate) return false  // no date = allow through (date will default to now)
+  const published = new Date(pubDate)
+  if (isNaN(published)) return false
+  const ageMs = Date.now() - published.getTime()
+  return ageMs > MAX_ARTICLE_AGE_DAYS * 24 * 60 * 60 * 1000
+}
+
 function isTooShort(title) {
   return title.trim().length < 15
 }
@@ -145,6 +155,7 @@ async function ingestOutlet(outlet) {
     const url   = item.link || item.guid
     const title = item.title?.trim()
     if (!url || !title) continue
+    if (isTooOld(item.pubDate))    { skipped++; continue }
     if (isTooShort(title))         { skipped++; continue }
     if (isLikelyNonEnglish(title)) { skipped++; continue }
     if (isJunk(title))             { skipped++; continue }
