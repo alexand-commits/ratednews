@@ -4,20 +4,20 @@ import { timeAgo } from '../utils/helpers'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
 const CATEGORIES = [
-  { value: 'Politics',       emoji: '🏛',  label: 'Politics',       color: '#4B6FBF' },
-  { value: 'Business',       emoji: '📈',  label: 'Business',       color: '#2E8B57' },
-  { value: 'Sport',          emoji: '⚽',  label: 'Sport',          color: '#E84B4B' },
-  { value: 'Tech',           emoji: '💻',  label: 'Tech',           color: '#7C5CBF' },
-  { value: 'Science',        emoji: '🔬',  label: 'Science',        color: '#2196F3' },
-  { value: 'Health',         emoji: '🏥',  label: 'Health',         color: '#D84B8A' },
-  { value: 'Environment',    emoji: '🌱',  label: 'Environment',    color: '#4CAF50' },
-  { value: 'Entertainment',  emoji: '🎬',  label: 'Entertainment',  color: '#FF9800' },
-  { value: 'Crime',          emoji: '🔍',  label: 'Crime',          color: '#795548' },
-  { value: 'Travel',         emoji: '✈️',  label: 'Travel',         color: '#00ACC1' },
-  { value: 'Education',      emoji: '🎓',  label: 'Education',      color: '#D85A30' },
-  { value: 'War & Conflict', emoji: '⚔️',  label: 'War & Conflict', color: '#757575' },
-  { value: 'Culture',        emoji: '🎨',  label: 'Culture',        color: '#AB47BC' },
-  { value: 'World',          emoji: '🌍',  label: 'World',          color: '#009688' },
+  { value: 'Politics',       slug: 'politics',       emoji: '🏛',  label: 'Politics',       color: '#4B6FBF' },
+  { value: 'Business',       slug: 'business',       emoji: '📈',  label: 'Business',       color: '#2E8B57' },
+  { value: 'Sport',          slug: 'sport',          emoji: '⚽',  label: 'Sport',          color: '#E84B4B' },
+  { value: 'Tech',           slug: 'tech',           emoji: '💻',  label: 'Tech',           color: '#7C5CBF' },
+  { value: 'Science',        slug: 'science',        emoji: '🔬',  label: 'Science',        color: '#2196F3' },
+  { value: 'Health',         slug: 'health',         emoji: '🏥',  label: 'Health',         color: '#D84B8A' },
+  { value: 'Environment',    slug: 'environment',    emoji: '🌱',  label: 'Environment',    color: '#4CAF50' },
+  { value: 'Entertainment',  slug: 'entertainment',  emoji: '🎬',  label: 'Entertainment',  color: '#FF9800' },
+  { value: 'Crime',          slug: 'crime',          emoji: '🔍',  label: 'Crime',          color: '#795548' },
+  { value: 'Travel',         slug: 'travel',         emoji: '✈️',  label: 'Travel',         color: '#00ACC1' },
+  { value: 'Education',      slug: 'education',      emoji: '🎓',  label: 'Education',      color: '#D85A30' },
+  { value: 'War & Conflict', slug: 'war-conflict',   emoji: '⚔️',  label: 'War & Conflict', color: '#757575' },
+  { value: 'Culture',        slug: 'culture',        emoji: '🎨',  label: 'Culture',        color: '#AB47BC' },
+  { value: 'World',          slug: 'world',          emoji: '🌍',  label: 'World',          color: '#009688' },
 ]
 
 const REGIONS = [
@@ -133,7 +133,7 @@ export default function CategoryPage({ navigate, goBack }) {
             return (
               <button
                 key={c.value}
-                onClick={() => navigate('feed', { category: c.value, region })}
+                onClick={() => navigate('category', { slug: c.slug })}
                 style={{
                   background: 'var(--surface)',
                   border: '0.5px solid var(--border)',

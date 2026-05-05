@@ -34,6 +34,9 @@ export function createNavigate(router, outlets = []) {
       case 'categories':
         router.push('/categories')
         break
+      case 'category':
+        router.push(`/categories/${opts.slug}`)
+        break
       case 'rankings':
         router.push('/rankings')
         break
