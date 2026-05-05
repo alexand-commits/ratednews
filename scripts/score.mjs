@@ -40,7 +40,10 @@ if (!ANTHROPIC_API_KEY) {
 const supabase  = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY })
 
-const BATCH_SIZE = 20
+const BATCH_SIZE      = 20
+const MAX_PER_RUN     = 300   // hard cap — prevents runaway costs on large backfills
+const MIN_TITLE_LEN   = 15    // skip malformed / very short titles
+const MIN_CONTENT_LEN = 30    // skip articles with neither a real title nor summary
 
 // ── System prompt (cached — never changes between articles) ─────────────────
 const CATEGORIES = ['Politics', 'Business', 'Sport', 'Tech', 'Science', 'Health', 'Environment', 'Entertainment', 'Crime', 'Travel', 'Education', 'Conflict', 'World']
@@ -96,7 +99,7 @@ Summary: ${article.summary || '(no summary available)'}`
 
   const response = await anthropic.messages.create({
     model:      'claude-haiku-4-5',
-    max_tokens: 400,
+    max_tokens: 300,
     system: [
       {
         type: 'text',
@@ -143,10 +146,10 @@ async function main() {
   console.log('🤖 RatedNews AI Scoring')
   console.log('========================\n')
 
-  let totalScored = 0, totalFailed = 0, batch = 1
+  let totalScored = 0, totalFailed = 0, totalThin = 0, batch = 1
   const skippedIds = new Set()   // articles that failed — excluded from future fetches
 
-  while (true) {
+  while (totalScored + totalFailed < MAX_PER_RUN) {
     let query = supabase
       .from('articles')
       .select('id, title, summary, outlets(name)')
@@ -177,6 +180,17 @@ async function main() {
 
     for (const article of articles) {
       const outletName = article.outlets?.name || 'Unknown'
+
+      // Skip thin-content articles — scoring on just a title produces unreliable results
+      const titleLen   = (article.title || '').trim().length
+      const summaryLen = (article.summary || '').trim().length
+      if (titleLen < MIN_TITLE_LEN || titleLen + summaryLen < MIN_CONTENT_LEN) {
+        console.log(`  ⏭  Thin content skipped: "${(article.title || '').slice(0, 50)}"`)
+        skippedIds.add(article.id)
+        totalThin++
+        continue
+      }
+
       process.stdout.write(`  Scoring: "${article.title.slice(0, 60)}..." `)
 
       try {
@@ -218,12 +232,12 @@ async function main() {
     batch++
   }
 
-  if (skippedIds.size > 0) {
-    console.log(`\n⚠️  Skipped ${skippedIds.size} articles that failed scoring (will retry next run)`)
+  if (totalScored + totalFailed >= MAX_PER_RUN) {
+    console.log(`\n⚠️  Hit MAX_PER_RUN cap (${MAX_PER_RUN}) — remaining articles will be scored next run`)
   }
 
   console.log(`\n========================`)
-  console.log(`✅ Total scored: ${totalScored}  ❌ Total failed: ${totalFailed}`)
+  console.log(`✅ Total scored: ${totalScored}  ❌ Failed: ${totalFailed}  ⏭ Thin content skipped: ${totalThin}`)
 }
 
 main()

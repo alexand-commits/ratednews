@@ -73,7 +73,41 @@ const JUNK_PATTERNS = [
   /^(weather|traffic) (update|alert|warning|forecast)/i,
   // Listicle bait with no news value
   /\byou won't believe\b/i,
+  // Photo galleries & multimedia — no text content to score
+  /\bin pictures?\b/i,
+  /\bin photos?\b/i,
+  /\bpictures? of the (day|week|year|month)\b/i,
+  /\bphoto ?gallery\b/i,
+  /\bwatch:\s/i,                      // "Watch: Moment when…"
+  /\blisten:\s/i,                     // "Listen: Full interview…"
+  // Live blogs — updated constantly, low signal
+  /^live:/i,
+  /\blive (blog|updates?|coverage|score)\b/i,
+  /\bas it happened\b/i,
+  // Factboxes & wires noise
+  /\bfactbox:\b/i,
+  /\bfact ?check:\b/i,                // keep actual fact-checks but factbox= wire filler
+  /^corrects?\b/i,                    // AP/Reuters correction notices
+  /^update\d*:/i,                     // "Update: Story now includes…"
+  // Pure TV/radio schedules
+  /\b(tv|radio) (listings?|schedule|guide|tonight)\b/i,
+  /\bwhat('s| is) on (tv|tonight|this week)\b/i,
+  // Non-editorial aggregates
+  /\bweekly roundup\b/i,
+  /\bmorning (briefing|digest|newsletter)\b/i,
+  /\bevening (briefing|digest|newsletter)\b/i,
+  // Extremely short titles are usually malformed feed entries
 ]
+
+function isTooShort(title) {
+  return title.trim().length < 15
+}
+
+// Rough non-English heuristic — if >40% of chars are non-ASCII, skip
+function isLikelyNonEnglish(title) {
+  const nonAscii = (title.match(/[^\x00-\x7F]/g) || []).length
+  return nonAscii / title.length > 0.4
+}
 
 function isJunk(title) {
   return JUNK_PATTERNS.some(re => re.test(title))
@@ -111,7 +145,9 @@ async function ingestOutlet(outlet) {
     const url   = item.link || item.guid
     const title = item.title?.trim()
     if (!url || !title) continue
-    if (isJunk(title)) { skipped++; continue }
+    if (isTooShort(title))         { skipped++; continue }
+    if (isLikelyNonEnglish(title)) { skipped++; continue }
+    if (isJunk(title))             { skipped++; continue }
     if (existingUrls.has(url) || existingTitles.has(title)) { skipped++; continue }
 
     const { error } = await supabase.from('articles').insert({
