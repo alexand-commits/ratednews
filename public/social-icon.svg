@@ -1,0 +1,33 @@
+<svg width="512" height="512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Dark background matching site theme -->
+  <rect width="512" height="512" rx="96" fill="#1A1917"/>
+
+  <!-- "rated" — white, light weight, spaced out -->
+  <text
+    x="256" y="226"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="78"
+    font-weight="400"
+    fill="rgba(255,255,255,0.90)"
+    text-anchor="middle"
+    letter-spacing="10"
+  >rated</text>
+
+  <!-- Thin divider in coral -->
+  <line x1="130" y1="252" x2="382" y2="252"
+    stroke="rgba(216,90,48,0.50)"
+    stroke-width="1.5"
+    stroke-linecap="round"
+  />
+
+  <!-- "news" — bold, coral, matching brand accent -->
+  <text
+    x="256" y="348"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="100"
+    font-weight="700"
+    fill="#D85A30"
+    text-anchor="middle"
+    letter-spacing="4"
+  >news</text>
+</svg>
