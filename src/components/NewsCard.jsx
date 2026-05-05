@@ -43,7 +43,7 @@ export default function NewsCard({ article, index, onClick, navigate }) {
   return (
     <div className="news-card" onClick={onClick}>
       <div className="outlet-row">
-        <span className="outlet-badge" onClick={handleOutletClick}>
+        <span className="outlet-badge" onClick={handleOutletClick} onTouchEnd={handleOutletClick}>
           <span className="outlet-dot" style={{ background: bg }} />
           {outlet.name || 'Unknown'}
         </span>
@@ -68,7 +68,7 @@ export default function NewsCard({ article, index, onClick, navigate }) {
       }
 
       <div className="score-row">
-        {index < 2 && <span className="trending-chip">↑ Trending</span>}
+        {commentCount >= 3 && <span className="trending-chip">↑ Trending</span>}
         {scored ? (
           <>
             <span className={accBadgeClass(acc)}>✦ {acc}</span>

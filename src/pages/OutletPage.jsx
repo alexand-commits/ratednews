@@ -382,7 +382,11 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                   )}
                 </>
               ) : (
-                <div className="empty-state"><p>No articles yet for this outlet.</p></div>
+                <div className="empty-state">
+                  <div style={{ fontSize: 28, marginBottom: 8 }}>📡</div>
+                  <h3>No articles yet</h3>
+                  <p>Articles from {outlet.name} will appear here once they're ingested and analysed. Check back after the next hourly update.</p>
+                </div>
               )}
             </div>
 

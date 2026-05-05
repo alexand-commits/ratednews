@@ -37,7 +37,7 @@
   --text: #EDECEA;
   --text2: #A8A49E;
   --text3: #6B6760;
-  --surface: #272522;
+  --surface: #2E2B28;
   --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
 }
@@ -241,10 +241,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .btn-outline:hover { border-color: var(--coral); color: var(--coral); }
 
 /* ARTICLE PREVIEW PAGE */
-.article-preview-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; }
-.article-outlet-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.article-preview-card { background: var(--surface); border: 0.5px solid var(--border); border-left: 3px solid var(--coral); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; }
+.article-outlet-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .article-av { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 500; }
-.article-headline-full { font-family: 'Playfair Display', serif; font-size: 22px; line-height: 1.4; margin-bottom: 12px; }
+.article-headline-full { font-family: 'Playfair Display', serif; font-size: 26px; font-weight: 700; line-height: 1.35; margin-bottom: 14px; }
 .article-score-strip { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
 .asc { background: var(--bg2); border-radius: var(--radius-sm); padding: 8px 14px; text-align: center; }
 .asc strong { display: block; font-size: 18px; font-weight: 500; }
@@ -353,6 +353,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 /* NOTIFICATION */
 .toast { position: fixed; bottom: 24px; right: 24px; background: #1c1c1e; color: #fff; padding: 12px 20px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; transform: translateY(100px); opacity: 0; transition: all 0.3s; z-index: 1000; box-shadow: 0 4px 16px rgba(0,0,0,0.35); }
 .toast.show { transform: translateY(0); opacity: 1; }
+@media (max-width: 768px) { .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); right: 16px; left: 16px; text-align: center; } }
 
 /* BACK BTN */
 .back-btn { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text2); cursor: pointer; margin-bottom: 16px; background: none; border: none; font-family: 'DM Sans', sans-serif; padding: 0; }

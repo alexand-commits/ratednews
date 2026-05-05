@@ -343,6 +343,14 @@ export default function FeedPage({
                     Browse outlets →
                   </button>
                 </div>
+              ) : displayList.length === 0 && feedTab === 'following' && followedOutletIds.size > 0 ? (
+                <div className="empty-state">
+                  <h3>No recent stories from your outlets</h3>
+                  <p>The {followedOutletIds.size} outlet{followedOutletIds.size !== 1 ? 's' : ''} you follow haven't published recently. Check back soon.</p>
+                  <button className="btn-outline" style={{ marginTop: 12, fontSize: 13 }} onClick={() => setFeedTab('all')}>
+                    Browse all stories
+                  </button>
+                </div>
               ) : displayList.length === 0 && isSearchActive ? (
                 <div className="empty-state">
                   <h3>No results for "{search}"</h3>
@@ -368,6 +376,22 @@ export default function FeedPage({
                 ))
               )}
 
+              {/* Fallback load more button — visible when sentinel scroll doesn't fire */}
+              {!isSearchActive && feedTab === 'all' && hasMoreArticles && !loadingMore && (
+                <button
+                  onClick={loadMoreArticles}
+                  style={{
+                    width: '100%', padding: '11px', marginTop: 4,
+                    background: 'var(--surface)', border: '0.5px solid var(--border)',
+                    borderRadius: 'var(--radius)', fontSize: 13, fontWeight: 500,
+                    color: 'var(--text2)', cursor: 'pointer', transition: 'border-color 0.15s',
+                  }}
+                  onMouseOver={e => e.currentTarget.style.borderColor = 'var(--coral)'}
+                  onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                >
+                  Load more stories ↓
+                </button>
+              )}
               {/* Infinite scroll sentinel — invisible div at bottom of feed */}
               {!isSearchActive && feedTab === 'all' && (
                 <div ref={sentinelRef} style={{ height: 1 }} />

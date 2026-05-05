@@ -173,10 +173,16 @@ export default function RankingsPage({ outlets, navigate, goBack, user, onRefres
                   return (
                     <div
                       key={o.id}
-                      style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderBottom: i < sorted.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 14,
+                        padding: '14px 18px',
+                        borderBottom: i < sorted.length - 1 ? '0.5px solid var(--border)' : 'none',
+                        cursor: 'pointer', transition: 'background 0.15s',
+                        background: i === 0 ? 'rgba(184,134,11,0.06)' : i === 1 ? 'rgba(160,160,160,0.05)' : i === 2 ? 'rgba(160,82,45,0.05)' : '',
+                      }}
                       onClick={() => navigate('outlet', { outletId: o.id })}
                       onMouseOver={e => e.currentTarget.style.background = 'var(--bg)'}
-                      onMouseOut={e => e.currentTarget.style.background = ''}
+                      onMouseOut={e => e.currentTarget.style.background = i === 0 ? 'rgba(184,134,11,0.06)' : i === 1 ? 'rgba(160,160,160,0.05)' : i === 2 ? 'rgba(160,82,45,0.05)' : ''}
                     >
                       <span style={{ fontSize: isTop3 ? 15 : 13, fontWeight: isTop3 ? 700 : 400, color: i === 0 ? '#b8860b' : i === 1 ? '#888' : i === 2 ? '#a0522d' : 'var(--text3)', width: 26, flexShrink: 0, textAlign: 'center' }}>
                         {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}

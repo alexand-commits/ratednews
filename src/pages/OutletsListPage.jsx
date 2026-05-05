@@ -354,8 +354,13 @@ export default function OutletsListPage({ outlets, navigate, goBack, showToast, 
                       </div>
                     </div>
                     <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: scoreColor(score), lineHeight: 1 }}>{score}</div>
-                      <div style={{ fontSize: 9, color: 'var(--text3)', marginTop: 2 }}>TRUST</div>
+                      <div style={{
+                        fontSize: 15, fontWeight: 700, lineHeight: 1,
+                        background: score >= 75 ? 'var(--green-light)' : score >= 60 ? '#fff3cd' : score > 0 ? '#fde8e8' : 'var(--bg2)',
+                        color: score >= 75 ? 'var(--green-dark)' : score >= 60 ? '#856404' : score > 0 ? 'var(--red)' : 'var(--text3)',
+                        padding: '4px 10px', borderRadius: 20,
+                      }}>{score > 0 ? score : '—'}</div>
+                      <div style={{ fontSize: 9, color: 'var(--text3)', marginTop: 4 }}>TRUST</div>
                     </div>
                   </div>
 
