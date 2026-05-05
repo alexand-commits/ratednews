@@ -58,6 +58,30 @@ function extractSummary(item) {
   return raw.replace(/<[^>]*>/g, '').trim().slice(0, 500) || null
 }
 
+// ── Junk filter ────────────────────────────────────────────────────────────────
+// Returns true for non-news content that should be dropped before insert/scoring.
+// Catches crosswords, podcasts, recipes, quizzes, sponsored posts, etc.
+
+const JUNK_TITLE_RE = /\b(crossword|wordsearch|word.?search|word.?game|sudoku)\b|\bpuzzle\b/i
+const PODCAST_TITLE_RE = /\bpodcast\b|\blistens?\s*:|^listen\s*:|\b(ep|episode)\s*\.?\s*\d+\b|\baudio\s+(story|tour|guide)\b/i
+const VIDEO_TITLE_RE = /^(watch|video)\s*:/i
+const LIFESTYLE_TITLE_RE = /\b(recipe|horoscope|star.?sign|your.?week|meal.?plan|fashion|style.?edit|quiz|crossword)\b/i
+const PROMO_TITLE_RE = /\b(sponsored|advertisement|advertorial|paid.?post|subscribe|sign.?up|newsletter|giveaway|competition|win a|enter now)\b/i
+
+const JUNK_URL_RE = /\/(crossword|puzzle|games?|podcast|podcasts|audio|video|videos|sponsored|newsletter|quiz|quizzes|recipe|recipes|horoscope|horoscopes)\b/i
+
+function isJunk(item) {
+  const title = item.title || ''
+  const url   = item.link  || item.guid || ''
+  if (JUNK_TITLE_RE.test(title))     return true
+  if (PODCAST_TITLE_RE.test(title))  return true
+  if (VIDEO_TITLE_RE.test(title))    return true
+  if (LIFESTYLE_TITLE_RE.test(title))return true
+  if (PROMO_TITLE_RE.test(title))    return true
+  if (JUNK_URL_RE.test(url))         return true
+  return false
+}
+
 async function ingestOutlet(supabase, outlet) {
   const feedUrl = RSS_FEEDS[outlet.name]
   if (!feedUrl) return { inserted: 0, skipped: 0, errors: 0 }
@@ -83,7 +107,8 @@ async function ingestOutlet(supabase, outlet) {
   for (const item of items) {
     const url = item.link || item.guid
     if (!url || !item.title) continue
-    if (existingUrls.has(url)) { skipped++; continue }
+    if (isJunk(item))             { skipped++; continue }
+    if (existingUrls.has(url))    { skipped++; continue }
 
     const { error } = await supabase.from('articles').insert({
       outlet_id:    outlet.id,
