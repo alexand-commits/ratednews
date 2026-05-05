@@ -6,6 +6,7 @@ import Header from '../src/components/Header'
 import BottomNav from '../src/components/BottomNav'
 import Toast from '../src/components/Toast'
 import AuthModal from '../src/components/AuthModal'
+import PasswordResetModal from '../src/components/PasswordResetModal'
 import { createNavigate } from '../src/utils/navigate'
 import '../src/styles/globals.css'
 
@@ -18,7 +19,8 @@ export default function App({ Component, pageProps }) {
 
   const [isDark,           setIsDark]           = useState(false)
   const [session,          setSession]          = useState(null)
-  const [showAuthModal,    setShowAuthModal]    = useState(false)
+  const [showAuthModal,       setShowAuthModal]       = useState(false)
+  const [showPasswordReset,   setShowPasswordReset]   = useState(false)
   const [toast,            setToast]            = useState({ message: '', visible: false })
   const [followedOutletIds,setFollowedOutletIds]= useState(new Set())
   const [savedArticleIds,  setSavedArticleIds]  = useState(new Set())
@@ -62,6 +64,11 @@ export default function App({ Component, pageProps }) {
     })
     const { data: { subscription } } = db.auth.onAuthStateChange((_event, session) => {
       setSession(session)
+      if (_event === 'PASSWORD_RECOVERY') {
+        // User clicked a reset link — show the new-password form instead of logging in silently
+        setShowPasswordReset(true)
+        return
+      }
       if (session?.user) { loadFollows(session.user.id); loadSaves(session.user.id) }
       else { setFollowedOutletIds(new Set()); setSavedArticleIds(new Set()) }
     })
@@ -190,6 +197,13 @@ export default function App({ Component, pageProps }) {
 
       {showAuthModal && (
         <AuthModal onClose={() => setShowAuthModal(false)} showToast={showToast} />
+      )}
+
+      {showPasswordReset && (
+        <PasswordResetModal
+          onClose={() => setShowPasswordReset(false)}
+          showToast={showToast}
+        />
       )}
 
       <BottomNav navigate={navigate} />

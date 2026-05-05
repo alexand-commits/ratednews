@@ -5,6 +5,56 @@ import OutletLogo from '../components/OutletLogo'
 import OutletRatingModal from '../components/OutletRatingModal'
 import InfoTip from '../components/InfoTip'
 
+// ── Article badge helpers (mirrors NewsCard.jsx) ─────────────────────────────
+const HEADLINE_BADGES = {
+  misleading: { bg: '#fff3cd', color: '#856404', label: '⚠ Misleading' },
+  clickbait:  { bg: '#fde8e8', color: 'var(--red)', label: '✗ Clickbait' },
+}
+const BIAS_LABELS = {
+  left:   { label: '← Left',   cls: 'score-badge score-badge-bias-left'   },
+  centre: { label: '◉ Centre', cls: 'score-badge score-badge-bias-centre' },
+  right:  { label: '→ Right',  cls: 'score-badge score-badge-bias-right'  },
+}
+function accBadgeClass(score) {
+  if (score >= 70) return 'score-badge score-badge-green'
+  if (score >= 50) return 'score-badge score-badge-amber'
+  return 'score-badge score-badge-red'
+}
+
+function ArticleCard({ a, onClick }) {
+  const acc      = a.accuracy_score || 0
+  const scored   = acc > 0
+  const hlBadge  = a.headline_vote ? HEADLINE_BADGES[a.headline_vote] : null
+  const biasLbl  = a.bias_direction ? BIAS_LABELS[a.bias_direction] : null
+  return (
+    <div className="news-card" onClick={onClick}>
+      <div className="news-headline">{a.title || ''}</div>
+      {hlBadge && (
+        <span style={{
+          display: 'inline-block', fontSize: 10, fontWeight: 600,
+          padding: '2px 8px', borderRadius: 20, marginBottom: 6,
+          background: hlBadge.bg, color: hlBadge.color, alignSelf: 'flex-start',
+        }}>
+          {hlBadge.label}
+        </span>
+      )}
+      <div className="score-row">
+        {scored ? (
+          <>
+            <span className={accBadgeClass(acc)}>✦ {acc}</span>
+            {biasLbl && <span className={biasLbl.cls}>{biasLbl.label}</span>}
+          </>
+        ) : (
+          <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg2)', padding: '2px 8px', borderRadius: 20 }}>
+            ⏳ Pending analysis
+          </span>
+        )}
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>{timeAgo(a.published_at)}</span>
+      </div>
+    </div>
+  )
+}
+
 export default function OutletPage({ outletId, allOutlets, navigate, goBack, showToast, user, onLoginClick, followedOutletIds = new Set(), toggleFollow }) {
   const [articles, setArticles] = useState([])
   const [activeTab, setActiveTab] = useState('overview')
@@ -384,17 +434,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                   <div className="section-label">Recent articles</div>
                   <div className="feed">
                     {articles.slice(0, visibleArticles).map(a => (
-                      <div key={a.id} className="news-card" onClick={() => navigate('article', { articleId: a.id })}>
-                        <div className="news-card-body">
-                          <div className="news-headline">{a.title || ''}</div>
-                          <div className="score-row">
-                            <div className="score-mini"><span className={`dot ${scoreDot(a.accuracy_score || 0)}`}></span>Acc {a.accuracy_score || '—'}</div>
-                            {a.bias_direction && <div className="score-mini" style={{ color: a.bias_direction === 'left' ? 'var(--blue, #3b82f6)' : a.bias_direction === 'right' ? 'var(--red)' : 'var(--text3)' }}>{a.bias_direction}</div>}
-                            {a.headline_vote && a.headline_vote !== 'fair' && <div className="score-mini" style={{ color: 'var(--amber)' }}>{a.headline_vote}</div>}
-                            <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>{timeAgo(a.published_at)}</span>
-                          </div>
-                        </div>
-                      </div>
+                      <ArticleCard key={a.id} a={a} onClick={() => navigate('article', { articleId: a.id })} />
                     ))}
                   </div>
                   {articles.length > visibleArticles && (
@@ -495,17 +535,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
             <>
               <div className="feed">
                 {articles.slice(0, visibleArticles).map(a => (
-                  <div key={a.id} className="news-card" onClick={() => navigate('article', { articleId: a.id })}>
-                    <div className="news-card-body">
-                      <div className="news-headline">{a.title || ''}</div>
-                      <div className="score-row">
-                        <div className="score-mini"><span className={`dot ${scoreDot(a.accuracy_score || 0)}`}></span>Acc {a.accuracy_score || '—'}</div>
-                        {a.bias_direction && <div className="score-mini" style={{ color: a.bias_direction === 'left' ? 'var(--blue, #3b82f6)' : a.bias_direction === 'right' ? 'var(--red)' : 'var(--text3)' }}>{a.bias_direction}</div>}
-                        {a.headline_vote && a.headline_vote !== 'fair' && <div className="score-mini" style={{ color: 'var(--amber)' }}>{a.headline_vote}</div>}
-                        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>{timeAgo(a.published_at)}</span>
-                      </div>
-                    </div>
-                  </div>
+                  <ArticleCard key={a.id} a={a} onClick={() => navigate('article', { articleId: a.id })} />
                 ))}
               </div>
               {articles.length > visibleArticles && (

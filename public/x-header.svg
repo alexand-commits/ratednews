@@ -1,0 +1,30 @@
+<svg width="1500" height="500" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+    <stop offset="0%" stop-color="#2A2825"/>
+    <stop offset="100%" stop-color="#0F0E0D"/>
+  </radialGradient>
+  <rect width="1500" height="500" fill="url(#vignette)"/>
+
+  <!-- "Rated" — right-anchored at centre, white -->
+  <text
+    x="748" y="290"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="148"
+    font-weight="700"
+    fill="rgba(255,255,255,0.92)"
+    text-anchor="end"
+    letter-spacing="-2"
+  >Rated</text>
+
+  <!-- "News" — left-anchored at centre, coral -->
+  <text
+    x="756" y="290"
+    font-family="Georgia, 'Times New Roman', serif"
+    font-size="148"
+    font-weight="700"
+    fill="#D85A30"
+    text-anchor="start"
+    letter-spacing="-2"
+  >News</text>
+</svg>

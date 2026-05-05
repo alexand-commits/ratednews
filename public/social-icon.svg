@@ -4,9 +4,9 @@
 
   <!-- "Rated" — white, regular weight, matching header style -->
   <text
-    x="256" y="224"
+    x="256" y="235"
     font-family="Georgia, 'Times New Roman', serif"
-    font-size="145"
+    font-size="120"
     font-weight="700"
     fill="rgba(255,255,255,0.92)"
     text-anchor="middle"
@@ -15,9 +15,9 @@
 
   <!-- "News" — coral accent, bold, matching header span colour -->
   <text
-    x="256" y="378"
+    x="256" y="370"
     font-family="Georgia, 'Times New Roman', serif"
-    font-size="145"
+    font-size="120"
     font-weight="700"
     fill="#D85A30"
     text-anchor="middle"
