@@ -4,20 +4,20 @@ import { timeAgo } from '../utils/helpers'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
 const CATEGORIES = [
-  { value: 'Politics',       emoji: '🏛',  label: 'Politics'       },
-  { value: 'Business',       emoji: '📈',  label: 'Business'       },
-  { value: 'Sport',          emoji: '⚽',  label: 'Sport'          },
-  { value: 'Tech',           emoji: '💻',  label: 'Tech'           },
-  { value: 'Science',        emoji: '🔬',  label: 'Science'        },
-  { value: 'Health',         emoji: '🏥',  label: 'Health'         },
-  { value: 'Environment',    emoji: '🌱',  label: 'Environment'    },
-  { value: 'Entertainment',  emoji: '🎬',  label: 'Entertainment'  },
-  { value: 'Crime',          emoji: '🔍',  label: 'Crime'          },
-  { value: 'Travel',         emoji: '✈️',  label: 'Travel'         },
-  { value: 'Education',      emoji: '🎓',  label: 'Education'      },
-  { value: 'War & Conflict', emoji: '⚔️',  label: 'War & Conflict' },
-  { value: 'Culture',        emoji: '🎨',  label: 'Culture'        },
-  { value: 'World',          emoji: '🌍',  label: 'World'          },
+  { value: 'Politics',       emoji: '🏛',  label: 'Politics',       color: '#4B6FBF' },
+  { value: 'Business',       emoji: '📈',  label: 'Business',       color: '#2E8B57' },
+  { value: 'Sport',          emoji: '⚽',  label: 'Sport',          color: '#E84B4B' },
+  { value: 'Tech',           emoji: '💻',  label: 'Tech',           color: '#7C5CBF' },
+  { value: 'Science',        emoji: '🔬',  label: 'Science',        color: '#2196F3' },
+  { value: 'Health',         emoji: '🏥',  label: 'Health',         color: '#D84B8A' },
+  { value: 'Environment',    emoji: '🌱',  label: 'Environment',    color: '#4CAF50' },
+  { value: 'Entertainment',  emoji: '🎬',  label: 'Entertainment',  color: '#FF9800' },
+  { value: 'Crime',          emoji: '🔍',  label: 'Crime',          color: '#795548' },
+  { value: 'Travel',         emoji: '✈️',  label: 'Travel',         color: '#00ACC1' },
+  { value: 'Education',      emoji: '🎓',  label: 'Education',      color: '#D85A30' },
+  { value: 'War & Conflict', emoji: '⚔️',  label: 'War & Conflict', color: '#757575' },
+  { value: 'Culture',        emoji: '🎨',  label: 'Culture',        color: '#AB47BC' },
+  { value: 'World',          emoji: '🌍',  label: 'World',          color: '#009688' },
 ]
 
 const REGIONS = [
@@ -137,18 +137,23 @@ export default function CategoryPage({ navigate, goBack }) {
                 style={{
                   background: 'var(--surface)',
                   border: '0.5px solid var(--border)',
+                  borderLeft: `3px solid ${c.color}`,
                   borderRadius: 'var(--radius)',
                   padding: '14px 16px',
                   cursor: 'pointer',
                   textAlign: 'left',
-                  transition: 'border-color 0.15s',
+                  transition: 'opacity 0.15s',
                   width: '100%',
                 }}
-                onMouseOver={e => e.currentTarget.style.borderColor = 'var(--coral)'}
-                onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                onMouseOver={e => e.currentTarget.style.opacity = '0.85'}
+                onMouseOut={e => e.currentTarget.style.opacity = '1'}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: preview ? 10 : 0 }}>
-                  <span style={{ fontSize: 22, lineHeight: 1 }}>{c.emoji}</span>
+                  <span style={{
+                    fontSize: 18, lineHeight: 1, width: 36, height: 36, flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    background: `${c.color}18`, borderRadius: 10,
+                  }}>{c.emoji}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                       <span style={{ fontWeight: 600, fontSize: 15 }}>{c.label}</span>
@@ -161,7 +166,7 @@ export default function CategoryPage({ navigate, goBack }) {
                       <div style={{ marginTop: 6, background: 'var(--bg2)', borderRadius: 4, height: 4 }}>
                         <div style={{
                           width: `${pct}%`, height: '100%',
-                          background: 'var(--coral)', borderRadius: 4,
+                          background: c.color, borderRadius: 4,
                           transition: 'width 0.4s ease',
                           minWidth: count > 0 ? 4 : 0,
                         }} />

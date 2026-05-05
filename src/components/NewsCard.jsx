@@ -63,17 +63,21 @@ export default function NewsCard({ article, index, onClick, navigate }) {
       )}
 
       {article.ai_summary
-        ? <div className="news-summary" style={{ fontStyle: 'italic', color: 'var(--text2)' }}>{article.ai_summary}</div>
+        ? <div className="news-summary">{article.ai_summary}</div>
         : article.summary && <div className="news-summary">{article.summary}</div>
       }
 
       <div className="score-row">
         {index < 2 && <span className="trending-chip">↑ Trending</span>}
-        {scored && (
-          <span className={accBadgeClass(acc)}>✦ {acc}</span>
-        )}
-        {biasLabel && scored && (
-          <span className={biasLabel.cls}>{biasLabel.label}</span>
+        {scored ? (
+          <>
+            <span className={accBadgeClass(acc)}>✦ {acc}</span>
+            {biasLabel && <span className={biasLabel.cls}>{biasLabel.label}</span>}
+          </>
+        ) : (
+          <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg2)', padding: '2px 8px', borderRadius: 20 }}>
+            ⏳ Pending analysis
+          </span>
         )}
         {article.category && (
           <div className="score-mini" style={{ color: 'var(--text3)' }}>

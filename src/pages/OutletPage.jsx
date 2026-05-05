@@ -187,7 +187,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
       <div className="container">
         <button className="back-btn" onClick={goBack}>← Back</button>
 
-        <div className="outlet-hero">
+        <div className="outlet-hero" style={{ borderLeft: '3px solid var(--coral)' }}>
           <OutletLogo name={outlet.name} size={64} borderRadius={14} />
           <div className="outlet-hero-info">
             <div className="outlet-hero-name">{outlet.name}</div>
@@ -301,7 +301,10 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                   <span>Lean left</span><span>Centre</span><span>Lean right</span>
                 </div>
                 <div className="bias-track">
-                  <div className="bias-needle" style={{ left: `${needlePos}%` }}></div>
+                  <div className="bias-needle" style={{
+                    left: `${needlePos}%`,
+                    borderColor: needlePos < 38 ? 'var(--blue, #3b82f6)' : needlePos > 62 ? 'var(--red)' : 'var(--text3)',
+                  }}></div>
                 </div>
                 <div className="bias-labels">
                   <span>Far left</span><span>Left</span><span>Centre</span><span>Right</span><span>Far right</span>
@@ -427,13 +430,12 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
 
               <div className="widget">
                 <div className="widget-title">Score history</div>
-                <div className="score-history">
-                  {[score - 3, score - 2, score - 1, score - 1, score, score].map((s, i) => (
-                    <div key={i} className="sh-bar" style={{ height: Math.max(10, (s - 70) * 3), background: scoreColor(s) }}></div>
-                  ))}
-                </div>
-                <div className="sh-labels">
-                  {['Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr'].map(m => <span key={m}>{m}</span>)}
+                <div style={{ textAlign: 'center', padding: '18px 0' }}>
+                  <div style={{ fontSize: 22, marginBottom: 6 }}>📈</div>
+                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)', marginBottom: 4 }}>Coming soon</div>
+                  <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.5 }}>
+                    Historical score tracking<br />is in development
+                  </div>
                 </div>
               </div>
             </div>

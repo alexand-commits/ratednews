@@ -117,7 +117,14 @@ export default function App({ Component, pageProps }) {
 
   const user     = session?.user || null
   const navigate = createNavigate(router, allOutlets)
-  const goBack   = () => router.back()
+  const goBack   = () => {
+    // If this is the first page in session history, going back would exit the app
+    if (typeof window !== 'undefined' && window.history.state?.idx > 0) {
+      router.back()
+    } else {
+      router.push('/')
+    }
+  }
 
   const ctx = {
     user, session, isDark,
