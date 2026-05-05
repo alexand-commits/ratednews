@@ -43,7 +43,7 @@ const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY })
 const BATCH_SIZE = 20
 
 // ── System prompt (cached — never changes between articles) ─────────────────
-const CATEGORIES = ['Politics', 'Business', 'Sport', 'Tech', 'Science', 'Health', 'Environment', 'Entertainment', 'Crime', 'Travel', 'Education', 'War & Conflict', 'Culture', 'World']
+const CATEGORIES = ['Politics', 'Business', 'Sport', 'Tech', 'Science', 'Health', 'Environment', 'Entertainment', 'Crime', 'Travel', 'Education', 'Conflict', 'World']
 
 const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article you receive, return a JSON object with these exact fields:
 
@@ -68,10 +68,11 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
   "misleading" = headline implies something not supported by the summary.
   "clickbait" = headline uses emotional bait, exaggeration, or withholds key info to drive clicks.
 
-- "category": string, one of: "Politics", "Business", "Sport", "Tech", "Science", "Health", "Environment", "Entertainment", "Crime", "Travel", "Education", "War & Conflict", "Culture", "World".
+- "category": string, one of: "Politics", "Business", "Sport", "Tech", "Science", "Health", "Environment", "Entertainment", "Crime", "Travel", "Education", "Conflict", "World".
   Pick the single best-fitting category for this article's subject matter.
-  Use "War & Conflict" for stories about armed conflict, military operations, wars, or geopolitical tensions involving military force.
-  Use "Culture" for arts, music, film, fashion, food, heritage, and lifestyle stories not covered by Entertainment.
+  Use "Conflict" for stories about armed conflict, wars, military operations, airstrikes, battles, casualties in war zones, or geopolitical tensions involving military force — this includes Ukraine, Gaza, Middle East, Sudan, and any active conflict zone. Do NOT assign these to Politics or World.
+  Use "Tech" for stories about technology companies, AI, software, hardware, cybersecurity, social media platforms, and the tech industry — even if they have a business angle. Do NOT assign pure tech stories to Business.
+  Use "Entertainment" for arts, music, film, TV, celebrity, fashion, food, culture, and lifestyle stories.
   Use "World" for international news or stories that don't fit another category.
 
 - "geographic_scope": string, one of: "local", "national", "global".

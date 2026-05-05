@@ -15,8 +15,7 @@ const CATEGORIES = [
   { value: 'Crime',          slug: 'crime',          emoji: '🔍',  label: 'Crime',          color: '#795548' },
   { value: 'Travel',         slug: 'travel',         emoji: '✈️',  label: 'Travel',         color: '#00ACC1' },
   { value: 'Education',      slug: 'education',      emoji: '🎓',  label: 'Education',      color: '#D85A30' },
-  { value: 'War & Conflict', slug: 'war-conflict',   emoji: '⚔️',  label: 'War & Conflict', color: '#757575' },
-  { value: 'Culture',        slug: 'culture',        emoji: '🎨',  label: 'Culture',        color: '#AB47BC' },
+  { value: 'Conflict',       slug: 'conflict',       emoji: '⚔️',  label: 'Conflict',       color: '#757575' },
   { value: 'World',          slug: 'world',          emoji: '🌍',  label: 'World',          color: '#009688' },
 ]
 

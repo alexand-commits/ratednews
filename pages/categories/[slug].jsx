@@ -63,14 +63,9 @@ export const CATEGORY_META = [
     description: 'Education news from schools, universities and policy — rated for factual accuracy across UK and US outlets covering tuition, exams and teaching.',
   },
   {
-    value: 'War & Conflict', slug: 'war-conflict', emoji: '⚔️',
-    title: 'War & Conflict News Rated for Accuracy',
+    value: 'Conflict', slug: 'conflict', emoji: '⚔️',
+    title: 'Conflict News Rated for Accuracy',
     description: 'War and conflict coverage rated for accuracy and fairness — Gaza, Ukraine, and global conflicts compared across outlets to reveal differing narratives.',
-  },
-  {
-    value: 'Culture', slug: 'culture', emoji: '🎨',
-    title: 'Arts & Culture News Rated for Accuracy',
-    description: 'Arts and culture news rated for accuracy and editorial fairness — museums, literature, fashion, architecture and heritage across leading outlets.',
   },
   {
     value: 'World', slug: 'world', emoji: '🌍',

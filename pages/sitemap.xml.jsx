@@ -7,7 +7,7 @@
 const CATEGORY_SLUGS = [
   'politics','business','sport','tech','science','health',
   'environment','entertainment','crime','travel','education',
-  'war-conflict','culture','world',
+  'conflict','world',
 ]
 
 const STATIC_PAGES = [
