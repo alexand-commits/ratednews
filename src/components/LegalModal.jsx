@@ -8,7 +8,7 @@ const PRIVACY = {
   sections: [
     {
       heading: 'Who we are',
-      body: `RatedNews is a news aggregation and media-rating service operated as a personal project. Our website is ratednews.com. You can contact us at alexandchow@gmail.com with any privacy-related queries.`,
+      body: `RatedNews is a news aggregation and media-rating service operated as a personal project. Our website is ratednews.com. You can contact us at info@ratednews.com with any privacy-related queries.`,
     },
     {
       heading: 'What data we collect',
@@ -55,7 +55,7 @@ Article content is sourced from public RSS feeds. We do not share any of your pe
 • **Portability** — receive your data in a machine-readable format
 • **Objection** — object to any processing you believe is unlawful
 
-To exercise any of these rights, email alexandchow@gmail.com. We will respond within 30 days.`,
+To exercise any of these rights, email info@ratednews.com. We will respond within 30 days.`,
     },
     {
       heading: 'Data retention',
@@ -84,7 +84,7 @@ Scores are algorithmic signals, not editorial verdicts. They reflect patterns in
     },
     {
       heading: 'Your account',
-      body: `You must provide accurate information when creating an account. You are responsible for maintaining the security of your password and for all activity under your account. Notify us immediately at alexandchow@gmail.com if you suspect unauthorised access.
+      body: `You must provide accurate information when creating an account. You are responsible for maintaining the security of your password and for all activity under your account. Notify us immediately at info@ratednews.com if you suspect unauthorised access.
 
 You must be at least 13 years old to use the Service.`,
     },
@@ -159,7 +159,7 @@ Rate the journalism, not the politics. A left-leaning outlet can be accurate. A 
     },
     {
       heading: 'Reporting concerns',
-      body: `If you believe an outlet's score has been manipulated, or you have evidence of coordinated abuse, please email alexandchow@gmail.com with details. We review all reports and will act where the evidence warrants it.`,
+      body: `If you believe an outlet's score has been manipulated, or you have evidence of coordinated abuse, please email info@ratednews.com with details. We review all reports and will act where the evidence warrants it.`,
     },
     {
       heading: 'Score integrity',
@@ -167,7 +167,7 @@ Rate the journalism, not the politics. A left-leaning outlet can be accurate. A 
     },
     {
       heading: 'These guidelines evolve',
-      body: `As the community grows, these guidelines will be updated to reflect new challenges. Substantive changes will be announced via email. Feedback is always welcome at alexandchow@gmail.com.`,
+      body: `As the community grows, these guidelines will be updated to reflect new challenges. Substantive changes will be announced via email. Feedback is always welcome at info@ratednews.com.`,
     },
   ],
 }
