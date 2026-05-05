@@ -144,22 +144,24 @@ export default function RankingsPage({ outlets, navigate, goBack, user, onRefres
             {/* Summary chips — always visible for layout uniformity */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
               {/* Top outlet */}
-              <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140 }}>
-                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Top outlet</div>
+              <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 80 }}>
+                <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Top outlet</div>
                 {topOutlet ? (
                   <>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{topOutlet.name}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25, margin: '6px 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      🥇 {topOutlet.name}
+                    </div>
                     <div style={{ fontSize: 12, color: 'var(--text2)' }}>
                       {tab === 'community'
-                        ? `${((topOutlet.community_score || 0) / 20).toFixed(1)}★ community`
+                        ? `${((topOutlet.community_score || 0) / 20).toFixed(1)}★ community score`
                         : tab === 'rated'
-                          ? `${topOutlet.total_ratings || 0} ratings`
+                          ? `${topOutlet.total_ratings || 0} community ratings`
                           : `${topOutlet[activeTab.key] || 0} ${activeTab.desc}`}
                     </div>
                   </>
                 ) : (
                   <>
-                    <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text3)' }}>—</div>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text3)', margin: '6px 0 4px' }}>—</div>
                     <div style={{ fontSize: 12, color: 'var(--text3)' }}>No data yet</div>
                   </>
                 )}
