@@ -35,10 +35,15 @@ export async function getServerSideProps({ res }) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY,
   )
 
+  // Only include articles from the last 90 days — older ones churn IDs
+  // and generate stale 404s in Search Console once they're re-ingested
+  const since90d = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+
   const [{ data: outlets }, { data: articles }] = await Promise.all([
     supabase.from('outlets').select('name, updated_at'),
     supabase.from('articles')
       .select('id, published_at')
+      .gte('published_at', since90d)
       .order('published_at', { ascending: false })
       .limit(1000),
   ])
