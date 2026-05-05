@@ -85,6 +85,27 @@ export default function FeedPage({
   const searchTimer                 = useRef(null)
   const searchInputRef              = useRef(null)
 
+  // Search history (localStorage-persisted)
+  const [searchHistory, setSearchHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('rn_searchHistory') || '[]') } catch { return [] }
+  })
+  const [searchFocused, setSearchFocused] = useState(false)
+
+  function addToHistory(term) {
+    const t = term.trim()
+    if (!t || t.length < 2) return
+    setSearchHistory(prev => {
+      const updated = [t, ...prev.filter(s => s.toLowerCase() !== t.toLowerCase())].slice(0, 6)
+      try { localStorage.setItem('rn_searchHistory', JSON.stringify(updated)) } catch {}
+      return updated
+    })
+  }
+
+  function clearHistory() {
+    setSearchHistory([])
+    try { localStorage.removeItem('rn_searchHistory') } catch {}
+  }
+
   // Rotating placeholder to show topic-search power
   const SEARCH_EXAMPLES = [
     'Search any topic, person or event…',
@@ -128,6 +149,7 @@ export default function FeedPage({
         .limit(50)
       setDbResults(data || [])
       setDbLoading(false)
+      if (term.length >= 2) addToHistory(term)
     }, 400)
     return () => clearTimeout(searchTimer.current)
   }, [search])
@@ -215,6 +237,40 @@ export default function FeedPage({
     return result
   }, [filtered, sort])
 
+  // Trending topics — top keywords from recent article titles
+  const STOP_WORDS = useMemo(() => new Set([
+    'the','a','an','and','or','but','in','on','at','to','for','of','with','by','from',
+    'as','is','was','are','were','been','be','have','has','had','do','does','did',
+    'will','would','could','should','may','might','that','this','these','those',
+    'it','its','he','she','they','we','you','i','his','her','their','our','your','my',
+    'what','who','how','when','where','why','which','about','after','before','between',
+    'into','through','over','under','up','out','off','down','if','than','then','so',
+    'because','while','although','though','however','says','said','say','new','first',
+    'last','more','most','also','just','now','like','one','two','three','us','uk',
+    'year','years','per','cent','after','back','says','amid','amid','report','reports',
+    'warns','calls','hits','gets','makes','takes','gives','sees','shows','faces',
+    'amid','plans','set','told','tell','here','there','they','their','being','its',
+  ]), [])
+
+  const trendingTopics = useMemo(() => {
+    const freq = {}
+    for (const article of articles.slice(0, 300)) {
+      const words = (article.title || '')
+        .toLowerCase()
+        .replace(/[^a-z\s]/g, ' ')
+        .split(/\s+/)
+        .filter(w => w.length > 3 && !STOP_WORDS.has(w))
+      for (const word of words) {
+        freq[word] = (freq[word] || 0) + 1
+      }
+    }
+    return Object.entries(freq)
+      .filter(([, count]) => count >= 2)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([word]) => word.charAt(0).toUpperCase() + word.slice(1))
+  }, [articles, STOP_WORDS])
+
   // Which list to display — DB results when search active, interleaved otherwise
   const isSearchActive = dbResults !== null
   const displayList    = isSearchActive ? dbResults : interleaved
@@ -273,6 +329,8 @@ export default function FeedPage({
             placeholder={SEARCH_EXAMPLES[placeholderIdx]}
             value={search}
             onChange={e => setSearch(e.target.value)}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
           />
           {search && (
             <button
@@ -283,10 +341,56 @@ export default function FeedPage({
             </button>
           )}
         </div>
-        {!search && (
-          <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: -8, marginBottom: 12, paddingLeft: 2 }}>
+
+        {/* Search history — shown when focused with no active query */}
+        {searchFocused && !search && searchHistory.length > 0 && (
+          <div style={{ marginTop: 4, marginBottom: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent searches</span>
+              <button
+                onMouseDown={e => { e.preventDefault(); clearHistory() }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--text3)', padding: 0 }}
+              >Clear</button>
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {searchHistory.map(term => (
+                <button
+                  key={term}
+                  className="pill"
+                  onMouseDown={e => { e.preventDefault(); setSearch(term) }}
+                  style={{ fontSize: 12 }}
+                >
+                  🕒 {term}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Hint text — shown when not searching and no history dropdown */}
+        {!search && !(searchFocused && searchHistory.length > 0) && (
+          <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: -8, marginBottom: 10, paddingLeft: 2 }}>
             Searches every story across all outlets — not just headlines
           </p>
+        )}
+
+        {/* Trending topics */}
+        {!isSearchActive && trendingTopics.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto', paddingBottom: 2, WebkitOverflowScrolling: 'touch' }}>
+              <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', flexShrink: 0 }}>🔥 Trending</span>
+              {trendingTopics.map(topic => (
+                <button
+                  key={topic}
+                  className="pill"
+                  onClick={() => { setSearch(topic); searchInputRef.current?.focus() }}
+                  style={{ fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0 }}
+                >
+                  {topic}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Region filter */}
