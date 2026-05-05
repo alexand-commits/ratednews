@@ -276,41 +276,23 @@ export default function OutletsListPage({ outlets, navigate, goBack, showToast, 
         </div>
 
         {/* Bias filter */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Bias</span>
+        <div className="filter-bar" style={{ marginBottom: 10 }}>
+          <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Bias</span>
           {BIAS_FILTERS.map(b => (
-            <button
-              key={b.value}
-              onClick={() => setBias(b.value)}
-              style={{
-                fontSize: 11, padding: '3px 12px', borderRadius: 20, border: '1px solid var(--border)',
-                background: bias === b.value ? 'var(--coral)' : 'var(--surface)',
-                color: bias === b.value ? '#fff' : 'var(--text2)',
-                cursor: 'pointer', transition: 'all 0.15s',
-              }}
-            >
+            <button key={b.value} className={`pill${bias === b.value ? ' active' : ''}`} onClick={() => setBias(b.value)}>
               {b.label}
             </button>
           ))}
+        </div>
 
-          {/* Sort — pushed right */}
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Sort</span>
-            {SORTS.map(s => (
-              <button
-                key={s.value}
-                onClick={() => setSort(s.value)}
-                style={{
-                  fontSize: 11, padding: '3px 12px', borderRadius: 20, border: '1px solid var(--border)',
-                  background: sort === s.value ? 'var(--text)' : 'var(--surface)',
-                  color: sort === s.value ? 'var(--surface)' : 'var(--text2)',
-                  cursor: 'pointer', transition: 'all 0.15s',
-                }}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
+        {/* Sort */}
+        <div className="filter-bar" style={{ marginBottom: 14 }}>
+          <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Sort</span>
+          {SORTS.map(s => (
+            <button key={s.value} className={`pill${sort === s.value ? ' active' : ''}`} onClick={() => setSort(s.value)}>
+              {s.label}
+            </button>
+          ))}
         </div>
 
         {/* Grid */}
