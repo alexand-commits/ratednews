@@ -235,7 +235,7 @@ export default function FeedPage({
                 <span>Outlets tracked ↗</span>
               </div>
               <div className="stat-chip">
-                <strong>{totalArticleCount ?? (articles.length || '—')}</strong>
+                <strong>{totalArticleCount != null ? totalArticleCount.toLocaleString() : (articles.length ? articles.length.toLocaleString() : '—')}</strong>
                 <span>Articles</span>
               </div>
               {latest && (
