@@ -45,7 +45,9 @@
   --green-dark: #8dc44a;
 }
 
-html { overscroll-behavior: none; }
+/* Fill the entire screen with the page background — html covers any area
+   outside the body (overscroll, rubber-band, gap below fixed nav on iOS) */
+html { overscroll-behavior: none; background: var(--bg); min-height: 100%; }
 body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100dvh; overflow-x: hidden; overscroll-behavior: none; }
 
 /* PAGE TRANSITION */
@@ -323,9 +325,19 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     background: var(--surface);
     border-top: 0.5px solid var(--border);
     z-index: 100;
-    /* Extend background into safe area (home indicator / Android nav bar) */
+    /* Extend background into safe area (home indicator / Android gesture bar) */
     padding-bottom: env(safe-area-inset-bottom, 0px);
     box-shadow: 0 -1px 0 0 var(--border);
+  }
+  /* Fill any sub-pixel or safe-area gap between nav and physical screen bottom */
+  .bottom-nav::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0; right: 0;
+    /* Generous height — this is off-screen so visual height doesn't matter */
+    height: max(env(safe-area-inset-bottom, 0px), 50px);
+    background: var(--surface);
   }
   .bottom-nav-item {
     flex: 1;
