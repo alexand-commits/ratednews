@@ -304,7 +304,7 @@ export default function FeedPage({
       }
     }
     return Object.entries(freq)
-      .filter(([, count]) => count >= 3)  // raised from 2 → 3 for stronger relevance signal
+      .filter(([, count]) => count >= 2)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12)
       .map(([word]) => word.charAt(0).toUpperCase() + word.slice(1))
