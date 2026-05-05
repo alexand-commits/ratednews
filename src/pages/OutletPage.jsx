@@ -16,6 +16,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   const [comments, setComments] = useState([])
   const [commentInput, setCommentInput] = useState('')
   const [votedComments, setVotedComments] = useState({})
+  const [visibleArticles, setVisibleArticles] = useState(10)
 
   const outlet = liveOutlet || allOutlets.find(o => o.id === outletId)
 
@@ -29,6 +30,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
     setAlreadyRated(false)
     setMyRating(null)
     setLiveOutlet(null)
+    setVisibleArticles(10)
 
     // Articles
     db.from('articles')
@@ -348,7 +350,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                 <>
                   <div className="section-label">Recent articles</div>
                   <div className="feed">
-                    {articles.map(a => (
+                    {articles.slice(0, visibleArticles).map(a => (
                       <div key={a.id} className="news-card" onClick={() => navigate('article', { articleId: a.id })}>
                         <div className="news-card-body">
                           <div className="news-headline">{a.title || ''}</div>
@@ -362,6 +364,19 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                       </div>
                     ))}
                   </div>
+                  {articles.length > visibleArticles && (
+                    <button
+                      onClick={() => setVisibleArticles(v => v + 10)}
+                      style={{
+                        width: '100%', marginTop: 10, padding: '10px',
+                        background: 'var(--surface)', border: '0.5px solid var(--border)',
+                        borderRadius: 'var(--radius)', fontSize: 13, fontWeight: 500,
+                        color: 'var(--text2)', cursor: 'pointer',
+                      }}
+                    >
+                      Show more articles ({articles.length - visibleArticles} remaining)
+                    </button>
+                  )}
                 </>
               ) : (
                 <div className="empty-state"><p>No articles yet for this outlet.</p></div>
@@ -427,21 +442,36 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
 
         {activeTab === 'feed-tab' && (
           articles.length > 0 ? (
-            <div className="feed">
-              {articles.map(a => (
-                <div key={a.id} className="news-card" onClick={() => navigate('article', { articleId: a.id })}>
-                  <div className="news-card-body">
-                    <div className="news-headline">{a.title || ''}</div>
-                    <div className="score-row">
-                      <div className="score-mini"><span className={`dot ${scoreDot(a.accuracy_score || 0)}`}></span>Acc {a.accuracy_score || '—'}</div>
-                      {a.bias_direction && <div className="score-mini" style={{ color: a.bias_direction === 'left' ? 'var(--blue, #3b82f6)' : a.bias_direction === 'right' ? 'var(--red)' : 'var(--text3)' }}>{a.bias_direction}</div>}
-                      {a.headline_vote && a.headline_vote !== 'fair' && <div className="score-mini" style={{ color: 'var(--amber)' }}>{a.headline_vote}</div>}
-                      <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>{timeAgo(a.published_at)}</span>
+            <>
+              <div className="feed">
+                {articles.slice(0, visibleArticles).map(a => (
+                  <div key={a.id} className="news-card" onClick={() => navigate('article', { articleId: a.id })}>
+                    <div className="news-card-body">
+                      <div className="news-headline">{a.title || ''}</div>
+                      <div className="score-row">
+                        <div className="score-mini"><span className={`dot ${scoreDot(a.accuracy_score || 0)}`}></span>Acc {a.accuracy_score || '—'}</div>
+                        {a.bias_direction && <div className="score-mini" style={{ color: a.bias_direction === 'left' ? 'var(--blue, #3b82f6)' : a.bias_direction === 'right' ? 'var(--red)' : 'var(--text3)' }}>{a.bias_direction}</div>}
+                        {a.headline_vote && a.headline_vote !== 'fair' && <div className="score-mini" style={{ color: 'var(--amber)' }}>{a.headline_vote}</div>}
+                        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>{timeAgo(a.published_at)}</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+              {articles.length > visibleArticles && (
+                <button
+                  onClick={() => setVisibleArticles(v => v + 10)}
+                  style={{
+                    width: '100%', marginTop: 10, padding: '10px',
+                    background: 'var(--surface)', border: '0.5px solid var(--border)',
+                    borderRadius: 'var(--radius)', fontSize: 13, fontWeight: 500,
+                    color: 'var(--text2)', cursor: 'pointer',
+                  }}
+                >
+                  Show more articles ({articles.length - visibleArticles} remaining)
+                </button>
+              )}
+            </>
           ) : (
             <div className="empty-state">
               <h3>No articles yet</h3>
