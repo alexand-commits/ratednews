@@ -9,7 +9,8 @@ export default function Document() {
         <meta name="theme-color" content="#D85A30" />
         <meta name="robots" content="index, follow" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="apple-touch-icon" href="/favicon.svg" />
+        <link rel="apple-touch-icon" href="/social-icon.png" />
+        <link rel="manifest" href="/manifest.json" />
         {/* Fallback OG image for any page that doesn't set its own */}
         <meta property="og:image"        content="https://ratednews.com/og-image.png" />
         <meta property="og:image:type"   content="image/png" />

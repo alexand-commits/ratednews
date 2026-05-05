@@ -11,6 +11,14 @@ export default function Categories() {
         <title>Rated News by Topic — Politics, Business, Tech & More — RatedNews</title>
         <meta name="description" content="Browse rated news stories by topic — Politics, Business, Tech, Health, Sport, Environment and more. Every article scored for bias and accuracy across 50+ outlets." />
         <link rel="canonical" href="https://ratednews.com/categories" />
+        <meta property="og:title"       content="Rated News by Topic — Politics, Business, Tech & More" />
+        <meta property="og:description" content="Browse rated news stories by topic — Politics, Business, Tech, Health, Sport, Environment and more. Every article scored for bias and accuracy." />
+        <meta property="og:url"         content="https://ratednews.com/categories" />
+        <meta property="og:type"        content="website" />
+        <meta property="og:image"       content="https://ratednews.com/og-image.png" />
+        <meta name="twitter:card"       content="summary_large_image" />
+        <meta name="twitter:title"      content="Rated News by Topic — RatedNews" />
+        <meta name="twitter:description" content="Browse Politics, Business, Tech, Health, Sport and more — every article scored for accuracy and bias." />
       </Head>
       <CategoryPage navigate={navigate} goBack={goBack} />
     </>

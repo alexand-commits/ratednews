@@ -4,12 +4,23 @@
  * Accessible at ratednews.com/sitemap.xml
  */
 
+const CATEGORY_SLUGS = [
+  'politics','business','sport','tech','science','health',
+  'environment','entertainment','crime','travel','education',
+  'war-conflict','culture','world',
+]
+
 const STATIC_PAGES = [
   { url: 'https://ratednews.com/',           priority: '1.0', changefreq: 'hourly'  },
   { url: 'https://ratednews.com/outlets',    priority: '0.9', changefreq: 'daily'   },
   { url: 'https://ratednews.com/rankings',   priority: '0.9', changefreq: 'hourly'  },
-  { url: 'https://ratednews.com/categories', priority: '0.7', changefreq: 'daily'   },
+  { url: 'https://ratednews.com/categories', priority: '0.8', changefreq: 'daily'   },
   { url: 'https://ratednews.com/about',      priority: '0.5', changefreq: 'monthly' },
+  ...CATEGORY_SLUGS.map(slug => ({
+    url:        `https://ratednews.com/categories/${slug}`,
+    priority:   '0.8',
+    changefreq: 'hourly',
+  })),
 ]
 
 function toSlug(name) {
