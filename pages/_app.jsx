@@ -23,6 +23,7 @@ export default function App({ Component, pageProps }) {
   const [followedOutletIds,setFollowedOutletIds]= useState(new Set())
   const [savedArticleIds,  setSavedArticleIds]  = useState(new Set())
   const [allOutlets,       setAllOutlets]       = useState([])
+  const [outletsLoading,   setOutletsLoading]   = useState(true)
 
   // ── Google Analytics page-view tracking ─────────────────────────────────
   useEffect(() => {
@@ -70,7 +71,7 @@ export default function App({ Component, pageProps }) {
   // ── Outlets (global, used by navigate for slug generation) ─────────────
   useEffect(() => {
     db.from('outlets').select('*').order('overall_score', { ascending: false })
-      .then(({ data }) => setAllOutlets(data || []))
+      .then(({ data }) => { setAllOutlets(data || []); setOutletsLoading(false) })
   }, [])
 
   async function refreshOutlets() {
@@ -102,6 +103,7 @@ export default function App({ Component, pageProps }) {
         showToast('Could not remove — please try again')
         console.error('[toggleSave] delete failed:', error)
       } else {
+        if (navigator.vibrate) navigator.vibrate(20)
         showToast('Removed from saved')
       }
     } else {
@@ -114,6 +116,7 @@ export default function App({ Component, pageProps }) {
         showToast('Could not save — please try again')
         console.error('[toggleSave] insert failed:', error)
       } else {
+        if (navigator.vibrate) navigator.vibrate([40, 30, 40])
         showToast('Article saved! 🔖')
       }
     }
@@ -125,10 +128,12 @@ export default function App({ Component, pageProps }) {
     if (isFollowing) {
       await db.from('follows').delete().eq('user_id', user.id).eq('outlet_id', outletId)
       setFollowedOutletIds(prev => { const n = new Set(prev); n.delete(outletId); return n })
+      if (navigator.vibrate) navigator.vibrate(20)
       showToast('Unfollowed')
     } else {
       await db.from('follows').insert({ user_id: user.id, outlet_id: outletId })
       setFollowedOutletIds(prev => new Set([...prev, outletId]))
+      if (navigator.vibrate) navigator.vibrate([30, 40, 60])
       showToast('Following!')
     }
   }
@@ -156,7 +161,7 @@ export default function App({ Component, pageProps }) {
     openAuthModal:  () => setShowAuthModal(true),
     followedOutletIds, toggleFollow,
     savedArticleIds,   toggleSave,
-    allOutlets, refreshOutlets,
+    allOutlets, outletsLoading, refreshOutlets,
     navigate, goBack,
   }
 

@@ -135,6 +135,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   }
 
   async function onRated(rating) {
+    if (navigator.vibrate) navigator.vibrate([50, 30, 80])
     setAlreadyRated(true)
     setMyRating(rating)
     // Refresh live outlet data + ratings list

@@ -46,7 +46,7 @@ function getTrustLevel(total) {
   return TRUST_LEVELS.find(t => total >= t.min) || TRUST_LEVELS[TRUST_LEVELS.length - 1]
 }
 
-export default function RankingsPage({ outlets, navigate, goBack, user, onRefresh }) {
+export default function RankingsPage({ outlets, outletsLoading, navigate, goBack, user, onRefresh }) {
   const [section, setSection] = useState('outlets')  // 'outlets' | 'leaderboard'
   const [tab, setTab]         = useState('credibility')
   const [region, setRegion]   = useState('all')
@@ -249,7 +249,22 @@ export default function RankingsPage({ outlets, navigate, goBack, user, onRefres
 
             {/* List */}
             <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-              {sorted.length === 0 ? (
+              {outletsLoading ? (
+                [0,1,2,3,4,5,6,7].map(i => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderBottom: i < 7 ? '0.5px solid var(--border)' : 'none' }}>
+                    <div className="skeleton-shimmer" style={{ width: 26, height: 14, borderRadius: 4, flexShrink: 0, background: 'var(--border)' }} />
+                    <div className="skeleton-shimmer" style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: 'var(--border)' }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="skeleton-line skeleton-shimmer" style={{ width: '55%', height: 13, marginBottom: 6 }} />
+                      <div className="skeleton-line skeleton-shimmer" style={{ width: '30%', height: 10 }} />
+                    </div>
+                    <div style={{ width: 100, flexShrink: 0 }}>
+                      <div className="skeleton-shimmer" style={{ height: 6, borderRadius: 3, background: 'var(--border)' }} />
+                      <div className="skeleton-shimmer" style={{ width: 28, height: 10, borderRadius: 3, background: 'var(--border)', marginTop: 6, marginLeft: 'auto' }} />
+                    </div>
+                  </div>
+                ))
+              ) : sorted.length === 0 ? (
                 <div className="empty-state"><p>No outlets for this region yet.</p></div>
               ) : (
                 sorted.map((o, i) => {
