@@ -18,7 +18,7 @@ const CATEGORIES = [
   { value: 'Crime',          label: '🔍 Crime'            },
   { value: 'Travel',         label: '✈️ Travel'           },
   { value: 'Education',      label: '🎓 Education'        },
-  { value: 'War & Conflict', label: '⚔️ War & Conflict'   },
+  { value: 'War & Conflict', label: '⚔️ War'               },
   { value: 'Culture',        label: '🎨 Culture'          },
   { value: 'World',          label: '🌍 World'            },
 ]
