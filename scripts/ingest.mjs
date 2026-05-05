@@ -99,7 +99,7 @@ const JUNK_PATTERNS = [
   // Extremely short titles are usually malformed feed entries
 ]
 
-const MAX_ARTICLE_AGE_DAYS = 3  // skip articles whose pubDate is older than this
+const MAX_ARTICLE_AGE_DAYS = 1  // skip articles whose pubDate is older than this
 
 function isTooOld(pubDate) {
   if (!pubDate) return false  // no date = allow through (date will default to now)
