@@ -174,8 +174,10 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 /* OUTLET PAGE */
 .outlet-hero { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
 @media (max-width: 520px) {
-  .outlet-hero { padding: 16px; }
-  .outlet-hero > :last-child { width: 100%; display: flex; align-items: center; gap: 14px; justify-content: flex-start; }
+  .outlet-hero { padding: 16px; flex-direction: column; }
+  .outlet-hero-score-block { width: 100% !important; flex-direction: row !important; align-items: center; gap: 16px; }
+  .outlet-hero-score-block .outlet-hero-score-text { text-align: left; }
+  .outlet-hero-score-block .outlet-hero-actions { justify-content: flex-start; margin-top: 0 !important; }
   .big-score { font-size: 36px; }
 }
 .outlet-logo-big { width: 64px; height: 64px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 500; flex-shrink: 0; }

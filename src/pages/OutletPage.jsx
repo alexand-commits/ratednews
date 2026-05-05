@@ -200,13 +200,15 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
               <span className="meta-chip"><span>✓</span>Editorially verified</span>
             </div>
           </div>
-          <div style={{ textAlign: 'center', flexShrink: 0 }}>
-            <div className="big-score">{score}</div>
-            <div className="big-score-label">Overall trust score</div>
-            <div className="score-grade">
-              {score >= 90 ? 'High credibility' : score >= 75 ? 'Good credibility' : score >= 60 ? 'Mixed credibility' : 'Low credibility'}
+          <div className="outlet-hero-score-block" style={{ textAlign: 'center', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div className="outlet-hero-score-text">
+              <div className="big-score">{score}</div>
+              <div className="big-score-label">Overall trust score</div>
+              <div className="score-grade">
+                {score >= 90 ? 'High credibility' : score >= 75 ? 'Good credibility' : score >= 60 ? 'Mixed credibility' : 'Low credibility'}
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: 6, marginTop: 10, justifyContent: 'center' }}>
+            <div className="outlet-hero-actions" style={{ display: 'flex', gap: 6, marginTop: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
               <button
                 onClick={() => { if (!user) { onLoginClick(); return } toggleFollow(outletId) }}
                 style={{
@@ -244,6 +246,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
             </div>
           </div>
         </div>
+
 
         {/* My rating banner */}
         {myRating && (

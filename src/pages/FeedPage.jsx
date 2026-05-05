@@ -192,7 +192,11 @@ export default function FeedPage({
       .sort((a, b) => {
         if (sort === 'trending')  return (b.comments?.[0]?.count || 0) - (a.comments?.[0]?.count || 0)
         if (sort === 'top-rated') return (b.accuracy_score || 0) - (a.accuracy_score || 0)
-        return new Date(b.published_at) - new Date(a.published_at)
+        // Clamp future-dated articles to now so RSS feed date errors don't pin them top
+        const now = Date.now()
+        const ta = Math.min(new Date(a.published_at).getTime(), now)
+        const tb = Math.min(new Date(b.published_at).getTime(), now)
+        return tb - ta
       })
   )
 
