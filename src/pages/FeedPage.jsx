@@ -77,8 +77,10 @@ export default function FeedPage({
   const [region, setRegion]     = useState(initialRegion)
   const [search, setSearch]     = useState('')
   const [sort, setSort]         = useState('latest')
-  const [feedTab, setFeedTab]   = useState('all') // 'all' | 'following'
-  const [legalDoc, setLegalDoc] = useState(null)  // 'privacy' | 'terms' | 'guidelines'
+  const [feedTab, setFeedTab]         = useState('all') // 'all' | 'following'
+  const [legalDoc, setLegalDoc]       = useState(null)  // 'privacy' | 'terms' | 'guidelines'
+  const [followingArticles, setFollowingArticles] = useState([])
+  const [followingLoading, setFollowingLoading]   = useState(false)
 
   // DB search state
   const [dbResults, setDbResults]   = useState(null)   // null = search not active
@@ -171,7 +173,25 @@ export default function FeedPage({
     return () => observer.disconnect()
   }, [hasMoreArticles, loadingMore, loadMoreArticles])
 
-  const followingArticles = articles.filter(a => followedOutletIds.has(a.outlet_id))
+  // Dedicated query for "My feed" tab — fetches directly from DB filtered by
+  // followed outlet IDs so we're not limited to whatever's in the main feed batch
+  useEffect(() => {
+    if (feedTab !== 'following') return
+    if (followedOutletIds.size === 0) { setFollowingArticles([]); return }
+
+    setFollowingLoading(true)
+    const ids = [...followedOutletIds]
+    db.from('articles')
+      .select('*, outlets(name, slug, logo_url, country, overall_score, bias_direction)')
+      .in('outlet_id', ids)
+      .not('accuracy_score', 'is', null)
+      .order('published_at', { ascending: false })
+      .limit(100)
+      .then(({ data }) => {
+        setFollowingArticles(data || [])
+        setFollowingLoading(false)
+      })
+  }, [feedTab, followedOutletIds])
 
   // Deduplicate similar stories from the same outlet — keeps the most recent,
   // hides older articles that share 3+ significant words in their title
@@ -576,6 +596,10 @@ export default function FeedPage({
                     </div>
                   </div>
                 ))
+              ) : followingLoading && feedTab === 'following' ? (
+                <div style={{ textAlign: 'center', padding: '40px 0', fontSize: 13, color: 'var(--text3)' }}>
+                  Loading your feed…
+                </div>
               ) : displayList.length === 0 && feedTab === 'following' && followedOutletIds.size === 0 ? (
                 <div className="empty-state">
                   <h3>You're not following anyone yet</h3>
