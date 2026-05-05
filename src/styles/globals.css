@@ -321,8 +321,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     z-index: 100;
     /* Extend background into safe area (home indicator / Android nav bar) */
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    /* Paint surface colour into any remaining browser-chrome gap */
-    box-shadow: 0 0 0 1px var(--border), 0 100px 0 100px var(--surface);
+    box-shadow: 0 -1px 0 0 var(--border);
   }
   .bottom-nav-item {
     flex: 1;
@@ -347,7 +346,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   .bottom-nav-icon { font-size: 20px; line-height: 1; }
   .bottom-nav-label { font-size: 10px; font-weight: 500; }
   /* Push page content up so it's not hidden behind the nav */
-  .page-content { padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+  .page-content { padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); min-height: 100dvh; }
 }
 
 /* NOTIFICATION */
