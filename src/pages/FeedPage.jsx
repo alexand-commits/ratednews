@@ -237,78 +237,66 @@ export default function FeedPage({
     return result
   }, [filtered, sort])
 
-  // Trending topics — top keywords from recent article titles
-  const STOP_WORDS = useMemo(() => new Set([
-    // Articles, conjunctions, prepositions
-    'the','a','an','and','or','but','in','on','at','to','for','of','with','by','from',
-    'as','is','was','are','were','been','be','have','has','had','do','does','did',
-    'will','would','could','should','may','might','that','this','these','those',
-    'it','its','he','she','they','we','you','i','his','her','their','our','your','my',
-    'what','who','how','when','where','why','which','about','after','before','between',
-    'into','through','over','under','up','out','off','down','if','than','then','so',
-    'because','while','although','though','however','here','there','being',
-    // Generic news verbs & filler
-    'says','said','say','told','tell','warn','warns','claims','claim','calls','hits',
-    'gets','makes','takes','gives','sees','shows','faces','plans','sets','amid',
-    'reports','report','reveals','reveal','urges','urge','slams','blasts','backs',
-    'push','pushes','pull','pulls','rise','rises','fell','fall','falls','drops',
-    'drop','surge','surges','jump','jumps','soar','soars','grow','grows','cuts','cut',
-    'deal','deals','bill','bills','move','moves','open','close','lead','hold','keep',
-    'turn','show','seek','seeks','back','call','face','want','wants','need','needs',
-    'look','looks','come','goes','puts','puts','join','joins','help','helps',
-    // Generic descriptors
-    'new','first','last','more','most','also','just','now','like','one','two','three',
-    'high','low','big','old','top','key','set','due','via','yet','ask','use','add',
-    'long','full','free','live','real','good','well','even','next','left','right',
-    'amid','week','days','time','home','life','work','month','year','years','per','cent',
-    // Common abbreviations already filtered by length, but just in case
-    'us','uk',
-  ]), [])
-
-  // Common first names — prevent "John", "Peter" etc. appearing as trending chips
-  const COMMON_NAMES = useMemo(() => new Set([
+  // Trending topics — extracted from proper nouns and acronyms only
+  // This avoids generic words (analysis, fire, rise) by only picking up
+  // mid-sentence capitalised words (proper nouns) and all-caps acronyms.
+  const TRENDING_BLOCKLIST = useMemo(() => new Set([
+    // Common first names
     'john','james','mary','peter','paul','david','sarah','michael','george','robert',
     'william','richard','charles','donald','boris','tony','mark','chris','kevin','gary',
     'alan','nick','kate','emma','anna','lisa','jane','helen','laura','sophie','joe',
     'jack','harry','henry','oliver','emily','grace','alice','thomas','daniel','matthew',
     'andrew','joshua','ryan','adam','luke','alex','sam','ben','tom','tim','jim','bob',
     'bill','mike','phil','andy','dave','steve','sean','jake','liam','owen','evan',
-    'neil','eric','carl','dean','joel','wade','reed','leon','hugo','ivan','igor',
-    'mary','rose','ruth','anne','june','dawn','hope','jade','amy','eva','mia','zoe',
-  ]), [])
-
-  // Sensitive standalone group/identity terms — meaningful in a headline with context
-  // but inappropriate/misleading as decontextualised clickable chips
-  const SENSITIVE_STANDALONE = useMemo(() => new Set([
+    'neil','eric','carl','dean','rose','ruth','anne','june','dawn','amy','eva','mia',
+    // Sensitive standalone group/identity terms
     'jews','jewish','muslims','christians','catholics','protestants',
     'blacks','whites','latinos','hispanics','asians','arabs',
     'immigrants','migrants','refugees','foreigners','natives',
     'gays','lesbians','trans','queer',
+    // Generic news genre words that still sneak through
+    'analysis','opinion','comment','review','interview','exclusive','special','breaking',
+    'latest','update','report','reports','live','watch','listen','read','podcast',
   ]), [])
 
   const trendingTopics = useMemo(() => {
     const freq = {}
+    const displayForm = {}
+
     for (const article of articles.slice(0, 300)) {
-      const words = (article.title || '')
-        .toLowerCase()
-        .replace(/[^a-z\s]/g, ' ')
-        .split(/\s+/)
-        .filter(w =>
-          w.length > 3 &&
-          !STOP_WORDS.has(w) &&
-          !COMMON_NAMES.has(w) &&
-          !SENSITIVE_STANDALONE.has(w)
-        )
-      for (const word of words) {
-        freq[word] = (freq[word] || 0) + 1
-      }
+      const title = (article.title || '').trim()
+      if (!title) continue
+      const rawWords = title.split(/\s+/)
+
+      rawWords.forEach((raw, idx) => {
+        const clean = raw.replace(/[^a-zA-Z]/g, '')
+        if (!clean) return
+
+        // All-caps acronyms: NHS, NATO, GDP, AI, IMF (2–6 chars)
+        const isAcronym = /^[A-Z]{2,6}$/.test(clean)
+        // Proper nouns: capitalised mid-sentence (not the opening word)
+        const isProperNoun = idx > 0 && /^[A-Z][a-z]{1,}$/.test(clean)
+
+        if (!isAcronym && !isProperNoun) return
+
+        const key = clean.toLowerCase()
+        if (key.length < 3) return
+        if (TRENDING_BLOCKLIST.has(key)) return
+
+        freq[key] = (freq[key] || 0) + 1
+        // Acronyms stay uppercase; proper nouns get initial cap
+        if (!displayForm[key] || isAcronym) {
+          displayForm[key] = isAcronym ? clean : clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase()
+        }
+      })
     }
+
     return Object.entries(freq)
       .filter(([, count]) => count >= 2)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12)
-      .map(([word]) => word.charAt(0).toUpperCase() + word.slice(1))
-  }, [articles, STOP_WORDS, COMMON_NAMES, SENSITIVE_STANDALONE])
+      .map(([key]) => displayForm[key] || key.charAt(0).toUpperCase() + key.slice(1))
+  }, [articles, TRENDING_BLOCKLIST])
 
   // Which list to display — DB results when search active, interleaved otherwise
   const isSearchActive = dbResults !== null
