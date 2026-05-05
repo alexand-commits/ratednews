@@ -93,13 +93,29 @@ export default function App({ Component, pageProps }) {
     if (!user) { setShowAuthModal(true); return }
     const isSaved = savedArticleIds.has(articleId)
     if (isSaved) {
-      await db.from('saved_articles').delete().eq('user_id', user.id).eq('article_id', articleId)
+      // Optimistic remove
       setSavedArticleIds(prev => { const n = new Set(prev); n.delete(articleId); return n })
-      showToast('Removed from saved')
+      const { error } = await db.from('saved_articles').delete().eq('user_id', user.id).eq('article_id', articleId)
+      if (error) {
+        // Revert on failure
+        setSavedArticleIds(prev => new Set([...prev, articleId]))
+        showToast('Could not remove — please try again')
+        console.error('[toggleSave] delete failed:', error)
+      } else {
+        showToast('Removed from saved')
+      }
     } else {
-      await db.from('saved_articles').insert({ user_id: user.id, article_id: articleId })
+      // Optimistic add
       setSavedArticleIds(prev => new Set([...prev, articleId]))
-      showToast('Article saved!')
+      const { error } = await db.from('saved_articles').insert({ user_id: user.id, article_id: articleId })
+      if (error) {
+        // Revert on failure
+        setSavedArticleIds(prev => { const n = new Set(prev); n.delete(articleId); return n })
+        showToast('Could not save — please try again')
+        console.error('[toggleSave] insert failed:', error)
+      } else {
+        showToast('Article saved! 🔖')
+      }
     }
   }
 

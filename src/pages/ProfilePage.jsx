@@ -224,12 +224,30 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
         .select('*, articles(id, title, published_at, category, ai_summary, outlets(name, country))')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
-    ]).then(([{ data: prof }, { data: ar }, { data: or }, { data: co }, { data: sv }]) => {
+    ]).then(async ([{ data: prof }, { data: ar }, { data: or }, { data: co }, { data: sv }]) => {
       setProfile(prof)
       setArticleRatings(ar || [])
       setOutletRatings(or || [])
       setComments(co || [])
-      setSavedItems(sv || [])
+
+      // If the embedded join returned rows but article data is null (FK not wired
+      // in Supabase schema), fall back to a manual join so saved items still show.
+      let savedRows = sv || []
+      const missingArticles = savedRows.filter(r => !r.articles)
+      if (missingArticles.length > 0) {
+        const ids = missingArticles.map(r => r.article_id).filter(Boolean)
+        if (ids.length) {
+          const { data: fallbackArticles } = await db
+            .from('articles')
+            .select('id, title, published_at, category, ai_summary, outlets(name, country)')
+            .in('id', ids)
+          if (fallbackArticles) {
+            const articleMap = Object.fromEntries(fallbackArticles.map(a => [a.id, a]))
+            savedRows = savedRows.map(r => r.articles ? r : { ...r, articles: articleMap[r.article_id] || null })
+          }
+        }
+      }
+      setSavedItems(savedRows)
       setLoading(false)
     })
   }, [user])
