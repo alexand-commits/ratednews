@@ -424,3 +424,20 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .infotip-btn:hover { color: var(--text2); }
 .infotip-box { position: fixed; background: var(--text); color: var(--bg); font-size: 12px; line-height: 1.55; padding: 9px 13px; border-radius: 8px; width: 280px; white-space: normal; z-index: 9999; pointer-events: none; box-shadow: var(--shadow-md); }
 .infotip-box::after { content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%); border: 5px solid transparent; border-top-color: var(--text); }
+
+/* LEGAL FOOTER & LINKS */
+@media (min-width: 768px) {
+  .legal-footer { display: block !important; }
+}
+.legal-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 11px;
+  color: var(--text3);
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.legal-link:hover { color: var(--text2); }

@@ -1,4 +1,5 @@
-import React from 'react'
+import React, { useState } from 'react'
+import LegalModal from '../components/LegalModal'
 
 const SCORES = [
   {
@@ -60,7 +61,9 @@ const SCORES = [
 ]
 
 export default function AboutPage({ navigate, goBack }) {
+  const [legalDoc, setLegalDoc] = useState(null)
   return (
+    <>
     <div className="page-content">
       <div className="container" style={{ maxWidth: 720 }}>
         <button className="back-btn" onClick={goBack}>← Back</button>
@@ -168,8 +171,42 @@ export default function AboutPage({ navigate, goBack }) {
           </div>
         </div>
 
+        {/* Legal links */}
+        <div style={{
+          marginTop: 32,
+          paddingTop: 20,
+          borderTop: '0.5px solid var(--border)',
+          display: 'flex',
+          gap: 20,
+          flexWrap: 'wrap',
+          alignItems: 'center',
+        }}>
+          <span style={{ fontSize: 12, color: 'var(--text3)' }}>© {new Date().getFullYear()} RatedNews</span>
+          {[
+            { label: 'Privacy Policy',       doc: 'privacy'    },
+            { label: 'Terms of Service',     doc: 'terms'      },
+            { label: 'Community Guidelines', doc: 'guidelines' },
+          ].map(({ label, doc }) => (
+            <button
+              key={doc}
+              onClick={() => setLegalDoc(doc)}
+              style={{
+                background: 'none', border: 'none', padding: 0,
+                fontSize: 12, color: 'var(--text2)', cursor: 'pointer',
+                fontFamily: 'inherit', textDecoration: 'underline',
+                textUnderlineOffset: 2,
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div style={{ height: 24 }} />
       </div>
     </div>
+
+    {legalDoc && <LegalModal doc={legalDoc} onClose={() => setLegalDoc(null)} />}
+    </>
   )
 }

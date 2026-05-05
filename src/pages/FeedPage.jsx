@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import NewsCard from '../components/NewsCard'
 import Sidebar from '../components/Sidebar'
+import LegalModal from '../components/LegalModal'
 import { timeAgo } from '../utils/helpers'
 import { db } from '../lib/supabase'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
@@ -78,6 +79,7 @@ export default function FeedPage({
   const [search, setSearch]     = useState('')
   const [sort, setSort]         = useState('latest')
   const [feedTab, setFeedTab]   = useState('all') // 'all' | 'following'
+  const [legalDoc, setLegalDoc] = useState(null)  // 'privacy' | 'terms' | 'guidelines'
 
   // DB search state
   const [dbResults, setDbResults]   = useState(null)   // null = search not active
@@ -237,10 +239,52 @@ export default function FeedPage({
     return result
   }, [filtered, sort])
 
-  // Trending topics — extracted from proper nouns and acronyms only
-  // This avoids generic words (analysis, fire, rise) by only picking up
-  // mid-sentence capitalised words (proper nouns) and all-caps acronyms.
-  const TRENDING_BLOCKLIST = useMemo(() => new Set([
+  // Trending topics — multi-word phrase extraction + acronyms
+  //
+  // Strategy: news headlines often use Title Case, so single capitalised words
+  // like "New", "Prize", "Party" are noisy. We instead prioritise consecutive
+  // capitalised-word PHRASES ("Donald Trump", "Supreme Court", "Gaza Strip")
+  // which are almost always genuine named entities. Single words are only shown
+  // when they're unambiguously proper (i.e. not in the common-word blocklist)
+  // and appear frequently enough to matter.
+
+  const COMMON_WORDS = useMemo(() => new Set([
+    // Generic adjectives / determiners common in title-case headlines
+    'new','old','big','small','great','major','key','top','full','long','short',
+    'high','low','good','bad','best','worst','next','last','first','second','third',
+    'final','early','late','real','true','false','main','chief','senior','junior',
+    'former','young','recent','latest','another','other','more','less','many','few',
+    'free','open','public','private','national','local','global','international',
+    'further','several','same','own','right','left','both','such','certain',
+    // Generic nouns that appear everywhere in title-case news
+    'prize','award','deal','plan','move','push','call','sign','vote','ban','bid',
+    'plea','plea','warning','threat','pledge','claim','claims','concerns','fears',
+    'hopes','doubts','talks','talks','crisis','issue','issues','case','cases',
+    'step','steps','way','ways','time','times','year','years','day','days',
+    'week','weeks','month','months','hour','hours','home','homes','world',
+    'nation','nations','state','states','city','cities','town','towns',
+    'area','areas','region','regions','group','groups','party','parties',
+    'people','man','woman','men','women','child','children','family','families',
+    'leader','leaders','head','boss','official','officials','minister','ministers',
+    'government','governments','court','courts','law','laws','rule','rules',
+    'war','peace','fight','battle','battle','death','deaths','life','lives',
+    'money','cash','fund','funds','cost','costs','price','prices','tax','taxes',
+    'shot','shots','fire','fires','attack','attacks','strike','strikes',
+    // Common verbs in title-case (mid-headline)
+    'win','wins','won','lose','loses','lost','hit','hits','face','faces','back',
+    'set','get','make','take','give','come','rise','fall','drop','cut','end',
+    'start','begin','grow','reach','help','lead','leave','use','see','run',
+    'hold','keep','bring','turn','say','says','said','show','shows','told',
+    'call','calls','called','called','push','pushed','seek','seeks','sought',
+    'join','joins','joined','open','opens','opened','close','closes','closed',
+    'launch','launches','launched','announce','announces','announced',
+    'reveal','reveals','revealed','confirm','confirms','confirmed',
+    'deny','denies','denied','condemn','condemns','condemns','defend','defends',
+    // Sensitive standalone group/identity terms
+    'jews','jewish','muslims','christians','catholics','protestants',
+    'blacks','whites','latinos','hispanics','asians','arabs',
+    'immigrants','migrants','refugees','foreigners','natives',
+    'gays','lesbians','trans','queer',
     // Common first names
     'john','james','mary','peter','paul','david','sarah','michael','george','robert',
     'william','richard','charles','donald','boris','tony','mark','chris','kevin','gary',
@@ -249,54 +293,95 @@ export default function FeedPage({
     'andrew','joshua','ryan','adam','luke','alex','sam','ben','tom','tim','jim','bob',
     'bill','mike','phil','andy','dave','steve','sean','jake','liam','owen','evan',
     'neil','eric','carl','dean','rose','ruth','anne','june','dawn','amy','eva','mia',
-    // Sensitive standalone group/identity terms
-    'jews','jewish','muslims','christians','catholics','protestants',
-    'blacks','whites','latinos','hispanics','asians','arabs',
-    'immigrants','migrants','refugees','foreigners','natives',
-    'gays','lesbians','trans','queer',
-    // Generic news genre words that still sneak through
+    // Generic news format words
     'analysis','opinion','comment','review','interview','exclusive','special','breaking',
-    'latest','update','report','reports','live','watch','listen','read','podcast',
+    'update','report','reports','live','watch','listen','read','podcast','inside',
+    'why','how','what','who','when','where','says','think','could','would','should',
   ]), [])
 
+  // Stop-words allowed to sit *inside* a phrase but not start/end one
+  const PHRASE_CONNECTORS = new Set(['of','the','and','in','on','at','to','for','by','with','from','over','into','as','a'])
+
   const trendingTopics = useMemo(() => {
-    const freq = {}
-    const displayForm = {}
+    const phraseFreq   = {}  // key → count  (multi-word phrases)
+    const singleFreq   = {}  // key → count  (single proper nouns / acronyms)
+    const displayForm  = {}  // key → display string
 
     for (const article of articles.slice(0, 300)) {
       const title = (article.title || '').trim()
       if (!title) continue
       const rawWords = title.split(/\s+/)
 
+      // ── Pass 1: collect phrases (2+ consecutive proper/acronym tokens) ──
+      let buffer = []   // [{word, key}]
+
+      const flushBuffer = () => {
+        // Trim trailing connectors from buffer
+        while (buffer.length && PHRASE_CONNECTORS.has(buffer[buffer.length - 1].key)) buffer.pop()
+        if (buffer.length >= 2) {
+          const phrase   = buffer.map(t => t.word).join(' ')
+          const phraseKey = phrase.toLowerCase()
+          phraseFreq[phraseKey] = (phraseFreq[phraseKey] || 0) + 1
+          displayForm[phraseKey] = phrase
+        }
+        buffer = []
+      }
+
+      rawWords.forEach((raw, idx) => {
+        const clean = raw.replace(/[^a-zA-Z'-]/g, '').replace(/^'+|'+$/g, '')
+        if (!clean) { flushBuffer(); return }
+
+        const isAcronym    = /^[A-Z]{2,6}$/.test(clean)
+        const isProperNoun = idx > 0 && /^[A-Z][a-z]{1,}$/.test(clean)
+        const isConnector  = PHRASE_CONNECTORS.has(clean.toLowerCase())
+
+        if (isAcronym || isProperNoun) {
+          buffer.push({ word: isAcronym ? clean : clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase(), key: clean.toLowerCase() })
+        } else if (isConnector && buffer.length > 0) {
+          // Allow connectors mid-phrase ("Secretary of State", "Isle of Man")
+          buffer.push({ word: clean.toLowerCase(), key: clean.toLowerCase() })
+        } else {
+          flushBuffer()
+        }
+      })
+      flushBuffer()
+
+      // ── Pass 2: single proper nouns & acronyms ──
       rawWords.forEach((raw, idx) => {
         const clean = raw.replace(/[^a-zA-Z]/g, '')
         if (!clean) return
 
-        // All-caps acronyms: NHS, NATO, GDP, AI, IMF (2–6 chars)
-        const isAcronym = /^[A-Z]{2,6}$/.test(clean)
-        // Proper nouns: capitalised mid-sentence (not the opening word)
+        const isAcronym    = /^[A-Z]{2,6}$/.test(clean)
         const isProperNoun = idx > 0 && /^[A-Z][a-z]{1,}$/.test(clean)
-
         if (!isAcronym && !isProperNoun) return
 
         const key = clean.toLowerCase()
         if (key.length < 3) return
-        if (TRENDING_BLOCKLIST.has(key)) return
+        if (COMMON_WORDS.has(key)) return
 
-        freq[key] = (freq[key] || 0) + 1
-        // Acronyms stay uppercase; proper nouns get initial cap
-        if (!displayForm[key] || isAcronym) {
+        singleFreq[key] = (singleFreq[key] || 0) + 1
+        if (!displayForm[key]) {
           displayForm[key] = isAcronym ? clean : clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase()
         }
       })
     }
 
-    return Object.entries(freq)
-      .filter(([, count]) => count >= 2)
+    // ── Score & merge ──
+    // Phrases get 3× weight so they surface above ambiguous singles.
+    // Singles require freq ≥ 3 (stricter than phrases) to reduce noise.
+    const scored = {}
+    for (const [key, count] of Object.entries(phraseFreq)) {
+      if (count >= 2) scored[key] = count * 3
+    }
+    for (const [key, count] of Object.entries(singleFreq)) {
+      if (count >= 3 && !scored[key]) scored[key] = count
+    }
+
+    return Object.entries(scored)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12)
       .map(([key]) => displayForm[key] || key.charAt(0).toUpperCase() + key.slice(1))
-  }, [articles, TRENDING_BLOCKLIST])
+  }, [articles, COMMON_WORDS, PHRASE_CONNECTORS])
 
   // Which list to display — DB results when search active, interleaved otherwise
   const isSearchActive = dbResults !== null
@@ -566,11 +651,34 @@ export default function FeedPage({
                   You've reached the end · {displayList.length} stories loaded
                 </div>
               )}
+
+              {/* Subtle legal footer — desktop only, below last article */}
+              {!isSearchActive && !hasMoreArticles && displayList.length > 0 && (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '12px 0 24px',
+                  fontSize: 11,
+                  color: 'var(--text3)',
+                  display: 'none',
+                  // shown via CSS on desktop only
+                }} className="legal-footer">
+                  © {new Date().getFullYear()} RatedNews
+                  {' · '}
+                  <button onClick={() => setLegalDoc('privacy')} className="legal-link">Privacy</button>
+                  {' · '}
+                  <button onClick={() => setLegalDoc('terms')} className="legal-link">Terms</button>
+                  {' · '}
+                  <button onClick={() => setLegalDoc('guidelines')} className="legal-link">Guidelines</button>
+                </div>
+              )}
             </div>
           </div>
           <Sidebar outlets={outlets} navigate={navigate} />
         </div>
       </div>
+
+      {/* Legal modal */}
+      {legalDoc && <LegalModal doc={legalDoc} onClose={() => setLegalDoc(null)} />}
     </div>
   )
 }

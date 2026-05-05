@@ -76,7 +76,10 @@ async function run() {
 
   const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString()
 
-  // Paginate articles to avoid Supabase's 1000-row default limit
+  // Paginate articles to avoid Supabase's 1000-row default limit.
+  // Primary window: last 30 days. For outlets with no recent scored articles
+  // we fall back to all-time so newly-ingested outlets with older RSS dates
+  // still get a score rather than being silently skipped.
   async function fetchAllArticles() {
     const PAGE = 1000
     let all = [], from = 0
@@ -92,6 +95,25 @@ async function run() {
       from += PAGE
     }
     return { data: all, error: null }
+  }
+
+  // Fallback: fetch all-time scored articles for outlets that had nothing in the 30-day window
+  async function fetchAllTimeArticles(outletIds) {
+    if (!outletIds.length) return []
+    const PAGE = 1000
+    let all = [], from = 0
+    while (true) {
+      const { data, error } = await supabase
+        .from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction')
+        .not('accuracy_score', 'is', null)
+        .in('outlet_id', outletIds)
+        .range(from, from + PAGE - 1)
+      if (error) break
+      all = all.concat(data || [])
+      if (!data || data.length < PAGE) break
+      from += PAGE
+    }
+    return all
   }
 
   const [
@@ -116,6 +138,22 @@ async function run() {
     if (!a.outlet_id) continue
     if (!grouped[a.outlet_id]) grouped[a.outlet_id] = []
     grouped[a.outlet_id].push(a)
+  }
+
+  // Fallback: for outlets with no articles in the 30-day window, fetch all-time
+  const missingOutletIds = outlets
+    .map(o => o.id)
+    .filter(id => !grouped[id] || grouped[id].length < MIN_ARTICLES)
+
+  if (missingOutletIds.length > 0) {
+    console.log(`   ⏳  ${missingOutletIds.length} outlets have no recent articles — fetching all-time fallback…`)
+    const fallbackArticles = await fetchAllTimeArticles(missingOutletIds)
+    console.log(`   ${fallbackArticles.length} all-time articles found for fallback outlets`)
+    for (const a of fallbackArticles) {
+      if (!a.outlet_id) continue
+      if (!grouped[a.outlet_id]) grouped[a.outlet_id] = []
+      grouped[a.outlet_id].push(a)
+    }
   }
 
   // Group ratings by outlet
@@ -157,7 +195,14 @@ async function run() {
   for (const u of updates) {
     const { error } = await supabase
       .from('outlets')
-      .update({ accuracy_score: u.accuracy_score, bias_score: u.bias_score, bias_direction: u.bias_direction, overall_score: u.overall_score })
+      .update({
+        accuracy_score:  u.accuracy_score,
+        bias_score:      u.bias_score,
+        bias_direction:  u.bias_direction,
+        overall_score:   u.overall_score,
+        community_score: u.communityScore || null,
+        total_ratings:   u.voteCount,
+      })
       .eq('id', u.id)
 
     const tier = u.voteCount === 0 ? 'AI-led' : u.voteCount < 5 ? 'early' : u.voteCount < 20 ? 'growing' : 'full'
