@@ -149,7 +149,8 @@ function BiasFingerprint({ ratings }) {
 const CATEGORY_EMOJIS = {
   Politics: '🏛', Business: '📈', Sport: '⚽', Tech: '💻',
   Science: '🔬', Health: '🏥', Environment: '🌱', Entertainment: '🎬',
-  Crime: '⚖️', Travel: '✈️', Education: '🎓', World: '🌍',
+  Crime: '🔍', Travel: '✈️', Education: '🎓', World: '🌍',
+  Conflict: '⚔️',
 }
 
 function TopicBreakdown({ ratings, noMargin = false }) {
@@ -201,6 +202,9 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
   const [nameInput, setNameInput]           = useState('')
   const [nameSaving, setNameSaving]         = useState(false)
   const [nameError, setNameError]           = useState('')
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteInput, setDeleteInput]             = useState('')
+  const [deleting, setDeleting]                   = useState(false)
 
   const followedOutlets = allOutlets.filter(o => followedOutletIds.has(o.id))
 
@@ -268,12 +272,29 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
       .neq('user_id', user.id)
       .maybeSingle()
     if (existing) { setNameError('Username already taken'); setNameSaving(false); return }
-    const { error } = await db.from('profiles').update({ username: val }).eq('user_id', user.id)
+    const { error } = await db.from('profiles').upsert({ user_id: user.id, username: val }, { onConflict: 'user_id' })
     if (error) { setNameError('Could not save — try again'); setNameSaving(false); return }
     setProfile(p => ({ ...p, username: val }))
     setEditingName(false)
     setNameSaving(false)
     showToast('Username updated!')
+  }
+
+  async function deleteAccount() {
+    setDeleting(true)
+    const { data: { session } } = await db.auth.getSession()
+    const res = await fetch('/api/delete-account', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    })
+    if (!res.ok) {
+      const { error } = await res.json()
+      showToast(`Could not delete account: ${error}`)
+      setDeleting(false)
+      return
+    }
+    await db.auth.signOut()
+    navigate('feed')
   }
 
   if (!user) { navigate('feed'); return null }
@@ -664,6 +685,49 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
             )}
           </div>
         )}
+
+        {/* Danger zone */}
+        <div style={{ marginTop: 32, paddingTop: 20, borderTop: '0.5px solid var(--border)' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 12 }}>Danger zone</div>
+          {!showDeleteConfirm ? (
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              style={{ fontSize: 12, padding: '7px 16px', borderRadius: 20, border: '1px solid var(--red)', background: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+            >
+              Delete account
+            </button>
+          ) : (
+            <div style={{ background: 'var(--red-light)', border: '0.5px solid var(--red)', borderRadius: 'var(--radius)', padding: '16px 18px' }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--red)', marginBottom: 6 }}>This cannot be undone</div>
+              <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 14 }}>
+                Your account, saved articles, ratings, and follows will be permanently deleted. Type <strong>DELETE</strong> to confirm.
+              </p>
+              <input
+                value={deleteInput}
+                onChange={e => setDeleteInput(e.target.value)}
+                placeholder="Type DELETE to confirm"
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--red)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, fontFamily: 'DM Sans, sans-serif', marginBottom: 10, boxSizing: 'border-box' }}
+              />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => { setShowDeleteConfirm(false); setDeleteInput('') }}
+                  style={{ flex: 1, fontSize: 12, padding: '7px 0', borderRadius: 20, border: '1px solid var(--border)', background: 'none', color: 'var(--text2)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={deleteAccount}
+                  disabled={deleteInput !== 'DELETE' || deleting}
+                  style={{ flex: 2, fontSize: 12, padding: '7px 0', borderRadius: 20, border: 'none', background: deleteInput === 'DELETE' ? 'var(--red)' : 'var(--border)', color: deleteInput === 'DELETE' ? '#fff' : 'var(--text3)', cursor: deleteInput === 'DELETE' ? 'pointer' : 'default', fontFamily: 'DM Sans, sans-serif', transition: 'all 0.15s' }}
+                >
+                  {deleting ? 'Deleting…' : 'Permanently delete'}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div style={{ height: 32 }} />
       </div>
     </div>
   )
