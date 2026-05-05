@@ -1,14 +1,35 @@
 import React, { useState, useEffect } from 'react'
 import { scoreColor } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
+import InfoTip from '../components/InfoTip'
 import { db } from '../lib/supabase'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
 const OUTLET_TABS = [
-  { id: 'credibility', label: 'Trust',        key: 'overall_score',   desc: 'Overall trust score'         },
-  { id: 'accuracy',    label: 'Most Accurate', key: 'accuracy_score',  desc: 'AI accuracy score'           },
-  { id: 'community',   label: 'Community',     key: 'community_score', desc: 'Avg community star rating'   },
-  { id: 'rated',       label: 'Most Rated',    key: 'total_ratings',   desc: 'Number of community ratings' },
+  {
+    id: 'credibility', label: 'Trust', key: 'overall_score',
+    desc: 'Overall trust score',
+    tip: 'Combined credibility score based on AI accuracy analysis, headline fairness and community ratings. Higher = more trustworthy.',
+    chipLabel: 'avg trust score', unit: '',
+  },
+  {
+    id: 'accuracy', label: 'Most Accurate', key: 'accuracy_score',
+    desc: 'AI accuracy score',
+    tip: 'AI-assessed factual reliability of each article. Outlets are ranked by the average accuracy score across their recent articles.',
+    chipLabel: 'avg accuracy', unit: '',
+  },
+  {
+    id: 'community', label: 'Community', key: 'community_score',
+    desc: 'Avg community star rating',
+    tip: 'Average star rating given by RatedNews users (out of 100). Reflects reader trust and experience, independent of AI analysis.',
+    chipLabel: 'avg community score', unit: '',
+  },
+  {
+    id: 'rated', label: 'Most Rated', key: 'total_ratings',
+    desc: 'Number of community ratings',
+    tip: 'Total number of community ratings submitted for each outlet. More ratings means greater confidence in that outlet\'s score.',
+    chipLabel: 'ratings across all outlets', unit: '',
+  },
 ]
 
 const BIAS_COLORS = { left: 'var(--blue, #3b82f6)', centre: 'var(--text3)', right: 'var(--red)' }
@@ -120,32 +141,88 @@ export default function RankingsPage({ outlets, navigate, goBack, user, onRefres
         {/* ── OUTLETS SECTION ── */}
         {section === 'outlets' && (
           <>
-            {/* Summary chips */}
-            {topOutlet && (
-              <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-                <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140 }}>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Top outlet</div>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{topOutlet.name}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text2)' }}>{topOutlet[activeTab.key] || 0} {activeTab.desc}</div>
-                </div>
-                <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140 }}>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Average</div>
-                  <div style={{ fontSize: 22, fontWeight: 700, color: tab === 'rated' ? 'var(--text)' : scoreColor(avgScore) }}>{avgScore}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text2)' }}>across {ratedOutlets.length} rated outlets</div>
-                </div>
-                <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140 }}>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total ratings</div>
-                  <div style={{ fontSize: 22, fontWeight: 700 }}>{outlets.reduce((s, o) => s + (o.total_ratings || 0), 0)}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text2)' }}>community ratings</div>
-                </div>
+            {/* Summary chips — always visible for layout uniformity */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+              {/* Top outlet */}
+              <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140 }}>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Top outlet</div>
+                {topOutlet ? (
+                  <>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>{topOutlet.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text2)' }}>
+                      {tab === 'community'
+                        ? `${((topOutlet.community_score || 0) / 20).toFixed(1)}★ community`
+                        : tab === 'rated'
+                          ? `${topOutlet.total_ratings || 0} ratings`
+                          : `${topOutlet[activeTab.key] || 0} ${activeTab.desc}`}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--text3)' }}>—</div>
+                    <div style={{ fontSize: 12, color: 'var(--text3)' }}>No data yet</div>
+                  </>
+                )}
               </div>
-            )}
+
+              {/* Average / count */}
+              <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140 }}>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  {tab === 'rated' ? 'Total ratings' : 'Average'}
+                </div>
+                {tab === 'rated' ? (
+                  <>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--coral)' }}>
+                      {outlets.reduce((s, o) => s + (o.total_ratings || 0), 0)}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text2)' }}>community ratings total</div>
+                  </>
+                ) : tab === 'community' ? (
+                  <>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: ratedOutlets.length ? scoreColor(avgScore) : 'var(--text3)' }}>
+                      {ratedOutlets.length ? `${(avgScore / 20).toFixed(1)}★` : '—'}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text2)' }}>
+                      {ratedOutlets.length ? `across ${ratedOutlets.length} rated outlets` : 'No community scores yet'}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 22, fontWeight: 700, color: ratedOutlets.length ? scoreColor(avgScore) : 'var(--text3)' }}>
+                      {ratedOutlets.length ? avgScore : '—'}
+                    </div>
+                    <div style={{ fontSize: 12, color: 'var(--text2)' }}>
+                      {ratedOutlets.length ? `across ${ratedOutlets.length} rated outlets` : 'No scores yet'}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Third chip — contextual */}
+              <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140 }}>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  {tab === 'rated' ? 'Outlets rated' : 'Total ratings'}
+                </div>
+                {tab === 'rated' ? (
+                  <>
+                    <div style={{ fontSize: 22, fontWeight: 700 }}>{outlets.filter(o => (o.total_ratings || 0) > 0).length}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text2)' }}>outlets with ratings</div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: 22, fontWeight: 700 }}>{outlets.reduce((s, o) => s + (o.total_ratings || 0), 0)}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text2)' }}>community ratings</div>
+                  </>
+                )}
+              </div>
+            </div>
 
             {/* Sub-tabs */}
             <div className="tabs" style={{ marginBottom: 16 }}>
               {OUTLET_TABS.map(t => (
-                <div key={t.id} className={`tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>
+                <div key={t.id} className={`tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                   {t.label}
+                  <InfoTip text={t.tip} />
                 </div>
               ))}
             </div>
