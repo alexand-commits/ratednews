@@ -57,6 +57,7 @@ export default function NewsCard({ article, index, onClick, navigate }) {
           display: 'inline-block', fontSize: 10, fontWeight: 600,
           padding: '2px 8px', borderRadius: 20, marginBottom: 6,
           background: hlBadge.bg, color: hlBadge.color,
+          alignSelf: 'flex-start',
         }}>
           {hlBadge.label}
         </span>
