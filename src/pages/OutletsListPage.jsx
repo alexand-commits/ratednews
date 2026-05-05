@@ -202,7 +202,15 @@ export default function OutletsListPage({ outlets, navigate, goBack, showToast, 
       (o.country || '').toLowerCase().includes(search.toLowerCase())
     )
     .slice()
-    .sort((a, b) => (b[sort] || 0) - (a[sort] || 0))
+    .sort((a, b) => {
+      const aVal = a[sort] || 0
+      const bVal = b[sort] || 0
+      // Always push unscored/zero outlets to the bottom
+      if (!aVal && !bVal) return 0
+      if (!aVal) return 1
+      if (!bVal) return -1
+      return bVal - aVal
+    })
 
   function handleSuggestClick() {
     if (!user) { onLoginClick(); return }
