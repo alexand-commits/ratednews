@@ -31,8 +31,8 @@ ${pages.map(p => `  <url>
 export async function getServerSideProps({ res }) {
   const { createClient } = await import('@supabase/supabase-js')
   const supabase = createClient(
-    process.env.VITE_SUPABASE_URL,
-    process.env.VITE_SUPABASE_ANON_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY,
   )
 
   const [{ data: outlets }, { data: articles }] = await Promise.all([

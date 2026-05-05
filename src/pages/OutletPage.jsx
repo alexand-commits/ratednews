@@ -200,48 +200,47 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
               <span className="meta-chip"><span>✓</span>Editorially verified</span>
             </div>
           </div>
-          <div className="outlet-hero-score-block" style={{ textAlign: 'center', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div className="outlet-hero-score-block">
             <div className="outlet-hero-score-text">
-              <div className="big-score">{score}</div>
+              <div className="big-score" style={{ color: score >= 75 ? 'var(--green)' : score >= 60 ? 'var(--amber)' : score > 0 ? 'var(--red)' : 'var(--text3)' }}>{score > 0 ? score : '—'}</div>
               <div className="big-score-label">Overall trust score</div>
-              <div className="score-grade">
-                {score >= 90 ? 'High credibility' : score >= 75 ? 'Good credibility' : score >= 60 ? 'Mixed credibility' : 'Low credibility'}
+              <div style={{
+                display: 'inline-block',
+                fontSize: 11,
+                fontWeight: 600,
+                padding: '3px 10px',
+                borderRadius: 20,
+                marginTop: 6,
+                background: score >= 75 ? 'var(--green-light)' : score >= 60 ? '#fff3cd' : score > 0 ? '#fde8e8' : 'var(--bg2)',
+                color: score >= 75 ? 'var(--green-dark)' : score >= 60 ? '#856404' : score > 0 ? 'var(--red)' : 'var(--text3)',
+              }}>
+                {score >= 90 ? '● High credibility' : score >= 75 ? '● Good credibility' : score >= 60 ? '● Mixed credibility' : score > 0 ? '● Low credibility' : 'Not yet rated'}
               </div>
             </div>
-            <div className="outlet-hero-actions" style={{ display: 'flex', gap: 6, marginTop: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <div className="outlet-hero-score-divider" />
+            <div className="outlet-hero-actions">
               <button
                 onClick={() => { if (!user) { onLoginClick(); return } toggleFollow(outletId) }}
+                className="outlet-action-btn"
                 style={{
-                  padding: '7px 14px',
-                  borderRadius: 20,
                   border: followedOutletIds.has(outletId) ? '1.5px solid var(--border)' : '1.5px solid var(--coral)',
                   background: followedOutletIds.has(outletId) ? 'var(--bg)' : 'var(--coral)',
                   color: followedOutletIds.has(outletId) ? 'var(--text2)' : '#fff',
-                  fontSize: 12,
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  transition: 'all 0.15s',
-                  whiteSpace: 'nowrap',
                 }}
               >
                 {followedOutletIds.has(outletId) ? '✓ Following' : '+ Follow'}
               </button>
               <button
                 onClick={handleRateClick}
+                className="outlet-action-btn"
                 style={{
-                  padding: '7px 14px',
-                  borderRadius: 20,
                   border: '1.5px solid var(--border2)',
                   background: alreadyRated ? 'var(--bg)' : 'var(--surface)',
-                  color: alreadyRated ? 'var(--text3)' : 'var(--text2)',
-                  fontSize: 12,
-                  fontWeight: 600,
+                  color: alreadyRated ? 'var(--text3)' : 'var(--text)',
                   cursor: alreadyRated ? 'default' : 'pointer',
-                  transition: 'all 0.15s',
-                  whiteSpace: 'nowrap',
                 }}
               >
-                {alreadyRated ? '★ Rated' : '★ Rate'}
+                {alreadyRated ? '★ Rated' : '★ Rate outlet'}
               </button>
             </div>
           </div>

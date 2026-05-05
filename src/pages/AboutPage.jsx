@@ -80,10 +80,10 @@ export default function AboutPage({ navigate, goBack }) {
           <div className="section-label" style={{ marginBottom: 12 }}>The process</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
-              { icon: '📡', step: '1. Ingestion', desc: 'Articles are pulled hourly from RSS feeds across 21 major news outlets spanning the US, UK and international press.' },
+              { icon: '📡', step: '1. Ingestion', desc: 'Articles are pulled hourly from RSS feeds across 80+ news outlets spanning the US, UK and international press. Promotional and sponsored content is automatically filtered before analysis.' },
               { icon: '🤖', step: '2. AI analysis', desc: 'Each article is analysed by Claude (Anthropic\'s AI) for accuracy, partisan intensity, political lean, headline fairness, and topic category.' },
               { icon: '👥', step: '3. Community rating', desc: 'Readers can rate articles with 1–5 stars and vote on accuracy, bias, and headline quality. Outlets can also be rated directly.' },
-              { icon: '📊', step: '4. Outlet scoring', desc: 'Outlet trust scores are recalculated every hour from all scored articles. The weight of community votes grows as more ratings arrive — protecting against early manipulation.' },
+              { icon: '📊', step: '4. Outlet scoring', desc: 'Outlet trust scores are recalculated every hour from all scored articles in the past 30 days. The weight of community votes grows as more ratings arrive — protecting against early manipulation.' },
             ].map(s => (
               <div key={s.step} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
                 <span style={{ fontSize: 20, flexShrink: 0 }}>{s.icon}</span>
