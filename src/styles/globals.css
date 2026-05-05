@@ -319,15 +319,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     background: var(--surface);
     border-top: 0.5px solid var(--border);
     z-index: 100;
-    padding-bottom: env(safe-area-inset-bottom);
-    /* Paint the nav background colour into the browser-chrome gap area */
-    box-shadow: 0 200px 0 200px var(--surface);
-    /* Force GPU compositing so the element tracks viewport resize instantly */
-    transform: translateZ(0);
-    will-change: transform;
+    /* Extend background into safe area (home indicator / Android nav bar) */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    /* Paint surface colour into any remaining browser-chrome gap */
+    box-shadow: 0 0 0 1px var(--border), 0 100px 0 100px var(--surface);
   }
   .bottom-nav-item {
     flex: 1;
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -341,15 +340,14 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     color: var(--text3);
     transition: color 0.15s;
   }
-  .bottom-nav-item { position: relative; }
   .bottom-nav-item.active { color: var(--coral); }
   .bottom-nav-item.active::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 28px; height: 3px; background: var(--coral); border-radius: 0 0 3px 3px; }
+  .bottom-nav-item.active .bottom-nav-label { font-weight: 700; }
   .bottom-nav-icon-wrap { width: 32px; height: 26px; display: flex; align-items: center; justify-content: center; }
   .bottom-nav-icon { font-size: 20px; line-height: 1; }
   .bottom-nav-label { font-size: 10px; font-weight: 500; }
-  .bottom-nav-item.active .bottom-nav-label { font-weight: 700; }
   /* Push page content up so it's not hidden behind the nav */
-  .page-content { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
+  .page-content { padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* NOTIFICATION */
