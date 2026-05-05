@@ -144,6 +144,7 @@ export default function CategoryPage({ navigate, goBack }) {
                   textAlign: 'left',
                   transition: 'opacity 0.15s',
                   width: '100%',
+                  color: 'var(--text)',
                 }}
                 onMouseOver={e => e.currentTarget.style.opacity = '0.85'}
                 onMouseOut={e => e.currentTarget.style.opacity = '1'}
