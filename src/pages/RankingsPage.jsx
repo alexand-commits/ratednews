@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { scoreColor } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import { db } from '../lib/supabase'
+import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
 const OUTLET_TABS = [
   { id: 'credibility', label: 'Trust',        key: 'overall_score',   desc: 'Overall trust score'         },
@@ -24,10 +25,11 @@ function getTrustLevel(total) {
   return TRUST_LEVELS.find(t => total >= t.min) || TRUST_LEVELS[TRUST_LEVELS.length - 1]
 }
 
-export default function RankingsPage({ outlets, navigate, goBack, user }) {
+export default function RankingsPage({ outlets, navigate, goBack, user, onRefresh }) {
   const [section, setSection] = useState('outlets')  // 'outlets' | 'leaderboard'
   const [tab, setTab]         = useState('credibility')
   const [region, setRegion]   = useState('all')
+  const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
 
   // Leaderboard state
   const [leaders, setLeaders]       = useState([])
@@ -91,7 +93,8 @@ export default function RankingsPage({ outlets, navigate, goBack, user }) {
   const topOutlet = ratedOutlets[0]
 
   return (
-    <div className="page-content">
+    <div className="page-content" {...pullHandlers}>
+      {pullIndicator}
       <div className="container" style={{ maxWidth: 800 }}>
         <button className="back-btn" onClick={goBack}>← Back</button>
 

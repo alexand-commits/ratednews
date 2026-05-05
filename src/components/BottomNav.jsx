@@ -8,7 +8,7 @@ const TABS = [
   { page: 'categories', path: '/categories', icon: '🗂', label: 'Browse'   },
 ]
 
-const DETAIL_PATHS = ['/article', '/outlet', '/profile']
+const DETAIL_PATHS = ['/article/', '/outlet/', '/profile/']
 
 export default function BottomNav({ navigate }) {
   const router = useRouter()

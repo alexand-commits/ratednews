@@ -341,11 +341,13 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     color: var(--text3);
     transition: color 0.15s;
   }
+  .bottom-nav-item { position: relative; }
   .bottom-nav-item.active { color: var(--coral); }
-  .bottom-nav-item.active .bottom-nav-icon-wrap { background: var(--coral-light); }
-  .bottom-nav-icon-wrap { width: 44px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 13px; transition: background 0.2s; }
-  .bottom-nav-icon { font-size: 18px; line-height: 1; }
+  .bottom-nav-item.active::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 28px; height: 3px; background: var(--coral); border-radius: 0 0 3px 3px; }
+  .bottom-nav-icon-wrap { width: 32px; height: 26px; display: flex; align-items: center; justify-content: center; }
+  .bottom-nav-icon { font-size: 20px; line-height: 1; }
   .bottom-nav-label { font-size: 10px; font-weight: 500; }
+  .bottom-nav-item.active .bottom-nav-label { font-weight: 700; }
   /* Push page content up so it's not hidden behind the nav */
   .page-content { padding-bottom: calc(70px + env(safe-area-inset-bottom)); }
 }

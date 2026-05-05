@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { scoreColor } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import { db } from '../lib/supabase'
+import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
 const BIAS_COLORS = {
   left:   'var(--blue, #3b82f6)',
@@ -184,12 +185,13 @@ function SuggestModal({ onClose, user, onLoginClick, showToast }) {
   )
 }
 
-export default function OutletsListPage({ outlets, navigate, goBack, showToast, user, onLoginClick }) {
+export default function OutletsListPage({ outlets, navigate, goBack, showToast, user, onLoginClick, onRefresh }) {
   const [search,  setSearch]  = useState('')
   const [region,  setRegion]  = useState('all')
   const [bias,    setBias]    = useState('all')
   const [sort,    setSort]    = useState('overall_score')
   const [showSuggest, setShowSuggest] = useState(false)
+  const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
 
   const filtered = outlets
     .filter(o => region === 'all' || getRegion(o) === region)
@@ -208,7 +210,8 @@ export default function OutletsListPage({ outlets, navigate, goBack, showToast, 
   }
 
   return (
-    <div className="page-content">
+    <div className="page-content" {...pullHandlers}>
+      {pullIndicator}
       <div className="container">
 
         {/* Header */}

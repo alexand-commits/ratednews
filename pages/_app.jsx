@@ -66,6 +66,11 @@ export default function App({ Component, pageProps }) {
       .then(({ data }) => setAllOutlets(data || []))
   }, [])
 
+  async function refreshOutlets() {
+    const { data } = await db.from('outlets').select('*').order('overall_score', { ascending: false })
+    if (data) setAllOutlets(data)
+  }
+
   // ── User data helpers ───────────────────────────────────────────────────
   async function loadFollows(userId) {
     const { data } = await db.from('follows').select('outlet_id').eq('user_id', userId)
@@ -121,7 +126,7 @@ export default function App({ Component, pageProps }) {
     openAuthModal:  () => setShowAuthModal(true),
     followedOutletIds, toggleFollow,
     savedArticleIds,   toggleSave,
-    allOutlets,
+    allOutlets, refreshOutlets,
     navigate, goBack,
   }
 

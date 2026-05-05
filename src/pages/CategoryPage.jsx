@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { db } from '../lib/supabase'
 import { timeAgo } from '../utils/helpers'
+import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
 const CATEGORIES = [
   { value: 'Politics',       emoji: '🏛',  label: 'Politics'       },
@@ -69,10 +70,34 @@ export default function CategoryPage({ navigate, goBack }) {
     load()
   }, [region])
 
+  const handleRefresh = useCallback(async () => {
+    setCounts({})
+    setPreviews({})
+    setLoading(true)
+    // Toggling region triggers the useEffect — use a small hack to force re-run
+    setRegion(r => r) // same value, but we need a different approach
+    // Directly re-fetch instead
+    const { data } = await db.from('articles').select('id, title, category, published_at, outlets(country)').not('category', 'is', null).order('published_at', { ascending: false })
+    if (data) {
+      const filtered = region === 'all' ? data : data.filter(a => {
+        const c = a.outlets?.country || ''
+        if (region === 'UK') return c === 'UK'
+        if (region === 'US') return c === 'US'
+        return c !== 'UK' && c !== 'US'
+      })
+      const newCounts = {}; const newPreviews = {}
+      for (const a of filtered) { const cat = a.category; newCounts[cat] = (newCounts[cat] || 0) + 1; if (!newPreviews[cat]) newPreviews[cat] = a }
+      setCounts(newCounts); setPreviews(newPreviews)
+    }
+    setLoading(false)
+  }, [region])
+
+  const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(handleRefresh)
   const total = Object.values(counts).reduce((s, n) => s + n, 0)
 
   return (
-    <div className="page-content">
+    <div className="page-content" {...pullHandlers}>
+      {pullIndicator}
       <div className="container">
         <button className="back-btn" onClick={goBack}>← Back</button>
 

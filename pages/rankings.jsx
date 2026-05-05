@@ -3,7 +3,7 @@ import { useAppContext } from './_app'
 import RankingsPage from '../src/pages/RankingsPage'
 
 export default function Rankings() {
-  const { navigate, goBack, allOutlets, showToast, user } = useAppContext()
+  const { navigate, goBack, allOutlets, showToast, user, refreshOutlets } = useAppContext()
 
   return (
     <>
@@ -18,6 +18,7 @@ export default function Rankings() {
         goBack={goBack}
         showToast={showToast}
         user={user}
+        onRefresh={refreshOutlets}
       />
     </>
   )
