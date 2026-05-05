@@ -19,18 +19,24 @@ jobs:
 
       - run: npm ci
 
-      - run: node scripts/ingest.mjs
+      - name: Ingest RSS feeds
+        run: node scripts/ingest.mjs
+        continue-on-error: true
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
-      - run: node scripts/score.mjs
+      - name: Score articles
+        run: node scripts/score.mjs
+        continue-on-error: true
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
-      - run: node scripts/aggregate-outlets.mjs
+      - name: Aggregate outlet scores
+        run: node scripts/aggregate-outlets.mjs
+        continue-on-error: true
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
