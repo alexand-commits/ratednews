@@ -151,12 +151,21 @@ export default function RankingsPage({ outlets, navigate, goBack, user, onRefres
             </div>
 
             {/* Region filter */}
-            <div className="filter-bar" style={{ marginBottom: 16 }}>
-              {['all', 'UK', 'US'].map(r => (
-                <button key={r} className={`pill${region === r ? ' active' : ''}`} onClick={() => setRegion(r)}>
-                  {r === 'all' ? 'Global' : r}
-                </button>
-              ))}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 8 }}>
+                Filter by region
+              </div>
+              <div className="filter-bar">
+                {[
+                  { value: 'all', label: '🌍 Global' },
+                  { value: 'UK',  label: '🇬🇧 UK'    },
+                  { value: 'US',  label: '🇺🇸 US'    },
+                ].map(r => (
+                  <button key={r.value} className={`pill${region === r.value ? ' active' : ''}`} onClick={() => setRegion(r.value)}>
+                    {r.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* List */}

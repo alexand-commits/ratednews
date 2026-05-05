@@ -83,6 +83,7 @@ export default function FeedPage({
   const [dbResults, setDbResults]   = useState(null)   // null = search not active
   const [dbLoading, setDbLoading]   = useState(false)
   const searchTimer                 = useRef(null)
+  const searchInputRef              = useRef(null)
 
   // Infinite scroll sentinel
   const sentinelRef = useRef(null)
@@ -249,6 +250,7 @@ export default function FeedPage({
         <div className="search-bar">
           <span className="search-icon">🔍</span>
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="Search all stories..."
             value={search}
@@ -297,6 +299,7 @@ export default function FeedPage({
                   : <>
                       {filtered.length} {filtered.length === 1 ? 'story' : 'stories'}
                       {category !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> in {category}</span>}
+                      {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
                     </>
                 }
               </div>
@@ -370,7 +373,10 @@ export default function FeedPage({
                     key={a.id}
                     article={a}
                     index={i}
-                    onClick={() => navigate('article', { articleId: a.id })}
+                    onClick={() => {
+                      searchInputRef.current?.blur()
+                      navigate('article', { articleId: a.id })
+                    }}
                     navigate={navigate}
                   />
                 ))

@@ -17,6 +17,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   const [commentInput, setCommentInput] = useState('')
   const [votedComments, setVotedComments] = useState({})
   const [visibleArticles, setVisibleArticles] = useState(10)
+  const [articlesLoading, setArticlesLoading] = useState(true)
 
   const outlet = liveOutlet || allOutlets.find(o => o.id === outletId)
 
@@ -31,6 +32,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
     setMyRating(null)
     setLiveOutlet(null)
     setVisibleArticles(10)
+    setArticlesLoading(true)
 
     // Articles
     db.from('articles')
@@ -38,7 +40,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
       .eq('outlet_id', outletId)
       .order('published_at', { ascending: false })
       .limit(25)
-      .then(({ data }) => setArticles(data || []))
+      .then(({ data }) => { setArticles(data || []); setArticlesLoading(false) })
 
     // Community ratings
     db.from('outlet_ratings')
@@ -80,6 +82,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   const score = outlet.overall_score || 0
   const biasPos = Math.max(0, Math.min(100, 50 + ((outlet.bias_score || 50) - 50)))
   const similar = allOutlets.filter(o => o.id !== outletId && o.country === outlet?.country).slice(0, 4)
+  const websiteUrl = outlet.rss_url ? (() => { try { const u = new URL(outlet.rss_url); return `${u.protocol}//${u.hostname}` } catch { return null } })() : null
 
 
   // AI aggregate scores derived from fetched articles
@@ -194,7 +197,16 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
             <div className="outlet-meta-chips">
               <span className="meta-chip"><span>🌍</span>{outlet.country || 'Unknown'}</span>
               <span className="meta-chip">{outlet.type || 'News outlet'}</span>
-              <span className="meta-chip">Global</span>
+              {websiteUrl && (
+                <a
+                  href={websiteUrl} target="_blank" rel="noopener noreferrer"
+                  className="meta-chip"
+                  onClick={e => e.stopPropagation()}
+                  style={{ textDecoration: 'none', color: 'var(--coral)', fontWeight: 500 }}
+                >
+                  ↗ Visit website
+                </a>
+              )}
             </div>
             <div className="outlet-desc">{outlet.description || ''}</div>
             <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
@@ -349,7 +361,24 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                 </>
               )}
 
-              {articles.length > 0 ? (
+              {articlesLoading ? (
+                <>
+                  <div className="section-label">Recent articles</div>
+                  <div className="feed">
+                    {[0, 1, 2, 3].map(i => (
+                      <div key={i} className="skeleton-news-card">
+                        <div className="skeleton-line skeleton-shimmer" style={{ width: '88%', height: 14 }} />
+                        <div className="skeleton-line skeleton-shimmer" style={{ width: '62%', height: 14 }} />
+                        <div className="skeleton-row">
+                          <div className="skeleton-line skeleton-shimmer" style={{ width: 44, height: 18, borderRadius: 20 }} />
+                          <div className="skeleton-line skeleton-shimmer" style={{ width: 40, height: 18, borderRadius: 20 }} />
+                          <div className="skeleton-line skeleton-shimmer" style={{ width: 36, height: 12, borderRadius: 20, marginLeft: 'auto' }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              ) : articles.length > 0 ? (
                 <>
                   <div className="section-label">Recent articles</div>
                   <div className="feed">
@@ -447,7 +476,21 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
         )}
 
         {activeTab === 'feed-tab' && (
-          articles.length > 0 ? (
+          articlesLoading ? (
+            <div className="feed">
+              {[0, 1, 2, 3, 4].map(i => (
+                <div key={i} className="skeleton-news-card">
+                  <div className="skeleton-line skeleton-shimmer" style={{ width: '90%', height: 14 }} />
+                  <div className="skeleton-line skeleton-shimmer" style={{ width: '65%', height: 14 }} />
+                  <div className="skeleton-row">
+                    <div className="skeleton-line skeleton-shimmer" style={{ width: 44, height: 18, borderRadius: 20 }} />
+                    <div className="skeleton-line skeleton-shimmer" style={{ width: 40, height: 18, borderRadius: 20 }} />
+                    <div className="skeleton-line skeleton-shimmer" style={{ width: 36, height: 12, borderRadius: 20, marginLeft: 'auto' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : articles.length > 0 ? (
             <>
               <div className="feed">
                 {articles.slice(0, visibleArticles).map(a => (

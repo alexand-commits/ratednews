@@ -346,9 +346,12 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                   </button>
                 </div>
               )}
-              <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 9px', borderRadius: 20, background: 'var(--bg)', border: `1.5px solid ${trust.color}`, color: trust.color, whiteSpace: 'nowrap' }}>
-                {trust.emoji} {trust.label}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 9px', borderRadius: 20, background: 'var(--bg)', border: `1.5px solid ${trust.color}`, color: trust.color, whiteSpace: 'nowrap' }}>
+                  {trust.emoji} {trust.label}
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text3)' }}>Member since {memberSince}</span>
+              </div>
             </div>
           </div>
 
@@ -369,6 +372,15 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
               </div>
             ))}
           </div>
+
+          {/* Quick summary line */}
+          {totalContrib > 0 && (
+            <div style={{ fontSize: 12, color: 'var(--text2)', padding: '10px 0', borderTop: '0.5px solid var(--border)', borderBottom: '0.5px solid var(--border)', marginBottom: 14, lineHeight: 1.6 }}>
+              <strong>{totalContrib}</strong> total contribution{totalContrib !== 1 ? 's' : ''} · <strong>{daysActive}</strong> active day{daysActive !== 1 ? 's' : ''}
+              {avgStars && <> · rated <strong>{avgStars}★</strong> on average</>}
+              {followedOutletIds.size > 0 && <> · following <strong>{followedOutletIds.size}</strong> outlet{followedOutletIds.size !== 1 ? 's' : ''}</>}
+            </div>
+          )}
 
           {/* Trust progress */}
           {trust.next ? (
