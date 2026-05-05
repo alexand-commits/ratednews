@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import NewsCard from '../components/NewsCard'
 import Sidebar from '../components/Sidebar'
 import { timeAgo } from '../utils/helpers'
@@ -84,6 +84,24 @@ export default function FeedPage({
   const [dbLoading, setDbLoading]   = useState(false)
   const searchTimer                 = useRef(null)
   const searchInputRef              = useRef(null)
+
+  // Rotating placeholder to show topic-search power
+  const SEARCH_EXAMPLES = [
+    'Search any topic, person or event…',
+    "Try 'AI regulation'…",
+    "Try 'UK inflation'…",
+    "Try 'Ukraine'…",
+    "Try 'climate change'…",
+    "Try 'Donald Trump'…",
+    "Try 'interest rates'…",
+    "Try 'NHS'…",
+  ]
+  const [placeholderIdx, setPlaceholderIdx] = useState(0)
+  useEffect(() => {
+    if (search) return
+    const id = setInterval(() => setPlaceholderIdx(i => (i + 1) % SEARCH_EXAMPLES.length), 3000)
+    return () => clearInterval(id)
+  }, [search])
 
   // Infinite scroll sentinel
   const sentinelRef = useRef(null)
@@ -252,7 +270,7 @@ export default function FeedPage({
           <input
             ref={searchInputRef}
             type="text"
-            placeholder="Search all stories..."
+            placeholder={SEARCH_EXAMPLES[placeholderIdx]}
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
@@ -265,6 +283,11 @@ export default function FeedPage({
             </button>
           )}
         </div>
+        {!search && (
+          <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: -8, marginBottom: 12, paddingLeft: 2 }}>
+            Searches every story across all outlets — not just headlines
+          </p>
+        )}
 
         {/* Region filter */}
         <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
