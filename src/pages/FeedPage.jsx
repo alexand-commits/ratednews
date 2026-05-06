@@ -638,7 +638,7 @@ export default function FeedPage({
                     index={i}
                     onClick={() => {
                       searchInputRef.current?.blur()
-                      navigate('article', { articleId: a.id })
+                      navigate('article', { articleId: a.id, title: a.title })
                     }}
                     navigate={navigate}
                   />

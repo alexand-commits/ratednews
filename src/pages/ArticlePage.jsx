@@ -512,7 +512,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 return (
                   <div
                     key={a.id}
-                    onClick={() => navigate('article', { articleId: a.id })}
+                    onClick={() => navigate('article', { articleId: a.id, title: a.title })}
                     style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: i < moreFromOutlet.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
                     onMouseOver={e => e.currentTarget.style.background = 'var(--bg)'}
                     onMouseOut={e => e.currentTarget.style.background = ''}
@@ -540,7 +540,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 return (
                   <div
                     key={a.id}
-                    onClick={() => navigate('article', { articleId: a.id })}
+                    onClick={() => navigate('article', { articleId: a.id, title: a.title })}
                     style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: i < sameCategory.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
                     onMouseOver={e => e.currentTarget.style.background = 'var(--bg)'}
                     onMouseOut={e => e.currentTarget.style.background = ''}

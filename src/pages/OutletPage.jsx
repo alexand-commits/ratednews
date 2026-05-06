@@ -436,7 +436,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                   <div className="section-label">Recent articles</div>
                   <div className="feed">
                     {articles.slice(0, visibleArticles).map(a => (
-                      <ArticleCard key={a.id} a={a} onClick={() => navigate('article', { articleId: a.id })} />
+                      <ArticleCard key={a.id} a={a} onClick={() => navigate('article', { articleId: a.id, title: a.title })} />
                     ))}
                   </div>
                   {articles.length > visibleArticles && (
@@ -537,7 +537,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
             <>
               <div className="feed">
                 {articles.slice(0, visibleArticles).map(a => (
-                  <ArticleCard key={a.id} a={a} onClick={() => navigate('article', { articleId: a.id })} />
+                  <ArticleCard key={a.id} a={a} onClick={() => navigate('article', { articleId: a.id, title: a.title })} />
                 ))}
               </div>
               {articles.length > visibleArticles && (

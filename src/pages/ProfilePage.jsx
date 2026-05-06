@@ -514,7 +514,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                       <div
                         key={r.id}
                         style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', cursor: 'pointer' }}
-                        onClick={() => r.articles?.id && navigate('article', { articleId: r.articles.id })}
+                        onClick={() => r.articles?.id && navigate('article', { articleId: r.articles.id, title: r.articles.title })}
                         onMouseOver={e => e.currentTarget.style.borderColor = 'var(--coral)'}
                         onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
                       >
@@ -576,7 +576,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                   <div
                     key={s.id}
                     style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', cursor: 'pointer' }}
-                    onClick={() => navigate('article', { articleId: article.id })}
+                    onClick={() => navigate('article', { articleId: article.id, title: article.title })}
                     onMouseOver={e => e.currentTarget.style.borderColor = 'var(--coral)'}
                     onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
                   >
@@ -673,7 +673,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                 <div
                   key={c.id}
                   style={{ padding: '14px 18px', borderBottom: i < comments.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }}
-                  onClick={() => c.articles?.id && navigate('article', { articleId: c.articles.id })}
+                  onClick={() => c.articles?.id && navigate('article', { articleId: c.articles.id, title: c.articles.title })}
                   onMouseOver={e => e.currentTarget.style.background = 'var(--bg)'}
                   onMouseOut={e => e.currentTarget.style.background = ''}
                 >

@@ -24,6 +24,21 @@ export function outletColor(name) {
   return colors[idx]
 }
 
+// Generates a human-readable, SEO-friendly URL slug for an article.
+// Format: "{title-words}-{uuid}"
+// e.g. "trump-signs-tariff-order-4f3ff8a6-4730-4e86-a7aa-9d493f4dfa71"
+// The UUID at the end lets getStaticProps do an exact DB lookup without
+// needing a separate slug column.
+export function articleSlug(title, id) {
+  const t = (title || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60)
+    .replace(/-$/, '')
+  return t ? `${t}-${id}` : String(id)
+}
+
 export function timeAgo(ts) {
   if (!ts) return ''
   const diff = (Date.now() - new Date(ts)) / 1000

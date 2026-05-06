@@ -2,6 +2,8 @@
  * Creates a navigate(page, opts) function backed by the Next.js router.
  * Keeps the same API as the old SPA navigate() so no page components need changing.
  */
+import { articleSlug } from './helpers'
+
 export function toSlug(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
@@ -19,9 +21,11 @@ export function createNavigate(router, outlets = []) {
         router.push(params.toString() ? `/?${params}` : '/')
         break
       }
-      case 'article':
-        router.push(`/article/${opts.articleId}`)
+      case 'article': {
+        const slug = articleSlug(opts.title || '', opts.articleId)
+        router.push(`/article/${slug}`)
         break
+      }
       case 'outlet': {
         // Look up outlet name from the allOutlets list so we can make a clean slug URL.
         const outlet = outlets.find(o => o.id === opts.outletId)
