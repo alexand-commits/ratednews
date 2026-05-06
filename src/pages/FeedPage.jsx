@@ -423,7 +423,7 @@ export default function FeedPage({
               </div>
               <div className="stat-chip">
                 <strong>{totalArticleCount != null ? totalArticleCount.toLocaleString() : (articles.length ? articles.length.toLocaleString() : '—')}</strong>
-                <span>Articles</span>
+                <span>Articles rated</span>
               </div>
               {latest && (
                 <div className="stat-chip">
