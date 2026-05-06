@@ -13,39 +13,100 @@ export default function ArticleDetail({ article }) {
     return <div className="page-content"><div className="container" style={{ padding: 40, textAlign: 'center', color: 'var(--text3)' }}>Loading…</div></div>
   }
 
-  const outletName = article.outlets?.name || 'RatedNews'
-  const summary    = article.ai_summary || article.summary || ''
+  const outletName   = article.outlets?.name || 'RatedNews'
+  const summary      = article.ai_summary || article.summary || ''
+  const acc          = article.accuracy_score || 0
+  const biasDir      = article.outlets?.bias_direction || article.bias_direction || null
+  const biasLabel    = { left: 'left-leaning', centre: 'centrist', right: 'right-leaning' }[biasDir] || null
+
+  // Meta description: lead with scores when available so the search snippet
+  // immediately shows the analytical value; fall back gracefully when unscored.
+  const scorePart  = acc > 0
+    ? `Accuracy ${acc}/100${biasLabel ? ` · ${biasLabel}` : ''}. `
+    : ''
+  const metaDesc = summary
+    ? `${scorePart}${summary}`.slice(0, 155)
+    : `AI accuracy & bias analysis of "${article.title}" by ${outletName} on RatedNews.`
+
+  // Keywords: title words + outlet + category + analysis terms
+  const keywords = [
+    outletName,
+    article.category,
+    biasLabel,
+    'news analysis',
+    'bias rating',
+    'accuracy score',
+    'fact check',
+  ].filter(Boolean).join(', ')
+
+  // ── Review schema ─────────────────────────────────────────────────────────
+  // @type Review signals to Google this page analyses the original article,
+  // not republishes it. itemReviewed references the source; reviewRating
+  // carries the accuracy score; reviewBody carries the AI analysis text.
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type':    'Review',
+    name:       `${article.title} — Accuracy & Bias Analysis`,
+    url:        `https://ratednews.com/article/${article.id}`,
+    datePublished: article.published_at,
+    author: {
+      '@type': 'Organization',
+      name:    'RatedNews',
+      url:     'https://ratednews.com',
+    },
+    publisher: {
+      '@type': 'Organization',
+      name:    'RatedNews',
+      url:     'https://ratednews.com',
+      logo: {
+        '@type': 'ImageObject',
+        url:     'https://ratednews.com/og-image.png',
+      },
+    },
+    ...(acc > 0 && {
+      reviewRating: {
+        '@type':       'Rating',
+        ratingValue:   acc,
+        bestRating:    100,
+        worstRating:   0,
+        ratingExplanation: 'AI-assessed accuracy score based on factual claims, source quality, and editorial standards.',
+      },
+    }),
+    ...(summary && { reviewBody: summary }),
+    ...(keywords && { keywords }),
+    itemReviewed: {
+      '@type':       'NewsArticle',
+      headline:      article.title,
+      url:           article.url,
+      datePublished: article.published_at,
+      ...(article.image_url && {
+        image: { '@type': 'ImageObject', url: article.image_url },
+      }),
+      author: {
+        '@type': 'Organization',
+        name:    outletName,
+      },
+      publisher: {
+        '@type': 'Organization',
+        name:    outletName,
+      },
+    },
+  }
 
   return (
     <>
       <Head>
         <title>{article.title} — RatedNews</title>
-        <meta name="description" content={summary.slice(0, 155) || `Read ${article.title} with AI bias and accuracy analysis on RatedNews.`} />
+        <meta name="description" content={metaDesc} />
         <link rel="canonical" href={`https://ratednews.com/article/${article.id}`} />
         <meta property="og:title"       content={article.title} />
-        <meta property="og:description" content={summary.slice(0, 200)} />
+        <meta property="og:description" content={metaDesc} />
         <meta property="og:url"         content={`https://ratednews.com/article/${article.id}`} />
         <meta property="og:type"        content="article" />
         {article.image_url && <meta property="og:image" content={article.image_url} />}
-        {/* Structured data for Google */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify({
-            '@context': 'https://schema.org',
-            '@type':    'NewsArticle',
-            headline:   article.title,
-            description: summary,
-            url:        `https://ratednews.com/article/${article.id}`,
-            datePublished: article.published_at,
-            publisher: {
-              '@type': 'Organization',
-              name:    outletName,
-            },
-            author: {
-              '@type': 'Organization',
-              name:    outletName,
-            },
-          }).replace(/<\//g, '<\\/')}}
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/<\//g, '<\\/') }}
         />
       </Head>
       <ErrorBoundary>
