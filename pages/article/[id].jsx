@@ -2,6 +2,7 @@ import Head from 'next/head'
 import { useRouter } from 'next/router'
 import { useAppContext } from '../_app'
 import ArticlePage from '../../src/pages/ArticlePage'
+import ErrorBoundary from '../../src/components/ErrorBoundary'
 
 export default function ArticleDetail({ article }) {
   const router = useRouter()
@@ -47,17 +48,19 @@ export default function ArticleDetail({ article }) {
           }).replace(/<\//g, '<\\/')}}
         />
       </Head>
-      <ArticlePage
-        articleId={article.id}
-        allArticles={[article]}
-        navigate={navigate}
-        goBack={goBack}
-        showToast={showToast}
-        user={user}
-        onLoginClick={openAuthModal}
-        isSaved={savedArticleIds.has(article.id)}
-        toggleSave={toggleSave}
-      />
+      <ErrorBoundary>
+        <ArticlePage
+          articleId={article.id}
+          allArticles={[article]}
+          navigate={navigate}
+          goBack={goBack}
+          showToast={showToast}
+          user={user}
+          onLoginClick={openAuthModal}
+          isSaved={savedArticleIds.has(article.id)}
+          toggleSave={toggleSave}
+        />
+      </ErrorBoundary>
     </>
   )
 }
