@@ -48,13 +48,14 @@ export default function PasswordResetModal({ onClose, showToast }) {
   }
 
   return (
-    <div className="modal-overlay">
+    <div className="modal-overlay" onClick={onClose}>
       <div className="modal-card" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div>
             <div className="modal-title">Set new password</div>
             <div className="modal-subtitle">Choose a strong password for your account.</div>
           </div>
+          <button className="modal-close" onClick={onClose}>✕</button>
         </div>
 
         <form onSubmit={handleSubmit}>

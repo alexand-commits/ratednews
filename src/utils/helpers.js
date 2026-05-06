@@ -20,7 +20,7 @@ export function outletColor(name) {
     ['#E1F5EE', '#0F6E56'],
     ['#FBEAF0', '#993556'],
   ]
-  const idx = name.charCodeAt(0) % colors.length
+  const idx = (name || 'X').charCodeAt(0) % colors.length
   return colors[idx]
 }
 

@@ -62,7 +62,7 @@ export default function OutletDetail({ outlet }) {
                 value:   `${outlet.overall_score}/100`,
               },
             ].filter(Boolean),
-          })}}
+          }).replace(/<\//g, '<\\/')}}
         />
       </Head>
       <OutletPage

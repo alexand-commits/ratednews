@@ -199,6 +199,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
     if (!user) { onLoginClick(); return }
     const body = commentInput.trim()
     if (!body) return
+    if (body.length > 1000) { showToast('Comment must be under 1,000 characters'); return }
     const { data, error } = await db
       .from('comments')
       .insert({ outlet_id: outletId, body, upvotes: 0, downvotes: 0, user_id: user.id })
@@ -210,6 +211,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   }
 
   async function voteComment(commentId, dir) {
+    if (!user) { onLoginClick(); return }
     const key = `${commentId}-${dir}`
     if (votedComments[key]) {
       setVotedComments(prev => { const n = { ...prev }; delete n[key]; return n })

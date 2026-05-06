@@ -8,7 +8,8 @@ export function toSlug(name) {
 
 export function createNavigate(router, outlets = []) {
   return function navigate(page, opts = {}) {
-    if (typeof window !== 'undefined') window.scrollTo(0, 0)
+    if (typeof window === 'undefined') return  // never navigate during SSR
+    window.scrollTo(0, 0)
 
     switch (page) {
       case 'feed': {

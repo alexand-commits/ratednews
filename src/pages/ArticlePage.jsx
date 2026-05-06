@@ -160,6 +160,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     if (!user) { onLoginClick(); return }
     const body = commentInput.trim()
     if (!body) return
+    if (body.length > 1000) { showToast('Comment must be under 1,000 characters'); return }
     const { data, error } = await db
       .from('comments')
       .insert({ article_id: articleId, body, upvotes: 0, downvotes: 0, user_id: user.id })
@@ -174,6 +175,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     if (!user) { onLoginClick(); return }
     const body = (replyInputs[parentId] || '').trim()
     if (!body) return
+    if (body.length > 1000) { showToast('Reply must be under 1,000 characters'); return }
     const { data, error } = await db
       .from('comments')
       .insert({ article_id: articleId, parent_id: parentId, body, upvotes: 0, downvotes: 0, ...(user ? { user_id: user.id } : {}) })
@@ -201,6 +203,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   }
 
   async function voteComment(commentId, dir) {
+    if (!user) { onLoginClick(); return }
     const key = `${commentId}-${dir}`
     if (votedComments[key]) {
       setVotedComments(prev => { const n = { ...prev }; delete n[key]; return n })
@@ -613,7 +616,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
         onRated={(rating) => {
           setAlreadyRated(true)
           setMyRating(rating)
-          refreshArticle(articleId)
+          refreshArticle?.(articleId)
           // Only persist to localStorage when logged out
           if (!user) localStorage.setItem(`rated_${articleId}`, JSON.stringify(rating))
         }}

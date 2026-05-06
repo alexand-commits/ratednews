@@ -208,6 +208,11 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
 
   const followedOutlets = allOutlets.filter(o => followedOutletIds.has(o.id))
 
+  // Redirect unauthenticated users — must be in useEffect (never during SSR render)
+  useEffect(() => {
+    if (!user) navigate('feed')
+  }, [user])
+
   useEffect(() => {
     if (!user) return
     Promise.all([
@@ -297,7 +302,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
     navigate('feed')
   }
 
-  if (!user) { navigate('feed'); return null }
+  if (!user) return null
 
   const displayName  = profile?.username || 'Reader'
   const initials     = displayName.slice(0, 2).toUpperCase()

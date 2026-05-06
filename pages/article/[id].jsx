@@ -44,7 +44,7 @@ export default function ArticleDetail({ article }) {
               '@type': 'Organization',
               name:    outletName,
             },
-          })}}
+          }).replace(/<\//g, '<\\/')}}
         />
       </Head>
       <ArticlePage

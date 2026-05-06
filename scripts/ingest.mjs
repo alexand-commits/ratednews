@@ -59,6 +59,16 @@ const JUNK_PATTERNS = [
   /\bodds\b.*\bprediction\b/i,
   /\bfree bets?\b/i,
   /\bpromo code\b/i,
+  // Racing tipster columns (e.g. The Sun's Templegate, tabloid NAP picks)
+  /\bhorse.?racing tips?\b/i,        // "Horse racing tips: …"
+  /\bracing tips?\b/i,               // "Racing tips for …"
+  /\btips?:\s/i,                     // "Tips: best bets today" etc.
+  /\btemplegate\b/i,                 // The Sun's tipster column
+  /\b(nap|nb|each.?way)\b.*\btips?\b/i,  // "NAP tips", "each-way tips"
+  /\bday \w+ nap\b/i,                // "day one NAP", "day two NAP"
+  /\bnap\s*$/i,                      // title ending in "… NAP"
+  /\b(accumulator|acca) tips?\b/i,   // "accumulator tips"
+  /\b(best bets?|top picks?|selections?) (today|tonight|this week)\b/i,
   // Sponsored / advertorial
   /\b(sponsored|advertorial|paid post|partner content|promoted)\b/i,
   // Deals & commerce

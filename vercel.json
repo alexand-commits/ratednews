@@ -1,3 +1,15 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "redirects": [
+    { "source": "/Archives/:year/:month/technology/:slug*", "destination": "/categories/tech",        "permanent": true },
+    { "source": "/Archives/:year/:month/usa/:slug*",        "destination": "/categories/politics",    "permanent": true },
+    { "source": "/Archives/:year/:month/science/:slug*",    "destination": "/categories/science",     "permanent": true },
+    { "source": "/Archives/:year/:month/health/:slug*",     "destination": "/categories/health",      "permanent": true },
+    { "source": "/Archives/:year/:month/business/:slug*",   "destination": "/categories/business",    "permanent": true },
+    { "source": "/Archives/:year/:month/sport/:slug*",      "destination": "/categories/sport",       "permanent": true },
+    { "source": "/Archives/:year/:month/environment/:slug*","destination": "/categories/environment", "permanent": true },
+    { "source": "/Archives/:year/:month/crime/:slug*",      "destination": "/categories/crime",       "permanent": true },
+    { "source": "/Archives/:year/:month/:category/:slug*",  "destination": "/",                       "permanent": true },
+    { "source": "/archives/:id*",                           "destination": "/",                       "permanent": true }
+  ]
 }

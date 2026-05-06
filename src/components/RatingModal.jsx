@@ -37,6 +37,7 @@ export default function RatingModal({ article, outlet, onClose, onRated, showToa
   }, [onClose])
 
   async function submit() {
+    if (!user) { showToast('Sign in to rate articles'); onClose(); return }
     if (!overallStars) { showToast('Please give an overall star rating'); return }
     setSubmitting(true)
 
@@ -48,7 +49,7 @@ export default function RatingModal({ article, outlet, onClose, onRated, showToa
       headline_vote: headlineVote,
       overall_stars: overallStars,
       quality_score: overallStars,
-      ...(user ? { user_id: user.id } : {}),
+      user_id:       user.id,
     })
 
     if (error) {
