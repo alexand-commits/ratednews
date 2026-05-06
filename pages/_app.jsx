@@ -7,6 +7,7 @@ import BottomNav from '../src/components/BottomNav'
 import Toast from '../src/components/Toast'
 import AuthModal from '../src/components/AuthModal'
 import PasswordResetModal from '../src/components/PasswordResetModal'
+import ErrorBoundary from '../src/components/ErrorBoundary'
 import { createNavigate } from '../src/utils/navigate'
 import '../src/styles/globals.css'
 
@@ -76,14 +77,39 @@ export default function App({ Component, pageProps }) {
   }, [])
 
   // ── Outlets (global, used by navigate for slug generation) ─────────────
+  // Cache in sessionStorage for 5 minutes — avoids a cold Supabase fetch on
+  // every page load and fixes the brief '—' flash on the feed stat chip.
   useEffect(() => {
+    const CACHE_KEY = 'rn_outlets_cache'
+    const CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+
+    try {
+      const cached = sessionStorage.getItem(CACHE_KEY)
+      if (cached) {
+        const { data, ts } = JSON.parse(cached)
+        if (Date.now() - ts < CACHE_TTL && data?.length) {
+          setAllOutlets(data)
+          setOutletsLoading(false)
+          return // skip fetch — cache is fresh
+        }
+      }
+    } catch (e) {}
+
     db.from('outlets').select('*').order('overall_score', { ascending: false })
-      .then(({ data }) => { setAllOutlets(data || []); setOutletsLoading(false) })
+      .then(({ data }) => {
+        const outlets = data || []
+        setAllOutlets(outlets)
+        setOutletsLoading(false)
+        try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data: outlets, ts: Date.now() })) } catch (e) {}
+      })
   }, [])
 
   async function refreshOutlets() {
     const { data } = await db.from('outlets').select('*').order('overall_score', { ascending: false })
-    if (data) setAllOutlets(data)
+    if (data) {
+      setAllOutlets(data)
+      try { sessionStorage.setItem('rn_outlets_cache', JSON.stringify({ data, ts: Date.now() })) } catch (e) {}
+    }
   }
 
   // ── User data helpers ───────────────────────────────────────────────────
@@ -193,7 +219,9 @@ export default function App({ Component, pageProps }) {
 
       <Toast message={toast.message} visible={toast.visible} />
 
-      <Component {...pageProps} />
+      <ErrorBoundary>
+        <Component {...pageProps} />
+      </ErrorBoundary>
 
       {showAuthModal && (
         <AuthModal onClose={() => setShowAuthModal(false)} showToast={showToast} />

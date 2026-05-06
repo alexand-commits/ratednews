@@ -513,10 +513,8 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                     {articleRatings.map(r => (
                       <div
                         key={r.id}
-                        style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', cursor: 'pointer' }}
+                        style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', cursor: 'pointer' }} className="border-hover"
                         onClick={() => r.articles?.id && navigate('article', { articleId: r.articles.id, title: r.articles.title })}
-                        onMouseOver={e => e.currentTarget.style.borderColor = 'var(--coral)'}
-                        onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
                       >
                         <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>
                           {r.articles?.outlets?.name || 'Unknown outlet'} · {timeAgo(r.created_at)}
@@ -538,10 +536,8 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                     {outletRatings.map(r => (
                       <div
                         key={r.id}
-                        style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', cursor: 'pointer' }}
+                        style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', cursor: 'pointer' }} className="border-hover"
                         onClick={() => r.outlets?.id && navigate('outlet', { outletId: r.outlets.id })}
-                        onMouseOver={e => e.currentTarget.style.borderColor = 'var(--coral)'}
-                        onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
                       >
                         <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>Outlet · {timeAgo(r.created_at)}</div>
                         <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>{r.outlets?.name || 'Unknown outlet'}</div>
@@ -575,10 +571,8 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                 return (
                   <div
                     key={s.id}
-                    style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', cursor: 'pointer' }}
+                    style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', cursor: 'pointer' }} className="border-hover"
                     onClick={() => navigate('article', { articleId: article.id, title: article.title })}
-                    onMouseOver={e => e.currentTarget.style.borderColor = 'var(--coral)'}
-                    onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
                   >
                     <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>
                       {article.outlets?.name || 'Unknown outlet'} · saved {timeAgo(s.created_at)}
@@ -603,8 +597,6 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                           setSavedItems(prev => prev.filter(x => x.id !== s.id))
                         }}
                         style={{ fontSize: 11, padding: '3px 10px', borderRadius: 20, border: '1px solid var(--border)', background: 'none', color: 'var(--text3)', cursor: 'pointer', marginLeft: 'auto' }}
-                        onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--red)'; e.currentTarget.style.color = 'var(--red)' }}
-                        onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text3)' }}
                       >
                         Remove
                       </button>
@@ -633,8 +625,6 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                     key={outlet.id}
                     style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
                     onClick={() => navigate('outlet', { outletId: outlet.id })}
-                    onMouseOver={e => e.currentTarget.style.borderColor = 'var(--coral)'}
-                    onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
                   >
                     <OutletLogo name={outlet.name} size={40} borderRadius={10} />
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -650,8 +640,6 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                     <button
                       onClick={e => { e.stopPropagation(); toggleFollow(outlet.id) }}
                       style={{ fontSize: 11, padding: '5px 12px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text2)', cursor: 'pointer', flexShrink: 0, whiteSpace: 'nowrap' }}
-                      onMouseOver={e => { e.currentTarget.style.borderColor = 'var(--red)'; e.currentTarget.style.color = 'var(--red)' }}
-                      onMouseOut={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text2)' }}
                     >
                       Unfollow
                     </button>
@@ -672,10 +660,8 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
               comments.map((c, i) => (
                 <div
                   key={c.id}
-                  style={{ padding: '14px 18px', borderBottom: i < comments.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }}
+                  style={{ padding: '14px 18px', borderBottom: i < comments.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }} className="row-hover"
                   onClick={() => c.articles?.id && navigate('article', { articleId: c.articles.id, title: c.articles.title })}
-                  onMouseOver={e => e.currentTarget.style.background = 'var(--bg)'}
-                  onMouseOut={e => e.currentTarget.style.background = ''}
                 >
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>
                     On: <span style={{ color: 'var(--text2)' }}>{c.articles?.title || 'Article'}</span> · {timeAgo(c.created_at)}

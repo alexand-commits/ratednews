@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { db } from '../lib/supabase'
-import { outletColor, scoreColor, scoreDot, timeAgo } from '../utils/helpers'
+import { articleSlug, outletColor, scoreColor, scoreDot, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import OutletRatingModal from '../components/OutletRatingModal'
 import InfoTip from '../components/InfoTip'
@@ -27,8 +28,10 @@ function ArticleCard({ a, onClick }) {
   const hlBadge  = a.headline_vote ? HEADLINE_BADGES[a.headline_vote] : null
   const biasLbl  = a.bias_direction ? BIAS_LABELS[a.bias_direction] : null
   return (
-    <div className="news-card" onClick={onClick}>
-      <div className="news-headline">{a.title || ''}</div>
+    <div className="news-card" onClick={e => { if (e.target.closest('a')) return; onClick?.(e) }}>
+      <Link href={`/article/${articleSlug(a.title, a.id)}`} className="news-headline" style={{ textDecoration: 'none', color: 'inherit' }}>
+        {a.title || ''}
+      </Link>
       {hlBadge && (
         <span style={{
           display: 'inline-block', fontSize: 10, fontWeight: 600,

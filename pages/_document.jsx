@@ -36,6 +36,8 @@ export default function Document() {
         />
       </Head>
       <body>
+        {/* Runs before React hydrates — prevents dark mode flash */}
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='dark'){document.documentElement.setAttribute('data-theme','dark');document.documentElement.style.background='#111110';}}catch(e){}})()`  }} />
         <Main />
         <NextScript />
       </body>

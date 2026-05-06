@@ -655,8 +655,6 @@ export default function FeedPage({
                     borderRadius: 'var(--radius)', fontSize: 13, fontWeight: 500,
                     color: 'var(--text2)', cursor: 'pointer', transition: 'border-color 0.15s',
                   }}
-                  onMouseOver={e => e.currentTarget.style.borderColor = 'var(--coral)'}
-                  onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
                 >
                   Load more stories ↓
                 </button>

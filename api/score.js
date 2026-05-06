@@ -7,7 +7,7 @@
 const Anthropic = require('@anthropic-ai/sdk')
 const { createClient } = require('@supabase/supabase-js')
 
-const BATCH_SIZE = 20
+const BATCH_SIZE = 50
 
 const CATEGORIES = ['Politics', 'Business', 'Sport', 'Tech', 'Science', 'Health', 'Environment', 'Entertainment', 'Crime', 'Travel', 'Education', 'World']
 
@@ -112,32 +112,35 @@ module.exports = async function handler(req, res) {
 
   let scored = 0, failed = 0
 
-  for (const article of articles) {
-    try {
-      const scores = await scoreArticle(anthropic, {
-        ...article,
-        outlet_name: article.outlets?.name,
-      })
-
-      const { error: updateError } = await supabase
-        .from('articles')
-        .update({
-          accuracy_score:  scores.accuracy_score,
-          bias_score:      scores.bias_score,
-          bias_direction:  scores.bias_direction,
-          headline_vote:   scores.headline_vote,
-          category:        scores.category,
-          ai_summary:      scores.ai_summary,
+  // Process in parallel batches of 5 — Haiku handles concurrency fine
+  const CONCURRENCY = 5
+  for (let i = 0; i < articles.length; i += CONCURRENCY) {
+    const batch = articles.slice(i, i + CONCURRENCY)
+    await Promise.all(batch.map(async article => {
+      try {
+        const scores = await scoreArticle(anthropic, {
+          ...article,
+          outlet_name: article.outlets?.name,
         })
-        .eq('id', article.id)
 
-      if (updateError) { failed++; continue }
-      scored++
-    } catch {
-      failed++
-    }
+        const { error: updateError } = await supabase
+          .from('articles')
+          .update({
+            accuracy_score:  scores.accuracy_score,
+            bias_score:      scores.bias_score,
+            bias_direction:  scores.bias_direction,
+            headline_vote:   scores.headline_vote,
+            category:        scores.category,
+            ai_summary:      scores.ai_summary,
+          })
+          .eq('id', article.id)
 
-    await new Promise(r => setTimeout(r, 200))
+        if (updateError) { failed++; return }
+        scored++
+      } catch {
+        failed++
+      }
+    }))
   }
 
   return res.status(200).json({ ok: true, scored, failed })

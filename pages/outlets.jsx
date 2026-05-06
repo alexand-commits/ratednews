@@ -3,7 +3,7 @@ import { useAppContext } from './_app'
 import OutletsListPage from '../src/pages/OutletsListPage'
 
 export default function Outlets() {
-  const { navigate, goBack, allOutlets, showToast, user, openAuthModal, refreshOutlets } = useAppContext()
+  const { navigate, goBack, allOutlets, outletsLoading, showToast, user, openAuthModal, refreshOutlets } = useAppContext()
 
   return (
     <>
@@ -22,6 +22,7 @@ export default function Outlets() {
       </Head>
       <OutletsListPage
         outlets={allOutlets}
+        outletsLoading={outletsLoading}
         navigate={navigate}
         goBack={goBack}
         showToast={showToast}

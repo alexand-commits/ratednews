@@ -36,12 +36,16 @@ module.exports = async function handler(req, res) {
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
+  // Only consider articles from the last 90 days — enough for accurate outlet scores
+  // and prevents the query growing unbounded as the DB scales
+  const since90d = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+
   const [
     { data: articles, error: artErr },
     { data: outlets,  error: outErr },
     { data: ratings,  error: ratErr },
   ] = await Promise.all([
-    supabase.from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction').not('accuracy_score', 'is', null),
+    supabase.from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction').not('accuracy_score', 'is', null).gte('published_at', since90d),
     supabase.from('outlets').select('id, name'),
     supabase.from('outlet_ratings').select('outlet_id, overall_stars'),
   ])

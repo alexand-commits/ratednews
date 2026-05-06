@@ -145,8 +145,6 @@ export default function CategoryPage({ navigate, goBack }) {
                   width: '100%',
                   color: 'var(--text)',
                 }}
-                onMouseOver={e => e.currentTarget.style.opacity = '0.85'}
-                onMouseOut={e => e.currentTarget.style.opacity = '1'}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: preview ? 10 : 0 }}>
                   <span style={{

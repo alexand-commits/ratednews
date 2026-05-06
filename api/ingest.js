@@ -8,12 +8,10 @@ const { createClient } = require('@supabase/supabase-js')
 const Parser = require('rss-parser')
 
 const RSS_FEEDS = {
-  'BBC':              'https://feeds.bbci.co.uk/news/rss.xml',
   'BBC News':         'https://feeds.bbci.co.uk/news/rss.xml',
   'Reuters':          'https://news.google.com/rss/search?q=site:reuters.com&hl=en-US&gl=US&ceid=US:en',
-  'The Guardian':     'https://www.theguardian.com/world/rss',
+  'The Guardian':     'https://www.theguardian.com/rss',
   'AP News':          'https://news.google.com/rss/search?q=site:apnews.com&hl=en-US&gl=US&ceid=US:en',
-  'AP New':           'https://news.google.com/rss/search?q=site:apnews.com&hl=en-US&gl=US&ceid=US:en',
   'The Economist':    'https://www.economist.com/latest/rss.xml',
   'New York Times':   'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml',
   'Washington Post':  'https://news.google.com/rss/search?q=site:washingtonpost.com&hl=en-US&gl=US&ceid=US:en',
@@ -31,6 +29,19 @@ const RSS_FEEDS = {
   'Breitbart':        'https://feeds.feedburner.com/breitbart',
   'Vox':              'https://www.vox.com/rss/index.xml',
   'Financial Times':  'https://news.google.com/rss/search?q=site:ft.com&hl=en-US&gl=US&ceid=US:en',
+  'Wall Street Journal': 'https://news.google.com/rss/search?q=site:wsj.com&hl=en-US&gl=US&ceid=US:en',
+  // New general outlets
+  'Channel NewsAsia':     'https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml',
+  'Hindustan Times':      'https://news.google.com/rss/search?q=site:hindustantimes.com&hl=en-IN&gl=IN&ceid=IN:en',
+  'The Age':              'https://www.theage.com.au/rss/feed.xml',
+  'The Conversation':     'https://theconversation.com/articles.atom',
+  'Washington Examiner':  'https://www.washingtonexaminer.com/feed',
+  // Sports outlets
+  'BBC Sport':        'https://feeds.bbci.co.uk/sport/rss.xml',
+  'Sky Sports':       'https://www.skysports.com/rss/12040',
+  'ESPN':             'https://www.espn.com/espn/rss/news',
+  'Marca':            'https://www.marca.com/rss/portada.xml',
+  'Sports Illustrated': 'https://news.google.com/rss/search?q=site:si.com&hl=en-US&gl=US&ceid=US:en',
 }
 
 const parser = new Parser({
@@ -60,25 +71,32 @@ function extractSummary(item) {
 
 // ── Junk filter ────────────────────────────────────────────────────────────────
 // Returns true for non-news content that should be dropped before insert/scoring.
-// Catches crosswords, podcasts, recipes, quizzes, sponsored posts, etc.
+// Catches crosswords, podcasts, recipes, quizzes, sponsored posts, live blogs etc.
 
-const JUNK_TITLE_RE = /\b(crossword|wordsearch|word.?search|word.?game|sudoku)\b|\bpuzzle\b/i
+const JUNK_TITLE_RE    = /\b(crossword|wordsearch|word.?search|word.?game|sudoku)\b|\bpuzzle\b/i
 const PODCAST_TITLE_RE = /\bpodcast\b|\blistens?\s*:|^listen\s*:|\b(ep|episode)\s*\.?\s*\d+\b|\baudio\s+(story|tour|guide)\b/i
-const VIDEO_TITLE_RE = /^(watch|video)\s*:/i
+const VIDEO_TITLE_RE   = /^(watch|video)\s*:/i  // catches "Watch:", "WATCH:", "Video:"
 const LIFESTYLE_TITLE_RE = /\b(recipe|horoscope|star.?sign|your.?week|meal.?plan|fashion|style.?edit|quiz|crossword)\b/i
-const PROMO_TITLE_RE = /\b(sponsored|advertisement|advertorial|paid.?post|subscribe|sign.?up|newsletter|giveaway|competition|win a|enter now)\b/i
+const PROMO_TITLE_RE   = /\b(sponsored|advertisement|advertorial|paid.?post|subscribe|sign.?up|newsletter|giveaway|competition|win a|enter now|terms and conditions)\b/i
+// Live score/match update pages — "Bayern vs PSG LIVE:", "LIVE: match updates"
+const LIVE_BLOG_RE     = /^LIVE\s*:/i|\bLIVE\b.{0,40}\b(score|updates?|stream|blog|latest)\b/i
 
-const JUNK_URL_RE = /\/(crossword|puzzle|games?|podcast|podcasts|audio|video|videos|sponsored|newsletter|quiz|quizzes|recipe|recipes|horoscope|horoscopes)\b/i
+const JUNK_URL_RE      = /\/(crossword|puzzle|games?|podcast|podcasts|audio|video|videos|sponsored|newsletter|quiz|quizzes|recipe|recipes|horoscope|horoscopes|terms|live-blog|liveblog)\b/i
+
+// Titles over 200 chars are almost always live blog aggregates, not articles
+const MAX_TITLE_LENGTH = 200
 
 function isJunk(item) {
   const title = item.title || ''
   const url   = item.link  || item.guid || ''
-  if (JUNK_TITLE_RE.test(title))     return true
-  if (PODCAST_TITLE_RE.test(title))  return true
-  if (VIDEO_TITLE_RE.test(title))    return true
-  if (LIFESTYLE_TITLE_RE.test(title))return true
-  if (PROMO_TITLE_RE.test(title))    return true
-  if (JUNK_URL_RE.test(url))         return true
+  if (title.length > MAX_TITLE_LENGTH)   return true
+  if (JUNK_TITLE_RE.test(title))         return true
+  if (PODCAST_TITLE_RE.test(title))      return true
+  if (VIDEO_TITLE_RE.test(title))        return true
+  if (LIFESTYLE_TITLE_RE.test(title))    return true
+  if (PROMO_TITLE_RE.test(title))        return true
+  if (LIVE_BLOG_RE.test(title))          return true
+  if (JUNK_URL_RE.test(url))             return true
   return false
 }
 
@@ -93,7 +111,7 @@ async function ingestOutlet(supabase, outlet) {
     return { inserted: 0, skipped: 0, errors: 1 }
   }
 
-  const items = feed.items.slice(0, 25)
+  const items = feed.items.slice(0, 10)
   let inserted = 0, skipped = 0, errors = 0
 
   const urls = items.map(i => i.link || i.guid).filter(Boolean)
@@ -110,12 +128,18 @@ async function ingestOutlet(supabase, outlet) {
     if (isJunk(item))             { skipped++; continue }
     if (existingUrls.has(url))    { skipped++; continue }
 
+    // Parse publish date — cap to now if future-dated (e.g. JP uses local time as UTC)
+    const parsedPubDate = item.pubDate ? new Date(item.pubDate) : null
+    const pubDate = (parsedPubDate && !isNaN(parsedPubDate) && parsedPubDate <= new Date())
+      ? parsedPubDate.toISOString()
+      : new Date().toISOString()
+
     const { error } = await supabase.from('articles').insert({
       outlet_id:    outlet.id,
       title:        item.title.trim(),
       url,
       summary:      extractSummary(item),
-      published_at: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
+      published_at: pubDate,
       image_url:    extractImageUrl(item),
     })
 

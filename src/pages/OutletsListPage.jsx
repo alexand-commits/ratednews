@@ -185,7 +185,7 @@ function SuggestModal({ onClose, user, onLoginClick, showToast }) {
   )
 }
 
-export default function OutletsListPage({ outlets, navigate, goBack, showToast, user, onLoginClick, onRefresh }) {
+export default function OutletsListPage({ outlets, outletsLoading, navigate, goBack, showToast, user, onLoginClick, onRefresh }) {
   const [search,  setSearch]  = useState('')
   const [region,  setRegion]  = useState('all')
   const [bias,    setBias]    = useState('all')
@@ -236,6 +236,7 @@ export default function OutletsListPage({ outlets, navigate, goBack, showToast, 
             </div>
             <button
               onClick={handleSuggestClick}
+              className="border-hover"
               style={{
                 flexShrink: 0,
                 background: 'var(--surface)',
@@ -249,10 +250,7 @@ export default function OutletsListPage({ outlets, navigate, goBack, showToast, 
                 display: 'flex',
                 alignItems: 'center',
                 gap: 5,
-                transition: 'border-color 0.15s',
               }}
-              onMouseOver={e => e.currentTarget.style.borderColor = 'var(--coral)'}
-              onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
             >
               ➕ Suggest
             </button>
@@ -304,7 +302,23 @@ export default function OutletsListPage({ outlets, navigate, goBack, showToast, 
         </div>
 
         {/* Grid */}
-        {filtered.length === 0 ? (
+        {outletsLoading ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 10 }}>
+            {Array.from({ length: 12 }).map((_, i) => (
+              <div key={i} style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div className="skeleton-shimmer" style={{ width: 40, height: 40, borderRadius: 10, flexShrink: 0 }} />
+                  <div style={{ flex: 1 }}>
+                    <div className="skeleton-shimmer" style={{ width: '60%', height: 13, borderRadius: 4, marginBottom: 6 }} />
+                    <div className="skeleton-shimmer" style={{ width: '40%', height: 10, borderRadius: 4 }} />
+                  </div>
+                  <div className="skeleton-shimmer" style={{ width: 36, height: 24, borderRadius: 20 }} />
+                </div>
+                <div className="skeleton-shimmer" style={{ height: 6, borderRadius: 3 }} />
+              </div>
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="empty-state"><p>No outlets match your filters.</p></div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 10 }}>
@@ -317,14 +331,13 @@ export default function OutletsListPage({ outlets, navigate, goBack, showToast, 
                 <div
                   key={o.id}
                   onClick={() => navigate('outlet', { outletId: o.id })}
+                  className="border-hover"
                   style={{
                     background: 'var(--surface)', border: '0.5px solid var(--border)',
                     borderRadius: 'var(--radius)', padding: '14px 16px',
-                    cursor: 'pointer', transition: 'border-color 0.15s',
+                    cursor: 'pointer',
                     display: 'flex', flexDirection: 'column', gap: 10,
                   }}
-                  onMouseOver={e => e.currentTarget.style.borderColor = 'var(--coral)'}
-                  onMouseOut={e => e.currentTarget.style.borderColor = 'var(--border)'}
                 >
                   {/* Top row: logo + name + score */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>

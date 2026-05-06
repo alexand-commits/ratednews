@@ -46,11 +46,147 @@ function getTrustLevel(total) {
   return TRUST_LEVELS.find(t => total >= t.min) || TRUST_LEVELS[TRUST_LEVELS.length - 1]
 }
 
+const STAT_ROWS = [
+  { key: 'overall_score',   label: 'Trust',      max: 100, format: v => v },
+  { key: 'accuracy_score',  label: 'Accuracy',   max: 100, format: v => v },
+  { key: 'community_score', label: 'Community',  max: 100, format: v => v > 0 ? `${(v / 20).toFixed(1)}★` : '—' },
+  { key: 'total_ratings',   label: 'Ratings',    max: null, format: v => v },
+]
+
+function ComparePanel({ a, b, navigate, onClear }) {
+  return (
+    <div style={{
+      background: 'var(--surface)', border: '0.5px solid var(--border)',
+      borderRadius: 'var(--radius)', padding: '16px', marginBottom: 16,
+    }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)' }}>
+          ⚖ Comparison
+        </div>
+        <button
+          onClick={onClear}
+          style={{ fontSize: 11, color: 'var(--text3)', background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 20, padding: '3px 10px', cursor: 'pointer' }}
+        >
+          Clear
+        </button>
+      </div>
+
+      {/* Outlet names */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+        <div style={{ textAlign: 'left' }}>
+          <OutletLogo name={a.name} size={32} borderRadius={8} />
+          <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6, lineHeight: 1.2 }}>{a.name}</div>
+          <div style={{ fontSize: 11, color: 'var(--text3)' }}>{a.country || ''}</div>
+        </div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text3)', padding: '0 4px' }}>vs</div>
+        <div style={{ textAlign: 'right' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <OutletLogo name={b.name} size={32} borderRadius={8} />
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 700, marginTop: 6, lineHeight: 1.2 }}>{b.name}</div>
+          <div style={{ fontSize: 11, color: 'var(--text3)' }}>{b.country || ''}</div>
+        </div>
+      </div>
+
+      {/* Stat rows */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {STAT_ROWS.map(({ key, label, max, format }) => {
+          const va = a[key] || 0
+          const vb = b[key] || 0
+          const peak = max || Math.max(va, vb, 1)
+          const aWins = va > vb
+          const bWins = vb > va
+          return (
+            <div key={key}>
+              <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 5 }}>
+                {label}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                {/* Left */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: aWins ? scoreColor(va) : 'var(--text2)' }}>
+                      {format(va) || '—'}
+                    </span>
+                    {aWins && <span style={{ fontSize: 9, color: scoreColor(va), fontWeight: 700 }}>▲</span>}
+                  </div>
+                  <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${(va / peak) * 100}%`, background: aWins ? scoreColor(va) : 'var(--text3)', borderRadius: 2, transition: 'width 0.4s ease' }} />
+                  </div>
+                </div>
+                {/* Right */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexDirection: 'row-reverse' }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: bWins ? scoreColor(vb) : 'var(--text2)' }}>
+                      {format(vb) || '—'}
+                    </span>
+                    {bWins && <span style={{ fontSize: 9, color: scoreColor(vb), fontWeight: 700 }}>▲</span>}
+                  </div>
+                  <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${(vb / peak) * 100}%`, background: bWins ? scoreColor(vb) : 'var(--text3)', borderRadius: 2, marginLeft: 'auto', transition: 'width 0.4s ease' }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+
+        {/* Bias row */}
+        <div>
+          <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 5 }}>
+            Bias
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: BIAS_COLORS[a.bias_direction] || 'var(--text3)' }}>
+              {BIAS_LABELS[a.bias_direction] || '—'}
+            </div>
+            <div style={{ fontSize: 12, fontWeight: 600, color: BIAS_COLORS[b.bias_direction] || 'var(--text3)', textAlign: 'right' }}>
+              {BIAS_LABELS[b.bias_direction] || '—'}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* View outlet links */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
+        <button
+          onClick={() => navigate('outlet', { outletId: a.id })}
+          style={{ fontSize: 12, fontWeight: 600, padding: '8px 0', background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: 'var(--text2)' }}
+        >
+          View {a.name} →
+        </button>
+        <button
+          onClick={() => navigate('outlet', { outletId: b.id })}
+          style={{ fontSize: 12, fontWeight: 600, padding: '8px 0', background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: 'var(--text2)' }}
+        >
+          View {b.name} →
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function RankingsPage({ outlets, outletsLoading, navigate, goBack, user, onRefresh }) {
-  const [section, setSection] = useState('outlets')  // 'outlets' | 'leaderboard'
-  const [tab, setTab]         = useState('credibility')
-  const [region, setRegion]   = useState('all')
+  const [section, setSection]     = useState('outlets')  // 'outlets' | 'leaderboard'
+  const [tab, setTab]             = useState('credibility')
+  const [region, setRegion]       = useState('all')
+  const [compareMode, setCompareMode] = useState(false)
+  const [compareIds, setCompareIds]   = useState([])
   const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
+
+  function toggleCompareOutlet(id) {
+    setCompareIds(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id)
+      if (prev.length < 2)  return [...prev, id]
+      return [prev[1], id]  // swap out oldest
+    })
+  }
+
+  function clearCompare() {
+    setCompareIds([])
+    setCompareMode(false)
+  }
 
   // Leaderboard state
   const [leaders, setLeaders]       = useState([])
@@ -229,23 +365,52 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
               ))}
             </div>
 
-            {/* Region filter */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 8 }}>
-                Filter by region
+            {/* Region filter + Compare toggle */}
+            <div style={{ marginBottom: 16, display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 8 }}>
+                  Filter by region
+                </div>
+                <div className="filter-bar">
+                  {[
+                    { value: 'all', label: '🌍 Global' },
+                    { value: 'UK',  label: '🇬🇧 UK'    },
+                    { value: 'US',  label: '🇺🇸 US'    },
+                  ].map(r => (
+                    <button key={r.value} className={`pill${region === r.value ? ' active' : ''}`} onClick={() => setRegion(r.value)}>
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="filter-bar">
-                {[
-                  { value: 'all', label: '🌍 Global' },
-                  { value: 'UK',  label: '🇬🇧 UK'    },
-                  { value: 'US',  label: '🇺🇸 US'    },
-                ].map(r => (
-                  <button key={r.value} className={`pill${region === r.value ? ' active' : ''}`} onClick={() => setRegion(r.value)}>
-                    {r.label}
-                  </button>
-                ))}
-              </div>
+              <button
+                onClick={() => { setCompareMode(m => !m); if (compareMode) setCompareIds([]) }}
+                style={{
+                  fontSize: 12, fontWeight: 600, padding: '6px 14px',
+                  background: compareMode ? 'var(--coral)' : 'var(--bg)',
+                  color: compareMode ? '#fff' : 'var(--text2)',
+                  border: `0.5px solid ${compareMode ? 'var(--coral)' : 'var(--border)'}`,
+                  borderRadius: 20, cursor: 'pointer', whiteSpace: 'nowrap',
+                  transition: 'all 0.15s',
+                }}
+              >
+                ⚖ {compareMode ? 'Cancel' : 'Compare'}
+              </button>
             </div>
+
+            {/* Compare hint */}
+            {compareMode && compareIds.length < 2 && (
+              <div style={{ fontSize: 12, color: 'var(--text2)', background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px 14px', marginBottom: 12 }}>
+                {compareIds.length === 0 ? 'Select two outlets to compare them.' : 'Now select one more outlet.'}
+              </div>
+            )}
+
+            {/* Comparison panel */}
+            {compareMode && compareIds.length === 2 && (() => {
+              const a = outlets.find(o => o.id === compareIds[0])
+              const b = outlets.find(o => o.id === compareIds[1])
+              return a && b ? <ComparePanel a={a} b={b} navigate={navigate} onClear={clearCompare} /> : null
+            })()}
 
             {/* List */}
             <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
@@ -268,10 +433,11 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                 <div className="empty-state"><p>No outlets for this region yet.</p></div>
               ) : (
                 sorted.map((o, i) => {
-                  const score    = o[activeTab.key] || 0
-                  const maxScore = tab === 'rated' ? Math.max(...sorted.map(x => x.total_ratings || 0), 1) : 100
-                  const barWidth = Math.round((score / maxScore) * 100)
-                  const isTop3   = i < 3
+                  const score      = o[activeTab.key] || 0
+                  const maxScore   = tab === 'rated' ? Math.max(...sorted.map(x => x.total_ratings || 0), 1) : 100
+                  const barWidth   = Math.round((score / maxScore) * 100)
+                  const isTop3     = i < 3
+                  const isSelected = compareIds.includes(o.id)
 
                   return (
                     <div
@@ -281,15 +447,26 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                         padding: '14px 18px',
                         borderBottom: i < sorted.length - 1 ? '0.5px solid var(--border)' : 'none',
                         cursor: 'pointer', transition: 'background 0.15s',
-                        background: i === 0 ? 'rgba(184,134,11,0.06)' : i === 1 ? 'rgba(160,160,160,0.05)' : i === 2 ? 'rgba(160,82,45,0.05)' : '',
+                        background: isSelected ? 'rgba(216,90,48,0.06)' : i === 0 ? 'rgba(184,134,11,0.06)' : i === 1 ? 'rgba(160,160,160,0.05)' : i === 2 ? 'rgba(160,82,45,0.05)' : '',
                       }}
-                      onClick={() => navigate('outlet', { outletId: o.id })}
-                      onMouseOver={e => e.currentTarget.style.background = 'var(--bg)'}
-                      onMouseOut={e => e.currentTarget.style.background = i === 0 ? 'rgba(184,134,11,0.06)' : i === 1 ? 'rgba(160,160,160,0.05)' : i === 2 ? 'rgba(160,82,45,0.05)' : ''}
+                      className="row-hover"
+                      onClick={() => compareMode ? toggleCompareOutlet(o.id) : navigate('outlet', { outletId: o.id })}
                     >
-                      <span style={{ fontSize: isTop3 ? 15 : 13, fontWeight: isTop3 ? 700 : 400, color: i === 0 ? '#b8860b' : i === 1 ? '#888' : i === 2 ? '#a0522d' : 'var(--text3)', width: 26, flexShrink: 0, textAlign: 'center' }}>
-                        {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
-                      </span>
+                      {/* Rank or compare circle */}
+                      {compareMode ? (
+                        <div style={{
+                          width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+                          border: `2px solid ${isSelected ? 'var(--coral)' : 'var(--border)'}`,
+                          background: isSelected ? 'var(--coral)' : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}>
+                          {isSelected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: isTop3 ? 15 : 13, fontWeight: isTop3 ? 700 : 400, color: i === 0 ? '#b8860b' : i === 1 ? '#888' : i === 2 ? '#a0522d' : 'var(--text3)', width: 26, flexShrink: 0, textAlign: 'center' }}>
+                          {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                        </span>
+                      )}
                       <OutletLogo name={o.name} size={38} borderRadius={10} />
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 2 }}>{o.name}</div>
@@ -350,9 +527,8 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                         background: isYou ? 'var(--bg2)' : 'var(--surface)',
                         cursor: 'pointer', transition: 'background 0.15s',
                       }}
+                      className="row-hover"
                       onClick={() => navigate('publicProfile', { userId: l.userId })}
-                      onMouseOver={e => { if (!isYou) e.currentTarget.style.background = 'var(--bg)' }}
-                      onMouseOut={e => { if (!isYou) e.currentTarget.style.background = 'var(--surface)' }}
                     >
                       {/* Rank */}
                       <span style={{ fontSize: isTop3 ? 15 : 13, fontWeight: isTop3 ? 700 : 400, color: i === 0 ? '#b8860b' : i === 1 ? '#888' : i === 2 ? '#a0522d' : 'var(--text3)', width: 26, flexShrink: 0, textAlign: 'center' }}>

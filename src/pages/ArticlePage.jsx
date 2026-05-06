@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { db } from '../lib/supabase'
-import { outletColor, scoreColor, scoreDot, timeAgo } from '../utils/helpers'
+import { articleSlug, outletColor, scoreColor, scoreDot, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import RatingModal from '../components/RatingModal'
 import InfoTip from '../components/InfoTip'
@@ -244,8 +245,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
             className="c-user"
             style={{ cursor: c.user_id ? 'pointer' : 'default' }}
             onClick={() => c.user_id && navigate('publicProfile', { userId: c.user_id })}
-            onMouseOver={e => { if (c.user_id) e.currentTarget.style.color = 'var(--coral)' }}
-            onMouseOut={e => e.currentTarget.style.color = ''}
           >
             {username}
           </span>
@@ -512,14 +511,13 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 return (
                   <div
                     key={a.id}
-                    onClick={() => navigate('article', { articleId: a.id, title: a.title })}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: i < moreFromOutlet.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
-                    onMouseOver={e => e.currentTarget.style.background = 'var(--bg)'}
-                    onMouseOut={e => e.currentTarget.style.background = ''}
+                    onClick={e => { if (e.target.closest('a')) return; navigate('article', { articleId: a.id, title: a.title }) }}
+                    className="row-hover"
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: i < moreFromOutlet.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }}
                   >
                     <div style={{ width: 4, height: 40, borderRadius: 2, background: abg, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontFamily: 'Playfair Display, serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.title}</div>
+                      <Link href={`/article/${articleSlug(a.title, a.id)}`} style={{ fontSize: 13, fontFamily: 'Playfair Display, serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>{a.title}</Link>
                       <div style={{ fontSize: 11, color: 'var(--text3)' }}>{timeAgo(a.published_at)}{a.accuracy_score > 0 ? ` · Accuracy ${a.accuracy_score}` : ''}</div>
                     </div>
                   </div>
@@ -540,14 +538,14 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 return (
                   <div
                     key={a.id}
-                    onClick={() => navigate('article', { articleId: a.id, title: a.title })}
+                    onClick={e => { if (e.target.closest('a')) return; navigate('article', { articleId: a.id, title: a.title }) }}
                     style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: i < sameCategory.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
                     onMouseOver={e => e.currentTarget.style.background = 'var(--bg)'}
                     onMouseOut={e => e.currentTarget.style.background = ''}
                   >
                     <OutletLogo name={a.outlets?.name || ''} size={28} borderRadius={7} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontFamily: 'Playfair Display, serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.title}</div>
+                      <Link href={`/article/${articleSlug(a.title, a.id)}`} style={{ fontSize: 13, fontFamily: 'Playfair Display, serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>{a.title}</Link>
                       <div style={{ fontSize: 11, color: 'var(--text3)' }}>
                         {a.outlets?.name} · {timeAgo(a.published_at)}
                         {a.bias_direction && <span style={{ color: a.bias_direction === 'left' ? 'var(--blue, #3b82f6)' : a.bias_direction === 'right' ? 'var(--red)' : 'var(--text3)', marginLeft: 4 }}>

@@ -8,7 +8,7 @@ export function usePullToRefresh(onRefresh) {
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const onTouchStart = useCallback((e) => {
-    if (window.scrollY === 0 && !isRefreshing) {
+    if (window.scrollY <= 5 && !isRefreshing) {
       pullStartY.current = e.touches[0].clientY
     }
   }, [isRefreshing])
@@ -16,7 +16,7 @@ export function usePullToRefresh(onRefresh) {
   const onTouchMove = useCallback((e) => {
     if (!pullStartY.current || isRefreshing) return
     const delta = e.touches[0].clientY - pullStartY.current
-    if (delta > 0 && window.scrollY === 0) {
+    if (delta > 0 && window.scrollY <= 5) {
       setPullY(Math.min(delta * 0.45, 80))
     } else {
       setPullY(0)

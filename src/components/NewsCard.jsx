@@ -1,5 +1,6 @@
 import React from 'react'
-import { outletColor, scoreDot, timeAgo } from '../utils/helpers'
+import Link from 'next/link'
+import { articleSlug, outletColor, scoreDot, timeAgo } from '../utils/helpers'
 
 const HEADLINE_BADGES = {
   misleading: { bg: '#fff3cd', color: '#856404', label: '⚠ Misleading' },
@@ -33,6 +34,7 @@ export default function NewsCard({ article, index, onClick, navigate }) {
   const hlBadge   = article.headline_vote ? HEADLINE_BADGES[article.headline_vote] : null
   const biasLabel = bias ? BIAS_LABELS[bias] : null
   const scored    = acc > 0
+  const slug      = articleSlug(article.title, article.id)
 
   function handleOutletClick(e) {
     if (!navigate || !outlet.id) return
@@ -40,8 +42,14 @@ export default function NewsCard({ article, index, onClick, navigate }) {
     navigate('outlet', { outletId: outlet.id })
   }
 
+  function handleCardClick(e) {
+    // Let the <a> handle its own navigation — don't fire onClick too
+    if (e.target.closest('a')) return
+    onClick?.(e)
+  }
+
   return (
-    <div className="news-card" onClick={onClick}>
+    <div className="news-card" onClick={handleCardClick}>
       <div className="outlet-row">
         <span className="outlet-badge" onClick={handleOutletClick} onTouchEnd={handleOutletClick}>
           <span className="outlet-dot" style={{ background: bg }} />
@@ -50,7 +58,9 @@ export default function NewsCard({ article, index, onClick, navigate }) {
         <span className="ts">{timeAgo(article.published_at)}</span>
       </div>
 
-      <div className="news-headline">{article.title || 'Untitled'}</div>
+      <Link href={`/article/${slug}`} className="news-headline" style={{ textDecoration: 'none', color: 'inherit' }}>
+        {article.title || 'Untitled'}
+      </Link>
 
       {hlBadge && (
         <span style={{

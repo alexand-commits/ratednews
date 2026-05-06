@@ -17,24 +17,43 @@ export default class ErrorBoundary extends React.Component {
   render() {
     if (this.state.error) {
       return (
-        <div style={{ padding: 32, maxWidth: 600, margin: '0 auto' }}>
-          <h2 style={{ color: 'var(--red)', marginBottom: 12 }}>Something went wrong</h2>
-          <pre style={{
-            background: 'var(--surface)', border: '1px solid var(--border)',
-            borderRadius: 8, padding: 16, fontSize: 12, overflowX: 'auto',
-            whiteSpace: 'pre-wrap', wordBreak: 'break-all',
-            color: 'var(--text)',
+        <div style={{
+          padding: '60px 24px', maxWidth: 480, margin: '0 auto', textAlign: 'center',
+        }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>😕</div>
+          <h2 style={{
+            fontFamily: 'Playfair Display, serif', fontSize: 22,
+            fontWeight: 700, marginBottom: 8, color: 'var(--text)',
           }}>
-            {this.state.error.toString()}
-            {'\n\n'}
-            {this.state.error.stack}
-          </pre>
-          <button
-            style={{ marginTop: 16, padding: '8px 16px', cursor: 'pointer' }}
-            onClick={() => window.history.back()}
-          >
-            ← Go back
-          </button>
+            Something went wrong
+          </h2>
+          <p style={{ fontSize: 14, color: 'var(--text2)', marginBottom: 24, lineHeight: 1.5 }}>
+            An unexpected error occurred. Try refreshing the page — if the problem
+            persists, come back in a few minutes.
+          </p>
+          <div style={{ display: 'flex', gap: 10, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                background: 'var(--coral)', color: '#fff', border: 'none',
+                borderRadius: 10, padding: '10px 22px', fontWeight: 600,
+                fontSize: 14, cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              Refresh page
+            </button>
+            <button
+              onClick={() => { this.setState({ error: null }); window.history.back() }}
+              style={{
+                background: 'var(--surface)', color: 'var(--text)',
+                border: '1px solid var(--border)', borderRadius: 10,
+                padding: '10px 22px', fontWeight: 600, fontSize: 14,
+                cursor: 'pointer', fontFamily: 'inherit',
+              }}
+            >
+              ← Go back
+            </button>
+          </div>
         </div>
       )
     }

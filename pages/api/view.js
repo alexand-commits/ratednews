@@ -1,0 +1,63 @@
+/**
+ * POST /api/view
+ * Increments view_count for an article.
+ * - Rejects known bots/crawlers by user-agent
+ * - Deduplicates by hashing IP + article_id within a 1-hour window (via in-memory cache)
+ */
+
+const { createClient } = require('@supabase/supabase-js')
+
+// Simple in-memory dedup cache: "ip:articleId" -> timestamp
+// Resets on each cold start, which is fine — it's a soft signal not an exact count
+const seen = new Map()
+const DEDUP_WINDOW_MS = 60 * 60 * 1000 // 1 hour
+
+const BOT_UA_RE = /bot|crawler|spider|crawling|facebookexternalhit|Twitterbot|rogerbot|linkedinbot|embedly|quora link preview|showyoubot|outbrain|pinterest|slackbot|vkShare|W3C_Validator|whatsapp|Googlebot|Bingbot|Slurp|DuckDuckBot|Baiduspider|YandexBot|Sogou|Exabot|ia_archiver/i
+
+module.exports = async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  // Reject bots
+  const ua = req.headers['user-agent'] || ''
+  if (BOT_UA_RE.test(ua)) {
+    return res.status(200).json({ ok: true, skipped: 'bot' })
+  }
+
+  const { id } = req.body || {}
+  if (!id || typeof id !== 'string') {
+    return res.status(400).json({ error: 'Missing article id' })
+  }
+
+  // IP-based dedup
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown'
+  const key = `${ip}:${id}`
+  const now = Date.now()
+  const last = seen.get(key)
+  if (last && now - last < DEDUP_WINDOW_MS) {
+    return res.status(200).json({ ok: true, skipped: 'dedup' })
+  }
+  seen.set(key, now)
+
+  // Prune old entries to prevent memory leak on long-lived instances
+  if (seen.size > 10000) {
+    for (const [k, ts] of seen) {
+      if (now - ts > DEDUP_WINDOW_MS) seen.delete(k)
+    }
+  }
+
+  const supabase = createClient(
+    process.env.VITE_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+  )
+
+  const { error } = await supabase.rpc('increment_view_count', { article_id: id })
+
+  if (error) {
+    console.error('[view] rpc error:', error.message)
+    return res.status(500).json({ error: error.message })
+  }
+
+  return res.status(200).json({ ok: true })
+}

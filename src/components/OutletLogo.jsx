@@ -90,6 +90,18 @@ const OUTLET_DOMAINS = {
   'The Moscow Times':         'themoscowtimes.com',
   'The Globe and Mail':       'theglobeandmail.com',
   'CNBC':                     'cnbc.com',
+  // New general outlets
+  'Channel NewsAsia':         'channelnewsasia.com',
+  'Hindustan Times':          'hindustantimes.com',
+  'The Age':                  'theage.com.au',
+  'The Conversation':         'theconversation.com',
+  'Washington Examiner':      'washingtonexaminer.com',
+  // Sports outlets
+  'BBC Sport':                'bbc.co.uk',
+  'Sky Sports':               'skysports.com',
+  'ESPN':                     'espn.com',
+  'Marca':                    'marca.com',
+  'Sports Illustrated':       'si.com',
 }
 
 export default function OutletLogo({ name = '', size = 32, borderRadius = 8, style = {} }) {
