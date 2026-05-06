@@ -27,6 +27,11 @@ function toSlug(name) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 }
 
+function toArticleSlug(title, id) {
+  const t = (title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60).replace(/-$/, '')
+  return t ? `${t}-${String(id).slice(0, 8)}` : String(id).slice(0, 8)
+}
+
 function buildSitemap(pages) {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -53,7 +58,7 @@ export async function getServerSideProps({ res }) {
   const [{ data: outlets }, { data: articles }] = await Promise.all([
     supabase.from('outlets').select('name, updated_at'),
     supabase.from('articles')
-      .select('id, published_at')
+      .select('id, title, published_at')
       .gte('published_at', since90d)
       .order('published_at', { ascending: false })
       .limit(1000),
@@ -67,7 +72,7 @@ export async function getServerSideProps({ res }) {
   }))
 
   const articlePages = (articles || []).map(a => ({
-    url:        `https://ratednews.com/article/${a.id}`,
+    url:        `https://ratednews.com/article/${toArticleSlug(a.title, a.id)}`,
     priority:   '0.6',
     changefreq: 'weekly',
     lastmod:    a.published_at?.slice(0, 10),
