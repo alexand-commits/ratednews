@@ -107,6 +107,33 @@ const JUNK_PATTERNS = [
   /\bmorning (briefing|digest|newsletter)\b/i,
   /\bevening (briefing|digest|newsletter)\b/i,
   // Extremely short titles are usually malformed feed entries
+
+  // ── Tabloid lifestyle / celebrity clickbait (Daily Mail, The Sun, etc.) ──────
+  // ALL-CAPS "YOUR" is the Daily Mail's signature engagement trigger
+  /\bYOUR\b/,                           // "judging YOUR bathroom", "YOUR home is…"
+  // Question-opener personal lifestyle titles
+  /^(should|are|is|do|would|could) (you|your)\b/i,  // "Should you X", "Are you X"
+  // "What your X says/reveals about you" — classic DM formula
+  /\bwhat your [a-z ]+ (says?|reveals?|means?|shows?)\b/i,
+  // Celebrity reaction / body / outfit clickbait
+  /\b(wows?|stuns?|shocks?|dazzles?) (fans?|followers?|internet|viewers?|critics?|crowds?)\b/i,
+  /\b(fans?|viewers?) (go wild|react|are (stunned|shocked|baffled|divided|furious))\b/i,
+  /\b(shows? off|flaunts?|puts on a display|steps out)\b/i,
+  /\blooks (incredible|stunning|unrecognisable|amazing) (as she|in|at)\b/i,
+  // Health anxiety bait — no clinical value
+  /\b(signs? you (may|might|could) have|warning signs?)\b/i,
+  /\b(symptoms? (of|you should)|silent (killer|symptom))\b/i,
+  // Domestic lifestyle tips that are not news
+  /\b(home|kitchen|bathroom|bedroom|garden) (tips?|hacks?|tricks?|ideas?|inspo|inspiration|secrets?)\b/i,
+  /\bhow to (clean|organise|organize|declutter|make) your (home|house|kitchen|bathroom|bedroom|garden)\b/i,
+  // Food & drink lifestyle (non-news)
+  /\brecipe(s)? (you|to try|of the (day|week))\b/i,
+  /\b(best|top) (restaurants?|places? to eat|cafes?|bars?) (in|near|for)\b/i,
+  // "Inside X's Y" celebrity home/life tours
+  /^inside [a-z]+'s (home|house|mansion|life|wedding|relationship)\b/i,
+  // Relationship / sex advice columns
+  /\b(dating|relationship|sex) (tips?|advice|hacks?|secrets?|rules?)\b/i,
+  /\bhow to (get|keep|attract|impress) (a |your )?(man|woman|partner|date|husband|wife)\b/i,
 ]
 
 const MAX_ARTICLE_AGE_DAYS = 1  // skip articles whose pubDate is older than this
@@ -198,8 +225,9 @@ async function main() {
 
   const { data: outlets, error } = await supabase
     .from('outlets')
-    .select('id, name, rss_url')
+    .select('id, name, rss_url, paused_ingest')
     .not('rss_url', 'is', null)
+    .not('paused_ingest', 'is', true)
 
   if (error) {
     console.error('Failed to fetch outlets:', error.message)
