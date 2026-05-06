@@ -554,11 +554,13 @@ export default function FeedPage({
                   ? dbLoading
                     ? 'Searching…'
                     : `${displayList.length} result${displayList.length !== 1 ? 's' : ''} for "${search}"`
-                  : <>
-                      {filtered.length} {filtered.length === 1 ? 'story' : 'stories'}
-                      {category !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> in {category}</span>}
-                      {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
-                    </>
+                  : (category !== 'all' || region !== 'all')
+                    ? <>
+                        {filtered.length} {filtered.length === 1 ? 'story' : 'stories'}
+                        {category !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> in {category}</span>}
+                        {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
+                      </>
+                    : null
                 }
               </div>
               {!isSearchActive && (
