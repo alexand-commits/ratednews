@@ -36,7 +36,10 @@ export function articleSlug(title, id) {
     .replace(/^-|-$/g, '')
     .slice(0, 60)
     .replace(/-$/, '')
-  return t ? `${t}-${id}` : String(id)
+  // Use only the first 8 hex chars of the UUID (the part before the first dash).
+  // 16^8 = 4 billion possibilities → collision-free at 10k articles.
+  const shortId = String(id).slice(0, 8)
+  return t ? `${t}-${shortId}` : shortId
 }
 
 export function timeAgo(ts) {

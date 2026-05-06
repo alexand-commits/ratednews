@@ -5,10 +5,17 @@ import ArticlePage from '../../src/pages/ArticlePage'
 import ErrorBoundary from '../../src/components/ErrorBoundary'
 import { articleSlug } from '../../src/utils/helpers'
 
-// Matches a full UUID at the END of a slug (or alone)
-// e.g. "trump-signs-tariff-4f3ff8a6-4730-4e86-a7aa-9d493f4dfa71"
-const UUID_SUFFIX_RE = /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i
-const UUID_ONLY_RE   = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// Shape 1 — bare full UUID (pre-slug links):
+//   "4f3ff8a6-4730-4e86-a7aa-9d493f4dfa71"
+const BARE_UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+// Shape 2 — slug + full UUID suffix (brief transitional window):
+//   "obama-slams-trump-4f3ff8a6-4730-4e86-a7aa-9d493f4dfa71"
+const FULL_UUID_SUFFIX_RE = /-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i
+
+// Shape 3 — canonical: slug + 8-char short ID (first segment of UUID):
+//   "obama-slams-trump-4f3ff8a6"
+const SHORT_ID_SUFFIX_RE = /-([0-9a-f]{8})$/i
 
 export default function ArticleDetail({ article }) {
   const router = useRouter()
@@ -140,42 +147,35 @@ export async function getStaticProps({ params }) {
   const supabase = await getSupabase()
   const slug = params.id
 
-  // ── Case 1: bare UUID (old link format) ───────────────────────────────────
-  // Someone followed a pre-migration link — fetch the article and 301 redirect
-  // to the canonical slug URL so Google consolidates to the new address.
-  if (UUID_ONLY_RE.test(slug)) {
-    const { data: article } = await supabase
-      .from('articles')
-      .select('id, title')
-      .eq('id', slug)
-      .single()
-
-    if (!article) return { notFound: true }
-
-    return {
-      redirect: {
-        destination: `/article/${articleSlug(article.title, article.id)}`,
-        permanent:   true,
-      },
-    }
+  // ── Shape 1: bare full UUID → redirect to canonical slug ─────────────────
+  if (BARE_UUID_RE.test(slug)) {
+    const { data: a } = await supabase
+      .from('articles').select('id, title').eq('id', slug).single()
+    if (!a) return { notFound: true }
+    return { redirect: { destination: `/article/${articleSlug(a.title, a.id)}`, permanent: true } }
   }
 
-  // ── Case 2: slug with UUID suffix (canonical format) ─────────────────────
-  // Extract the UUID from the end of the slug for an exact DB lookup.
-  const idMatch = slug.match(UUID_SUFFIX_RE)
-  if (!idMatch) return { notFound: true }
-  const id = idMatch[1]
+  // ── Shape 2: slug + full UUID suffix → redirect to canonical slug ─────────
+  const fullMatch = slug.match(FULL_UUID_SUFFIX_RE)
+  if (fullMatch) {
+    const { data: a } = await supabase
+      .from('articles').select('id, title').eq('id', fullMatch[1]).single()
+    if (!a) return { notFound: true }
+    return { redirect: { destination: `/article/${articleSlug(a.title, a.id)}`, permanent: true } }
+  }
 
+  // ── Shape 3: canonical slug + 8-char short ID → serve the page ───────────
+  const shortMatch = slug.match(SHORT_ID_SUFFIX_RE)
+  if (!shortMatch) return { notFound: true }
+
+  // First 8 chars are the opening segment of the UUID — prefix-match is unique.
   const { data: article } = await supabase
     .from('articles')
     .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
-    .eq('id', id)
+    .ilike('id', `${shortMatch[1]}-%`)
     .single()
 
   if (!article) return { notFound: true }
 
-  return {
-    props:      { article },
-    revalidate: 3600,
-  }
+  return { props: { article }, revalidate: 3600 }
 }
