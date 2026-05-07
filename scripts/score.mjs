@@ -238,6 +238,12 @@ async function main() {
 
   console.log(`\n========================`)
   console.log(`✅ Total scored: ${totalScored}  ❌ Failed: ${totalFailed}  ⏭ Thin content skipped: ${totalThin}`)
+
+  // Write output for GitHub Actions conditional steps
+  if (process.env.GITHUB_OUTPUT) {
+    const fs = await import('fs')
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `scored=${totalScored}\n`)
+  }
 }
 
 main()

@@ -126,7 +126,7 @@ const OUTLET_DOMAINS = {
 // Direct logo URLs for outlets that share a domain with another outlet
 // or need a specific branded image instead of the generic favicon
 const LOGO_OVERRIDES = {
-  'BBC Sport': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/BBC_Sport_logo_%282024%29.svg/240px-BBC_Sport_logo_%282024%29.svg.png',
+  'BBC Sport': '/bbc-sport-logo.svg',
 }
 
 export default function OutletLogo({ name = '', size = 32, borderRadius = 8, style = {} }) {

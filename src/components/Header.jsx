@@ -20,8 +20,8 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
       </div>
       <nav className="nav">
         <a onClick={() => navigate('feed')}>Feed</a>
-        <a onClick={() => navigate('sports')}>Sports</a>
         <a onClick={() => navigate('trending')}>Trending</a>
+        <a onClick={() => navigate('sports')}>Sports</a>
         <a onClick={() => navigate('outlets')}>Outlets</a>
         <a onClick={() => navigate('rankings')}>Rankings</a>
         <a onClick={() => navigate('about')}>How it works</a>

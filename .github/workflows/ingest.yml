@@ -2,8 +2,8 @@ name: RSS Ingestion
 
 on:
   schedule:
-    - cron: '0 * * * *'   # Every hour
-  workflow_dispatch:        # Also allows manual trigger from GitHub UI
+    - cron: '0 * * * *'   # Every hour — cron.org handles raw ingest every 30 mins
+  workflow_dispatch:        # Manual trigger from GitHub UI
 
 jobs:
   ingest:
@@ -17,9 +17,19 @@ jobs:
         with:
           node-version: '24'
 
+      # Cache npm — saves ~60s per run (~1,400 mins/month at hourly)
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - run: npm ci
 
       - name: Ingest RSS feeds
+        id: ingest
         run: node scripts/ingest.mjs
         continue-on-error: true
         env:
@@ -27,6 +37,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Score articles
+        id: score
         run: node scripts/score.mjs
         continue-on-error: true
         env:
@@ -34,7 +45,9 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
+      # Only aggregate when articles were actually scored this run
       - name: Aggregate outlet scores
+        if: steps.score.outputs.scored != '0'
         run: node scripts/aggregate-outlets.mjs
         continue-on-error: true
         env:

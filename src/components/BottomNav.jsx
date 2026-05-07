@@ -4,8 +4,8 @@ import { useRouter } from 'next/router'
 const TABS = [
   { page: 'feed',      path: '/',          icon: '🏠', label: 'Feed'     },
   { page: 'rankings',  path: '/rankings',  icon: '🏆', label: 'Rankings' },
-  { page: 'sports',    path: '/sports',    icon: '⚽', label: 'Sports'   },
   { page: 'trending',  path: '/trending',  icon: '🔥', label: 'Trending' },
+  { page: 'sports',    path: '/sports',    icon: '⚽', label: 'Sports'   },
   { page: 'outlets',   path: '/outlets',   icon: '📡', label: 'Outlets'  },
 ]
 

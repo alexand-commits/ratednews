@@ -246,6 +246,12 @@ async function main() {
 
   console.log(`\n===========================`)
   console.log(`✅ Done — ${totalInserted} new articles ingested`)
+
+  // Write output for GitHub Actions conditional steps
+  if (process.env.GITHUB_OUTPUT) {
+    const fs = await import('fs')
+    fs.appendFileSync(process.env.GITHUB_OUTPUT, `inserted=${totalInserted}\n`)
+  }
 }
 
 main()
