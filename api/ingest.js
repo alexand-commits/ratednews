@@ -40,7 +40,6 @@ const RSS_FEEDS = {
   'BBC Sport':        'https://feeds.bbci.co.uk/sport/rss.xml',
   'Sky Sports':       'https://www.skysports.com/rss/12040',
   'ESPN':             'https://www.espn.com/espn/rss/news',
-  'Marca':            'https://www.marca.com/rss/portada.xml',
   'Sports Illustrated': 'https://news.google.com/rss/search?q=site:si.com&hl=en-US&gl=US&ceid=US:en',
 }
 

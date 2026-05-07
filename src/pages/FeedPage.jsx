@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import NewsCard from '../components/NewsCard'
+import OutletLogo from '../components/OutletLogo'
 import Sidebar from '../components/Sidebar'
 import LegalModal from '../components/LegalModal'
 import { timeAgo } from '../utils/helpers'
@@ -406,6 +407,13 @@ export default function FeedPage({
   const isSearchActive = dbResults !== null
   const displayList    = isSearchActive ? dbResults : interleaved
 
+  // Outlet search — match search term against outlet names
+  const matchedOutlets = useMemo(() => {
+    if (!isSearchActive || search.trim().length < 2) return []
+    const term = search.trim().toLowerCase()
+    return (outlets || []).filter(o => o.name?.toLowerCase().includes(term)).slice(0, 3)
+  }, [isSearchActive, search, outlets])
+
   return (
     <div className="page-content" {...pullHandlers}>
       {pullIndicator}
@@ -574,6 +582,41 @@ export default function FeedPage({
                 </div>
               )}
             </div>
+
+            {/* Outlet matches — pinned above article results when search active */}
+            {isSearchActive && matchedOutlets.length > 0 && (
+              <div style={{ marginBottom: 12 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Outlets</div>
+                {matchedOutlets.map(outlet => (
+                  <div
+                    key={outlet.id}
+                    onClick={() => navigate('outlet', { outletId: outlet.id, name: outlet.name })}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 12,
+                      padding: '10px 14px', marginBottom: 6,
+                      background: 'var(--surface)', border: '0.5px solid var(--border)',
+                      borderRadius: 'var(--radius)', cursor: 'pointer',
+                      transition: 'border-color 0.15s',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--coral)'}
+                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                  >
+                    <OutletLogo name={outlet.name} size={36} borderRadius={8} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{outlet.name}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 1 }}>
+                        {outlet.overall_score != null ? `Score ${outlet.overall_score}/100` : 'Outlet'}
+                        {outlet.bias_direction && outlet.bias_direction !== 'centre' ? ` · ${outlet.bias_direction}-leaning` : ''}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 13, color: 'var(--text3)' }}>→</span>
+                  </div>
+                ))}
+                {displayList.length > 0 && (
+                  <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '12px 0 8px' }}>Articles</div>
+                )}
+              </div>
+            )}
 
             <div className="feed">
               {loading || (isSearchActive && dbLoading) ? (
