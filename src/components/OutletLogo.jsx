@@ -104,8 +104,15 @@ const OUTLET_DOMAINS = {
   'Sports Illustrated':       'si.com',
 }
 
+// Direct logo URLs for outlets that share a domain with another outlet
+// or need a specific branded image instead of the generic favicon
+const LOGO_OVERRIDES = {
+  'BBC Sport': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/BBC_Sport_logo_%282024%29.svg/240px-BBC_Sport_logo_%282024%29.svg.png',
+}
+
 export default function OutletLogo({ name = '', size = 32, borderRadius = 8, style = {} }) {
   const [failed, setFailed] = useState(false)
+  const override = LOGO_OVERRIDES[name]
   const domain = OUTLET_DOMAINS[name]
   const [bg, fg] = outletColor(name)
 
@@ -121,11 +128,13 @@ export default function OutletLogo({ name = '', size = 32, borderRadius = 8, sty
     ...style,
   }
 
-  if (domain && !failed) {
+  const logoSrc = override || (domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64` : null)
+
+  if (logoSrc && !failed) {
     return (
       <div style={{ ...base, background: bg }}>
         <img
-          src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`}
+          src={logoSrc}
           alt={name}
           onError={() => setFailed(true)}
           style={{ width: size * 0.65, height: size * 0.65, objectFit: 'contain' }}
