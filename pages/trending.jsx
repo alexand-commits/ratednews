@@ -82,30 +82,66 @@ export async function getStaticProps() {
       .from('articles')
       .select('id, title, published_at, accuracy_score, bias_direction, category, ai_summary, image_url, view_count, outlets(name, bias_direction, logo_url), comments(count)')
       .gte('published_at', since24h)
+      .not('accuracy_score', 'is', null)
       .order('published_at', { ascending: false })
-      .limit(100)
+      .limit(200)
 
     if (error) throw error
+
+    // ── Cross-outlet coverage scoring ──────────────────────────────────────────
+    // Extract meaningful tokens from a title (strip stop words + short words)
+    const STOP = new Set(['the','a','an','in','on','at','to','for','of','and','or',
+      'is','are','was','were','says','say','said','after','as','with','by','from',
+      'over','into','its','it','his','her','their','how','why','what','who','will',
+      'have','has','had','been','be','but','not','this','that','than','then'])
+
+    function tokens(title) {
+      return (title || '').toLowerCase()
+        .replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)
+        .filter(w => w.length > 3 && !STOP.has(w))
+    }
+
+    // For each article, count how many OTHER outlet articles share 3+ tokens
+    // within a 6-hour window — this is the cross-outlet coverage signal
+    const COVERAGE_WINDOW = 6 * 3600000
+    const allTokens = (data || []).map(a => ({ id: a.id, t: new Set(tokens(a.title)), ts: new Date(a.published_at).getTime(), outletId: a.outlets?.name }))
+
+    const coverageMap = {}
+    for (let i = 0; i < allTokens.length; i++) {
+      let count = 0
+      for (let j = 0; j < allTokens.length; j++) {
+        if (i === j) continue
+        if (allTokens[i].outletId === allTokens[j].outletId) continue // same outlet doesn't count
+        if (Math.abs(allTokens[i].ts - allTokens[j].ts) > COVERAGE_WINDOW) continue
+        const shared = [...allTokens[i].t].filter(w => allTokens[j].t.has(w)).length
+        if (shared >= 3) count++
+      }
+      coverageMap[allTokens[i].id] = count
+    }
 
     const scored = (data || []).map(a => {
       const hoursAgo  = (Date.now() - new Date(a.published_at)) / 3600000
       const views     = a.view_count || 0
       const comments  = a.comments?.[0]?.count || 0
-      // Views are the primary signal; comments carry more weight per-unit as they signal deeper engagement
-      const trendScore = views * 1 + comments * 10 + Math.max(0, 24 - hoursAgo)
-      return { ...a, _trendScore: trendScore }
+      const coverage  = coverageMap[a.id] || 0
+      const accuracy  = a.accuracy_score || 50
+      // Cross-outlet coverage is the primary signal — stories covered by many
+      // outlets score highest. Views + comments boost when traffic picks up.
+      const trendScore = coverage * 15 + views * 2 + comments * 20
+                       + (accuracy / 100) * 5 + Math.max(0, 12 - hoursAgo)
+      return { ...a, _trendScore: trendScore, _coverage: coverage }
     })
 
     scored.sort((a, b) => b._trendScore - a._trendScore)
 
-    const articles = scored.slice(0, 20).map(({ _trendScore, ...rest }) => rest)
+    const articles = scored.slice(0, 20).map(({ _trendScore, _coverage, ...rest }) => rest)
 
     return {
       props: {
         articles,
         generatedAt: new Date().toISOString(),
       },
-      revalidate: 1800,
+      revalidate: 900, // refresh every 15 minutes — more responsive
     }
   } catch (err) {
     console.error('trending getStaticProps error:', err)

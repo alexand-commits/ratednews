@@ -48,7 +48,7 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
             Nothing trending yet
           </div>
           <div style={{ fontSize: 14, color: 'var(--text3)' }}>
-            Check back soon — trending articles from the last 48 hours will appear here.
+            Check back soon — trending articles from the last 24 hours will appear here.
           </div>
         </div>
       </div>
@@ -84,7 +84,7 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
           )}
         </div>
         <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text2)' }}>
-          Most discussed in the last 48 hours
+          Most covered stories in the last 24 hours
         </p>
       </div>
 
