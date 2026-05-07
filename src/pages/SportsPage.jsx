@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
-import Link from 'next/link'
-import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
+import NewsCard from '../components/NewsCard'
+import { timeAgo } from '../utils/helpers'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
 // ─── Sport detection ────────────────────────────────────────────────────────
@@ -76,66 +76,6 @@ const SPORT_FILTERS = [
   { value: 'golf',     label: '⛳ Golf' },
 ]
 
-const SPORT_TAG_STYLES = {
-  football: { background: '#dbeafe', color: '#1d4ed8' },
-  f1:       { background: '#fee2e2', color: '#b91c1c' },
-  rugby:    { background: '#fef3c7', color: '#92400e' },
-  tennis:   { background: '#dcfce7', color: '#166534' },
-  cricket:  { background: '#fef9c3', color: '#854d0e' },
-  golf:     { background: '#f3e8ff', color: '#6b21a8' },
-}
-
-const SPORT_TAG_LABELS = {
-  football: '⚽ Football',
-  f1:       '🏎 F1',
-  rugby:    '🏉 Rugby',
-  tennis:   '🎾 Tennis',
-  cricket:  '🏏 Cricket',
-  golf:     '⛳ Golf',
-}
-
-function SportTag({ type }) {
-  if (!type) return null
-  const style = SPORT_TAG_STYLES[type] || { background: 'var(--bg2)', color: 'var(--text2)' }
-  return (
-    <span style={{
-      display: 'inline-block',
-      fontSize: 10, fontWeight: 700,
-      padding: '2px 8px', borderRadius: 20,
-      textTransform: 'uppercase', letterSpacing: '0.05em',
-      ...style,
-    }}>
-      {SPORT_TAG_LABELS[type] || type}
-    </span>
-  )
-}
-
-const BIAS_LABELS = {
-  left:   { label: '← Left',   cls: 'score-badge score-badge-bias-left'   },
-  centre: { label: '◉ Centre', cls: 'score-badge score-badge-bias-centre' },
-  right:  { label: '→ Right',  cls: 'score-badge score-badge-bias-right'  },
-}
-
-function accBadgeClass(score) {
-  if (score >= 70) return 'score-badge score-badge-green'
-  if (score >= 50) return 'score-badge score-badge-amber'
-  return 'score-badge score-badge-red'
-}
-
-function ScoreBadges({ article }) {
-  const acc  = article.accuracy_score || 0
-  const bias = article.bias_direction
-  if (!acc) return null
-  return (
-    <>
-      <span className={accBadgeClass(acc)}>✦ {acc}</span>
-      {bias && BIAS_LABELS[bias] && (
-        <span className={BIAS_LABELS[bias].cls}>{BIAS_LABELS[bias].label}</span>
-      )}
-    </>
-  )
-}
-
 // ─── Main component ──────────────────────────────────────────────────────────
 export default function SportsPage({ articles, generatedAt, navigate, goBack, onRefresh }) {
   const [activeSport, setActiveSport] = useState('all')
@@ -145,11 +85,10 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
     ? Math.round((Date.now() - new Date(generatedAt)) / 60000)
     : null
 
-  // Attach sport type to each article client-side
-  const tagged = (articles || []).map(a => ({
-    ...a,
-    _sportType: detectSportType(a),
-  }))
+  // Attach sport type to each article client-side, sort by latest
+  const tagged = (articles || [])
+    .map(a => ({ ...a, _sportType: detectSportType(a) }))
+    .sort((a, b) => new Date(b.published_at) - new Date(a.published_at))
 
   const filtered = activeSport === 'all'
     ? tagged
@@ -178,9 +117,6 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
       </div>
     )
   }
-
-  const hero   = filtered[0]
-  const ranked = filtered.slice(1)
 
   return (
     <div className="page-content" {...pullHandlers}>
@@ -233,210 +169,22 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
 
         {filtered.length === 0 ? (
           <div className="empty-state">
-            <p>No {activeSport} articles in the last 7 days.</p>
+            <p>No {activeSport} stories in the last 7 days.</p>
           </div>
         ) : (
-          <>
-            {/* Hero card */}
-            {hero && (
-              <>
-                <div className="section-label" style={{ marginBottom: 8 }}>Top Story</div>
-                <HeroCard article={hero} navigate={navigate} />
-              </>
-            )}
-
-            {/* Ranked list */}
-            {ranked.length > 0 && (
-              <>
-                <div className="section-label" style={{ margin: '20px 0 8px' }}>
-                  Latest Coverage
-                </div>
-                <div style={{
-                  background: 'var(--surface)',
-                  border: '0.5px solid var(--border)',
-                  borderRadius: 'var(--radius)',
-                  overflow: 'hidden',
-                }}>
-                  {ranked.map((a, i) => (
-                    <ArticleRow
-                      key={a.id}
-                      article={a}
-                      rank={i + 2}
-                      isLast={i === ranked.length - 1}
-                      navigate={navigate}
-                    />
-                  ))}
-                </div>
-              </>
-            )}
-          </>
+          <div className="feed">
+            {filtered.map((a, i) => (
+              <NewsCard
+                key={a.id}
+                article={a}
+                index={i}
+                onClick={() => navigate('article', { articleId: a.id, title: a.title })}
+                navigate={navigate}
+              />
+            ))}
+          </div>
         )}
       </div>
-    </div>
-  )
-}
-
-// ─── Hero card ───────────────────────────────────────────────────────────────
-function HeroCard({ article, navigate }) {
-  const outlet   = article.outlets || {}
-  const [dotBg]  = outletColor(outlet.name || 'X')
-  const slug     = articleSlug(article.title, article.id)
-  const comments = article.comments?.[0]?.count || 0
-
-  return (
-    <div
-      onClick={e => { if (e.target.closest('a')) return; navigate('article', { articleId: article.id, title: article.title }) }}
-      className="row-hover"
-      style={{
-        background: 'var(--surface)', border: '0.5px solid var(--border)',
-        borderRadius: 'var(--radius)', padding: 20, marginBottom: 12, cursor: 'pointer',
-      }}
-    >
-      {/* Outlet + time row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-        <span style={{ width: 8, height: 8, borderRadius: '50%', background: dotBg, flexShrink: 0 }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>
-          {outlet.name || 'Unknown'}
-        </span>
-        {article._sportType && (
-          <span style={{ marginLeft: 2 }}>
-            <SportTag type={article._sportType} />
-          </span>
-        )}
-        <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>
-          {timeAgo(article.published_at)}
-        </span>
-      </div>
-
-      {/* Headline */}
-      <Link
-        href={`/article/${slug}`}
-        style={{ textDecoration: 'none', color: 'inherit' }}
-        onClick={e => e.stopPropagation()}
-      >
-        <h2 style={{
-          margin: '0 0 10px', fontSize: 20, fontWeight: 700, lineHeight: 1.35,
-          fontFamily: "'Playfair Display', Georgia, serif", color: 'var(--text)',
-        }}>
-          {article.title}
-        </h2>
-      </Link>
-
-      {/* Summary */}
-      {article.ai_summary && (
-        <p style={{
-          margin: '0 0 12px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.5,
-          display: '-webkit-box', WebkitLineClamp: 2,
-          WebkitBoxOrient: 'vertical', overflow: 'hidden',
-        }}>
-          {article.ai_summary}
-        </p>
-      )}
-
-      {/* Badges */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        <ScoreBadges article={article} />
-        {comments > 0 && (
-          <span style={{
-            fontSize: 11, fontWeight: 600,
-            background: 'var(--bg)', color: 'var(--text2)',
-            border: '0.5px solid var(--border)', borderRadius: 20, padding: '2px 8px',
-          }}>
-            💬 {comments}
-          </span>
-        )}
-      </div>
-    </div>
-  )
-}
-
-// ─── Article row ─────────────────────────────────────────────────────────────
-function ArticleRow({ article, rank, isLast, navigate }) {
-  const outlet   = article.outlets || {}
-  const [dotBg]  = outletColor(outlet.name || 'X')
-  const slug     = articleSlug(article.title, article.id)
-  const comments = article.comments?.[0]?.count || 0
-  const acc      = article.accuracy_score || 0
-
-  return (
-    <div
-      onClick={e => { if (e.target.closest('a')) return; navigate('article', { articleId: article.id, title: article.title }) }}
-      className="row-hover"
-      style={{
-        display: 'flex', alignItems: 'flex-start', gap: 12,
-        padding: '12px 16px', cursor: 'pointer',
-        borderBottom: isLast ? 'none' : '0.5px solid var(--border)',
-      }}
-    >
-      {/* Rank */}
-      <div style={{
-        width: 28, height: 28, borderRadius: '50%',
-        background: 'var(--bg2)', color: 'var(--text3)',
-        fontSize: 11, fontWeight: 700, flexShrink: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 2,
-      }}>
-        #{rank}
-      </div>
-
-      {/* Content */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {/* Outlet + sport tag row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4, flexWrap: 'wrap' }}>
-          <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotBg, flexShrink: 0 }} />
-          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>
-            {outlet.name || 'Unknown'}
-          </span>
-          {article._sportType && <SportTag type={article._sportType} />}
-          <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>
-            {timeAgo(article.published_at)}
-          </span>
-        </div>
-
-        {/* Headline */}
-        <Link
-          href={`/article/${slug}`}
-          style={{ textDecoration: 'none', color: 'inherit' }}
-          onClick={e => e.stopPropagation()}
-        >
-          <div style={{
-            fontSize: 13, fontWeight: 600, color: 'var(--text)',
-            lineHeight: 1.4, marginBottom: 6,
-            display: '-webkit-box', WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical', overflow: 'hidden',
-          }}>
-            {article.title}
-          </div>
-        </Link>
-
-        {/* Badges */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-          <ScoreBadges article={article} />
-          {comments > 0 && (
-            <span style={{
-              fontSize: 10, color: 'var(--text3)',
-              background: 'var(--bg)', border: '0.5px solid var(--border)',
-              borderRadius: 20, padding: '1px 6px',
-            }}>
-              💬 {comments}
-            </span>
-          )}
-        </div>
-      </div>
-
-      {/* Accuracy score */}
-      {acc > 0 && (
-        <div style={{ textAlign: 'center', flexShrink: 0, minWidth: 36 }}>
-          <div style={{
-            fontSize: 14, fontWeight: 700,
-            color: acc >= 70 ? 'var(--green-dark)' : acc >= 50 ? 'var(--amber)' : 'var(--red)',
-          }}>
-            {acc}
-          </div>
-          <div style={{ fontSize: 9, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-            acc
-          </div>
-        </div>
-      )}
     </div>
   )
 }
