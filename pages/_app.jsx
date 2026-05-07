@@ -18,7 +18,7 @@ export function useAppContext() { return useContext(AppContext) }
 export default function App({ Component, pageProps }) {
   const router = useRouter()
 
-  const [isDark,           setIsDark]           = useState(false)
+  const [isDark,           setIsDark]           = useState(true)
   const [session,          setSession]          = useState(null)
   const [showAuthModal,       setShowAuthModal]       = useState(false)
   const [showPasswordReset,   setShowPasswordReset]   = useState(false)
@@ -42,7 +42,7 @@ export default function App({ Component, pageProps }) {
   // ── Theme ───────────────────────────────────────────────────────────────
   useEffect(() => {
     const stored = localStorage.getItem('theme')
-    if (stored === 'dark') setIsDark(true)
+    if (stored === 'light') setIsDark(false)
   }, [])
 
   useEffect(() => {
