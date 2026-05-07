@@ -134,7 +134,24 @@ export async function getStaticProps() {
 
     scored.sort((a, b) => b._trendScore - a._trendScore)
 
-    const articles = scored.slice(0, 20).map(({ _trendScore, _coverage, ...rest }) => rest)
+    // Deduplicate — once sorted by score, skip any article that shares 3+ tokens
+    // with an already-selected article. Keeps the best representative per story.
+    const selected = []
+    const selectedTokenSets = []
+    for (const a of scored) {
+      const t = new Set(tokens(a.title))
+      const isDupe = selectedTokenSets.some(existing => {
+        const shared = [...t].filter(w => existing.has(w)).length
+        return shared >= 3
+      })
+      if (!isDupe) {
+        selected.push(a)
+        selectedTokenSets.push(t)
+      }
+      if (selected.length >= 20) break
+    }
+
+    const articles = selected.map(({ _trendScore, _coverage, ...rest }) => rest)
 
     return {
       props: {
