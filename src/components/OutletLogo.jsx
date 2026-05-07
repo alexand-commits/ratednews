@@ -96,6 +96,16 @@ const OUTLET_DOMAINS = {
   'The Age':                  'theage.com.au',
   'The Conversation':         'theconversation.com',
   'Washington Examiner':      'washingtonexaminer.com',
+  // Tech outlets
+  'The Verge':                'theverge.com',
+  'Wired':                    'wired.com',
+  'Ars Technica':             'arstechnica.com',
+  'TechCrunch':               'techcrunch.com',
+  'MIT Technology Review':    'technologyreview.com',
+  // Africa & LATAM
+  'Mail & Guardian':          'mg.co.za',
+  'Africa News':              'africanews.com',
+  'Buenos Aires Times':       'batimes.com.ar',
   // Sports outlets
   'BBC Sport':                'bbc.co.uk',
   'Sky Sports':               'skysports.com',

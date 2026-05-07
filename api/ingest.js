@@ -30,6 +30,16 @@ const RSS_FEEDS = {
   'Vox':              'https://www.vox.com/rss/index.xml',
   'Financial Times':  'https://news.google.com/rss/search?q=site:ft.com&hl=en-US&gl=US&ceid=US:en',
   'Wall Street Journal': 'https://news.google.com/rss/search?q=site:wsj.com&hl=en-US&gl=US&ceid=US:en',
+  // Tech outlets
+  'The Verge':             'https://www.theverge.com/rss/index.xml',
+  'Wired':                 'https://www.wired.com/feed/rss',
+  'Ars Technica':          'https://feeds.arstechnica.com/arstechnica/index',
+  'TechCrunch':            'https://techcrunch.com/feed/',
+  'MIT Technology Review': 'https://www.technologyreview.com/feed/',
+  // Africa & LATAM
+  'Mail & Guardian':       'https://mg.co.za/feed/',
+  'Africa News':           'https://www.africanews.com/feed/rss',
+  'Buenos Aires Times':    'https://batimes.com.ar/feed',
   // New general outlets
   'Channel NewsAsia':     'https://www.channelnewsasia.com/api/v1/rss-outbound-feed?_format=xml',
   'Hindustan Times':      'https://news.google.com/rss/search?q=site:hindustantimes.com&hl=en-IN&gl=IN&ceid=IN:en',
