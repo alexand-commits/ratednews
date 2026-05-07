@@ -25,7 +25,7 @@ function accBadgeClass(score) {
   return 'score-badge score-badge-red'
 }
 
-export default function NewsCard({ article, index, onClick, navigate }) {
+export default function NewsCard({ article, index, onClick, navigate, clusterCount = 0 }) {
   const outlet = article.outlets || {}
   const [bg] = outletColor(outlet.name || 'X')
   const acc       = article.accuracy_score || 0
@@ -94,6 +94,15 @@ export default function NewsCard({ article, index, onClick, navigate }) {
           <div className="score-mini" style={{ color: 'var(--text3)' }}>
             {CATEGORY_EMOJI[article.category] || '📰'} {article.category}
           </div>
+        )}
+        {clusterCount > 1 && (
+          <span style={{
+            fontSize: 10, fontWeight: 600, color: 'var(--text3)',
+            background: 'var(--bg2)', border: '0.5px solid var(--border)',
+            borderRadius: 20, padding: '2px 8px',
+          }}>
+            🗞 {clusterCount} outlets
+          </span>
         )}
         <div className="score-mini" style={{ marginLeft: 'auto', color: 'var(--text3)' }}>
           💬 {commentCount}

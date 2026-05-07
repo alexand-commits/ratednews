@@ -57,6 +57,63 @@ const SPORT_KEYWORDS = {
   ],
 }
 
+// ─── Story clustering ────────────────────────────────────────────────────────
+const STOP_WORDS = new Set([
+  'the','a','an','in','on','at','to','for','of','and','or','is','are','was',
+  'were','says','say','said','after','as','with','by','from','over','into',
+  'its','it','his','her','their','our','how','why','what','who','when','will',
+  'have','has','had','been','be','but','not','this','that','than','then',
+  'report','reports','breaking','watch','exclusive','just','now','new',
+])
+
+function titleTokens(title) {
+  return (title || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 2 && !STOP_WORDS.has(w))
+}
+
+function titlesMatch(a, b) {
+  const ta = titleTokens(a)
+  const tb = new Set(titleTokens(b))
+  return ta.filter(w => tb.has(w)).length >= 3
+}
+
+// Groups articles into clusters, returns one representative per cluster
+// (most recent) with a _clusterCount attached. Unclustered articles keep _clusterCount = 1.
+function clusterArticles(articles) {
+  const WINDOW_MS = 8 * 60 * 60 * 1000 // 8 hours
+  const used = new Set()
+  const clusters = []
+
+  for (let i = 0; i < articles.length; i++) {
+    if (used.has(i)) continue
+    const group = [i]
+    const timeA = new Date(articles[i].published_at).getTime()
+
+    for (let j = i + 1; j < articles.length; j++) {
+      if (used.has(j)) continue
+      const timeB = new Date(articles[j].published_at).getTime()
+      if (Math.abs(timeA - timeB) > WINDOW_MS) continue
+      if (titlesMatch(articles[i].title, articles[j].title)) {
+        group.push(j)
+      }
+    }
+
+    group.forEach(idx => used.add(idx))
+
+    // Pick the most recent article as representative
+    const rep = group.reduce((best, idx) =>
+      new Date(articles[idx].published_at) > new Date(articles[best].published_at) ? idx : best
+    , group[0])
+
+    clusters.push({ ...articles[rep], _clusterCount: group.length })
+  }
+
+  return clusters
+}
+
 export function detectSportType(article) {
   const text = `${article.title || ''} ${article.ai_summary || ''}`.toLowerCase()
   for (const [sport, keywords] of Object.entries(SPORT_KEYWORDS)) {
@@ -93,6 +150,9 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
   const filtered = activeSport === 'all'
     ? tagged
     : tagged.filter(a => a._sportType === activeSport)
+
+  // Cluster similar stories — deduplicate within 8hr window, surface outlet count
+  const clustered = clusterArticles(filtered)
 
   // Count per sport for pill badges
   const counts = {}
@@ -167,19 +227,20 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
           ))}
         </div>
 
-        {filtered.length === 0 ? (
+        {clustered.length === 0 ? (
           <div className="empty-state">
             <p>No {activeSport} stories in the last 7 days.</p>
           </div>
         ) : (
           <div className="feed">
-            {filtered.map((a, i) => (
+            {clustered.map((a, i) => (
               <NewsCard
                 key={a.id}
                 article={a}
                 index={i}
                 onClick={() => navigate('article', { articleId: a.id, title: a.title })}
                 navigate={navigate}
+                clusterCount={a._clusterCount || 1}
               />
             ))}
           </div>
