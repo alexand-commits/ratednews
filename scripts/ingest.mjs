@@ -203,7 +203,7 @@ async function ingestOutlet(outlet) {
       title,
       url,
       summary:      extractSummary(item),
-      published_at: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
+      published_at: (() => { const p = item.pubDate ? new Date(item.pubDate) : null; return (p && !isNaN(p) && p <= new Date()) ? p.toISOString() : new Date().toISOString() })(),
       image_url:    extractImageUrl(item),
     })
 
@@ -225,9 +225,8 @@ async function main() {
 
   const { data: outlets, error } = await supabase
     .from('outlets')
-    .select('id, name, rss_url, paused_ingest')
+    .select('id, name, rss_url')
     .not('rss_url', 'is', null)
-    .not('paused_ingest', 'is', true)
 
   if (error) {
     console.error('Failed to fetch outlets:', error.message)
