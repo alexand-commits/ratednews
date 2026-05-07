@@ -96,6 +96,15 @@ const OUTLET_DOMAINS = {
   'The Age':                  'theage.com.au',
   'The Conversation':         'theconversation.com',
   'Washington Examiner':      'washingtonexaminer.com',
+  // US political
+  'The Intercept':            'theintercept.com',
+  'Mother Jones':             'motherjones.com',
+  'The Federalist':           'thefederalist.com',
+  // Canada
+  'National Post':            'nationalpost.com',
+  'Toronto Star':             'thestar.com',
+  // Science
+  'New Scientist':            'newscientist.com',
   // Tech outlets
   'The Verge':                'theverge.com',
   'Wired':                    'wired.com',

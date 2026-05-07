@@ -30,6 +30,15 @@ const RSS_FEEDS = {
   'Vox':              'https://www.vox.com/rss/index.xml',
   'Financial Times':  'https://news.google.com/rss/search?q=site:ft.com&hl=en-US&gl=US&ceid=US:en',
   'Wall Street Journal': 'https://news.google.com/rss/search?q=site:wsj.com&hl=en-US&gl=US&ceid=US:en',
+  // US political
+  'The Intercept':         'https://theintercept.com/feed/?rss',
+  'Mother Jones':          'https://www.motherjones.com/feed/',
+  'The Federalist':        'https://thefederalist.com/feed/',
+  // Canada
+  'National Post':         'https://news.google.com/rss/search?q=site:nationalpost.com&hl=en-CA&gl=CA&ceid=CA:en',
+  'Toronto Star':          'https://news.google.com/rss/search?q=site:thestar.com&hl=en-CA&gl=CA&ceid=CA:en',
+  // Science
+  'New Scientist':         'https://www.newscientist.com/feed/home/',
   // Tech outlets
   'The Verge':             'https://www.theverge.com/rss/index.xml',
   'Wired':                 'https://www.wired.com/feed/rss',
