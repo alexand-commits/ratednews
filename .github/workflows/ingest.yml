@@ -3,7 +3,8 @@ name: RSS Ingestion
 on:
   schedule:
     - cron: '0 * * * *'   # Every hour — cron.org handles raw ingest every 30 mins
-  workflow_dispatch:        # Manual trigger from GitHub UI
+  workflow_dispatch:        # Primary trigger — cron.org fires this every 30 mins
+    branches: [main]        # Only run on main — never on staging
 
 jobs:
   ingest:
