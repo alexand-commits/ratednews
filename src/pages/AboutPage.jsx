@@ -29,13 +29,14 @@ const SCORES = [
   {
     emoji: '🧭',
     title: 'Political Lean',
-    range: 'Left · Centre · Right',
+    range: 'Left · Centre · Right · Factual',
     color: 'var(--purple)',
-    desc: 'The political direction of an article\'s framing — left, centre, or right. This is entirely separate from partisan intensity. A left-leaning article can be calm and objective (low intensity), or heated and one-sided (high intensity).',
+    desc: 'The political direction of an article\'s framing — left, centre, or right. This is entirely separate from partisan intensity. A left-leaning article can be calm and objective (low intensity), or heated and one-sided (high intensity). Articles with very low partisan intensity (under 25) are labelled Factual instead — indicating straightforward reporting where political framing is not meaningfully present.',
     bands: [
-      { label: '← Left',   color: 'var(--blue)',  text: 'Progressive or liberal framing' },
-      { label: '◉ Centre', color: 'var(--text2)', text: 'Balanced or no clear lean' },
-      { label: '→ Right',  color: 'var(--red)',   text: 'Conservative framing' },
+      { label: '← Left',    color: 'var(--blue)',  text: 'Progressive or liberal framing' },
+      { label: '◉ Centre',  color: 'var(--text2)', text: 'Balanced or no clear lean' },
+      { label: '→ Right',   color: 'var(--red)',   text: 'Conservative framing' },
+      { label: '◉ Factual', color: 'var(--text2)', text: 'Partisan intensity too low to assign a direction — consistent with factual reporting' },
     ],
   },
   {
