@@ -234,6 +234,31 @@ const JUNK_PATTERNS = [
   /\b(bang for your buck|test drive|road test)\b.*\b(car|suv|truck|van|bike)\b/i,
   /^[A-Z][a-z]+ [A-Z][a-z]+ [A-Z].+:\s*(Review|Test|First drive|Long.?term)\b/i,
 
+  // ── Deals, promo codes and product best-of roundups (Wired Gear, etc.) ───────
+  // Wired's Gear section publishes these constantly — not journalism
+  /\bPromo Codes?\b/i,
+  /^Top .+ Deals? for\b/i,
+  /^(The Best|Top \d+) .+\(\d{4}\)$/i,    // "The Best Gaming Controllers (2026)"
+  /\bDeals?:? Up to \$?\d+/i,              // "Deals: Up to $100 off"
+
+  // ── Newsletter / digest entries ────────────────────────────────────────────────
+  // MIT Technology Review's daily digest, Economist newsletter etc.
+  /^The Download:/i,
+  /^Cover Story newsletter:/i,
+  /^(Morning|Evening|Daily|Weekly) (Briefing|Digest|Edition|Newsletter|Wrap|Roundup):/i,
+
+  // ── Syndicated wire bylines pulled as main outlet articles ────────────────────
+  // USA Today's Google News feed pulls in Gannett wire articles (Patriots Wire etc.)
+  /- [A-Z][a-z]+ Wire$/,
+
+  // ── Weekend culture guides ─────────────────────────────────────────────────────
+  /\bfor the weekend\b/i,
+  /^(What's (on|to do)|Things to do) this (weekend|week)\b/i,
+
+  // ── Numbered health / lifestyle listicles ──────────────────────────────────────
+  /^\d+ (cancer|weight.?loss|anti.?aging|sleep|gut.?health|longevity).*(habit|tip|food|sign|way|thing)/i,
+  /^How to (manage|deal with|cope with) your (health )?(anxiety|stress|worry)\b/i,
+
   // ── Personal finance clickbait ────────────────────────────────────────────────
   // "How nearly half of women are cheating themselves out of free money"
   /\bcheating (themselves|yourself|himself|herself) out of\b/i,
