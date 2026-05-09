@@ -123,6 +123,12 @@ const JUNK_PATTERNS = [
   /\b\d{1,2} \w+ \d{4} (Cover|Cartoons?)\b/i,
   /\b20\d{2} [Cc]overs?\b/,
 
+  // ── Magazine shopping / product recommendation sections ───────────────────────
+  // New York Magazine's "The Strategist" is a product rec section, not journalism
+  /\bThe Strategist\b/i,
+  /\bHalf-Off\b.*\b(sale|deal|discount|weekend)\b/i,
+  /\bSales? This (Weekend|Week)\b/i,
+
   // ── Advice columns ────────────────────────────────────────────────────────────
   /^Dear (Abby|Ann|Prudence|Carolyn)\b/i,
 
