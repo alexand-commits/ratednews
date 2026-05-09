@@ -198,6 +198,10 @@ const JUNK_PATTERNS = [
   /\bh2h results\b/i,
   /\bodds today\b/i,
 
+  // ── Daily cartoon / illustration entries ─────────────────────────────────────
+  // The New Yorker publishes a "Daily Cartoon: [Day], [Date]" entry every day
+  /^Daily Cartoon:/i,
+
   // ── Puzzles, games & daily digest fillers ─────────────────────────────────────
   // Slate Pears Game, SoundBites, NYT Connections etc.
   /\bPears Game\b/i,
@@ -215,8 +219,20 @@ const JUNK_PATTERNS = [
   // ── Personal narrative lifestyle pieces (BI, Mirror, tabloids) ───────────────
   // "I lost a third of my bodyweight after..." / "I was convinced my mother-in-law..."
   // Distinct from "I visited" (already caught) — broader personal confession/journey openers
-  /^I (lost|gained|had|spent|quit|left|gave|told|couldn't|didn't|never|asked|found|tried to|woke up)\b/i,
+  /^I (lost|gained|had|have|spent|quit|left|gave|told|couldn't|didn't|never|asked|found|tried to|woke up|grew up|moved|retired|survived)\b/i,
   /^My (mother.in.law|husband|wife|partner|mum|dad|boss|doctor|neighbour|neighbor)\b/i,
+
+  // ── Section / category homepage links mistakenly pulled as articles ───────────
+  // The Times and similar outlets' RSS sometimes includes nav/section landing pages
+  /^(Business|Life( & Style)?|Style|Culture|Sport|Health|Travel|Food|Money|Technology|Opinion|Entertainment)\s*[:\-–]\s*(Latest news|News and analysis|Today's|This week)/i,
+
+  // ── Weekly digest / roundup entries ──────────────────────────────────────────
+  /^Stories (that caught|we think|we found|of the week)\b/i,
+  /\bweekly (digest|roundup|wrap.?up|briefing)\b/i,
+
+  // ── Car and product reviews ───────────────────────────────────────────────────
+  /\b(bang for your buck|test drive|road test)\b.*\b(car|suv|truck|van|bike)\b/i,
+  /^[A-Z][a-z]+ [A-Z][a-z]+ [A-Z].+:\s*(Review|Test|First drive|Long.?term)\b/i,
 
   // ── Personal finance clickbait ────────────────────────────────────────────────
   // "How nearly half of women are cheating themselves out of free money"
