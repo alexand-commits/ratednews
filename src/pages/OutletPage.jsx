@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { db } from '../lib/supabase'
@@ -99,55 +99,129 @@ function ArticleCard({ a, onClick }) {
 }
 
 function ScoreHistoryChart({ points }) {
-  if (!points || points.length < 2) return null
-  const W = 100 // viewBox width units
-  const H = 60
-  const PAD = 6
-  const scores = points.map(p => p.score)
-  const minS = Math.max(0, Math.min(...scores) - 10)
-  const maxS = Math.min(100, Math.max(...scores) + 10)
-  const range = maxS - minS || 1
+  const [hovered, setHovered] = useState(null)
+  const svgRef = useRef(null)
 
-  const xs = points.map((_, i) => PAD + (i / (points.length - 1)) * (W - PAD * 2))
-  const ys = points.map(p => H - PAD - ((p.score - minS) / range) * (H - PAD * 2))
+  if (!points || points.length < 2) return null
+
+  const W = 100
+  const H = 60
+  const PL = 16  // left pad — room for Y axis labels
+  const PR = 4
+  const PT = 4
+  const PB = 4
+
+  const scores = points.map(p => p.score)
+  const minS   = Math.max(0,   Math.min(...scores) - 10)
+  const maxS   = Math.min(100, Math.max(...scores) + 10)
+  const midS   = Math.round((minS + maxS) / 2)
+  const range  = maxS - minS || 1
+
+  const xs = points.map((_, i) => PL + (i / (points.length - 1)) * (W - PL - PR))
+  const ys = points.map(p => H - PB - ((p.score - minS) / range) * (H - PT - PB))
+
+  const toY = val => H - PB - ((val - minS) / range) * (H - PT - PB)
 
   const pathD = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ')
-  const fillD = `${pathD} L${xs[xs.length - 1].toFixed(1)},${H} L${xs[0].toFixed(1)},${H} Z`
+  const fillD = `${pathD} L${xs[xs.length-1].toFixed(1)},${H} L${xs[0].toFixed(1)},${H} Z`
 
-  const latest = points[points.length - 1]
+  const latest   = points[points.length - 1]
   const earliest = points[0]
-  const trend = latest.score - earliest.score
+  const trend      = latest.score - earliest.score
   const trendColor = trend > 3 ? 'var(--green)' : trend < -3 ? 'var(--red)' : 'var(--text3)'
   const trendLabel = trend > 3 ? `↑ +${trend}` : trend < -3 ? `↓ ${trend}` : '→ Stable'
 
+  function handleMouseMove(e) {
+    const svg = svgRef.current
+    if (!svg) return
+    const rect = svg.getBoundingClientRect()
+    const relX = ((e.clientX - rect.left) / rect.width) * W
+    let minDist = Infinity, idx = 0
+    xs.forEach((x, i) => { const d = Math.abs(x - relX); if (d < minDist) { minDist = d; idx = i } })
+    setHovered({ index: idx, x: xs[idx], y: ys[idx], score: points[idx].score, date: points[idx].date })
+  }
+
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+      {/* Header row */}
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
         <span style={{ fontSize: 11, color: 'var(--text3)' }}>{points.length} day{points.length !== 1 ? 's' : ''} of data</span>
         <span style={{ fontSize: 11, fontWeight: 600, color: trendColor }}>{trendLabel}</span>
       </div>
+
+      {/* Fixed-height tooltip row — no layout shift on hover */}
+      <div style={{ height: 18, marginBottom: 2, display: 'flex', alignItems: 'center' }}>
+        {hovered ? (
+          <span style={{
+            fontSize: 11, fontWeight: 600, color: 'var(--text)',
+            background: 'var(--bg2)', border: '0.5px solid var(--border)',
+            borderRadius: 5, padding: '1px 7px',
+          }}>
+            {hovered.score} · {hovered.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+          </span>
+        ) : (
+          <span style={{ fontSize: 10, color: 'var(--text3)' }}>Hover to inspect</span>
+        )}
+      </div>
+
       <svg
+        ref={svgRef}
         viewBox={`0 0 ${W} ${H}`}
-        style={{ width: '100%', height: 80, display: 'block', overflow: 'visible' }}
+        style={{ width: '100%', height: 80, display: 'block', overflow: 'visible', cursor: 'crosshair' }}
         preserveAspectRatio="none"
+        onMouseMove={handleMouseMove}
+        onMouseLeave={() => setHovered(null)}
       >
-        {/* Gradient fill under line */}
         <defs>
           <linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--coral)" stopOpacity="0.18" />
             <stop offset="100%" stopColor="var(--coral)" stopOpacity="0" />
           </linearGradient>
         </defs>
+
+        {/* Y-axis gridlines */}
+        {[maxS, midS, minS].map(val => (
+          <line key={val}
+            x1={PL} y1={toY(val).toFixed(1)}
+            x2={W - PR} y2={toY(val).toFixed(1)}
+            stroke="var(--border)" strokeWidth="0.5" strokeDasharray="2,2"
+          />
+        ))}
+
+        {/* Y-axis labels */}
+        {[maxS, midS, minS].map(val => (
+          <text key={val}
+            x={PL - 2} y={toY(val).toFixed(1)}
+            textAnchor="end" fontSize="4.5" fill="var(--text3)"
+            dominantBaseline="middle"
+          >{val}</text>
+        ))}
+
+        {/* Area + line */}
         <path d={fillD} fill="url(#histGrad)" />
         <path d={pathD} fill="none" stroke="var(--coral)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-        {/* Latest dot */}
-        <circle
-          cx={xs[xs.length - 1].toFixed(1)}
-          cy={ys[ys.length - 1].toFixed(1)}
-          r="2.5"
-          fill="var(--coral)"
-        />
+
+        {/* Hover crosshair */}
+        {hovered && (
+          <>
+            <line
+              x1={hovered.x.toFixed(1)} y1={PT}
+              x2={hovered.x.toFixed(1)} y2={H - PB}
+              stroke="var(--text3)" strokeWidth="0.8" strokeDasharray="2,2"
+            />
+            <circle cx={hovered.x.toFixed(1)} cy={hovered.y.toFixed(1)} r="3" fill="var(--coral)" stroke="var(--surface)" strokeWidth="1.5" />
+          </>
+        )}
+
+        {/* Resting dot on latest point */}
+        {!hovered && (
+          <circle cx={xs[xs.length-1].toFixed(1)} cy={ys[ys.length-1].toFixed(1)} r="2.5" fill="var(--coral)" />
+        )}
+
+        {/* Invisible wider hit area for easier mousing */}
+        <rect x={PL} y={0} width={W - PL - PR} height={H} fill="transparent" />
       </svg>
+
       {/* X-axis labels */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
         <span style={{ fontSize: 10, color: 'var(--text3)' }}>
