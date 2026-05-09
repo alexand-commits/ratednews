@@ -283,6 +283,30 @@ const JUNK_PATTERNS = [
   // "How nearly half of women are cheating themselves out of free money"
   /\bcheating (themselves|yourself|himself|herself) out of\b/i,
   /\bone extra (dollar|pound|penny) (on|in|triggers?)\b/i,
+
+  // ── Chicago Tribune specific ──────────────────────────────────────────────────
+  // Jumble — daily puzzle (appears as "Jumble Daily" or "Jumble for [date]")
+  /\bJumble\b/i,
+  // "Asking Eric" — syndicated advice column
+  /^Asking [A-Z][a-z]+:/i,
+  // "Today in Chicago History" / "Today in History" — nostalgia filler
+  /^Today in [A-Z].{0,30} History\b/i,
+  // Entertainment and restaurant reviews (Tribune format: "Review: …" or "Restaurant review: …")
+  /^(Restaurant|Film|Movie|Theater|Theatre|Concert|Album|Book|Art) [Rr]eview:/,
+
+  // ── Los Angeles Times specific ────────────────────────────────────────────────
+  // "LA Times Insights" / "LA Times Media Group Streaming" — product/promo artifacts
+  /\bLA Times (Insights?|Media Group|Streaming)\b/i,
+  // Subscription / login nav artifacts that slip through on some feeds
+  /\bSubscription (Center|Hub|Page)\b/i,
+  /^Log [Ii]n\b.*\bsubscri/i,
+
+  // ── Miami Herald specific ─────────────────────────────────────────────────────
+  // Reader crowdsourcing callouts ("Did you lose your job… Reach out to us")
+  /\breach out to us\b/i,
+  /^Did you (lose|leave|quit|work at|work for)\b.{0,60}\?$/i,
+  // Somatic / wellness trend pieces out of place in a news feed
+  /\bsomatic (exercises?|therapy|practice)\b/i,
 ]
 
 const MAX_ARTICLE_AGE_DAYS = 1  // default: skip articles older than 1 day

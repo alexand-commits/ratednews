@@ -118,6 +118,10 @@ const OUTLET_DOMAINS = {
   'Buenos Aires Times':       'batimes.com.ar',
   // Middle East
   'The National':             'thenationalnews.com',
+  // US metro dailies
+  'Los Angeles Times':        'latimes.com',
+  'Chicago Tribune':          'chicagotribune.com',
+  'Miami Herald':             'miamiherald.com',
   // Tech & Society
   'Rest of World':            'restofworld.org',
   // Sports outlets
