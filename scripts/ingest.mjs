@@ -197,8 +197,9 @@ const JUNK_PATTERNS = [
   /\bkick.?off time\b.*\b(tv|live stream|odds)\b/i,
   /\bh2h results\b/i,
   /\bodds today\b/i,
-  // How-to-watch event guides (NYP, sports outlets)
-  /^how to watch\b/i,                      // "How to watch Wardley vs. Dubois..."
+  // How/where-to-watch event guides (NYP, sports outlets)
+  /^(how|where) to watch\b/i,              // "How to watch..." / "Where to watch..."
+  /:\s*(how|where) to watch\b/i,           // "WWE Backlash: Where To Watch, Start Time..."
   // Sports betting picks dressed as previews
   /\bprediction:.*\b(picks?|best bets?)\b/i, // "Game 4 prediction: NHL picks, best bets"
 
