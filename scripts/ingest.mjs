@@ -134,6 +134,15 @@ const JUNK_PATTERNS = [
   // Relationship / sex advice columns
   /\b(dating|relationship|sex) (tips?|advice|hacks?|secrets?|rules?)\b/i,
   /\bhow to (get|keep|attract|impress) (a |your )?(man|woman|partner|date|husband|wife)\b/i,
+  // Fashion, clothing & style (tabloid filler — not news)
+  /\b(how to (style|wear|rock))\b/i,
+  /\b(fashion|style|beauty|wardrobe) (tips?|hacks?|tricks?|secrets?|guide|edit|haul)\b/i,
+  /\b(best|top|must-have) (jeans?|trainers?|sneakers?|dresses?|shoes?|boots?|coats?|jackets?|leggings?) (for|to buy|under|worth|you need)\b/i,
+  /\bjeans? (you need|every woman|that will|for every|to try|worth buying)\b/i,
+  /\b(spring|summer|autumn|winter|fall) (fashion|style|outfits?|wardrobe|must-haves?|edit|pieces?)\b/i,
+  /\b(on-trend|trending (looks?|styles?|outfits?))\b/i,
+  /\b(capsule|staple|timeless) (wardrobe|pieces?|outfits?)\b/i,
+  /\bhigh street (finds?|picks?|buys?|favourites?|gems?)\b/i,
 ]
 
 const MAX_ARTICLE_AGE_DAYS = 1  // skip articles whose pubDate is older than this

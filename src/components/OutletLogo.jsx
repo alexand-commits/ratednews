@@ -129,6 +129,11 @@ const LOGO_OVERRIDES = {
   'BBC Sport': '/bbc-sport-logo.svg',
 }
 
+// Force specific container backgrounds for logos that need it (e.g. light/yellow SVGs on light bg)
+const CONTAINER_BG_OVERRIDES = {
+  'BBC Sport': { background: '#0f1923', border: 'none' },
+}
+
 export default function OutletLogo({ name = '', size = 32, borderRadius = 8, style = {} }) {
   const [failed, setFailed] = useState(false)
   const override = LOGO_OVERRIDES[name]
@@ -148,10 +153,11 @@ export default function OutletLogo({ name = '', size = 32, borderRadius = 8, sty
   }
 
   const logoSrc = override || (domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64` : null)
+  const containerOverride = CONTAINER_BG_OVERRIDES[name] || {}
 
   if (logoSrc && !failed) {
     return (
-      <div style={{ ...base, background: bg }}>
+      <div style={{ ...base, background: bg, ...containerOverride }}>
         <img
           src={logoSrc}
           alt={name}

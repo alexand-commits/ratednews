@@ -94,11 +94,6 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
     ? tagged
     : tagged.filter(a => a._sportType === activeSport)
 
-  // Count per sport for pill badges
-  const counts = {}
-  for (const a of tagged) {
-    if (a._sportType) counts[a._sportType] = (counts[a._sportType] || 0) + 1
-  }
 
   if (!articles || articles.length === 0) {
     return (
@@ -129,7 +124,7 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
             <h1 style={{
               fontSize: 26, fontWeight: 700, margin: 0,
-              fontFamily: 'Playfair Display, serif', color: 'var(--text)',
+              fontFamily: 'var(--font-playfair), serif', color: 'var(--text)',
             }}>
               ⚽ Sports
             </h1>
@@ -153,23 +148,13 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
               onClick={() => setActiveSport(f.value)}
             >
               {f.label}
-              {f.value !== 'all' && counts[f.value] > 0 && (
-                <span style={{
-                  marginLeft: 5, fontSize: 10, fontWeight: 700,
-                  background: activeSport === f.value ? 'rgba(255,255,255,0.25)' : 'var(--bg2)',
-                  color: activeSport === f.value ? '#fff' : 'var(--text3)',
-                  padding: '1px 5px', borderRadius: 10,
-                }}>
-                  {counts[f.value]}
-                </span>
-              )}
             </button>
           ))}
         </div>
 
         {filtered.length === 0 ? (
           <div className="empty-state">
-            <p>No {activeSport} stories in the last 7 days.</p>
+            <p>No {activeSport} stories available yet.</p>
           </div>
         ) : (
           <div className="feed">

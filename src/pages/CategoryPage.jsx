@@ -101,7 +101,7 @@ export default function CategoryPage({ navigate, goBack }) {
         <button className="back-btn" onClick={goBack}>← Back</button>
 
         <div style={{ marginBottom: 16 }}>
-          <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
+          <h1 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
             Categories
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text2)' }}>

@@ -101,6 +101,34 @@ export default function ArticleDetail({ article }) {
     ? `${article.title} · Accuracy ${acc}/100 — RatedNews`
     : `${article.title} — RatedNews`
 
+  // Top-level NewsArticle schema — required for Google News carousel / Top Stories eligibility.
+  // The Review schema above nests NewsArticle inside itemReviewed which Google ignores for carousel.
+  // Emitting a second root-level NewsArticle block makes the page eligible.
+  const newsArticleLd = {
+    '@context': 'https://schema.org',
+    '@type':    'NewsArticle',
+    headline:   article.title,
+    url:        article.url,
+    mainEntityOfPage: `https://ratednews.com/article/${canonicalSlug}`,
+    datePublished:  article.published_at,
+    dateModified:   article.published_at,
+    ...(summary && { description: summary }),
+    ...(article.image_url && {
+      image: { '@type': 'ImageObject', url: article.image_url, width: 1200, height: 630 },
+    }),
+    author: {
+      '@type': 'Organization',
+      name:    outletName,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name:    'RatedNews',
+      url:     'https://ratednews.com',
+      logo:    { '@type': 'ImageObject', url: 'https://ratednews.com/icon-192.png', width: 192, height: 192 },
+    },
+    ...(keywords && { keywords }),
+  }
+
   const breadcrumbLd = {
     '@context': 'https://schema.org',
     '@type':    'BreadcrumbList',
@@ -129,6 +157,10 @@ export default function ArticleDetail({ article }) {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/<\//g, '<\\/') }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(newsArticleLd).replace(/<\//g, '<\\/') }}
         />
         <script
           type="application/ld+json"
@@ -175,7 +207,7 @@ export async function getStaticPaths() {
     paths: (articles || []).map(a => ({
       params: { id: articleSlug(a.title, a.id) },
     })),
-    fallback: 'blocking',
+    fallback: true, // show skeleton immediately — no blank wait for new articles
   }
 }
 

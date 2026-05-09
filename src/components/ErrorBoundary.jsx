@@ -22,7 +22,7 @@ export default class ErrorBoundary extends React.Component {
         }}>
           <div style={{ fontSize: 48, marginBottom: 16 }}>😕</div>
           <h2 style={{
-            fontFamily: 'Playfair Display, serif', fontSize: 22,
+            fontFamily: 'var(--font-playfair), serif', fontSize: 22,
             fontWeight: 700, marginBottom: 8, color: 'var(--text)',
           }}>
             Something went wrong

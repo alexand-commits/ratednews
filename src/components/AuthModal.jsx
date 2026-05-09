@@ -64,7 +64,7 @@ export default function AuthModal({ onClose, showToast }) {
         <div className="modal-card" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
           <div style={{ textAlign: 'center', padding: '8px 0 16px' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>📬</div>
-            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8, fontFamily: 'Playfair Display, serif' }}>Check your inbox</div>
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8, fontFamily: 'var(--font-playfair), serif' }}>Check your inbox</div>
             <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 20 }}>
               We've sent a confirmation link to <strong>{email}</strong>. Click it to activate your account, then sign in.
             </p>
@@ -78,7 +78,7 @@ export default function AuthModal({ onClose, showToast }) {
             <button
               onClick={handleResendConfirmation}
               disabled={loading}
-              style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--text3)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+              style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--text3)', cursor: 'pointer', fontFamily: 'var(--font-dm-sans), sans-serif' }}
             >
               {loading ? 'Sending…' : "Didn't receive it? Resend"}
             </button>
@@ -160,7 +160,7 @@ export default function AuthModal({ onClose, showToast }) {
                 flex: 1, padding: '10px 0', fontSize: 13, fontWeight: tab === key ? 500 : 400,
                 background: 'none', border: 'none', borderBottom: tab === key ? '2px solid var(--coral)' : '2px solid transparent',
                 color: tab === key ? 'var(--coral)' : 'var(--text2)', cursor: 'pointer',
-                fontFamily: 'DM Sans, sans-serif', marginBottom: -1, transition: 'all 0.15s'
+                fontFamily: 'var(--font-dm-sans), sans-serif', marginBottom: -1, transition: 'all 0.15s'
               }}
             >
               {label}
@@ -189,7 +189,7 @@ export default function AuthModal({ onClose, showToast }) {
                   <button
                     type="button"
                     onClick={() => switchTab('reset')}
-                    style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--text3)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif', padding: 0 }}
+                    style={{ background: 'none', border: 'none', fontSize: 11, color: 'var(--text3)', cursor: 'pointer', fontFamily: 'var(--font-dm-sans), sans-serif', padding: 0 }}
                   >
                     Forgot password?
                   </button>
@@ -227,8 +227,8 @@ export default function AuthModal({ onClose, showToast }) {
 
         <div style={{ marginTop: 16, textAlign: 'center', fontSize: 11, color: 'var(--text3)' }}>
           {tab === 'signin'
-            ? <span>No account? <button onClick={() => switchTab('signup')} style={{ background: 'none', border: 'none', color: 'var(--coral)', cursor: 'pointer', fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}>Create one</button></span>
-            : <span>Already have an account? <button onClick={() => switchTab('signin')} style={{ background: 'none', border: 'none', color: 'var(--coral)', cursor: 'pointer', fontSize: 11, fontFamily: 'DM Sans, sans-serif' }}>Sign in</button></span>
+            ? <span>No account? <button onClick={() => switchTab('signup')} style={{ background: 'none', border: 'none', color: 'var(--coral)', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-dm-sans), sans-serif' }}>Create one</button></span>
+            : <span>Already have an account? <button onClick={() => switchTab('signin')} style={{ background: 'none', border: 'none', color: 'var(--coral)', cursor: 'pointer', fontSize: 11, fontFamily: 'var(--font-dm-sans), sans-serif' }}>Sign in</button></span>
           }
         </div>
       </div>

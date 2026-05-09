@@ -1,6 +1,7 @@
 import React, { useState, useEffect, createContext, useContext } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
+import Script from 'next/script'
 import { db } from '../src/lib/supabase'
 import Header from '../src/components/Header'
 import BottomNav from '../src/components/BottomNav'
@@ -9,7 +10,12 @@ import AuthModal from '../src/components/AuthModal'
 import PasswordResetModal from '../src/components/PasswordResetModal'
 import ErrorBoundary from '../src/components/ErrorBoundary'
 import { createNavigate } from '../src/utils/navigate'
+import { Analytics } from '@vercel/analytics/react'
+import { SpeedInsights } from '@vercel/speed-insights/next'
+import { playfair, lato } from '../src/lib/fonts'
 import '../src/styles/globals.css'
+
+const GA_ID = 'G-FK738TW9V4'
 
 // ── Global app context ──────────────────────────────────────────────────────
 const AppContext = createContext({})
@@ -204,6 +210,16 @@ export default function App({ Component, pageProps }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
       </Head>
 
+      {/* Google Analytics — loaded after page is interactive, not render-blocking */}
+      <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
+      <Script id="ga-init" strategy="afterInteractive">{`
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', '${GA_ID}', { page_path: window.location.pathname });
+      `}</Script>
+
+      <div className={`${playfair.variable} ${lato.variable}`} style={{ fontFamily: 'var(--font-lato), sans-serif' }}>
       <Header
         navigate={navigate}
         isDark={isDark}
@@ -235,6 +251,9 @@ export default function App({ Component, pageProps }) {
       )}
 
       <BottomNav navigate={navigate} />
+      <Analytics />
+      <SpeedInsights />
+      </div>
     </AppContext.Provider>
   )
 }

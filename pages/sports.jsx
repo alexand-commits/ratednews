@@ -77,15 +77,12 @@ export async function getStaticProps() {
       process.env.VITE_SUPABASE_ANON_KEY,
     )
 
-    const since7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-
     const { data, error } = await supabase
       .from('articles')
       .select('id, title, published_at, accuracy_score, bias_direction, category, ai_summary, image_url, outlets(name, bias_direction, logo_url), comments(count)')
       .eq('category', 'Sport')
-      .gte('published_at', since7d)
       .order('published_at', { ascending: false })
-      .limit(60)
+      .limit(400)
 
     if (error) throw error
 
@@ -96,7 +93,7 @@ export async function getStaticProps() {
         articles: articles || [],
         generatedAt: new Date().toISOString(),
       },
-      revalidate: 300, // refresh every 5 minutes
+      revalidate: 900, // refresh every 15 minutes
     }
   } catch (err) {
     console.error('sports getStaticProps error:', err)
@@ -105,7 +102,7 @@ export async function getStaticProps() {
         articles: [],
         generatedAt: new Date().toISOString(),
       },
-      revalidate: 300,
+      revalidate: 900,
     }
   }
 }

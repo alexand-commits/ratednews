@@ -1,5 +1,6 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
@@ -27,6 +28,105 @@ function ScoreBadges({ article }) {
       <span className={accBadgeClass(acc)}>✦ {acc}</span>
       {biasLabel && <span className={biasLabel.cls}>{biasLabel.label}</span>}
     </>
+  )
+}
+
+function RankedRow({ a, rank, isLast, navigate }) {
+  const [imgFailed, setImgFailed] = useState(false)
+  const outlet = a.outlets || {}
+  const [dotBg] = outletColor(outlet.name || 'X')
+  const slug = articleSlug(a.title, a.id)
+  const comments = a.comments?.[0]?.count || 0
+  const hasImage = a.image_url && !imgFailed
+
+  return (
+    <div
+      className="row-hover"
+      onClick={() => navigate('article', { articleId: a.id, title: a.title })}
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 12,
+        padding: '12px 16px',
+        borderBottom: !isLast ? '0.5px solid var(--border)' : 'none',
+      }}
+    >
+      {/* Rank circle */}
+      <div style={{
+        width: 28, height: 28,
+        background: 'var(--bg2, var(--bg))',
+        color: 'var(--text3)',
+        fontSize: 12, fontWeight: 700,
+        borderRadius: '50%', flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        marginTop: 2,
+      }}>
+        #{rank}
+      </div>
+
+      {/* Main content */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotBg, flexShrink: 0 }} />
+          <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{outlet.name || 'Unknown'}</span>
+          <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>{timeAgo(a.published_at)}</span>
+        </div>
+        <Link
+          href={`/article/${slug}`}
+          style={{ textDecoration: 'none', color: 'inherit' }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div style={{
+            fontSize: 13, fontWeight: 600, color: 'var(--text)',
+            lineHeight: 1.4, marginBottom: 5,
+          }}>
+            {a.title}
+          </div>
+        </Link>
+        {(a.ai_summary || a.summary) && (
+          <div style={{
+            fontSize: 12, color: 'var(--text2)', lineHeight: 1.55,
+            marginBottom: 6,
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            overflow: 'hidden',
+          }}>
+            {a.ai_summary || a.summary}
+          </div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+          <ScoreBadges article={a} />
+          {comments > 0 && (
+            <span style={{
+              fontSize: 10, color: 'var(--text3)',
+              background: 'var(--bg)', border: '0.5px solid var(--border)',
+              borderRadius: 20, padding: '1px 6px',
+            }}>
+              💬 {comments}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Thumbnail */}
+      {hasImage && (
+        <div style={{
+          position: 'relative', width: 72, height: 72, flexShrink: 0,
+          borderRadius: 8, overflow: 'hidden', background: 'var(--bg2)',
+          marginTop: 2,
+        }}>
+          <Image
+            src={a.image_url}
+            alt=""
+            fill
+            sizes="72px"
+            style={{ objectFit: 'cover' }}
+            onError={() => setImgFailed(true)}
+          />
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -73,7 +173,7 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
           <h1 style={{
             fontSize: 26, fontWeight: 700, color: 'var(--text)',
-            margin: 0, fontFamily: 'Playfair Display, serif',
+            margin: 0, fontFamily: 'var(--font-playfair), serif',
           }}>
             🔥 Trending
           </h1>
@@ -99,7 +199,6 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
           marginBottom: 12,
           cursor: 'pointer',
         }}
-        className="row-hover"
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
           <span
@@ -126,7 +225,7 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
             fontSize: 22,
             fontWeight: 700,
             lineHeight: 1.35,
-            fontFamily: "'Playfair Display', Georgia, serif",
+            fontFamily: 'var(--font-playfair), Georgia, serif',
             color: 'var(--text)',
           }}>
             {hero.title}
@@ -173,92 +272,15 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
             borderRadius: 'var(--radius)',
             overflow: 'hidden',
           }}>
-            {ranked.map((a, i) => {
-              const outlet = a.outlets || {}
-              const [dotBg] = outletColor(outlet.name || 'X')
-              const slug = articleSlug(a.title, a.id)
-              const comments = a.comments?.[0]?.count || 0
-
-              return (
-                <div
-                  key={a.id}
-                  onClick={() => navigate('article', { articleId: a.id, title: a.title })}
-                  className="row-hover"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                    gap: 12,
-                    padding: '12px 16px',
-                    borderBottom: i < ranked.length - 1 ? '0.5px solid var(--border)' : 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {/* Rank circle */}
-                  <div style={{
-                    width: 28, height: 28,
-                    background: 'var(--bg2, var(--bg))',
-                    color: 'var(--text3)',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    borderRadius: '50%',
-                    flexShrink: 0,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    marginTop: 2,
-                  }}>
-                    #{i + 2}
-                  </div>
-
-                  {/* Main content */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
-                      <span style={{
-                        width: 6, height: 6, borderRadius: '50%',
-                        background: dotBg, flexShrink: 0,
-                      }} />
-                      <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>
-                        {outlet.name || 'Unknown'}
-                      </span>
-                      <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>
-                        {timeAgo(a.published_at)}
-                      </span>
-                    </div>
-                    <Link
-                      href={`/article/${slug}`}
-                      style={{ textDecoration: 'none', color: 'inherit' }}
-                      onClick={e => e.stopPropagation()}
-                    >
-                      <div style={{
-                        fontSize: 13,
-                        fontWeight: 600,
-                        color: 'var(--text)',
-                        lineHeight: 1.4,
-                        display: '-webkit-box',
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: 'vertical',
-                        overflow: 'hidden',
-                        marginBottom: 6,
-                      }}>
-                        {a.title}
-                      </div>
-                    </Link>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                      <ScoreBadges article={a} />
-                      {comments > 0 && (
-                        <span style={{
-                          fontSize: 10, color: 'var(--text3)',
-                          background: 'var(--bg)', border: '0.5px solid var(--border)',
-                          borderRadius: 20, padding: '1px 6px',
-                        }}>
-                          💬 {comments}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
+            {ranked.map((a, i) => (
+              <RankedRow
+                key={a.id}
+                a={a}
+                rank={i + 2}
+                isLast={i === ranked.length - 1}
+                navigate={navigate}
+              />
+            ))}
           </div>
         </>
       )}

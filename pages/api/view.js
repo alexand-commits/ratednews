@@ -47,17 +47,43 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  const supabase = createClient(
-    process.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-  )
+  // Use service role key if available (bypasses RLS), fall back to anon key
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY
+  const supabaseUrl = process.env.VITE_SUPABASE_URL
 
-  const { error } = await supabase.rpc('increment_view_count', { article_id: id })
-
-  if (error) {
-    console.error('[view] rpc error:', error.message)
-    return res.status(500).json({ error: error.message })
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('[view] Missing Supabase env vars')
+    return res.status(500).json({ error: 'Server misconfiguration' })
   }
 
-  return res.status(200).json({ ok: true })
+  try {
+    const supabase = createClient(supabaseUrl, supabaseKey)
+
+    // Fetch current view count then increment — avoids relying on a DB RPC function
+    const { data, error: fetchError } = await supabase
+      .from('articles')
+      .select('view_count')
+      .eq('id', id)
+      .single()
+
+    if (fetchError) {
+      console.error('[view] fetch error:', fetchError.message)
+      return res.status(500).json({ error: 'Internal server error' })
+    }
+
+    const { error: updateError } = await supabase
+      .from('articles')
+      .update({ view_count: (data?.view_count || 0) + 1 })
+      .eq('id', id)
+
+    if (updateError) {
+      console.error('[view] update error:', updateError.message)
+      return res.status(500).json({ error: 'Internal server error' })
+    }
+
+    return res.status(200).json({ ok: true })
+  } catch (err) {
+    console.error('[view] unexpected error:', err.message)
+    return res.status(500).json({ error: 'Internal server error' })
+  }
 }

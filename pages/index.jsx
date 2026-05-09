@@ -128,6 +128,6 @@ export async function getStaticProps() {
       revalidate: 300, // regenerate every 5 minutes
     }
   } catch {
-    return { props: { initialArticles: [], initialCount: 0 }, revalidate: 60 }
+    return { props: { initialArticles: [], initialCount: 0 }, revalidate: 300 }
   }
 }

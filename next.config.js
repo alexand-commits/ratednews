@@ -9,8 +9,8 @@ const securityHeaders = [
     value: [
       "default-src 'self'",
       "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com",
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "font-src 'self' https://fonts.gstatic.com",
+      "style-src 'self' 'unsafe-inline'",
+      "font-src 'self'",
       "img-src 'self' data: blob: https:",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google-analytics.com https://region1.google-analytics.com",
       "frame-ancestors 'none'",
@@ -26,10 +26,10 @@ const nextConfig = {
     NEXT_PUBLIC_SUPABASE_URL:      process.env.VITE_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
   },
-  // Allow images from Google favicon service
+  // Allow images from any HTTPS source (news thumbnails come from many domains)
   images: {
     remotePatterns: [
-      { protocol: 'https', hostname: 'www.google.com' },
+      { protocol: 'https', hostname: '**' },
     ],
   },
   async headers() {

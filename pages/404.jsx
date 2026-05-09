@@ -17,7 +17,7 @@ export default function NotFound() {
           <div style={{
             fontSize: 96,
             fontWeight: 700,
-            fontFamily: 'Playfair Display, serif',
+            fontFamily: 'var(--font-playfair), serif',
             color: 'var(--border)',
             lineHeight: 1,
             marginBottom: 8,
@@ -37,7 +37,7 @@ export default function NotFound() {
           <h1 style={{
             fontSize: 22,
             fontWeight: 600,
-            fontFamily: 'Playfair Display, serif',
+            fontFamily: 'var(--font-playfair), serif',
             marginBottom: 12,
             color: 'var(--text)',
           }}>

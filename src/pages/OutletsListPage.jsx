@@ -85,7 +85,7 @@ function SuggestModal({ onClose, user, onLoginClick, showToast }) {
         {done ? (
           <div style={{ textAlign: 'center', padding: '16px 0' }}>
             <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
-            <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: 20, marginBottom: 8 }}>Thanks for the suggestion!</h3>
+            <h3 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 20, marginBottom: 8 }}>Thanks for the suggestion!</h3>
             <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 20 }}>
               We'll review <strong>{name}</strong> and add it if it meets our quality criteria.
             </p>
@@ -104,7 +104,7 @@ function SuggestModal({ onClose, user, onLoginClick, showToast }) {
           <>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
               <div>
-                <h3 style={{ fontFamily: 'Playfair Display, serif', fontSize: 20, fontWeight: 700 }}>
+                <h3 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 20, fontWeight: 700 }}>
                   Suggest an outlet
                 </h3>
                 <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>
@@ -227,7 +227,7 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
           <button className="back-btn" onClick={goBack}>← Back</button>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
             <div>
-              <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
+              <h1 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
                 News Outlets
               </h1>
               <p style={{ fontSize: 13, color: 'var(--text2)' }}>

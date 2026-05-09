@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { db } from '../../src/lib/supabase'
 import FeedPage from '../../src/pages/FeedPage'
 import { useAppContext } from '../_app'
+import { articleSlug } from '../../src/utils/helpers'
 
 const BATCH = 50
 
@@ -35,7 +36,7 @@ export const CATEGORY_META = [
   {
     value: 'Health', slug: 'health', emoji: '🏥',
     title: 'Health & Medical News Rated for Accuracy',
-    description: 'Health and medical news rated for factual accuracy — NHS coverage, clinical research, vaccines and public health, compared across 50+ outlets.',
+    description: 'Health and medical news rated for factual accuracy — clinical research, vaccines, public health and healthcare policy, compared across 100+ outlets.',
   },
   {
     value: 'Environment', slug: 'environment', emoji: '🌱',
@@ -139,7 +140,23 @@ export default function CategoryLanding({ slug, initialArticles, initialCount, c
   }
 
   const canonical = `https://ratednews.com/categories/${slug}`
-  const pageTitle = `${categoryMeta.emoji} ${categoryMeta.title} | RatedNews`
+  const pageTitle = `${categoryMeta.title} | RatedNews`
+
+  // ItemList schema — helps Google surface category pages in Search with article links
+  const itemListLd = articles.length ? {
+    '@context':     'https://schema.org',
+    '@type':        'ItemList',
+    name:           categoryMeta.title,
+    description:    categoryMeta.description,
+    url:            canonical,
+    numberOfItems:  totalCount,
+    itemListElement: articles.slice(0, 10).map((a, i) => ({
+      '@type':    'ListItem',
+      position:   i + 1,
+      url:        `https://ratednews.com/article/${articleSlug(a.title, a.id)}`,
+      name:       a.title,
+    })),
+  } : null
 
   return (
     <>
@@ -153,7 +170,15 @@ export default function CategoryLanding({ slug, initialArticles, initialCount, c
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://ratednews.com/og-image.png" />
         <meta name="twitter:card"       content="summary_large_image" />
+        <meta name="twitter:title"      content={categoryMeta.title + ' | RatedNews'} />
+        <meta name="twitter:description" content={categoryMeta.description} />
         <meta name="twitter:image"      content="https://ratednews.com/og-image.png" />
+        {itemListLd && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListLd).replace(/<\//g, '<\\/') }}
+          />
+        )}
       </Head>
       <FeedPage
         articles={articles}
@@ -218,7 +243,7 @@ export async function getStaticProps({ params }) {
         initialCount: 0,
         categoryMeta: { value: cat.value, emoji: cat.emoji, slug: cat.slug, title: cat.title, description: cat.description },
       },
-      revalidate: 60,
+      revalidate: 300,
     }
   }
 }

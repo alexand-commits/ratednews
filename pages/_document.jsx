@@ -1,12 +1,12 @@
 import { Html, Head, Main, NextScript } from 'next/document'
 
-const GA_ID = 'G-FK738TW9V4'
-
 export default function Document() {
   return (
     <Html lang="en">
       <Head>
-        <meta name="theme-color" content="#D85A30" />
+        {/* Match system chrome to dark/light page background — prevents floaty nav on mobile */}
+        <meta name="theme-color" content="#111110" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#F8F6F4" media="(prefers-color-scheme: light)" />
         <meta name="robots" content="index, follow" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="apple-touch-icon" href="/social-icon.png" />
@@ -18,27 +18,14 @@ export default function Document() {
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"        content="summary_large_image" />
         <meta name="twitter:image"       content="https://ratednews.com/og-image.png" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap"
-          rel="stylesheet"
-        />
-        {/* Google Analytics */}
-        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', '${GA_ID}', { page_path: window.location.pathname });
-            `,
-          }}
-        />
+        {/* Preconnect to Supabase — saves DNS+TLS round trip on first data fetch */}
+        <link rel="preconnect" href={process.env.VITE_SUPABASE_URL} />
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
       </Head>
       <body>
         {/* Runs before React hydrates — prevents dark mode flash */}
         {/* Default to dark mode — apply light only if user has explicitly chosen it */}
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme');var dark=t!=='light';if(dark){document.documentElement.setAttribute('data-theme','dark');document.documentElement.style.background='#111110';}}catch(e){}})()`  }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme');var dark=t!=='light';var bg=dark?'#111110':'#F8F6F4';document.documentElement.setAttribute('data-theme',dark?'dark':'light');document.documentElement.style.background=bg;document.body.style.background=bg;}catch(e){}})()`  }} />
         <Main />
         <NextScript />
       </body>

@@ -256,7 +256,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
         <button className="back-btn" onClick={goBack}>← Back</button>
 
         <div style={{ marginBottom: 20 }}>
-          <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 26, fontWeight: 700, marginBottom: 6 }}>
+          <h1 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 26, fontWeight: 700, marginBottom: 6 }}>
             Rankings
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text2)' }}>

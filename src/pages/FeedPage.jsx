@@ -8,20 +8,20 @@ import { db } from '../lib/supabase'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
 const CATEGORIES = [
-  { value: 'all',            label: 'All'               },
-  { value: 'Politics',       label: '🏛 Politics'        },
-  { value: 'Business',       label: '📈 Business'        },
-  { value: 'Sport',          label: '⚽ Sport'            },
-  { value: 'Tech',           label: '💻 Tech'             },
-  { value: 'Science',        label: '🔬 Science'          },
-  { value: 'Health',         label: '🏥 Health'           },
-  { value: 'Environment',    label: '🌱 Environment'      },
-  { value: 'Entertainment',  label: '🎬 Entertainment'    },
-  { value: 'Crime',          label: '🔍 Crime'            },
-  { value: 'Travel',         label: '✈️ Travel'           },
-  { value: 'Education',      label: '🎓 Education'        },
-  { value: 'Conflict',       label: '⚔️ Conflict'          },
-  { value: 'World',          label: '🌍 World'            },
+  { value: 'all',            label: 'All'           },
+  { value: 'Politics',       label: 'Politics'      },
+  { value: 'Business',       label: 'Business'      },
+  { value: 'Sport',          label: 'Sport'         },
+  { value: 'Tech',           label: 'Tech'          },
+  { value: 'Science',        label: 'Science'       },
+  { value: 'Health',         label: 'Health'        },
+  { value: 'Environment',    label: 'Environment'   },
+  { value: 'Entertainment',  label: 'Entertainment' },
+  { value: 'Crime',          label: 'Crime'         },
+  { value: 'Travel',         label: 'Travel'        },
+  { value: 'Education',      label: 'Education'     },
+  { value: 'Conflict',       label: 'Conflict'      },
+  { value: 'World',          label: 'World'         },
 ]
 
 // Keyword fallback for articles not yet AI-categorised
@@ -48,16 +48,24 @@ function getArticleCategory(article) {
 }
 
 const SORTS = [
-  { value: 'latest',    label: '🕒 Latest'     },
-  { value: 'trending',  label: '🔥 Trending'   },
-  { value: 'top-rated', label: '⭐ Top Rated'  },
+  { value: 'latest',    label: 'Latest'     },
+  { value: 'trending',  label: 'Trending'   },
+  { value: 'top-rated', label: 'Top Rated'  },
 ]
 
 const REGIONS = [
-  { value: 'all', label: '🌍 All'           },
-  { value: 'UK',  label: '🇬🇧 UK'           },
-  { value: 'US',  label: '🇺🇸 US'           },
-  { value: 'int', label: '🌐 International' },
+  { value: 'all', label: 'All'           },
+  { value: 'UK',  label: 'UK'            },
+  { value: 'US',  label: 'US'            },
+  { value: 'int', label: 'International' },
+]
+
+const MIN_SCORES = [
+  { value: 0,  label: 'All scores' },
+  { value: 50, label: '50+'        },
+  { value: 60, label: '60+'        },
+  { value: 70, label: '70+'        },
+  { value: 80, label: '80+'        },
 ]
 
 function getArticleRegion(article) {
@@ -76,6 +84,7 @@ export default function FeedPage({
 }) {
   const [category, setCategory] = useState(initialCategory)
   const [region, setRegion]     = useState(initialRegion)
+  const [minScore, setMinScore] = useState(0)
   const [search, setSearch]     = useState('')
   const [sort, setSort]         = useState('latest')
   const [feedTab, setFeedTab]         = useState('all') // 'all' | 'following'
@@ -119,7 +128,7 @@ export default function FeedPage({
     "Try 'climate change'…",
     "Try 'Donald Trump'…",
     "Try 'interest rates'…",
-    "Try 'NHS'…",
+    "Try 'healthcare'…",
   ]
   const [placeholderIdx, setPlaceholderIdx] = useState(0)
   useEffect(() => {
@@ -145,10 +154,12 @@ export default function FeedPage({
     setDbLoading(true)
     searchTimer.current = setTimeout(async () => {
       const term = search.trim()
+      // Escape LIKE metacharacters so user input can't corrupt the filter or cause full-table scans
+      const escaped = term.replace(/[%_\\]/g, '\\$&')
       const { data } = await db
         .from('articles')
         .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
-        .or(`title.ilike.%${term}%,ai_summary.ilike.%${term}%,summary.ilike.%${term}%`)
+        .or(`title.ilike.%${escaped}%,ai_summary.ilike.%${escaped}%,summary.ilike.%${escaped}%`)
         .order('published_at', { ascending: false })
         .limit(50)
       setDbResults(data || [])
@@ -183,12 +194,12 @@ export default function FeedPage({
     setFollowingLoading(true)
     const ids = [...followedOutletIds]
     db.from('articles')
-      .select('*, outlets(name, slug, logo_url, country, overall_score, bias_direction)')
+      .select('*, outlets(name, logo_url, country, bias_direction), comments(count)')
       .in('outlet_id', ids)
-      .not('accuracy_score', 'is', null)
       .order('published_at', { ascending: false })
       .limit(100)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) console.error('[MyFeed] query failed:', error)
         setFollowingArticles(data || [])
         setFollowingLoading(false)
       })
@@ -222,6 +233,7 @@ export default function FeedPage({
       // When a specific region is selected the reader has opted in, so show
       // everything from that region including local stories.
       .filter(a => region !== 'all' || a.geographic_scope !== 'local')
+      .filter(a => minScore === 0 || (a.accuracy_score || 0) >= minScore)
       .slice()
       .sort((a, b) => {
         if (sort === 'trending')  return (b.comments?.[0]?.count || 0) - (a.comments?.[0]?.count || 0)
@@ -405,7 +417,9 @@ export default function FeedPage({
 
   // Which list to display — DB results when search active, interleaved otherwise
   const isSearchActive = dbResults !== null
-  const displayList    = isSearchActive ? dbResults : interleaved
+  const displayList = isSearchActive
+    ? (minScore > 0 ? (dbResults || []).filter(a => (a.accuracy_score || 0) >= minScore) : dbResults)
+    : interleaved
 
   // Outlet search — match search term against outlet names
   const matchedOutlets = useMemo(() => {
@@ -455,7 +469,11 @@ export default function FeedPage({
               setFeedTab('following')
             }}
           >
-            My feed {user && followedOutletIds.size > 0 && <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({followedOutletIds.size})</span>}
+            My feed
+            {user && followedOutletIds.size > 0
+              ? <span style={{ color: 'var(--text3)', fontWeight: 400 }}> ({followedOutletIds.size})</span>
+              : <span style={{ fontSize: 10, color: 'var(--coral)', fontWeight: 500, marginLeft: 5, background: 'rgba(255,99,71,0.1)', padding: '1px 6px', borderRadius: 10 }}>Follow outlets</span>
+            }
           </div>
         </div>
 
@@ -532,19 +550,8 @@ export default function FeedPage({
           </div>
         )}
 
-        {/* Region filter */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-          {REGIONS.map(r => (
-            <button
-              key={r.value}
-              className={`pill${region === r.value ? ' active' : ''}`}
-              onClick={() => setRegion(r.value)}
-            >{r.label}</button>
-          ))}
-        </div>
-
         {/* Category filter */}
-        <div className="filter-bar" style={{ marginBottom: 16 }}>
+        <div className="filter-bar" style={{ marginBottom: 8 }}>
           {CATEGORIES.map(c => (
             <button
               key={c.value}
@@ -552,6 +559,27 @@ export default function FeedPage({
               onClick={() => setCategory(c.value)}
             >{c.label}</button>
           ))}
+        </div>
+
+        {/* Region + Min score — combined on one scrollable row */}
+        <div className="filter-bar" style={{ marginBottom: 16 }}>
+          {REGIONS.map(r => (
+            <button
+              key={r.value}
+              className={`pill${region === r.value ? ' active' : ''}`}
+              onClick={() => setRegion(r.value)}
+            >{r.label}</button>
+          ))}
+          {!isSearchActive && <>
+            <span style={{ width: 1, background: 'var(--border)', alignSelf: 'stretch', flexShrink: 0, margin: '4px 2px' }} />
+            {MIN_SCORES.map(s => (
+              <button
+                key={s.value}
+                className={`pill${minScore === s.value ? ' active' : ''}`}
+                onClick={() => setMinScore(s.value)}
+              >{s.label}</button>
+            ))}
+          </>}
         </div>
 
         <div className="grid">
@@ -712,8 +740,10 @@ export default function FeedPage({
                 </div>
               )}
               {!isSearchActive && feedTab === 'all' && !hasMoreArticles && displayList.length > 0 && (
-                <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 12, color: 'var(--text3)' }}>
-                  You've reached the end · {displayList.length} stories loaded
+                <div style={{ textAlign: 'center', padding: '28px 16px', borderTop: '0.5px solid var(--border)', marginTop: 8 }}>
+                  <div style={{ fontSize: 18, marginBottom: 6 }}>✓</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 3 }}>You're all caught up</div>
+                  <div style={{ fontSize: 12, color: 'var(--text3)' }}>{displayList.length} stories loaded · updates hourly</div>
                 </div>
               )}
 

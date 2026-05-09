@@ -6,6 +6,21 @@ import OutletLogo from '../components/OutletLogo'
 import RatingModal from '../components/RatingModal'
 import InfoTip from '../components/InfoTip'
 
+// Extract meaningful initials from a username or email — avoids numbers/symbols
+function getInitials(str) {
+  if (!str) return '?'
+  // If it looks like an email, use first letter of local part + first letter of domain
+  if (str.includes('@')) {
+    const [local, domain] = str.split('@')
+    const a = local.replace(/[^a-zA-Z]/g, '')[0] || '?'
+    const b = (domain || '').replace(/[^a-zA-Z]/g, '')[0] || ''
+    return (a + b).toUpperCase()
+  }
+  // Otherwise take first letter of first two words
+  const words = str.trim().split(/\s+/)
+  return words.slice(0, 2).map(w => w.replace(/[^a-zA-Z]/g, '')[0] || '').join('').toUpperCase() || '?'
+}
+
 export default function ArticlePage({ articleId, allArticles, navigate, goBack, showToast, refreshArticle, user, onLoginClick, isSaved, toggleSave }) {
   const [comments, setComments] = useState([])
   const [commentInput, setCommentInput] = useState('')
@@ -19,6 +34,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   const [replies, setReplies] = useState({}) // { [parentId]: [reply, ...] }
   const [userProfiles, setUserProfiles] = useState({}) // { [user_id]: username }
   const [fetchedArticle, setFetchedArticle] = useState(null)
+  const [relatedArticles, setRelatedArticles] = useState([])
 
   const article = allArticles.find(a => a.id === articleId) || fetchedArticle
 
@@ -30,27 +46,10 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     setComments([])
     setReplies({})
     setReplyingTo(null)
+    setVotedComments({})
 
-    if (user) {
-      // Logged in — check DB for prior rating
-      db.from('ratings')
-        .select('overall_stars, accuracy_vote, bias_vote, headline_vote')
-        .eq('article_id', articleId)
-        .eq('user_id', user.id)
-        .maybeSingle()
-        .then(({ data }) => {
-          if (data) {
-            setAlreadyRated(true)
-            setMyRating({
-              overallStars: data.overall_stars,
-              accuracyVote: data.accuracy_vote,
-              biasVote: data.bias_vote,
-              headlineVote: data.headline_vote,
-            })
-          }
-        })
-    } else {
-      // Logged out — fall back to localStorage
+    // Logged out — check localStorage immediately (no network needed)
+    if (!user) {
       const stored = localStorage.getItem(`rated_${articleId}`)
       if (stored) {
         setAlreadyRated(true)
@@ -58,49 +57,125 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
       }
     }
 
-    db.from('comments')
+    // Fire ratings + comments + votes in parallel — no sequential waiting
+    const ratingsPromise = user
+      ? db.from('ratings')
+          .select('overall_stars, accuracy_vote, bias_vote, headline_vote')
+          .eq('article_id', articleId)
+          .eq('user_id', user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null })
+
+    const commentsPromise = db.from('comments')
       .select('*')
       .eq('article_id', articleId)
       .is('parent_id', null)
       .order('upvotes', { ascending: false })
-      .then(async ({ data }) => {
-        const loaded = data || []
-        setComments(loaded)
-        // Fetch usernames for all commenters
-        const ids = [...new Set(loaded.map(c => c.user_id).filter(Boolean))]
-        if (ids.length > 0) {
-          const { data: profiles } = await db
-            .from('profiles')
-            .select('user_id, username')
-            .in('user_id', ids)
-          if (profiles) {
-            const map = {}
-            profiles.forEach(p => { map[p.user_id] = p.username })
-            setUserProfiles(map)
-          }
-        }
-      })
 
-    // Real-time: new comments on this article
-    const channel = db
-      .channel(`comments-${articleId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'comments',
-        filter: `article_id=eq.${articleId}`,
-      }, payload => {
-        if (!payload.new.parent_id) {
-          setComments(prev => {
-            if (prev.find(c => c.id === payload.new.id)) return prev
-            return [payload.new, ...prev]
+    const votesPromise = user
+      ? db.from('comment_votes').select('comment_id, dir').eq('user_id', user.id)
+      : Promise.resolve({ data: [] })
+
+    Promise.all([ratingsPromise, commentsPromise, votesPromise]).then(
+      ([{ data: ratingData }, { data: commentData }, { data: votesData }]) => {
+        // Apply ratings
+        if (ratingData) {
+          setAlreadyRated(true)
+          setMyRating({
+            overallStars: ratingData.overall_stars,
+            accuracyVote: ratingData.accuracy_vote,
+            biasVote:     ratingData.bias_vote,
+            headlineVote: ratingData.headline_vote,
           })
         }
-      })
-      .subscribe()
 
-    return () => { db.removeChannel(channel) }
+        // Apply comments
+        const loaded = commentData || []
+        setComments(loaded)
+
+        // Restore persisted vote state from DB
+        if (votesData && votesData.length > 0) {
+          const map = {}
+          votesData.forEach(v => { map[`${v.comment_id}-${v.dir}`] = true })
+          setVotedComments(map)
+        }
+
+        // Fetch profiles in parallel once we have comment user IDs
+        const ids = [...new Set(loaded.map(c => c.user_id).filter(Boolean))]
+        if (ids.length > 0) {
+          db.from('profiles')
+            .select('user_id, username')
+            .in('user_id', ids)
+            .then(({ data: profiles }) => {
+              if (profiles) {
+                const map = {}
+                profiles.forEach(p => { map[p.user_id] = p.username })
+                setUserProfiles(map)
+              }
+            })
+        }
+      }
+    )
+
+    // Defer realtime subscription — set up after initial render, not on mount
+    const realtimeTimer = setTimeout(() => {
+      const channel = db
+        .channel(`comments-${articleId}`)
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'comments',
+          filter: `article_id=eq.${articleId}`,
+        }, payload => {
+          if (!payload.new.parent_id) {
+            setComments(prev => {
+              if (prev.find(c => c.id === payload.new.id)) return prev
+              return [payload.new, ...prev]
+            })
+          }
+        })
+        .subscribe()
+
+      return () => { db.removeChannel(channel) }
+    }, 3000)
+
+    return () => { clearTimeout(realtimeTimer) }
   }, [articleId, user])
+
+  // Fetch related articles once the current article is known
+  useEffect(() => {
+    if (!article) return
+    setRelatedArticles([])
+    const { outlet_id, category, id, bias_score } = article
+    const isFactualArticle = (article.accuracy_score || 0) > 0 && (bias_score || 0) < 25
+
+    // Always fetch more from the same outlet
+    const outletPromise = db.from('articles')
+      .select('*, outlets(name, logo_url, country, bias_direction)')
+      .eq('outlet_id', outlet_id)
+      .neq('id', id)
+      .gt('accuracy_score', 0)
+      .order('published_at', { ascending: false })
+      .limit(4)
+
+    // Only fetch same-category for non-factual articles
+    const categoryPromise = (!isFactualArticle && category)
+      ? db.from('articles')
+          .select('*, outlets(name, logo_url, country, bias_direction)')
+          .eq('category', category)
+          .neq('outlet_id', outlet_id)
+          .neq('id', id)
+          .gt('accuracy_score', 0)
+          .order('published_at', { ascending: false })
+          .limit(4)
+      : Promise.resolve({ data: [] })
+
+    Promise.all([outletPromise, categoryPromise]).then(
+      ([{ data: outletData }, { data: categoryData }]) => {
+        setRelatedArticles({ outlet: outletData || [], category: categoryData || [] })
+      }
+    )
+  }, [article?.id])
 
   // If article isn't in the local cache (e.g. older than the loaded feed window),
   // fetch it directly from the DB so we never show a blank page
@@ -122,27 +197,21 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   const acc = article.accuracy_score || 0
   const bias = article.bias_score || 0
   const com = article.community_score || 0
+  const isFactual = acc > 0 && bias < 25
 
-  // Related articles
-  const moreFromOutlet = allArticles
-    .filter(a => a.id !== articleId && a.outlets?.name === outlet.name)
-    .slice(0, 4)
-
-  const sameCategory = article.category
-    ? allArticles
-        .filter(a => a.id !== articleId && a.category === article.category && a.outlets?.name !== outlet.name)
-        .slice(0, 4)
-    : []
+  // Related articles — fetched client-side in the useEffect above
+  const moreFromOutlet = relatedArticles.outlet || []
+  const sameCategory   = relatedArticles.category || []
 
   const HEADLINE_STYLES = {
     fair:       { bg: 'var(--green-light)', color: 'var(--green-dark)', label: '✓ Fair headline'  },
-    misleading: { bg: '#fff3cd',            color: '#856404',           label: '⚠ Misleading'    },
-    clickbait:  { bg: '#fde8e8',            color: 'var(--red)',        label: '✗ Clickbait'     },
+    misleading: { bg: 'var(--amber-light)', color: 'var(--amber)', label: '⚠ Misleading' },
+    clickbait:  { bg: 'var(--red-light)',   color: 'var(--red)',   label: '✗ Clickbait'  },
   }
   const BIAS_INFO = {
-    left:   { label: 'Left-leaning',   color: 'var(--blue, #3b82f6)', bar: 20 },
-    centre: { label: 'Centre / Neutral', color: 'var(--text2)',       bar: 50 },
-    right:  { label: 'Right-leaning',  color: 'var(--red)',           bar: 80 },
+    left:   { label: '← Left',   color: 'var(--blue, #3b82f6)', bar: 20 },
+    centre: { label: '◉ Centre', color: 'var(--text2)',         bar: 50 },
+    right:  { label: '→ Right',  color: 'var(--red)',           bar: 80 },
   }
   const hlStyle  = article.headline_vote ? HEADLINE_STYLES[article.headline_vote] : null
   const biasInfo = article.bias_direction ? BIAS_INFO[article.bias_direction] : null
@@ -206,25 +275,51 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   async function voteComment(commentId, dir) {
     if (!user) { onLoginClick(); return }
     const key = `${commentId}-${dir}`
-    if (votedComments[key]) {
-      setVotedComments(prev => { const n = { ...prev }; delete n[key]; return n })
-      return
-    }
-    setVotedComments(prev => ({ ...prev, [key]: true }))
     const field = dir === 1 ? 'upvotes' : 'downvotes'
-    const { data } = await db.from('comments').select(field).eq('id', commentId).single()
-    if (data) {
-      await db.from('comments').update({ [field]: (data[field] || 0) + 1 }).eq('id', commentId)
-      // Update in top-level comments or replies
-      setComments(prev => prev.map(c => c.id === commentId ? { ...c, [field]: (c[field] || 0) + 1 } : c))
+
+    function applyDelta(delta) {
+      setComments(prev => prev.map(c =>
+        c.id === commentId ? { ...c, [field]: Math.max(0, (c[field] || 0) + delta) } : c
+      ))
       setReplies(prev => {
         const updated = {}
         for (const [pid, rList] of Object.entries(prev)) {
-          updated[pid] = rList.map(r => r.id === commentId ? { ...r, [field]: (r[field] || 0) + 1 } : r)
+          updated[pid] = rList.map(r =>
+            r.id === commentId ? { ...r, [field]: Math.max(0, (r[field] || 0) + delta) } : r
+          )
         }
         return updated
       })
     }
+
+    if (votedComments[key]) {
+      // Un-vote: remove from DB, decrement count optimistically
+      setVotedComments(prev => { const n = { ...prev }; delete n[key]; return n })
+      applyDelta(-1)
+      const { error: delError } = await db.from('comment_votes').delete().eq('user_id', user.id).eq('comment_id', commentId)
+      if (delError) {
+        // Revert optimistic update
+        setVotedComments(prev => ({ ...prev, [key]: true }))
+        applyDelta(1)
+        showToast('Could not remove vote — please try again')
+        return
+      }
+      const { data } = await db.from('comments').select(field).eq('id', commentId).single()
+      if (data) await db.from('comments').update({ [field]: Math.max(0, (data[field] || 0) - 1) }).eq('id', commentId)
+      return
+    }
+
+    // Vote: insert into DB — unique constraint prevents duplicates across sessions
+    const { error } = await db.from('comment_votes').insert({ user_id: user.id, comment_id: commentId, dir })
+    if (error) {
+      // Revert optimistic state and inform user
+      showToast('Could not register vote — please try again')
+      return
+    }
+    setVotedComments(prev => ({ ...prev, [key]: true }))
+    applyDelta(1)
+    const { data } = await db.from('comments').select(field).eq('id', commentId).single()
+    if (data) await db.from('comments').update({ [field]: (data[field] || 0) + 1 }).eq('id', commentId)
   }
 
   function CommentRow({ c, isReply = false }) {
@@ -233,7 +328,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     const isExpanded = replies[c.id] !== undefined
     const isReplying = replyingTo === c.id
     const username = c.user_id ? (userProfiles[c.user_id] || 'Community member') : 'Community member'
-    const initials = username.slice(0, 2).toUpperCase()
+    const initials = getInitials(username)
 
     return (
       <div className={isReply ? 'reply' : 'comment'}>
@@ -329,15 +424,24 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               </div>
               <div style={{ fontSize: 11, color: 'var(--text2)' }}>{outlet.country || ''} · {timeAgo(article.published_at)}</div>
             </div>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-              <span className="ai-tag">AI scored</span>
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              {aiScored && (
+                <span className={acc >= 70 ? 'score-badge score-badge-green' : acc >= 50 ? 'score-badge score-badge-amber' : 'score-badge score-badge-red'}>
+                  ✦ {acc}
+                </span>
+              )}
+              {aiScored && (
+                isFactual
+                  ? <span className="score-badge score-badge-bias-centre">◉ Factual</span>
+                  : biasInfo && <span className={`score-badge score-badge-bias-${article.bias_direction}`}>
+                      {{ left: '← Left', centre: '◉ Centre', right: '→ Right' }[article.bias_direction]}
+                    </span>
+              )}
               <button
                 className={`save-btn${isSaved ? ' saved' : ''}`}
                 onClick={() => toggleSave(articleId)}
-                title={isSaved ? 'Remove from saved' : 'Save article'}
-                style={{ fontSize: 20 }}
               >
-                🔖
+                {isSaved ? 'Saved ✓' : 'Save'}
               </button>
             </div>
           </div>
@@ -346,10 +450,9 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
           <div className="article-score-strip">
             <div className="asc"><strong style={{ color: scoreColor(acc) }}>{acc || '—'}</strong><span>Accuracy</span></div>
-            <div className="asc"><strong style={{ color: biasInfo?.color || 'var(--text2)' }}>{article.bias_direction || '—'}</strong><span>Bias</span></div>
             {com > 0 && <div className="asc"><strong style={{ color: 'var(--amber)' }}>{(com / 20).toFixed(1)}★</strong><span>Community</span></div>}
             <div className="asc"><strong>{article.total_ratings || 0}</strong><span>Ratings</span></div>
-            <div className="asc"><strong style={{ color: 'var(--text2)' }}>💬 {comments.length}</strong><span>Comments</span></div>
+            <div className="asc"><strong style={{ color: 'var(--text2)' }}>{comments.length}</strong><span>Comments</span></div>
           </div>
 
           {/* AI Analysis panel */}
@@ -390,7 +493,11 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
               {/* Political lean + headline verdict */}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                {biasInfo && (
+                {isFactual ? (
+                  <span style={{ fontSize: 11, color: 'var(--text3)', fontStyle: 'italic' }}>
+                    Low partisan intensity — consistent with factual reporting
+                  </span>
+                ) : biasInfo && (
                   <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: 'var(--bg2, var(--surface))', border: '0.5px solid var(--border)', color: biasInfo.color, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                     {biasInfo.label} <InfoTip text="The political direction of this article's framing — left, centre, or right. This is separate from how intensely partisan it is." />
                   </span>
@@ -517,8 +624,12 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                   >
                     <div style={{ width: 4, height: 40, borderRadius: 2, background: abg, flexShrink: 0 }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <Link href={`/article/${articleSlug(a.title, a.id)}`} style={{ fontSize: 13, fontFamily: 'Playfair Display, serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>{a.title}</Link>
-                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>{timeAgo(a.published_at)}{a.accuracy_score > 0 ? ` · Accuracy ${a.accuracy_score}` : ''}</div>
+                      <Link href={`/article/${articleSlug(a.title, a.id)}`} style={{ fontSize: 13, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>{a.title}</Link>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span>{timeAgo(a.published_at)}</span>
+                        {a.accuracy_score > 0 && <span className={a.accuracy_score >= 70 ? 'score-badge score-badge-green' : a.accuracy_score >= 50 ? 'score-badge score-badge-amber' : 'score-badge score-badge-red'} style={{ fontSize: 10, padding: '1px 5px' }}>✦ {a.accuracy_score}</span>}
+                        {a.bias_direction && <span className={`score-badge score-badge-bias-${a.bias_direction}`} style={{ fontSize: 10, padding: '1px 5px' }}>{{ left: '← Left', centre: '◉ Centre', right: '→ Right' }[a.bias_direction]}</span>}
+                      </div>
                     </div>
                   </div>
                 )
@@ -539,18 +650,16 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                   <div
                     key={a.id}
                     onClick={e => { if (e.target.closest('a')) return; navigate('article', { articleId: a.id, title: a.title }) }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: i < sameCategory.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer', transition: 'background 0.15s' }}
-                    onMouseOver={e => e.currentTarget.style.background = 'var(--bg)'}
-                    onMouseOut={e => e.currentTarget.style.background = ''}
+                    className="row-hover"
+                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: i < sameCategory.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }}
                   >
                     <OutletLogo name={a.outlets?.name || ''} size={28} borderRadius={7} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <Link href={`/article/${articleSlug(a.title, a.id)}`} style={{ fontSize: 13, fontFamily: 'Playfair Display, serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>{a.title}</Link>
-                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>
-                        {a.outlets?.name} · {timeAgo(a.published_at)}
-                        {a.bias_direction && <span style={{ color: a.bias_direction === 'left' ? 'var(--blue, #3b82f6)' : a.bias_direction === 'right' ? 'var(--red)' : 'var(--text3)', marginLeft: 4 }}>
-                          {a.bias_direction === 'left' ? '← Left' : a.bias_direction === 'right' ? '→ Right' : '◉ Centre'}
-                        </span>}
+                      <Link href={`/article/${articleSlug(a.title, a.id)}`} style={{ fontSize: 13, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>{a.title}</Link>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                        <span>{a.outlets?.name} · {timeAgo(a.published_at)}</span>
+                        {a.accuracy_score > 0 && <span className={a.accuracy_score >= 70 ? 'score-badge score-badge-green' : a.accuracy_score >= 50 ? 'score-badge score-badge-amber' : 'score-badge score-badge-red'} style={{ fontSize: 10, padding: '1px 5px' }}>✦ {a.accuracy_score}</span>}
+                        {a.bias_direction && <span className={`score-badge score-badge-bias-${a.bias_direction}`} style={{ fontSize: 10, padding: '1px 5px' }}>{{ left: '← Left', centre: '◉ Centre', right: '→ Right' }[a.bias_direction]}</span>}
                       </div>
                     </div>
                   </div>
@@ -578,7 +687,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
             ))}
           </div>
           <div className="compose-row">
-            <div className="compose-av">{user ? user.email.slice(0, 2).toUpperCase() : '?'}</div>
+            <div className="compose-av">{user ? getInitials(user.email) : '?'}</div>
             <input
               className="compose-input"
               placeholder={user ? 'Add to the discussion...' : 'Sign in to join the discussion...'}

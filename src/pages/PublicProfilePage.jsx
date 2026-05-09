@@ -300,7 +300,7 @@ export default function PublicProfilePage({ userId, navigate, goBack, showToast 
                   <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>
                     {r.articles?.outlets?.name || 'Unknown outlet'} · {timeAgo(r.created_at)}
                   </div>
-                  <div style={{ fontSize: 14, fontFamily: 'Playfair Display, serif', lineHeight: 1.4, marginBottom: 8 }}>
+                  <div style={{ fontSize: 14, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: 8 }}>
                     {r.articles?.title || 'Article'}
                   </div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>

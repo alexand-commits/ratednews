@@ -69,7 +69,7 @@ export default function AboutPage({ navigate, goBack }) {
         <button className="back-btn" onClick={goBack}>← Back</button>
 
         <div style={{ marginBottom: 32 }}>
-          <h1 style={{ fontFamily: 'Playfair Display, serif', fontSize: 28, fontWeight: 700, marginBottom: 10 }}>
+          <h1 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 28, fontWeight: 700, marginBottom: 10 }}>
             How RatedNews works
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.7 }}>
@@ -83,7 +83,7 @@ export default function AboutPage({ navigate, goBack }) {
           <div className="section-label" style={{ marginBottom: 12 }}>The process</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
-              { icon: '📡', step: '1. Ingestion', desc: 'Articles are pulled hourly from RSS feeds across 80+ news outlets spanning the US, UK and international press. Promotional and sponsored content is automatically filtered before analysis.' },
+              { icon: '📡', step: '1. Ingestion', desc: 'Articles are pulled hourly from RSS feeds across 100+ news outlets spanning the US, UK and international press. Promotional and sponsored content is automatically filtered before analysis.' },
               { icon: '🤖', step: '2. AI analysis', desc: 'Each article is analysed by Claude (Anthropic\'s AI) for accuracy, partisan intensity, political lean, headline fairness, and topic category.' },
               { icon: '👥', step: '3. Community rating', desc: 'Readers can rate articles with 1–5 stars and vote on accuracy, bias, and headline quality. Outlets can also be rated directly.' },
               { icon: '📊', step: '4. Outlet scoring', desc: 'Outlet trust scores are recalculated every hour from all scored articles in the past 30 days. The weight of community votes grows as more ratings arrive — protecting against early manipulation.' },

@@ -44,6 +44,8 @@ export default function handler(req) {
   return new ImageResponse(
     (
       <div
+        // Cache aggressively — OG images rarely change after initial scoring.
+        // CDN caches for 7 days, browsers for 1 day, stale-while-revalidate for 30 days.
         style={{
           width: '100%',
           height: '100%',
@@ -133,6 +135,9 @@ export default function handler(req) {
     {
       width:  1200,
       height: 630,
+      headers: {
+        'Cache-Control': 'public, max-age=86400, s-maxage=604800, stale-while-revalidate=2592000',
+      },
     },
   )
 }

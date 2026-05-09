@@ -258,7 +258,7 @@ export default function LegalModal({ doc, onClose }) {
           flexShrink: 0,
         }}>
           <div>
-            <div style={{ fontSize: 17, fontWeight: 700, fontFamily: 'Playfair Display, serif' }}>
+            <div style={{ fontSize: 17, fontWeight: 700, fontFamily: 'var(--font-playfair), serif' }}>
               {content.title}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>

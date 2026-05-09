@@ -36,7 +36,7 @@ export default function PasswordResetModal({ onClose, showToast }) {
       <div className="modal-overlay">
         <div className="modal-card" style={{ maxWidth: 400, textAlign: 'center', padding: '32px 24px' }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>✅</div>
-          <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8, fontFamily: 'Playfair Display, serif' }}>
+          <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8, fontFamily: 'var(--font-playfair), serif' }}>
             Password updated
           </div>
           <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>

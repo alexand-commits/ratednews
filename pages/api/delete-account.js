@@ -37,7 +37,10 @@ export default async function handler(req, res) {
     process.env.SUPABASE_SERVICE_ROLE_KEY
   )
   const { error: deleteErr } = await adminClient.auth.admin.deleteUser(user.id)
-  if (deleteErr) return res.status(500).json({ error: deleteErr.message })
+  if (deleteErr) {
+    console.error('[delete-account] deleteUser error:', deleteErr.message)
+    return res.status(500).json({ error: 'Could not delete account' })
+  }
 
   return res.status(200).json({ success: true })
 }

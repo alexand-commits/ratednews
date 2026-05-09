@@ -1,15 +1,28 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { db } from '../lib/supabase'
 import { articleSlug, outletColor, scoreColor, scoreDot, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import OutletRatingModal from '../components/OutletRatingModal'
 import InfoTip from '../components/InfoTip'
 
+function getInitials(str) {
+  if (!str) return '?'
+  if (str.includes('@')) {
+    const [local, domain] = str.split('@')
+    const a = local.replace(/[^a-zA-Z]/g, '')[0] || '?'
+    const b = (domain || '').replace(/[^a-zA-Z]/g, '')[0] || ''
+    return (a + b).toUpperCase()
+  }
+  const words = str.trim().split(/\s+/)
+  return words.slice(0, 2).map(w => w.replace(/[^a-zA-Z]/g, '')[0] || '').join('').toUpperCase() || '?'
+}
+
 // ── Article badge helpers (mirrors NewsCard.jsx) ─────────────────────────────
 const HEADLINE_BADGES = {
-  misleading: { bg: '#fff3cd', color: '#856404', label: '⚠ Misleading' },
-  clickbait:  { bg: '#fde8e8', color: 'var(--red)', label: '✗ Clickbait' },
+  misleading: { bg: 'var(--amber-light)', color: 'var(--amber)', label: '⚠ Misleading' },
+  clickbait:  { bg: 'var(--red-light)',   color: 'var(--red)',   label: '✗ Clickbait' },
 }
 const BIAS_LABELS = {
   left:   { label: '← Left',   cls: 'score-badge score-badge-bias-left'   },
@@ -23,24 +36,51 @@ function accBadgeClass(score) {
 }
 
 function ArticleCard({ a, onClick }) {
+  const [imgFailed, setImgFailed] = useState(false)
   const acc      = a.accuracy_score || 0
   const scored   = acc > 0
   const hlBadge  = a.headline_vote ? HEADLINE_BADGES[a.headline_vote] : null
   const biasLbl  = a.bias_direction ? BIAS_LABELS[a.bias_direction] : null
+  const hasImage = a.image_url && !imgFailed
   return (
     <div className="news-card" onClick={e => { if (e.target.closest('a')) return; onClick?.(e) }}>
-      <Link href={`/article/${articleSlug(a.title, a.id)}`} className="news-headline" style={{ textDecoration: 'none', color: 'inherit' }}>
-        {a.title || ''}
-      </Link>
-      {hlBadge && (
-        <span style={{
-          display: 'inline-block', fontSize: 10, fontWeight: 600,
-          padding: '2px 8px', borderRadius: 20, marginBottom: 6,
-          background: hlBadge.bg, color: hlBadge.color, alignSelf: 'flex-start',
-        }}>
-          {hlBadge.label}
-        </span>
-      )}
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        {/* Text */}
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <Link href={`/article/${articleSlug(a.title, a.id)}`} className="news-headline" style={{ textDecoration: 'none', color: 'inherit' }}>
+            {a.title || ''}
+          </Link>
+          {hlBadge && (
+            <span style={{
+              display: 'inline-block', fontSize: 10, fontWeight: 600,
+              padding: '2px 8px', borderRadius: 20, marginBottom: 6,
+              background: hlBadge.bg, color: hlBadge.color, alignSelf: 'flex-start',
+            }}>
+              {hlBadge.label}
+            </span>
+          )}
+          {a.ai_summary
+            ? <div className="news-summary">{a.ai_summary}</div>
+            : a.summary && <div className="news-summary">{a.summary}</div>
+          }
+        </div>
+        {/* Thumbnail */}
+        {hasImage && (
+          <div style={{
+            position: 'relative', width: 80, height: 80, flexShrink: 0,
+            borderRadius: 8, overflow: 'hidden', background: 'var(--bg2)',
+          }}>
+            <Image
+              src={a.image_url}
+              alt=""
+              fill
+              sizes="80px"
+              style={{ objectFit: 'cover' }}
+              onError={() => setImgFailed(true)}
+            />
+          </div>
+        )}
+      </div>
       <div className="score-row">
         {scored ? (
           <>
@@ -53,6 +93,69 @@ function ArticleCard({ a, onClick }) {
           </span>
         )}
         <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>{timeAgo(a.published_at)}</span>
+      </div>
+    </div>
+  )
+}
+
+function ScoreHistoryChart({ points }) {
+  if (!points || points.length < 2) return null
+  const W = 100 // viewBox width units
+  const H = 60
+  const PAD = 6
+  const scores = points.map(p => p.score)
+  const minS = Math.max(0, Math.min(...scores) - 10)
+  const maxS = Math.min(100, Math.max(...scores) + 10)
+  const range = maxS - minS || 1
+
+  const xs = points.map((_, i) => PAD + (i / (points.length - 1)) * (W - PAD * 2))
+  const ys = points.map(p => H - PAD - ((p.score - minS) / range) * (H - PAD * 2))
+
+  const pathD = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ')
+  const fillD = `${pathD} L${xs[xs.length - 1].toFixed(1)},${H} L${xs[0].toFixed(1)},${H} Z`
+
+  const latest = points[points.length - 1]
+  const earliest = points[0]
+  const trend = latest.score - earliest.score
+  const trendColor = trend > 3 ? 'var(--green)' : trend < -3 ? 'var(--red)' : 'var(--text3)'
+  const trendLabel = trend > 3 ? `↑ +${trend}` : trend < -3 ? `↓ ${trend}` : '→ Stable'
+
+  return (
+    <div>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 8 }}>
+        <span style={{ fontSize: 11, color: 'var(--text3)' }}>{points.length} day{points.length !== 1 ? 's' : ''} of data</span>
+        <span style={{ fontSize: 11, fontWeight: 600, color: trendColor }}>{trendLabel}</span>
+      </div>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        style={{ width: '100%', height: 80, display: 'block', overflow: 'visible' }}
+        preserveAspectRatio="none"
+      >
+        {/* Gradient fill under line */}
+        <defs>
+          <linearGradient id="histGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--coral)" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="var(--coral)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <path d={fillD} fill="url(#histGrad)" />
+        <path d={pathD} fill="none" stroke="var(--coral)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Latest dot */}
+        <circle
+          cx={xs[xs.length - 1].toFixed(1)}
+          cy={ys[ys.length - 1].toFixed(1)}
+          r="2.5"
+          fill="var(--coral)"
+        />
+      </svg>
+      {/* X-axis labels */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
+        <span style={{ fontSize: 10, color: 'var(--text3)' }}>
+          {earliest.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+        </span>
+        <span style={{ fontSize: 10, color: 'var(--text3)' }}>
+          {latest.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+        </span>
       </div>
     </div>
   )
@@ -71,6 +174,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   const [votedComments, setVotedComments] = useState({})
   const [visibleArticles, setVisibleArticles] = useState(10)
   const [articlesLoading, setArticlesLoading] = useState(true)
+  const [scoreHistory, setScoreHistory] = useState([])
 
   const outlet = liveOutlet || allOutlets.find(o => o.id === outletId)
 
@@ -86,6 +190,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
     setLiveOutlet(null)
     setVisibleArticles(10)
     setArticlesLoading(true)
+    setScoreHistory([])
 
     // Articles
     db.from('articles')
@@ -109,6 +214,32 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
       .is('parent_id', null)
       .order('upvotes', { ascending: false })
       .then(({ data }) => setComments(data || []))
+
+    // Score history — fetch last 30 days of scored articles, grouped daily
+    const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    db.from('articles')
+      .select('accuracy_score, published_at')
+      .eq('outlet_id', outletId)
+      .gt('accuracy_score', 0)
+      .gte('published_at', since30)
+      .order('published_at', { ascending: true })
+      .then(({ data }) => {
+        if (!data || data.length < 2) return
+        // Group by day (YYYY-MM-DD)
+        const days = {}
+        data.forEach(a => {
+          const d = new Date(a.published_at)
+          const key = d.toISOString().slice(0, 10)
+          if (!days[key]) days[key] = { sum: 0, count: 0, date: d }
+          days[key].sum += a.accuracy_score
+          days[key].count++
+        })
+        const points = Object.entries(days)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([, v]) => ({ score: Math.round(v.sum / v.count), date: v.date }))
+          .slice(-30) // last 30 days
+        setScoreHistory(points)
+      })
 
     // Already rated?
     if (user) {
@@ -135,7 +266,22 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   const score = outlet.overall_score || 0
   const biasPos = Math.max(0, Math.min(100, 50 + ((outlet.bias_score || 50) - 50)))
   const similar = allOutlets.filter(o => o.id !== outletId && o.country === outlet?.country).slice(0, 4)
-  const websiteUrl = outlet.rss_url ? (() => { try { const u = new URL(outlet.rss_url); return `${u.protocol}//${u.hostname}` } catch { return null } })() : null
+  const websiteUrl = outlet.website_url || (() => {
+    if (!outlet.rss_url) return null
+    try {
+      const u = new URL(outlet.rss_url)
+      // Known feed-domain → website mappings (feed host doesn't match the real site)
+      const FEED_HOST_MAP = {
+        'feeds.bbci.co.uk': 'https://www.bbc.co.uk',
+        'feeds.skynews.com': 'https://news.sky.com',
+        'feeds.feedburner.com': null, // feedburner can't be reverse-mapped
+      }
+      if (FEED_HOST_MAP[u.hostname] !== undefined) return FEED_HOST_MAP[u.hostname]
+      // Strip common feed subdomains to get the root site
+      const host = u.hostname.replace(/^(feeds?|rss|feed)\./i, '')
+      return `${u.protocol}//${host}`
+    } catch { return null }
+  })()
 
 
   // AI aggregate scores derived from fetched articles
@@ -159,9 +305,9 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   }
   const fairRate  = aiCount ? Math.round((headlineBreakdown.fair / aiCount) * 100) : null
   const dominantBias = aiCount
-    ? (biasBreakdown.left > biasBreakdown.right && biasBreakdown.left > biasBreakdown.centre ? 'Left-leaning'
-     : biasBreakdown.right > biasBreakdown.left && biasBreakdown.right > biasBreakdown.centre ? 'Right-leaning'
-     : 'Centre / Neutral')
+    ? (biasBreakdown.left > biasBreakdown.right && biasBreakdown.left > biasBreakdown.centre ? '← Left'
+     : biasBreakdown.right > biasBreakdown.left && biasBreakdown.right > biasBreakdown.centre ? '→ Right'
+     : '◉ Centre')
     : (outlet.bias_direction || null)
 
   // Needle position: weighted average of direction counts (left=0, centre=50, right=100)
@@ -281,8 +427,8 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                 padding: '3px 10px',
                 borderRadius: 20,
                 marginTop: 6,
-                background: score >= 75 ? 'var(--green-light)' : score >= 60 ? '#fff3cd' : score > 0 ? '#fde8e8' : 'var(--bg2)',
-                color: score >= 75 ? 'var(--green-dark)' : score >= 60 ? '#856404' : score > 0 ? 'var(--red)' : 'var(--text3)',
+                background: score >= 75 ? 'var(--green-light)' : score >= 60 ? 'var(--amber-light)' : score > 0 ? 'var(--red-light)' : 'var(--bg2)',
+                color: score >= 75 ? 'var(--green-dark)' : score >= 60 ? 'var(--amber)' : score > 0 ? 'var(--red)' : 'var(--text3)',
               }}>
                 {score >= 90 ? '● High credibility' : score >= 75 ? '● Good credibility' : score >= 60 ? '● Mixed credibility' : score > 0 ? '● Low credibility' : 'Not yet rated'}
               </div>
@@ -303,6 +449,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
               <button
                 onClick={handleRateClick}
                 className="outlet-action-btn"
+                disabled={alreadyRated}
                 style={{
                   border: '1.5px solid var(--border2)',
                   background: alreadyRated ? 'var(--bg)' : 'var(--surface)',
@@ -338,7 +485,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
         {activeTab === 'overview' && (
           <div className="grid">
             <div>
-              <div className="section-label">AI score breakdown {aiCount > 0 && <span style={{ fontWeight: 400, color: 'var(--text3)' }}>({aiCount} articles analysed)</span>}</div>
+              <div className="section-label">AI score breakdown {aiCount > 0 && <span style={{ fontWeight: 400, color: 'var(--text3)' }}>(based on last 25 articles)</span>}</div>
               <div className="widget" style={{ marginBottom: 14 }}>
                 {avgAccuracy !== null ? (
                   <>
@@ -402,8 +549,8 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                   <div className="widget" style={{ marginBottom: 14 }}>
                     {[
                       { key: 'fair',       label: '✓ Fair',       bg: 'var(--green-light)', color: 'var(--green-dark)' },
-                      { key: 'misleading', label: '⚠ Misleading', bg: '#fff3cd',            color: '#856404'           },
-                      { key: 'clickbait',  label: '✗ Clickbait',  bg: '#fde8e8',            color: 'var(--red)'        },
+                      { key: 'misleading', label: '⚠ Misleading', bg: 'var(--amber-light)', color: 'var(--amber)' },
+                      { key: 'clickbait',  label: '✗ Clickbait',  bg: 'var(--red-light)',   color: 'var(--red)'  },
                     ].map(({ key, label, bg, color }) => (
                       <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                         <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: bg, color, minWidth: 90, textAlign: 'center' }}>{label}</span>
@@ -485,8 +632,9 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                 </div>
                 <button
                   className="btn-primary"
-                  style={{ width: '100%', opacity: alreadyRated ? 0.6 : 1 }}
+                  style={{ width: '100%' }}
                   onClick={handleRateClick}
+                  disabled={alreadyRated}
                 >
                   {alreadyRated ? '★ Already rated' : '★ Rate this outlet'}
                 </button>
@@ -509,13 +657,15 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
 
               <div className="widget">
                 <div className="widget-title">Score history</div>
-                <div style={{ textAlign: 'center', padding: '18px 0' }}>
-                  <div style={{ fontSize: 22, marginBottom: 6 }}>📈</div>
-                  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--text2)', marginBottom: 4 }}>Coming soon</div>
-                  <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.5 }}>
-                    Historical score tracking<br />is in development
+                {scoreHistory.length >= 2 ? (
+                  <ScoreHistoryChart points={scoreHistory} />
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '18px 0' }}>
+                    <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.5 }}>
+                      Not enough data yet.<br />Check back as more articles are scored.
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -570,8 +720,11 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
             <div>
               {outletRatings.length === 0 ? (
                 <div className="empty-state">
-                  <h3>No reviews yet</h3>
+                  <h3>No community ratings yet</h3>
                   <p>Be the first to rate {outlet.name}.</p>
+                  <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>
+                    Community ratings shape the outlet's trust score alongside AI analysis — the more people rate, the more weight they carry.
+                  </p>
                   <button className="btn-primary" style={{ marginTop: 12 }} onClick={handleRateClick}>
                     ★ Rate this outlet
                   </button>
@@ -584,7 +737,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                       <div key={r.id} style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--purple-light)', color: 'var(--purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 500 }}>
-                            {r.user_id ? r.user_id.slice(0, 2).toUpperCase() : '??'}
+                            {r.user_id ? getInitials(r.user_id) : '??'}
                           </div>
                           <span style={{ fontSize: 13, fontWeight: 500 }}>Community member</span>
                           <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>{timeAgo(r.created_at)}</span>
@@ -630,8 +783,9 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                 )}
                 <button
                   className="btn-primary"
-                  style={{ width: '100%', marginTop: 14, opacity: alreadyRated ? 0.6 : 1 }}
+                  style={{ width: '100%', marginTop: 14 }}
                   onClick={handleRateClick}
+                  disabled={alreadyRated}
                 >
                   {alreadyRated ? '★ Already rated' : '★ Rate this outlet'}
                 </button>
@@ -648,7 +802,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
 
             {/* Compose */}
             <div className="compose-row">
-              <div className="compose-av">{user ? user.email.slice(0, 2).toUpperCase() : '?'}</div>
+              <div className="compose-av">{user ? getInitials(user.email) : '?'}</div>
               <input
                 className="compose-input"
                 placeholder={user ? `Share your thoughts on ${outlet.name}...` : 'Sign in to join the discussion...'}
@@ -674,7 +828,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                 <div key={c.id} className="comment">
                   <div className="comment-header">
                     <div className="c-av" style={{ background: 'var(--purple-light)', color: 'var(--purple)' }}>
-                      {(c.user_id || '?').slice(0, 2).toUpperCase()}
+                      {getInitials(c.user_id || '?')}
                     </div>
                     <span className="c-user">Community member</span>
                     <span className="c-ts">{timeAgo(c.created_at)}</span>

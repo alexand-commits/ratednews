@@ -407,7 +407,6 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
               { value: followedOutletIds.size,  label: 'Following'      },
               { value: savedItems.length,       label: 'Saved'          },
               { value: comments.length,         label: 'Comments'       },
-              { value: daysActive,              label: 'Days active'    },
               ...(avgStars ? [{ value: `${avgStars}★`, label: 'Avg rating', color: 'var(--amber)' }] : []),
             ].map(({ value, label, color }) => (
               <div key={label} style={{ background: 'var(--bg)', borderRadius: 8, padding: '10px 8px', textAlign: 'center' }}>
@@ -420,7 +419,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
           {/* Quick summary line */}
           {totalContrib > 0 && (
             <div style={{ fontSize: 12, color: 'var(--text2)', padding: '10px 0', borderTop: '0.5px solid var(--border)', borderBottom: '0.5px solid var(--border)', marginBottom: 14, lineHeight: 1.6 }}>
-              <strong>{totalContrib}</strong> total contribution{totalContrib !== 1 ? 's' : ''} · <strong>{daysActive}</strong> active day{daysActive !== 1 ? 's' : ''}
+              <strong>{totalContrib}</strong> total contribution{totalContrib !== 1 ? 's' : ''}
               {avgStars && <> · rated <strong>{avgStars}★</strong> on average</>}
               {followedOutletIds.size > 0 && <> · following <strong>{followedOutletIds.size}</strong> outlet{followedOutletIds.size !== 1 ? 's' : ''}</>}
             </div>
@@ -519,7 +518,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                         <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>
                           {r.articles?.outlets?.name || 'Unknown outlet'} · {timeAgo(r.created_at)}
                         </div>
-                        <div style={{ fontSize: 14, fontFamily: 'Playfair Display, serif', lineHeight: 1.4, marginBottom: 8 }}>
+                        <div style={{ fontSize: 14, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: 8 }}>
                           {r.articles?.title || 'Article'}
                         </div>
                         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -577,7 +576,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                     <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>
                       {article.outlets?.name || 'Unknown outlet'} · saved {timeAgo(s.created_at)}
                     </div>
-                    <div style={{ fontSize: 14, fontFamily: 'Playfair Display, serif', lineHeight: 1.4, marginBottom: article.ai_summary ? 6 : 0 }}>
+                    <div style={{ fontSize: 14, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: article.ai_summary ? 6 : 0 }}>
                       {article.title || 'Article'}
                     </div>
                     {article.ai_summary && (
@@ -683,7 +682,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
           {!showDeleteConfirm ? (
             <button
               onClick={() => setShowDeleteConfirm(true)}
-              style={{ fontSize: 12, padding: '7px 16px', borderRadius: 20, border: '1px solid var(--red)', background: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+              style={{ fontSize: 12, padding: '7px 16px', borderRadius: 20, border: '1px solid var(--red)', background: 'none', color: 'var(--red)', cursor: 'pointer', fontFamily: 'var(--font-dm-sans), sans-serif' }}
             >
               Delete account
             </button>
@@ -697,19 +696,19 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                 value={deleteInput}
                 onChange={e => setDeleteInput(e.target.value)}
                 placeholder="Type DELETE to confirm"
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--red)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, fontFamily: 'DM Sans, sans-serif', marginBottom: 10, boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--red)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, fontFamily: 'var(--font-dm-sans), sans-serif', marginBottom: 10, boxSizing: 'border-box' }}
               />
               <div style={{ display: 'flex', gap: 8 }}>
                 <button
                   onClick={() => { setShowDeleteConfirm(false); setDeleteInput('') }}
-                  style={{ flex: 1, fontSize: 12, padding: '7px 0', borderRadius: 20, border: '1px solid var(--border)', background: 'none', color: 'var(--text2)', cursor: 'pointer', fontFamily: 'DM Sans, sans-serif' }}
+                  style={{ flex: 1, fontSize: 12, padding: '7px 0', borderRadius: 20, border: '1px solid var(--border)', background: 'none', color: 'var(--text2)', cursor: 'pointer', fontFamily: 'var(--font-dm-sans), sans-serif' }}
                 >
                   Cancel
                 </button>
                 <button
                   onClick={deleteAccount}
                   disabled={deleteInput !== 'DELETE' || deleting}
-                  style={{ flex: 2, fontSize: 12, padding: '7px 0', borderRadius: 20, border: 'none', background: deleteInput === 'DELETE' ? 'var(--red)' : 'var(--border)', color: deleteInput === 'DELETE' ? '#fff' : 'var(--text3)', cursor: deleteInput === 'DELETE' ? 'pointer' : 'default', fontFamily: 'DM Sans, sans-serif', transition: 'all 0.15s' }}
+                  style={{ flex: 2, fontSize: 12, padding: '7px 0', borderRadius: 20, border: 'none', background: deleteInput === 'DELETE' ? 'var(--red)' : 'var(--border)', color: deleteInput === 'DELETE' ? '#fff' : 'var(--text3)', cursor: deleteInput === 'DELETE' ? 'pointer' : 'default', fontFamily: 'var(--font-dm-sans), sans-serif', transition: 'all 0.15s' }}
                 >
                   {deleting ? 'Deleting…' : 'Permanently delete'}
                 </button>
