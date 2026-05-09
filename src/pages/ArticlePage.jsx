@@ -528,23 +528,15 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
           )}
 
           <div className="browser-wrap" style={{ marginBottom: 14 }}>
-            <div className="browser-chrome">
-              <div className="browser-dots">
-                <div className="browser-dot" style={{ background: '#FF5F57' }}></div>
-                <div className="browser-dot" style={{ background: '#FFBD2E' }}></div>
-                <div className="browser-dot" style={{ background: '#28C840' }}></div>
-              </div>
-              <div className="url-bar">
-                <span className="url-lock">🔒</span>
-                <span>{hostname}</span>
-              </div>
-            </div>
             <div className="rn-browser-bar">
               <div className="rn-browser-label">
-                <span style={{ background: 'rgba(255,255,255,0.2)', padding: '2px 6px', borderRadius: 4, fontSize: 10, fontWeight: 700 }}>RN</span>
-                RatedNews · {outlet.name || ''} · Score: {acc}
+                <span className="url-lock">🔒</span>
+                <span style={{ opacity: 0.85 }}>{hostname}</span>
               </div>
-              <span className="rn-browser-badge">Opens in app</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>Score: {acc}</span>
+                <span className="rn-browser-badge">Opens in app</span>
+              </div>
             </div>
             <div className="browser-content">
               <div className="browser-headline">{article.title || ''}</div>
@@ -552,23 +544,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               <div className="browser-body">
                 {article.summary || "Click \"Read full article\" to read the complete story on the publisher's website."}
               </div>
-            </div>
-            <div className="sticky-rate-bar">
-              <div className="srb-label">Reading via RatedNews — rate this article or join the discussion</div>
-              <button className="btn-outline" style={{ fontSize: 12, padding: '6px 12px' }} onClick={() => showToast('Discussion below ↓')}>
-                💬 {comments.length}
-              </button>
-              <button
-                className="btn-primary"
-                style={{ fontSize: 12, padding: '6px 14px', opacity: alreadyRated ? 0.6 : 1 }}
-                onClick={() => {
-                  if (!user) { onLoginClick(); return }
-                  if (alreadyRated) { showToast('You\'ve already rated this article'); return }
-                  setShowRatingModal(true)
-                }}
-              >
-                {alreadyRated ? '★ Rated' : '★ Rate'}
-              </button>
             </div>
           </div>
 
