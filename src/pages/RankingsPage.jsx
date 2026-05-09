@@ -24,12 +24,6 @@ const OUTLET_TABS = [
     tip: 'Average star rating given by RatedNews users (out of 100). Reflects reader trust and experience, independent of AI analysis.',
     chipLabel: 'avg community score', unit: '',
   },
-  {
-    id: 'rated', label: 'Most Rated', key: 'total_ratings',
-    desc: 'Number of community ratings',
-    tip: 'Total number of community ratings submitted for each outlet. More ratings means greater confidence in that outlet\'s score.',
-    chipLabel: 'ratings across all outlets', unit: '',
-  },
 ]
 
 const BIAS_COLORS = { left: 'var(--blue, #3b82f6)', centre: 'var(--text3)', right: 'var(--red)' }
@@ -290,9 +284,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                     <div style={{ fontSize: 12, color: 'var(--text2)' }}>
                       {tab === 'community'
                         ? `${((topOutlet.community_score || 0) / 20).toFixed(1)}★ community score`
-                        : tab === 'rated'
-                          ? `${topOutlet.total_ratings || 0} community ratings`
-                          : `${topOutlet[activeTab.key] || 0} ${activeTab.desc}`}
+                        : `${topOutlet[activeTab.key] || 0} ${activeTab.desc}`}
                     </div>
                   </>
                 ) : (
@@ -303,19 +295,10 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                 )}
               </div>
 
-              {/* Average / count */}
+              {/* Average */}
               <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140 }}>
-                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  {tab === 'rated' ? 'Total ratings' : 'Average'}
-                </div>
-                {tab === 'rated' ? (
-                  <>
-                    <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--coral)' }}>
-                      {outlets.reduce((s, o) => s + (o.total_ratings || 0), 0)}
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--text2)' }}>community ratings total</div>
-                  </>
-                ) : tab === 'community' ? (
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Average</div>
+                {tab === 'community' ? (
                   <>
                     <div style={{ fontSize: 22, fontWeight: 700, color: ratedOutlets.length ? scoreColor(avgScore) : 'var(--text3)' }}>
                       {ratedOutlets.length ? `${(avgScore / 20).toFixed(1)}★` : '—'}
@@ -336,22 +319,11 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                 )}
               </div>
 
-              {/* Third chip — contextual */}
+              {/* Total ratings */}
               <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140 }}>
-                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  {tab === 'rated' ? 'Outlets rated' : 'Total ratings'}
-                </div>
-                {tab === 'rated' ? (
-                  <>
-                    <div style={{ fontSize: 22, fontWeight: 700 }}>{outlets.filter(o => (o.total_ratings || 0) > 0).length}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text2)' }}>outlets with ratings</div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ fontSize: 22, fontWeight: 700 }}>{outlets.reduce((s, o) => s + (o.total_ratings || 0), 0)}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text2)' }}>community ratings</div>
-                  </>
-                )}
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total ratings</div>
+                <div style={{ fontSize: 22, fontWeight: 700 }}>{outlets.reduce((s, o) => s + (o.total_ratings || 0), 0)}</div>
+                <div style={{ fontSize: 12, color: 'var(--text2)' }}>community ratings</div>
               </div>
             </div>
 
@@ -434,8 +406,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
               ) : (
                 sorted.map((o, i) => {
                   const score      = o[activeTab.key] || 0
-                  const maxScore   = tab === 'rated' ? Math.max(...sorted.map(x => x.total_ratings || 0), 1) : 100
-                  const barWidth   = Math.round((score / maxScore) * 100)
+                  const barWidth   = Math.round((score / 100) * 100)
                   const isTop3     = i < 3
                   const isSelected = compareIds.includes(o.id)
 
@@ -473,14 +444,14 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                           <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.country || ''}</span>
                           {o.bias_direction && <span style={{ fontSize: 11, color: BIAS_COLORS[o.bias_direction] || 'var(--text3)' }}>{BIAS_LABELS[o.bias_direction]}</span>}
-                          {o.total_ratings > 0 && tab !== 'rated' && <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.total_ratings} {o.total_ratings === 1 ? 'rating' : 'ratings'}</span>}
+                          {o.total_ratings > 0 && <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.total_ratings} {o.total_ratings === 1 ? 'rating' : 'ratings'}</span>}
                         </div>
                       </div>
                       <div style={{ width: 100, flexShrink: 0 }}>
                         <div className="rank-bar-bg">
-                          <div className="rank-bar-fill" style={{ width: `${barWidth}%`, background: tab === 'rated' ? 'var(--coral)' : scoreColor(score) }} />
+                          <div className="rank-bar-fill" style={{ width: `${barWidth}%`, background: scoreColor(score) }} />
                         </div>
-                        <div style={{ fontSize: 11, textAlign: 'right', marginTop: 3, color: tab === 'rated' ? 'var(--coral)' : scoreColor(score), fontWeight: 600 }}>
+                        <div style={{ fontSize: 11, textAlign: 'right', marginTop: 3, color: scoreColor(score), fontWeight: 600 }}>
                           {tab === 'community' && o.community_score > 0 ? `${(o.community_score / 20).toFixed(1)}★` : score}
                         </div>
                       </div>
