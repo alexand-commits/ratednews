@@ -81,6 +81,23 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'Internal server error' })
     }
 
+    // If the user is logged in, record a user-attributed view for media diet tracking
+    const authHeader = req.headers['authorization']
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.slice(7)
+      try {
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token)
+        if (!authError && user?.id) {
+          await supabase.from('article_views').insert({
+            user_id:    user.id,
+            article_id: id,
+          })
+        }
+      } catch (_) {
+        // Non-fatal — view_count already updated above
+      }
+    }
+
     return res.status(200).json({ ok: true })
   } catch (err) {
     console.error('[view] unexpected error:', err.message)

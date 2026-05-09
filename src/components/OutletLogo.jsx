@@ -105,6 +105,7 @@ const OUTLET_DOMAINS = {
   'Toronto Star':             'thestar.com',
   // Science
   'New Scientist':            'newscientist.com',
+  'Quanta Magazine':          'quantamagazine.org',
   // Tech outlets
   'The Verge':                'theverge.com',
   'Wired':                    'wired.com',
@@ -115,6 +116,10 @@ const OUTLET_DOMAINS = {
   'Mail & Guardian':          'mg.co.za',
   'Africa News':              'africanews.com',
   'Buenos Aires Times':       'batimes.com.ar',
+  // Middle East
+  'The National':             'thenationalnews.com',
+  // Tech & Society
+  'Rest of World':            'restofworld.org',
   // Sports outlets
   'BBC Sport':                'bbc.co.uk',
   'Sky Sports':               'skysports.com',

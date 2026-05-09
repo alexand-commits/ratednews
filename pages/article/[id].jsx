@@ -5,6 +5,7 @@ import { useAppContext } from '../_app'
 import ArticlePage from '../../src/pages/ArticlePage'
 import ErrorBoundary from '../../src/components/ErrorBoundary'
 import { articleSlug } from '../../src/utils/helpers'
+import { db } from '../../src/lib/supabase'
 
 // Shape 1 — bare full UUID (pre-slug links):
 //   "4f3ff8a6-4730-4e86-a7aa-9d493f4dfa71"
@@ -29,11 +30,17 @@ export default function ArticleDetail({ article }) {
     const key = `rn_viewed_${article.id}`
     if (sessionStorage.getItem(key)) return
     sessionStorage.setItem(key, '1')
-    fetch('/api/view', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: article.id }),
-    }).catch(() => {}) // fire-and-forget
+    // Pass auth token so server can record user-attributed view for media diet
+    db.auth.getSession().then(({ data: { session } }) => {
+      fetch('/api/view', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.access_token ? { 'Authorization': `Bearer ${session.access_token}` } : {}),
+        },
+        body: JSON.stringify({ id: article.id }),
+      }).catch(() => {}) // fire-and-forget
+    })
   }, [article?.id])
 
   if (router.isFallback || !article) {

@@ -82,9 +82,11 @@ function ActivityChart({ ratings, outletRatings, comments }) {
 }
 
 // ── Bias fingerprint ──────────────────────────────────────────────────────────
-function BiasFingerprint({ ratings }) {
+function BiasFingerprint({ ratings, views }) {
   const counts = { left: 0, centre: 0, right: 0 }
-  ratings.forEach(r => {
+  // Prefer views as primary signal (larger dataset), fall back to ratings
+  const source = views.length > 0 ? views : ratings
+  source.forEach(r => {
     const dir = r.articles?.bias_direction
     if (dir && counts[dir] !== undefined) counts[dir]++
   })
@@ -153,9 +155,11 @@ const CATEGORY_EMOJIS = {
   Conflict: '⚔️',
 }
 
-function TopicBreakdown({ ratings, noMargin = false }) {
+function TopicBreakdown({ ratings, views, noMargin = false }) {
   const counts = {}
-  ratings.forEach(r => {
+  // Prefer views as primary signal (larger dataset), fall back to ratings
+  const source = views.length > 0 ? views : ratings
+  source.forEach(r => {
     const cat = r.articles?.category
     if (cat) counts[cat] = (counts[cat] || 0) + 1
   })
@@ -195,6 +199,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
   const [outletRatings, setOutletRatings]   = useState([])
   const [comments, setComments]             = useState([])
   const [savedItems, setSavedItems]         = useState([])
+  const [articleViews, setArticleViews]     = useState([])
   const [loading, setLoading]               = useState(true)
   const [tab, setTab]                       = useState('ratings')
   const [profile, setProfile]               = useState(null)
@@ -215,6 +220,8 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
 
   useEffect(() => {
     if (!user) return
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+
     Promise.all([
       db.from('profiles').select('username').eq('user_id', user.id).maybeSingle(),
       db.from('ratings')
@@ -233,11 +240,17 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
         .select('*, articles(id, title, published_at, category, ai_summary, outlets(name, country))')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
-    ]).then(async ([{ data: prof }, { data: ar }, { data: or }, { data: co }, { data: sv }]) => {
+      db.from('article_views')
+        .select('viewed_at, articles(id, category, bias_direction, outlets(name))')
+        .eq('user_id', user.id)
+        .gte('viewed_at', ninetyDaysAgo)
+        .order('viewed_at', { ascending: false }),
+    ]).then(async ([{ data: prof }, { data: ar }, { data: or }, { data: co }, { data: sv }, { data: av }]) => {
       setProfile(prof)
       setArticleRatings(ar || [])
       setOutletRatings(or || [])
       setComments(co || [])
+      setArticleViews(av || [])
 
       // If the embedded join returned rows but article data is null (FK not wired
       // in Supabase schema), fall back to a manual join so saved items still show.
@@ -315,13 +328,15 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
   const allStars = [...articleRatings, ...outletRatings].map(r => r.overall_stars || 0).filter(Boolean)
   const avgStars = allStars.length ? (allStars.reduce((a, b) => a + b, 0) / allStars.length).toFixed(1) : null
 
-  // Media diet
+  // Media diet — prefer view history (last 90 days), fall back to ratings
+  const dietSource = articleViews.length > 0 ? articleViews : articleRatings
   const outletCounts = {}
-  articleRatings.forEach(r => {
+  dietSource.forEach(r => {
     const name = r.articles?.outlets?.name
     if (name) outletCounts[name] = (outletCounts[name] || 0) + 1
   })
-  const mediaDiet = Object.entries(outletCounts).sort((a, b) => b[1] - a[1]).slice(0, 4)
+  const mediaDiet = Object.entries(outletCounts).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  const dietTotal = dietSource.length
 
   function RatingBadges({ accuracy, bias, headline }) {
     return (
@@ -402,8 +417,8 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
           {/* Stats grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 10, marginBottom: 16 }}>
             {[
-              { value: articleRatings.length,   label: 'Articles rated' },
-              { value: outletRatings.length,    label: 'Outlets rated'  },
+              { value: articleViews.length,     label: 'Articles read'  },
+              { value: articleRatings.length,   label: 'Rated'          },
               { value: followedOutletIds.size,  label: 'Following'      },
               { value: savedItems.length,       label: 'Saved'          },
               { value: comments.length,         label: 'Comments'       },
@@ -445,18 +460,21 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
         {!loading && (
           <>
             <ActivityChart ratings={articleRatings} outletRatings={outletRatings} comments={comments} />
-            <BiasFingerprint ratings={articleRatings} />
+            <BiasFingerprint ratings={articleRatings} views={articleViews} />
 
-            {/* Topics rated + Media diet — side by side */}
-            {(articleRatings.length > 0) && (
+            {/* Topics + Media diet — side by side */}
+            {(articleViews.length > 0 || articleRatings.length > 0) && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
-                <TopicBreakdown ratings={articleRatings} noMargin />
+                <TopicBreakdown ratings={articleRatings} views={articleViews} noMargin />
                 {mediaDiet.length > 0 && (
                   <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 20px' }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 12 }}>Media diet</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text3)' }}>Media diet</div>
+                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>last 90 days</div>
+                    </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {mediaDiet.map(([name, count]) => {
-                        const pct = Math.round((count / articleRatings.length) * 100)
+                        const pct = Math.round((count / dietTotal) * 100)
                         return (
                           <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                             <OutletLogo name={name} size={22} borderRadius={5} />
@@ -464,10 +482,13 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                             <div style={{ width: 48, height: 5, background: 'var(--border)', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
                               <div style={{ height: '100%', width: `${pct}%`, background: 'var(--coral)', borderRadius: 3, transition: 'width 0.5s ease' }} />
                             </div>
-                            <span style={{ fontSize: 11, color: 'var(--text3)', width: 18, textAlign: 'right', flexShrink: 0 }}>{count}</span>
+                            <span style={{ fontSize: 11, color: 'var(--text3)', width: 24, textAlign: 'right', flexShrink: 0 }}>{pct}%</span>
                           </div>
                         )
                       })}
+                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 10, paddingTop: 8, borderTop: '0.5px solid var(--border)' }}>
+                      Based on {dietTotal} article{dietTotal !== 1 ? 's' : ''} read
                     </div>
                   </div>
                 )}

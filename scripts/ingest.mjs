@@ -78,7 +78,7 @@ const JUNK_PATTERNS = [
   /^best \d+ /i,                      // "Best 10 VPNs for…"
   /\b(buy now|shop now|order now)\b/i,
   // Horoscopes & puzzles
-  /\b(horoscope|star sign|crossword answer|wordle answer|quiz)\b/i,
+  /\b(horoscope|star sign|crossword|wordle answer|quiz)\b/i,
   // Weather & traffic (very local, no editorial value)
   /^(weather|traffic) (update|alert|warning|forecast)/i,
   // Listicle bait with no news value
@@ -197,6 +197,10 @@ const JUNK_PATTERNS = [
   /\bkick.?off time\b.*\b(tv|live stream|odds)\b/i,
   /\bh2h results\b/i,
   /\bodds today\b/i,
+  // How-to-watch event guides (NYP, sports outlets)
+  /^how to watch\b/i,                      // "How to watch Wardley vs. Dubois..."
+  // Sports betting picks dressed as previews
+  /\bprediction:.*\b(picks?|best bets?)\b/i, // "Game 4 prediction: NHL picks, best bets"
 
   // ── Daily cartoon / illustration entries ─────────────────────────────────────
   // The New Yorker publishes a "Daily Cartoon: [Day], [Date]" entry every day
@@ -212,6 +216,10 @@ const JUNK_PATTERNS = [
 
   // ── Poll pages ────────────────────────────────────────────────────────────────
   /^POLL:/i,
+
+  // ── Daily diary / engagements listings (The Hindu, broadsheets) ───────────────
+  /^today's engagements\b/i,              // "Today's engagements" diary column
+  /^engagements for\b/i,                  // "Engagements for [date]"
 
   // ── Live traffic & travel disruption blogs (not news) ────────────────────────
   /\b(M\d+|motorway|A\d+ road)\b.{0,30}\blive\b.*\b(blocked|delays?|crash|closure)\b/i,
@@ -234,12 +242,16 @@ const JUNK_PATTERNS = [
   /\b(bang for your buck|test drive|road test)\b.*\b(car|suv|truck|van|bike)\b/i,
   /^[A-Z][a-z]+ [A-Z][a-z]+ [A-Z].+:\s*(Review|Test|First drive|Long.?term)\b/i,
 
-  // ── Deals, promo codes and product best-of roundups (Wired Gear, etc.) ───────
-  // Wired's Gear section publishes these constantly — not journalism
+  // ── Deals, promo codes and product best-of roundups (Wired Gear, The Verge, etc.) ──
+  // Wired's Gear section and The Verge publish these constantly — not journalism
   /\bPromo Codes?\b/i,
   /^Top .+ Deals? for\b/i,
   /^(The Best|Top \d+) .+\(\d{4}\)$/i,    // "The Best Gaming Controllers (2026)"
-  /\bDeals?:? Up to \$?\d+/i,              // "Deals: Up to $100 off"
+  /\bDeals?:? Up to \$?\d+/i,             // "Deals: Up to $100 off"
+  /\bis (now )?down to \$[\d,.]+/i,        // "Dyson robovac is down to $279.99"
+  /\bon sale for \d+ ?(% |percent )off\b/i, // "already on sale for 20 percent off"
+  /\bfor a limited time\b/i,               // promotional urgency language
+  /\bpreorders? (come|start|open) with\b/i, // "preorders come with a free band"
 
   // ── Newsletter / digest entries ────────────────────────────────────────────────
   // MIT Technology Review's daily digest, Economist newsletter etc.
@@ -265,14 +277,26 @@ const JUNK_PATTERNS = [
   /\bone extra (dollar|pound|penny) (on|in|triggers?)\b/i,
 ]
 
-const MAX_ARTICLE_AGE_DAYS = 1  // skip articles whose pubDate is older than this
+const MAX_ARTICLE_AGE_DAYS = 1  // default: skip articles older than 1 day
 
-function isTooOld(pubDate) {
+// Slow-publishing outlets produce fewer articles per week — give them a wider window
+const OUTLET_MAX_AGE_DAYS = {
+  'Quanta Magazine': 7,
+  'Rest of World':   5,
+  'The Economist':   7,
+  'New Statesman':   7,
+  'Foreign Policy':  5,
+  'ProPublica':      5,
+  'Bellingcat':      14,
+}
+
+function isTooOld(pubDate, outletName) {
   if (!pubDate) return false  // no date = allow through (date will default to now)
   const published = new Date(pubDate)
   if (isNaN(published)) return false
+  const maxDays = OUTLET_MAX_AGE_DAYS[outletName] ?? MAX_ARTICLE_AGE_DAYS
   const ageMs = Date.now() - published.getTime()
-  return ageMs > MAX_ARTICLE_AGE_DAYS * 24 * 60 * 60 * 1000
+  return ageMs > maxDays * 24 * 60 * 60 * 1000
 }
 
 function isTooShort(title) {
@@ -351,7 +375,7 @@ async function ingestOutlet(outlet) {
     const url   = item.link || item.guid
     const title = cleanTitle(item.title?.trim() ?? '', outlet.name)
     if (!url || !title) continue
-    if (isTooOld(item.pubDate))              { skipped++; continue }
+    if (isTooOld(item.pubDate, outlet.name)) { skipped++; continue }
     if (isTooShort(title))                   { skipped++; continue }
     if (isLikelyNonEnglish(title))           { skipped++; continue }
     if (isJunk(title))                       { skipped++; continue }
