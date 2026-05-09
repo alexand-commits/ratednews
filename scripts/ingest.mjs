@@ -108,6 +108,10 @@ const JUNK_PATTERNS = [
   /\bevening (briefing|digest|newsletter)\b/i,
   // Extremely short titles are usually malformed feed entries
 
+  // ── Paywalled article markers ─────────────────────────────────────────────────
+  // Der Spiegel prefixes subscriber-only articles with "(S+)" — drop them
+  /^\(S\+\)/,
+
   // ── Government / sponsored campaign promotions (common in Indian press) ───────
   // Catches "PFRDA Mother's Day Campaign 2026 | NPS Vatsalya" style entries
   /\b(campaign|scheme|yojana|initiative|drive)\s+\d{4}\b/i,
