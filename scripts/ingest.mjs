@@ -183,6 +183,39 @@ const JUNK_PATTERNS = [
   /\b(on-trend|trending (looks?|styles?|outfits?))\b/i,
   /\b(capsule|staple|timeless) (wardrobe|pieces?|outfits?)\b/i,
   /\bhigh street (finds?|picks?|buys?|favourites?|gems?)\b/i,
+
+  // ── Sports match preview / fixture guide articles ─────────────────────────────
+  // "Man Utd XI vs Chelsea: Predicted lineup, confirmed team news, TV, live stream"
+  // These are preview/guide pages, not news — common on Evening Standard, ESPN etc.
+  /\bpredicted (lineup|line.?up|starting (xi|eleven))\b/i,
+  /\bkick.?off time\b.*\b(tv|live stream|odds)\b/i,
+  /\bh2h results\b/i,
+  /\bodds today\b/i,
+
+  // ── Puzzles, games & daily digest fillers ─────────────────────────────────────
+  // Slate Pears Game, SoundBites, NYT Connections etc.
+  /\bPears Game\b/i,
+  /\bSoundBites?\b.*\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|\d{4})\b/i,
+  /\bConnections (puzzle|game|hints?)\b/i,
+  /\bWordle\b/i,
+  /\bQuordle\b/i,
+
+  // ── Poll pages ────────────────────────────────────────────────────────────────
+  /^POLL:/i,
+
+  // ── Live traffic & travel disruption blogs (not news) ────────────────────────
+  /\b(M\d+|motorway|A\d+ road)\b.{0,30}\blive\b.*\b(blocked|delays?|crash|closure)\b/i,
+
+  // ── Personal narrative lifestyle pieces (BI, Mirror, tabloids) ───────────────
+  // "I lost a third of my bodyweight after..." / "I was convinced my mother-in-law..."
+  // Distinct from "I visited" (already caught) — broader personal confession/journey openers
+  /^I (lost|gained|had|spent|quit|left|gave|told|couldn't|didn't|never|asked|found|tried to|woke up)\b/i,
+  /^My (mother.in.law|husband|wife|partner|mum|dad|boss|doctor|neighbour|neighbor)\b/i,
+
+  // ── Personal finance clickbait ────────────────────────────────────────────────
+  // "How nearly half of women are cheating themselves out of free money"
+  /\bcheating (themselves|yourself|himself|herself) out of\b/i,
+  /\bone extra (dollar|pound|penny) (on|in|triggers?)\b/i,
 ]
 
 const MAX_ARTICLE_AGE_DAYS = 1  // skip articles whose pubDate is older than this
@@ -214,6 +247,13 @@ function isJunk(title) {
 // Strip it so we don't store "Story headline - Hindustan Times" in the DB.
 function cleanTitle(title, outletName) {
   return title
+    // Decode common HTML entities that some feeds fail to unescape
+    .replace(/&#0*39;/g, "'")
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    // Strip "- Outlet Name" suffix added by Google News RSS
     .replace(new RegExp(`\\s*[|\\-–]\\s*${outletName}\\s*$`, 'i'), '')
     .trim()
 }
