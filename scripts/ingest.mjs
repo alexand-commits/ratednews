@@ -169,6 +169,20 @@ function isJunk(title) {
   return JUNK_PATTERNS.some(re => re.test(title))
 }
 
+// ── Per-outlet title length limits ────────────────────────────────────────────
+// Tabloids routinely use very long headlines for lifestyle/clickbait content.
+// Legitimate news headlines rarely exceed 120 chars — anything longer from
+// these outlets is almost always celebrity gossip, sex advice, or sponsored fluff.
+const OUTLET_MAX_TITLE_LENGTH = {
+  'Daily Mail': 125,
+  'The Sun':    125,
+}
+
+function isTitleTooLong(title, outletName) {
+  const limit = OUTLET_MAX_TITLE_LENGTH[outletName]
+  return limit != null && title.length > limit
+}
+
 async function ingestOutlet(outlet) {
   if (!outlet.rss_url) {
     console.log(`  ⚠️  No rss_url set — skipping`)
@@ -201,10 +215,11 @@ async function ingestOutlet(outlet) {
     const url   = item.link || item.guid
     const title = item.title?.trim()
     if (!url || !title) continue
-    if (isTooOld(item.pubDate))    { skipped++; continue }
-    if (isTooShort(title))         { skipped++; continue }
-    if (isLikelyNonEnglish(title)) { skipped++; continue }
-    if (isJunk(title))             { skipped++; continue }
+    if (isTooOld(item.pubDate))              { skipped++; continue }
+    if (isTooShort(title))                   { skipped++; continue }
+    if (isLikelyNonEnglish(title))           { skipped++; continue }
+    if (isJunk(title))                       { skipped++; continue }
+    if (isTitleTooLong(title, outlet.name))  { skipped++; continue }
     if (existingUrls.has(url) || existingTitles.has(title)) { skipped++; continue }
 
     const { error } = await supabase.from('articles').insert({
