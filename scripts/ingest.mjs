@@ -112,14 +112,41 @@ const JUNK_PATTERNS = [
   // Der Spiegel prefixes subscriber-only articles with "(S+)" — drop them
   /^\(S\+\)/,
 
+  // ── Magazine / publisher events and shop pages ────────────────────────────────
+  // The Spectator's Google News feed picks up events and shop listings alongside journalism
+  /\bSpectator Events\b/i,
+  /\bSpectator Shop\b/i,
+  /\bSpectator Boardroom\b/i,
+  /\bWinemaker (Dinner|Lunch)\b/i,
+  /\bCarol Service\b/i,
+  // Generic "magazine covers" and cartoon listings
+  /\b\d{1,2} \w+ \d{4} (Cover|Cartoons?)\b/i,
+  /\b20\d{2} [Cc]overs?\b/,
+
+  // ── Advice columns ────────────────────────────────────────────────────────────
+  /^Dear (Abby|Ann|Prudence|Carolyn)\b/i,
+
   // ── Government / sponsored campaign promotions (common in Indian press) ───────
   // Catches "PFRDA Mother's Day Campaign 2026 | NPS Vatsalya" style entries
   /\b(campaign|scheme|yojana|initiative|drive)\s+\d{4}\b/i,
   /\bNPS (Vatsalya|scheme)\b/i,
+  // Store/showroom openings dressed as news (PR releases)
+  /\b(Authorised|Authorized) Reseller Store\b/i,
+  /\bopens? (its |a |new )?(flagship|mega|new) store\b/i,
+
+  // ── Scholarship & listing pages ───────────────────────────────────────────────
+  /^Scholarships?:\s/i,
 
   // ── TV programme listings (Channel 4 and similar broadcasters) ───────────────
   // "Fri 8 May 2026 – Programmes" style schedule pages
   /\b[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]+ \d{4} [–-] Programmes?\b/,
+
+  // ── Sun / tabloid travel & consumer puff ─────────────────────────────────────
+  // "I visited the foodie city..." personal travel pieces used as destination ads
+  /^I (visited|tried|tested|went to|stayed at|ate at)\b/i,
+  // Shopping product recommendations disguised as news
+  /\b(tumble dryer|clothes airer|air fryer|heated airer)\b/i,
+  /\b(half.?price|£\d+ (deal|saving|off))\b.*\b(airer|dryer|gadget|device)\b/i,
 
   // ── Tabloid lifestyle / celebrity clickbait (Daily Mail, The Sun, etc.) ──────
   // ALL-CAPS "YOUR" is the Daily Mail's signature engagement trigger
@@ -197,7 +224,7 @@ function cleanTitle(title, outletName) {
 // these outlets is almost always celebrity gossip, sex advice, or sponsored fluff.
 const OUTLET_MAX_TITLE_LENGTH = {
   'Daily Mail': 125,
-  'The Sun':    125,
+  'The Sun':    110,  // tighter — sub-125 lifestyle/consumer junk still slipping through
 }
 
 function isTitleTooLong(title, outletName) {
