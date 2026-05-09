@@ -108,6 +108,15 @@ const JUNK_PATTERNS = [
   /\bevening (briefing|digest|newsletter)\b/i,
   // Extremely short titles are usually malformed feed entries
 
+  // ── Government / sponsored campaign promotions (common in Indian press) ───────
+  // Catches "PFRDA Mother's Day Campaign 2026 | NPS Vatsalya" style entries
+  /\b(campaign|scheme|yojana|initiative|drive)\s+\d{4}\b/i,
+  /\bNPS (Vatsalya|scheme)\b/i,
+
+  // ── TV programme listings (Channel 4 and similar broadcasters) ───────────────
+  // "Fri 8 May 2026 – Programmes" style schedule pages
+  /\b[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]+ \d{4} [–-] Programmes?\b/,
+
   // ── Tabloid lifestyle / celebrity clickbait (Daily Mail, The Sun, etc.) ──────
   // ALL-CAPS "YOUR" is the Daily Mail's signature engagement trigger
   /\bYOUR\b/,                           // "judging YOUR bathroom", "YOUR home is…"
@@ -169,6 +178,15 @@ function isJunk(title) {
   return JUNK_PATTERNS.some(re => re.test(title))
 }
 
+// ── Title cleanup ─────────────────────────────────────────────────────────────
+// Google News RSS appends "- Outlet Name" to every title.
+// Strip it so we don't store "Story headline - Hindustan Times" in the DB.
+function cleanTitle(title, outletName) {
+  return title
+    .replace(new RegExp(`\\s*[|\\-–]\\s*${outletName}\\s*$`, 'i'), '')
+    .trim()
+}
+
 // ── Per-outlet title length limits ────────────────────────────────────────────
 // Tabloids routinely use very long headlines for lifestyle/clickbait content.
 // Legitimate news headlines rarely exceed 120 chars — anything longer from
@@ -213,7 +231,7 @@ async function ingestOutlet(outlet) {
 
   for (const item of items) {
     const url   = item.link || item.guid
-    const title = item.title?.trim()
+    const title = cleanTitle(item.title?.trim() ?? '', outlet.name)
     if (!url || !title) continue
     if (isTooOld(item.pubDate))              { skipped++; continue }
     if (isTooShort(title))                   { skipped++; continue }
