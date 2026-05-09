@@ -238,6 +238,13 @@ const JUNK_PATTERNS = [
   // ── Weekly digest / roundup entries ──────────────────────────────────────────
   /^Stories (that caught|we think|we found|of the week)\b/i,
   /\bweekly (digest|roundup|wrap.?up|briefing)\b/i,
+  /\bwhat you missed this week\b/i,              // "News of the World: What you missed this week"
+  /\b(wild|key|big|best|top) moments?.{0,25}this week\b/i, // "Wild moments in Trumpworld this week"
+  /^this week on\b/i,                            // "This week on Sunday Morning"
+  /^win (a copy of|tickets? to)\b/i,             // competition giveaways
+  /^(looking for something|something) to watch\b/i,
+  /^add to cart:/i,                              // shopping round-up columns
+  /\bnew (shows?|movies?|films?) to watch this (week|weekend)\b/i,
 
   // ── Car and product reviews ───────────────────────────────────────────────────
   /\b(bang for your buck|test drive|road test)\b.*\b(car|suv|truck|van|bike)\b/i,
