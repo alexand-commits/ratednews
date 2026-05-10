@@ -550,6 +550,65 @@ export default function FeedPage({
       )
     : baseList
 
+  // Story clustering — groups articles about the same event across outlets.
+  // Only surfaces when there's genuine outlet diversity (2+ outlets, ideally
+  // different bias directions). Runs on the full loaded articles pool so
+  // clusters survive category/region filtering on the primary card.
+  const storyGroups = useMemo(() => {
+    const STOP = new Set([
+      'the','a','an','in','on','at','to','for','of','and','or','but','with',
+      'from','by','as','is','are','was','were','be','been','has','have','had',
+      'its','their','this','that','these','those','how','why','what','who',
+      'when','where','says','said','will','can','may','over','after','before',
+      'amid','about','into','over','says','new','after','first','second',
+    ])
+    function sigWords(title) {
+      return [...new Set(
+        (title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !STOP.has(w))
+      )]
+    }
+
+    // Work from the full loaded articles pool (not displayList) so related
+    // articles in different categories can still be linked to the primary
+    const pool = articles
+    const groups = new Map()   // articleId → [related articles]
+    const taken  = new Set()   // indices already assigned as secondary
+
+    for (let i = 0; i < pool.length; i++) {
+      if (taken.has(i)) continue
+      const primary = pool[i]
+      const pWords  = new Set(sigWords(primary.title))
+      if (pWords.size < 2) continue
+
+      const related = []
+      for (let j = 0; j < pool.length; j++) {
+        if (i === j || taken.has(j)) continue
+        // Must be a different outlet
+        if (pool[j].outlet_id === primary.outlet_id) continue
+        const overlap = sigWords(pool[j].title).filter(w => pWords.has(w)).length
+        if (overlap >= 3) {
+          related.push(pool[j])
+          taken.add(j)
+        }
+      }
+
+      if (related.length === 0) continue
+
+      // Only show multi-angle when there's genuine perspective diversity:
+      // either 3+ outlets OR at least 2 different bias directions
+      const allBiases = [
+        primary.outlets?.bias_direction,
+        ...related.map(a => a.outlets?.bias_direction),
+      ].filter(Boolean)
+      const uniqueBiases = new Set(allBiases)
+      if (related.length >= 2 || uniqueBiases.size >= 2) {
+        groups.set(primary.id, related)
+      }
+      taken.add(i)
+    }
+    return groups
+  }, [articles])
+
   // Outlet search — match search term against outlet names
   const matchedOutlets = useMemo(() => {
     if (!isSearchActive || search.trim().length < 2) return []
@@ -886,6 +945,7 @@ export default function FeedPage({
                       navigate('article', { articleId: a.id, title: a.title })
                     }}
                     navigate={navigate}
+                    relatedArticles={storyGroups.get(a.id) || []}
                   />
                 ))
               )}

@@ -15,14 +15,23 @@ const BIAS_LABELS = {
   right:  { label: '→ Right',  cls: 'score-badge score-badge-bias-right'  },
 }
 
+// Compact dot colours for the angles list
+const BIAS_DOTS = {
+  left:   { color: '#4a90d9', label: 'Left'   },
+  centre: { color: '#5cb85c', label: 'Centre' },
+  right:  { color: '#d9534f', label: 'Right'  },
+}
+
 function accBadgeClass(score) {
   if (score >= 70) return 'score-badge score-badge-green'
   if (score >= 50) return 'score-badge score-badge-amber'
   return 'score-badge score-badge-red'
 }
 
-export default function NewsCard({ article, index, onClick, navigate }) {
+export default function NewsCard({ article, index, onClick, navigate, relatedArticles = [] }) {
   const [imgFailed, setImgFailed] = useState(false)
+  const [showAngles, setShowAngles] = useState(false)
+
   const outlet = article.outlets || {}
   const [bg] = outletColor(outlet.name || 'X')
   const hasImage = article.image_url && !imgFailed
@@ -34,9 +43,17 @@ export default function NewsCard({ article, index, onClick, navigate }) {
   const scored    = acc > 0
   const slug      = articleSlug(article.title, article.id)
 
+  const hasAngles = relatedArticles.length > 0
+  // All articles in this cluster (primary + related), deduped by outlet
+  const allAngles = hasAngles
+    ? [article, ...relatedArticles].filter((a, i, arr) =>
+        arr.findIndex(x => x.outlet_id === a.outlet_id) === i
+      )
+    : []
+
   function handleCardClick(e) {
-    // Let the <a> handle its own navigation — don't fire onClick too
     if (e.target.closest('a')) return
+    if (e.target.closest('[data-angles]')) return
     onClick?.(e)
   }
 
@@ -129,6 +146,115 @@ export default function NewsCard({ article, index, onClick, navigate }) {
           <span className="score-mini" style={{ color: 'var(--text3)' }}>💬 {commentCount}</span>
         </div>
       </div>
+
+      {/* Multi-angle toggle — only shown when 2+ outlets cover same story */}
+      {hasAngles && (
+        <div data-angles="true" style={{ borderTop: '0.5px solid var(--border)', marginTop: 8, paddingTop: 8 }}>
+          <button
+            onClick={e => { e.stopPropagation(); setShowAngles(v => !v) }}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: 0, fontFamily: 'inherit',
+              fontSize: 11, fontWeight: 600,
+              color: showAngles ? 'var(--coral)' : 'var(--text3)',
+              transition: 'color 0.15s',
+            }}
+          >
+            <span style={{ fontSize: 13 }}>📰</span>
+            {allAngles.length} outlets covering this
+            {/* Bias dot preview — shows the spread at a glance */}
+            <span style={{ display: 'flex', gap: 3, marginLeft: 2 }}>
+              {allAngles.map(a => {
+                const dot = BIAS_DOTS[a.outlets?.bias_direction]
+                return dot ? (
+                  <span key={a.id} style={{
+                    width: 7, height: 7, borderRadius: '50%',
+                    background: dot.color, display: 'inline-block', flexShrink: 0,
+                  }} title={dot.label} />
+                ) : null
+              })}
+            </span>
+            <span style={{ marginLeft: 'auto', fontSize: 10 }}>{showAngles ? '▲' : '▼'}</span>
+          </button>
+
+          {showAngles && (
+            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+              {allAngles.map(a => {
+                const o      = a.outlets || {}
+                const [oBg]  = outletColor(o.name || 'X')
+                const oBias  = BIAS_DOTS[o.bias_direction]
+                const oAcc   = a.accuracy_score || 0
+                const oSlug  = articleSlug(a.title, a.id)
+                const isPrimary = a.id === article.id
+                return (
+                  <Link
+                    key={a.id}
+                    href={`/article/${oSlug}`}
+                    style={{ textDecoration: 'none' }}
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '7px 10px',
+                      background: isPrimary ? 'var(--bg2)' : 'var(--surface)',
+                      border: `0.5px solid ${isPrimary ? 'var(--coral)' : 'var(--border)'}`,
+                      borderRadius: 8,
+                      transition: 'border-color 0.15s',
+                    }}
+                    onMouseEnter={e => { if (!isPrimary) e.currentTarget.style.borderColor = 'var(--coral)' }}
+                    onMouseLeave={e => { if (!isPrimary) e.currentTarget.style.borderColor = 'var(--border)' }}
+                    >
+                      {/* Outlet dot */}
+                      <span style={{
+                        width: 8, height: 8, borderRadius: '50%',
+                        background: oBg, flexShrink: 0,
+                      }} />
+
+                      {/* Outlet name */}
+                      <span style={{
+                        fontSize: 12, fontWeight: 600,
+                        color: 'var(--text)', flex: 1, minWidth: 0,
+                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      }}>
+                        {o.name || 'Unknown'}
+                        {isPrimary && (
+                          <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 400, marginLeft: 5 }}>
+                            (this article)
+                          </span>
+                        )}
+                      </span>
+
+                      {/* Bias */}
+                      {oBias && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 600,
+                          color: oBias.color, flexShrink: 0,
+                        }}>
+                          {oBias.label}
+                        </span>
+                      )}
+
+                      {/* Accuracy score */}
+                      {oAcc > 0 && (
+                        <span style={{
+                          fontSize: 10, fontWeight: 600,
+                          color: oAcc >= 70 ? 'var(--green)' : oAcc >= 50 ? 'var(--amber)' : 'var(--red)',
+                          flexShrink: 0,
+                        }}>
+                          ✦{oAcc}
+                        </span>
+                      )}
+
+                      <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>→</span>
+                    </div>
+                  </Link>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
