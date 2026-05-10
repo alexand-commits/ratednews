@@ -339,7 +339,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
 
             {/* Region filter + Compare toggle */}
             <div style={{ marginBottom: 16, display: 'flex', alignItems: 'flex-end', gap: 12, flexWrap: 'wrap' }}>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 8 }}>
                   Filter by region
                 </div>

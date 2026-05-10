@@ -108,7 +108,7 @@ body { background: var(--bg); color: var(--text); min-height: 100dvh; overflow-x
 /* FILTERS */
 .filter-bar { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .filter-bar::-webkit-scrollbar { display: none; }
-.pill { font-size: 12px; padding: 5px 14px; border-radius: 20px; border: 0.5px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; font-family: var(--font-lato), sans-serif; }
+.pill { font-size: 12px; padding: 5px 14px; border-radius: 20px; border: 0.5px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; font-family: var(--font-lato), sans-serif; white-space: nowrap; flex-shrink: 0; }
 .pill:hover { border-color: var(--coral); color: var(--coral); }
 .pill.active { background: var(--coral); color: #fff; border-color: var(--coral); }
 
