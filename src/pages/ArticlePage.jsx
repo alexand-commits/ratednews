@@ -160,19 +160,21 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     )]
     if (sigWords.length < 2) return
 
-    // Search by the two strongest keywords; filter client-side for 3+ word overlap
-    const k1 = sigWords[0]
-    const k2 = sigWords[1] || sigWords[0]
+    // OR across top 3 keywords so we catch outlets that cover the same story
+    // without using the exact same words (e.g. Clasico articles that don't
+    // mention "Rashford"). Client-side 3-word overlap filter keeps quality high.
+    const keys = sigWords.slice(0, 3)
+    const orFilter = keys.map(k => `title.ilike.%${k}%`).join(',')
     const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
 
     db.from('articles')
       .select('*, outlets(name, bias_direction, logo_url)')
       .neq('outlet_id', article.outlet_id)
       .neq('id', article.id)
-      .ilike('title', `%${k1}%`)
+      .or(orFilter)
       .gte('published_at', cutoff)
       .order('published_at', { ascending: false })
-      .limit(30)
+      .limit(50)
       .then(({ data }) => {
         if (!data) return
         const titleWords = new Set(sigWords)
