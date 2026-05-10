@@ -58,6 +58,10 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
   "brilliant", "stunner") — these are standard sports-writing conventions, not inaccuracies.
   A factually correct match report with vivid language should score 75–90.
   Only lower accuracy_score if the reported facts themselves appear wrong (wrong scoreline, wrong scorer, etc.).
+  CRITICAL — do NOT use your training-data knowledge of player club affiliations to judge accuracy.
+  Player transfers and loan moves happen constantly and your knowledge may be outdated. If an article says
+  a player scored for a club, trust the article — do not flag it as inaccurate because you believe the player
+  is at a different club. Judge only the internal consistency between title and summary.
 
 - "bias_direction": string, one of: "left", "centre", "right".
   The political lean of the article's framing and perspective.
