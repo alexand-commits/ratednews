@@ -319,12 +319,6 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                 )}
               </div>
 
-              {/* Total ratings */}
-              <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140 }}>
-                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Total ratings</div>
-                <div style={{ fontSize: 22, fontWeight: 700 }}>{outlets.reduce((s, o) => s + (o.total_ratings || 0), 0)}</div>
-                <div style={{ fontSize: 12, color: 'var(--text2)' }}>community ratings</div>
-              </div>
             </div>
 
             {/* Sub-tabs */}
