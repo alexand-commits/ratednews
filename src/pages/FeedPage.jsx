@@ -602,7 +602,15 @@ export default function FeedPage({
       ].filter(Boolean)
       const uniqueBiases = new Set(allBiases)
       if (related.length >= 2 || uniqueBiases.size >= 2) {
-        groups.set(primary.id, related)
+        // Index EVERY member of the cluster, not just the primary.
+        // The interleaved feed may surface any cluster member as the card
+        // shown to the user — without this, storyGroups.get(secondaryId)
+        // returns undefined and the toggle never appears.
+        const cluster = [primary, ...related]
+        for (const member of cluster) {
+          const others = cluster.filter(a => a.id !== member.id)
+          groups.set(member.id, others)
+        }
       }
       taken.add(i)
     }
