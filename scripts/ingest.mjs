@@ -266,6 +266,40 @@ const JUNK_PATTERNS = [
   /^The Download:/i,
   /^Cover Story newsletter:/i,
   /^(Morning|Evening|Daily|Weekly) (Briefing|Digest|Edition|Newsletter|Wrap|Roundup):/i,
+  // Sports Illustrated newsletter digest promos ("SI:AM |", "SI:CYMI |")
+  /^SI:(AM|PM|CYMI)\b/i,
+
+  // ── Sports transfer gossip columns & rumour roundups ─────────────────────────
+  // Sky Sports "Papers:" column, BBC "Saturday's gossip", SI "Transfer Rumors:"
+  /^Papers:/i,
+  /^Transfer Rum(our|or)s?:/i,
+  /\b(Saturday|Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Today|Tonight)'s (gossip|papers|rumours?|rumors?)\b/i,
+  /- (Saturday|Sunday|Monday|Tuesday|Wednesday|Thursday|Friday)'s gossip$/i,
+
+  // ── Sports mock trades ────────────────────────────────────────────────────────
+  /\bMock Trade\b/i,
+
+  // ── Recruiting / college commitments ─────────────────────────────────────────
+  // "2027 QB Andre Phillip II Commits to West Virginia" / "Offers Scholarship to"
+  /\b20\d{2} (recruit|prospect|commit|class)\b/i,
+  /\b(commits? to|announces? (college )?commitment)\b/i,
+  /\b(official|campus) visit to\b/i,
+
+  // ── Minicamp / practice observation filler ───────────────────────────────────
+  // SI's rookie minicamp live notes, OTA observations, practice takeaways
+  /\b(rookie|mandatory|OTA|offseason|training camp|minicamp)\b.{0,40}\b(observations?|notes?|updates?|impressions?|takeaways?|report)\b/i,
+  /\bdepth chart\b/i,
+  /\bundrafted (free agents?|rookies?|class)\b/i,
+  /\bjersey numbers?\b.*\b(rookie|class|draft|assign)\b/i,
+
+  // ── TV highlights shows (BBC Sport, Sky Sports) ───────────────────────────────
+  // "Bolton 1-0 Bradford highlights", "Match of the Day", "Sportscene highlights"
+  /\bhighlights?\s*$/i,
+  /^Match of the Day\b/i,
+  /^Sportscene\b/i,
+
+  // ── Commercial / merchandise promos in sports feeds ──────────────────────────
+  /\bSwimsuit Issue\b/i,
 
   // ── Syndicated wire bylines pulled as main outlet articles ────────────────────
   // USA Today's Google News feed pulls in Gannett wire articles (Patriots Wire etc.)
