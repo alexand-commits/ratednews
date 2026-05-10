@@ -234,7 +234,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
 
   const activeTab = OUTLET_TABS.find(t => t.id === tab)
   const sorted = outlets
-    .filter(o => region === 'all' || o.country === region)
+    .filter(o => region === 'all' || (o.country || 'International') === region)
     .slice()
     .sort((a, b) => (b[activeTab.key] || 0) - (a[activeTab.key] || 0))
 
@@ -345,9 +345,14 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                 </div>
                 <div className="filter-bar">
                   {[
-                    { value: 'all', label: '🌍 Global' },
-                    { value: 'UK',  label: '🇬🇧 UK'    },
-                    { value: 'US',  label: '🇺🇸 US'    },
+                    { value: 'all',        label: '🌐 All'         },
+                    { value: 'US',         label: '🇺🇸 US'         },
+                    { value: 'UK',         label: '🇬🇧 UK'         },
+                    { value: 'Europe',     label: '🇪🇺 Europe'     },
+                    { value: 'MiddleEast', label: '🌙 Middle East' },
+                    { value: 'Africa',     label: '🌍 Africa'      },
+                    { value: 'AsiaPac',    label: '🌏 Asia Pacific'},
+                    { value: 'Americas',   label: '🌎 Americas'    },
                   ].map(r => (
                     <button key={r.value} className={`pill${region === r.value ? ' active' : ''}`} onClick={() => setRegion(r.value)}>
                       {r.label}

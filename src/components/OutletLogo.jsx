@@ -116,6 +116,13 @@ const OUTLET_DOMAINS = {
   'Mail & Guardian':          'mg.co.za',
   'Africa News':              'africanews.com',
   'Buenos Aires Times':       'batimes.com.ar',
+  'Daily Maverick':           'dailymaverick.co.za',
+  'Premium Times':            'premiumtimesng.com',
+  'The East African':         'theeastafrican.co.ke',
+  'African Arguments':        'africanarguments.org',
+  'MercoPress':               'mercopress.com',
+  'InSight Crime':            'insightcrime.org',
+  'Colombia Reports':         'colombiareports.com',
   // Middle East
   'The National':             'thenationalnews.com',
   // US metro dailies

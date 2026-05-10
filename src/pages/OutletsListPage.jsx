@@ -16,10 +16,14 @@ const BIAS_LABELS = {
 }
 
 const REGIONS = [
-  { value: 'all', label: 'Global' },
-  { value: 'US',  label: '🇺🇸 US' },
-  { value: 'UK',  label: '🇬🇧 UK' },
-  { value: 'International', label: '🌍 International' },
+  { value: 'all',          label: '🌐 All'          },
+  { value: 'US',           label: '🇺🇸 US'           },
+  { value: 'UK',           label: '🇬🇧 UK'           },
+  { value: 'Europe',       label: '🇪🇺 Europe'       },
+  { value: 'MiddleEast',   label: '🌙 Middle East'   },
+  { value: 'Africa',       label: '🌍 Africa'        },
+  { value: 'AsiaPac',      label: '🌏 Asia Pacific'  },
+  { value: 'Americas',     label: '🌎 Americas'      },
 ]
 
 const BIAS_FILTERS = [
@@ -36,10 +40,7 @@ const SORTS = [
 ]
 
 function getRegion(outlet) {
-  const c = outlet.country || ''
-  if (c === 'US') return 'US'
-  if (c === 'UK') return 'UK'
-  return 'International'
+  return outlet.country || 'International'
 }
 
 function SuggestModal({ onClose, user, onLoginClick, showToast }) {
