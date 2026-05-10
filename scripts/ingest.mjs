@@ -348,6 +348,13 @@ const JUNK_PATTERNS = [
   /^Did you (lose|leave|quit|work at|work for)\b.{0,60}\?$/i,
   // Somatic / wellness trend pieces out of place in a news feed
   /\bsomatic (exercises?|therapy|practice)\b/i,
+
+  // ── Score / rating format titles ("5/10: Sunday Morning", "8/10: Album Name") ──
+  /^\d+\/\d+:\s/,
+
+  // ── Bare TV / podcast show titles with no news content ───────────────────────
+  /^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday) Morning$/i,
+  /^(Meet the Press|Face the Nation|State of the Union|This Week with|Good Morning America|Sunday Morning|Morning Joe)(\s*[-–:].*)?$/i,
 ]
 
 const MAX_ARTICLE_AGE_DAYS = 1  // default: skip articles older than 1 day
