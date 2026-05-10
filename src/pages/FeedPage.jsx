@@ -472,23 +472,18 @@ export default function FeedPage({
       .map(([key]) => displayForm[key] || key.charAt(0).toUpperCase() + key.slice(1))
   }, [trendingArticles, COMMON_WORDS, MEDIA_ACRONYMS])
 
-  // Topic insights — count + avg accuracy from the dedicated 24h trendingArticles fetch.
-  // This is a complete (non-paginated) dataset so counts are stable and accurate.
+  // Topic insights — just need count for ordering/filtering, no accuracy computation
   const topicInsights = useMemo(() => {
     if (!trendingTopics.length) return []
     return trendingTopics.slice(0, 8).map(topic => {
       const key = topic.toLowerCase()
-      const matched = trendingArticles.filter(a =>
+      const count = trendingArticles.filter(a =>
         (a.title || '').toLowerCase().includes(key)
-      )
-      const scored = matched.filter(a => (a.accuracy_score || 0) > 0)
-      const avgAcc = scored.length
-        ? Math.round(scored.reduce((s, a) => s + a.accuracy_score, 0) / scored.length)
-        : null
-      return { topic, count: matched.length, avgAcc }
+      ).length
+      return { topic, count }
     })
     .filter(t => t.count >= 2)
-    .sort((a, b) => b.count - a.count) // highest count left to right
+    .sort((a, b) => b.count - a.count)
   }, [trendingTopics, trendingArticles])
 
   // Which list to display — DB results when search active, interleaved otherwise
@@ -648,12 +643,8 @@ export default function FeedPage({
               🔥 Trending · 24h
             </div>
             <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
-              {topicInsights.map(({ topic, count, avgAcc }) => {
+              {topicInsights.map(({ topic }) => {
                 const isActive = activeTopic === topic
-                const accColor = avgAcc === null ? 'var(--text3)'
-                  : avgAcc >= 70 ? 'var(--green)'
-                  : avgAcc >= 50 ? 'var(--amber)'
-                  : 'var(--red)'
                 return (
                   <div
                     key={topic}
@@ -662,23 +653,14 @@ export default function FeedPage({
                       flexShrink: 0, cursor: 'pointer',
                       background: isActive ? 'var(--coral)' : 'var(--surface)',
                       border: `0.5px solid ${isActive ? 'var(--coral)' : 'var(--border)'}`,
-                      borderRadius: 'var(--radius-sm)', padding: '10px 14px',
-                      minWidth: 120, maxWidth: 160,
+                      borderRadius: 'var(--radius-sm)', padding: '8px 14px',
                       transition: 'all 0.15s',
                     }}
                     onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = 'var(--coral)' }}
                     onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = 'var(--border)' }}
                   >
-                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isActive ? '#fff' : 'inherit' }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', color: isActive ? '#fff' : 'inherit' }}>
                       {topic}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
-                      <span style={{ fontSize: 10, color: isActive ? 'rgba(255,255,255,0.8)' : 'var(--text3)' }}>{count} article{count !== 1 ? 's' : ''}</span>
-                      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                        {avgAcc !== null && (
-                          <span style={{ fontSize: 10, fontWeight: 700, color: isActive ? '#fff' : accColor }}>✦{avgAcc}</span>
-                        )}
-                      </div>
                     </div>
                   </div>
                 )
