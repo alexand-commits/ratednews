@@ -155,7 +155,7 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
       {hasAngles && (
         <div
           data-angles="true"
-          style={{ borderTop: '0.5px solid var(--border)', marginTop: 8, paddingTop: 4 }}
+          style={{ borderTop: '1px solid var(--divider)', marginTop: 8, paddingTop: 4 }}
         >
           {/* Full-width tap target for mobile */}
           <div
