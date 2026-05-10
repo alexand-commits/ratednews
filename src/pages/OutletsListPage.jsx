@@ -271,6 +271,7 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
 
         {/* Region filter */}
         <div className="filter-bar" style={{ marginBottom: 10 }}>
+          <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Region</span>
           {REGIONS.map(r => (
             <button
               key={r.value}

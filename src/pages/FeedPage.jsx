@@ -54,14 +54,14 @@ const SORTS = [
 ]
 
 const REGIONS = [
-  { value: 'all',        label: '🌐 All'         },
-  { value: 'US',         label: '🇺🇸 US'         },
-  { value: 'UK',         label: '🇬🇧 UK'         },
-  { value: 'Europe',     label: '🇪🇺 Europe'     },
-  { value: 'MiddleEast', label: '🌙 Middle East' },
-  { value: 'Africa',     label: '🌍 Africa'      },
-  { value: 'AsiaPac',    label: '🌏 Asia Pacific'},
-  { value: 'Americas',   label: '🌎 Americas'    },
+  { value: 'all',        label: 'All'          },
+  { value: 'US',         label: 'US'           },
+  { value: 'UK',         label: 'UK'           },
+  { value: 'Europe',     label: 'Europe'       },
+  { value: 'MiddleEast', label: 'Middle East'  },
+  { value: 'Africa',     label: 'Africa'       },
+  { value: 'AsiaPac',    label: 'Asia Pacific' },
+  { value: 'Americas',   label: 'Americas'     },
 ]
 
 const MIN_SCORES = [
