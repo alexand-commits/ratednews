@@ -368,6 +368,7 @@ const OUTLET_MAX_AGE_DAYS = {
   'Foreign Policy':  5,
   'ProPublica':      5,
   'Bellingcat':      14,
+  'InSight Crime':   7,
 }
 
 function isTooOld(pubDate, outletName) {
