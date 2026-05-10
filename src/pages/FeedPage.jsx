@@ -594,23 +594,14 @@ export default function FeedPage({
 
       if (related.length === 0) continue
 
-      // Only show multi-angle when there's genuine perspective diversity:
-      // either 3+ outlets OR at least 2 different bias directions
-      const allBiases = [
-        primary.outlets?.bias_direction,
-        ...related.map(a => a.outlets?.bias_direction),
-      ].filter(Boolean)
-      const uniqueBiases = new Set(allBiases)
-      if (related.length >= 2 || uniqueBiases.size >= 2) {
-        // Index EVERY member of the cluster, not just the primary.
-        // The interleaved feed may surface any cluster member as the card
-        // shown to the user — without this, storyGroups.get(secondaryId)
-        // returns undefined and the toggle never appears.
-        const cluster = [primary, ...related]
-        for (const member of cluster) {
-          const others = cluster.filter(a => a.id !== member.id)
-          groups.set(member.id, others)
-        }
+      // Any 2+ outlets covering the same story qualifies — bias diversity
+      // is a nice-to-have but shouldn't gate the feature. Index EVERY
+      // cluster member so storyGroups.get() works regardless of which
+      // article the interleaved feed surfaces as the displayed card.
+      const cluster = [primary, ...related]
+      for (const member of cluster) {
+        const others = cluster.filter(a => a.id !== member.id)
+        groups.set(member.id, others)
       }
       taken.add(i)
     }
@@ -958,8 +949,8 @@ export default function FeedPage({
                 ))
               )}
 
-              {/* Infinite scroll sentinel + spinner */}
-              {!isSearchActive && feedTab === 'all' && hasMoreArticles && (
+              {/* Infinite scroll sentinel — hidden when topic filter or search active */}
+              {!isSearchActive && !activeTopic && feedTab === 'all' && hasMoreArticles && (
                 <div ref={sentinelRef} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px 0', minHeight: 56 }}>
                   {loadingMore && (
                     <div style={{
@@ -972,8 +963,28 @@ export default function FeedPage({
                   )}
                 </div>
               )}
-              {!isSearchActive && feedTab === 'all' && !hasMoreArticles && displayList.length > 0 && (
-                <div style={{ textAlign: 'center', padding: '28px 16px', borderTop: '0.5px solid var(--border)', marginTop: 8 }}>
+
+              {/* Topic filter end-of-list */}
+              {activeTopic && displayList.length > 0 && (
+                <div style={{ textAlign: 'center', padding: '28px 16px', borderTop: '1px solid var(--divider)', marginTop: 8 }}>
+                  <div style={{ fontSize: 20, marginBottom: 6 }}>📰</div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 3 }}>
+                    {displayList.length} article{displayList.length !== 1 ? 's' : ''} on {activeTopic} in the last 24h
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>That's everything — updates hourly</div>
+                  <button
+                    className="btn-outline"
+                    style={{ fontSize: 12 }}
+                    onClick={() => setActiveTopic(null)}
+                  >
+                    Back to all stories
+                  </button>
+                </div>
+              )}
+
+              {/* Regular feed end-of-list */}
+              {!isSearchActive && !activeTopic && feedTab === 'all' && !hasMoreArticles && displayList.length > 0 && (
+                <div style={{ textAlign: 'center', padding: '28px 16px', borderTop: '1px solid var(--divider)', marginTop: 8 }}>
                   <div style={{ fontSize: 18, marginBottom: 6 }}>✓</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 3 }}>You're all caught up</div>
                   <div style={{ fontSize: 12, color: 'var(--text3)' }}>{displayList.length} stories loaded · updates hourly</div>
