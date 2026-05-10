@@ -30,7 +30,6 @@ function accBadgeClass(score) {
 
 export default function NewsCard({ article, index, onClick, navigate, relatedArticles = [] }) {
   const [imgFailed, setImgFailed] = useState(false)
-  const [showAngles, setShowAngles] = useState(false)
 
   const outlet = article.outlets || {}
   const [bg] = outletColor(outlet.name || 'X')
@@ -53,7 +52,6 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
 
   function handleCardClick(e) {
     if (e.target.closest('a')) return
-    if (e.target.closest('[data-angles]')) return
     onClick?.(e)
   }
 
@@ -84,17 +82,6 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
             {article.title || 'Untitled'}
           </Link>
 
-          {hlBadge && (
-            <span style={{
-              display: 'inline-block', fontSize: 10, fontWeight: 600,
-              padding: '2px 8px', borderRadius: 20, marginBottom: 6,
-              background: hlBadge.bg, color: hlBadge.color,
-              alignSelf: 'flex-start',
-            }}>
-              {hlBadge.label}
-            </span>
-          )}
-
           {article.ai_summary
             ? <div className="news-summary">{article.ai_summary}</div>
             : article.summary && <div className="news-summary">{article.summary}</div>
@@ -123,57 +110,110 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
       </div>
 
       <div className="score-row">
-        {commentCount >= 10 && <span className="trending-chip">💬 Discussed</span>}
         {scored ? (
           <>
-            <span className={accBadgeClass(acc)}>✦ {acc}</span>
-            {(article.bias_score || 0) < 25
-              ? <span className="score-badge score-badge-bias-centre">◉ Factual</span>
-              : biasLabel && <span className={biasLabel.cls}>{biasLabel.label}</span>
-            }
+            {/* Accuracy — dominant score block */}
+            {(() => {
+              const [blockBg, numColor, label] = acc >= 70
+                ? ['var(--green-light)', 'var(--green-dark)', 'Accurate']
+                : acc >= 50
+                ? ['var(--amber-light)', 'var(--amber)', 'Mixed']
+                : ['var(--red-light)', 'var(--red)', 'Low']
+              return (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 7,
+                  background: blockBg, borderRadius: 8, padding: '5px 10px', flexShrink: 0,
+                }}>
+                  <span style={{ fontSize: 22, fontWeight: 800, lineHeight: 1, color: numColor }}>
+                    {acc}
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: numColor, opacity: 0.8, lineHeight: 1 }}>
+                      {label}
+                    </span>
+                    {/* 5-pip accuracy bar */}
+                    <div style={{ display: 'flex', gap: 2 }}>
+                      {[0,1,2,3,4].map(i => (
+                        <div key={i} style={{
+                          width: 5, height: 4, borderRadius: 1,
+                          background: i < Math.round(acc / 20) ? numColor : `${numColor}33`,
+                        }} />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
+
+            {/* Bias spectrum bar */}
+            {bias && (article.bias_score || 0) >= 25 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
+                <div style={{ display: 'flex', borderRadius: 3, overflow: 'hidden', height: 10 }}>
+                  <div style={{ width: 30, background: bias === 'left'   ? '#4a90d9' : 'var(--bg2)', transition: 'background 0.2s' }} />
+                  <div style={{ width: 2,  background: 'var(--surface)' }} />
+                  <div style={{ width: 30, background: bias === 'centre' ? '#5cb85c' : 'var(--bg2)', transition: 'background 0.2s' }} />
+                  <div style={{ width: 2,  background: 'var(--surface)' }} />
+                  <div style={{ width: 30, background: bias === 'right'  ? '#d9534f' : 'var(--bg2)', transition: 'background 0.2s' }} />
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', width: 94 }}>
+                  <span style={{ fontSize: 8, fontWeight: 700, color: bias === 'left'   ? '#4a90d9' : 'var(--text3)' }}>Left</span>
+                  <span style={{ fontSize: 8, fontWeight: 700, color: bias === 'centre' ? '#5cb85c' : 'var(--text3)' }}>Centre</span>
+                  <span style={{ fontSize: 8, fontWeight: 700, color: bias === 'right'  ? '#d9534f' : 'var(--text3)' }}>Right</span>
+                </div>
+              </div>
+            ) : (article.bias_score || 0) < 25 && (
+              <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', background: 'var(--bg2)', padding: '3px 8px', borderRadius: 20, flexShrink: 0 }}>
+                ◉ Factual
+              </span>
+            )}
+
+            {/* Headline vote — only shown when not fair */}
+            {hlBadge && (
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 20, flexShrink: 0,
+                background: hlBadge.bg, color: hlBadge.color,
+              }}>
+                {hlBadge.label}
+              </span>
+            )}
           </>
         ) : (
-          <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg2)', padding: '2px 8px', borderRadius: 20 }}>
-            ⏳ Pending analysis
+          <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg2)', padding: '3px 8px', borderRadius: 20 }}>
+            ⏳ Pending
           </span>
         )}
-        {article.category && (
-          <div className="score-mini" style={{ color: 'var(--text3)' }}>
-            {article.category}
-          </div>
-        )}
-        {commentCount > 0 && (
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span className="score-mini" style={{ color: 'var(--text3)' }}>
-              💬 {commentCount}
-            </span>
-          </div>
-        )}
+
+        {/* Category + comment count pushed right */}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {article.category && (
+            <span className="score-mini" style={{ color: 'var(--text3)' }}>{article.category}</span>
+          )}
+          {commentCount > 0 && (
+            <span className="score-mini" style={{ color: 'var(--text3)' }}>💬 {commentCount}</span>
+          )}
+          {commentCount >= 10 && (
+            <span className="trending-chip">🔥 Hot</span>
+          )}
+        </div>
       </div>
 
-      {/* Multi-angle toggle — only shown when 2+ outlets cover same story */}
+      {/* Multi-outlet chip — taps through to article page where full coverage lives */}
       {hasAngles && (
-        <div
-          data-angles="true"
-          style={{ borderTop: '1px solid var(--divider)', marginTop: 8, paddingTop: 4 }}
+        <Link
+          href={`/article/${slug}`}
+          style={{ textDecoration: 'none' }}
+          onClick={e => e.stopPropagation()}
         >
-          {/* Full-width tap target for mobile */}
-          <div
-            role="button"
-            onClick={e => { e.stopPropagation(); setShowAngles(v => !v) }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              minHeight: 44, padding: '4px 0',
-              cursor: 'pointer',
-            }}
-          >
+          <div style={{
+            borderTop: '1px solid var(--divider)',
+            marginTop: 8,
+            display: 'flex', alignItems: 'center', gap: 6,
+            minHeight: 44, padding: '10px 0 4px',
+            cursor: 'pointer',
+          }}>
             <span style={{ fontSize: 13 }}>📰</span>
-            <span style={{
-              fontSize: 11, fontWeight: 600,
-              color: showAngles ? 'var(--coral)' : 'var(--text3)',
-              transition: 'color 0.15s',
-            }}>
-              {allAngles.length} outlets covering this
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>
+              Also covered by other outlets
             </span>
             {/* Bias dot preview */}
             <span style={{ display: 'flex', gap: 3, marginLeft: 2 }}>
@@ -187,76 +227,9 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
                 ) : null
               })}
             </span>
-            <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text3)' }}>
-              {showAngles ? '▲' : '▼'}
-            </span>
+            <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>→</span>
           </div>
-
-          {showAngles && (
-            <div style={{ marginBottom: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {allAngles.map(a => {
-                const o      = a.outlets || {}
-                const [oBg]  = outletColor(o.name || 'X')
-                const oBias  = BIAS_DOTS[o.bias_direction]
-                const oAcc   = a.accuracy_score || 0
-                const oSlug  = articleSlug(a.title, a.id)
-                const isPrimary = a.id === article.id
-                return (
-                  <Link
-                    key={a.id}
-                    href={`/article/${oSlug}`}
-                    style={{ textDecoration: 'none' }}
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '10px 12px', minHeight: 44,
-                      background: isPrimary ? 'var(--bg2)' : 'var(--surface)',
-                      border: `0.5px solid ${isPrimary ? 'var(--coral)' : 'var(--border)'}`,
-                      borderRadius: 8,
-                      transition: 'border-color 0.15s',
-                    }}
-                    onMouseEnter={e => { if (!isPrimary) e.currentTarget.style.borderColor = 'var(--coral)' }}
-                    onMouseLeave={e => { if (!isPrimary) e.currentTarget.style.borderColor = 'var(--border)' }}
-                    >
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: oBg, flexShrink: 0 }} />
-
-                      <span style={{
-                        fontSize: 13, fontWeight: 600,
-                        color: 'var(--text)', flex: 1, minWidth: 0,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>
-                        {o.name || 'Unknown'}
-                        {isPrimary && (
-                          <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 400, marginLeft: 5 }}>
-                            (this article)
-                          </span>
-                        )}
-                      </span>
-
-                      {oBias && (
-                        <span style={{ fontSize: 11, fontWeight: 600, color: oBias.color, flexShrink: 0 }}>
-                          {oBias.label}
-                        </span>
-                      )}
-
-                      {oAcc > 0 && (
-                        <span style={{
-                          fontSize: 11, fontWeight: 600, flexShrink: 0,
-                          color: oAcc >= 70 ? 'var(--green)' : oAcc >= 50 ? 'var(--amber)' : 'var(--red)',
-                        }}>
-                          ✦{oAcc}
-                        </span>
-                      )}
-
-                      <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>→</span>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-        </div>
+        </Link>
       )}
     </div>
   )

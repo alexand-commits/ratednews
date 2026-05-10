@@ -151,20 +151,20 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     const STOP = new Set([
       'the','a','an','in','on','at','to','for','of','and','or','but','with',
       'from','by','as','is','are','was','were','be','been','has','have','had',
-      'its','their','this','that','how','why','what','who','when','where',
-      'says','said','will','can','may','over','after','before','amid','about',
-      'into','new','after','first','second','top','more','than',
+      'its','their','this','that','these','those','how','why','what','who',
+      'when','where','says','said','will','can','may','over','after','before',
+      'amid','about','into','new','first','second',
     ])
     const sigWords = [...new Set(
       article.title.toLowerCase().split(/\W+/).filter(w => w.length > 3 && !STOP.has(w))
     )]
     if (sigWords.length < 2) return
 
-    // OR across top 3 keywords so we catch outlets that cover the same story
-    // without using the exact same words (e.g. Clasico articles that don't
-    // mention "Rashford"). Client-side 3-word overlap filter keeps quality high.
-    const keys = sigWords.slice(0, 3)
-    const orFilter = keys.map(k => `title.ilike.%${k}%`).join(',')
+    // OR across ALL significant keywords so we catch outlets that cover the same
+    // story with different wording (e.g. "Clasico" articles that don't mention
+    // "Rashford" and vice versa). The DB net is wide; the client-side 3-word
+    // overlap filter below keeps quality high.
+    const orFilter = sigWords.map(k => `title.ilike.%${k}%`).join(',')
     const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
 
     db.from('articles')
@@ -181,7 +181,11 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
         const matched = data.filter(a => {
           const aWords = (a.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !STOP.has(w))
           const overlap = aWords.filter(w => titleWords.has(w)).length
-          return overlap >= 3
+          // Use 2-word threshold (not 3) because the article page can't do the
+          // transitive cluster walk that FeedPage does. Cluster members may share
+          // only 2 words with the current article but clearly cover the same story.
+          // The OR filter + 72h window + 2-word overlap is a strong enough signal.
+          return overlap >= 2
         })
         // Dedupe by outlet — keep most recent per outlet
         const byOutlet = {}
