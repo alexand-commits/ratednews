@@ -640,22 +640,33 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
             ) : (
               followedOutlets.map(outlet => {
                 const score = outlet.overall_score || 0
+                const articles30d = outlet.article_count_30d || 0
+                const delta = outlet.accuracy_delta_7d
                 return (
                   <div
                     key={outlet.id}
                     style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
+                    className="border-hover"
                     onClick={() => navigate('outlet', { outletId: outlet.id })}
                   >
                     <OutletLogo name={outlet.name} size={40} borderRadius={10} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 3 }}>{outlet.name}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>
-                        {outlet.country || 'Global'} · {outlet.bias_direction ? `${outlet.bias_direction.charAt(0).toUpperCase() + outlet.bias_direction.slice(1)} bias` : 'Centre bias'}
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                        <span style={{ fontSize: 11, color: 'var(--text3)' }}>{outlet.country || 'Global'}</span>
+                        {articles30d > 0 && (
+                          <span style={{ fontSize: 11, color: 'var(--text3)' }}>· {articles30d} articles/30d</span>
+                        )}
+                        {delta !== null && delta !== undefined && (
+                          <span style={{ fontSize: 11, fontWeight: 600, color: delta > 0 ? 'var(--green)' : delta < 0 ? 'var(--red)' : 'var(--text3)' }}>
+                            {delta > 0 ? `↑ +${delta}` : delta < 0 ? `↓ ${delta}` : '→'}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div style={{ textAlign: 'center', flexShrink: 0 }}>
                       <div style={{ fontSize: 20, fontWeight: 700, color: score >= 70 ? 'var(--green-dark)' : score >= 50 ? 'var(--amber)' : 'var(--red)' }}>{score}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>Trust score</div>
+                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>Trust</div>
                     </div>
                     <button
                       onClick={e => { e.stopPropagation(); toggleFollow(outlet.id) }}

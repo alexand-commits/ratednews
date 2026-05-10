@@ -98,7 +98,7 @@ function ArticleCard({ a, onClick }) {
   )
 }
 
-function ScoreHistoryChart({ points }) {
+function ScoreHistoryChart({ points, points2 = null, name1 = '', name2 = '' }) {
   const [hovered, setHovered] = useState(null)
   const svgRef = useRef(null)
 
@@ -106,24 +106,33 @@ function ScoreHistoryChart({ points }) {
 
   const W = 100
   const H = 60
-  const PL = 16  // left pad — room for Y axis labels
+  const PL = 16
   const PR = 4
   const PT = 4
   const PB = 4
 
-  const scores = points.map(p => p.score)
-  const minS   = Math.max(0,   Math.min(...scores) - 10)
-  const maxS   = Math.min(100, Math.max(...scores) + 10)
-  const midS   = Math.round((minS + maxS) / 2)
-  const range  = maxS - minS || 1
+  // Combined scale across both series so they share the same Y axis
+  const allScores = [
+    ...points.map(p => p.score),
+    ...(points2 || []).map(p => p.score),
+  ]
+  const minS  = Math.max(0,   Math.min(...allScores) - 10)
+  const maxS  = Math.min(100, Math.max(...allScores) + 10)
+  const midS  = Math.round((minS + maxS) / 2)
+  const range = maxS - minS || 1
 
-  const xs = points.map((_, i) => PL + (i / (points.length - 1)) * (W - PL - PR))
-  const ys = points.map(p => H - PB - ((p.score - minS) / range) * (H - PT - PB))
+  const toY  = val => H - PB - ((val - minS) / range) * (H - PT - PB)
+  const toXs = (pts) => pts.map((_, i) => PL + (i / (pts.length - 1)) * (W - PL - PR))
 
-  const toY = val => H - PB - ((val - minS) / range) * (H - PT - PB)
+  const xs1   = toXs(points)
+  const ys1   = points.map(p => toY(p.score))
+  const path1 = xs1.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys1[i].toFixed(1)}`).join(' ')
+  const fill1 = `${path1} L${xs1[xs1.length-1].toFixed(1)},${H} L${xs1[0].toFixed(1)},${H} Z`
 
-  const pathD = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys[i].toFixed(1)}`).join(' ')
-  const fillD = `${pathD} L${xs[xs.length-1].toFixed(1)},${H} L${xs[0].toFixed(1)},${H} Z`
+  const hasP2  = points2 !== null && points2.length >= 2
+  const xs2    = hasP2 ? toXs(points2) : []
+  const ys2    = hasP2 ? points2.map(p => toY(p.score)) : []
+  const path2  = hasP2 ? xs2.map((x, i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${ys2[i].toFixed(1)}`).join(' ') : ''
 
   const latest   = points[points.length - 1]
   const earliest = points[0]
@@ -136,29 +145,53 @@ function ScoreHistoryChart({ points }) {
     if (!svg) return
     const rect = svg.getBoundingClientRect()
     const relX = ((e.clientX - rect.left) / rect.width) * W
-    let minDist = Infinity, idx = 0
-    xs.forEach((x, i) => { const d = Math.abs(x - relX); if (d < minDist) { minDist = d; idx = i } })
-    setHovered({ index: idx, x: xs[idx], y: ys[idx], score: points[idx].score, date: points[idx].date })
+    const nearestIdx  = xs1.reduce((best, x, i) => Math.abs(x - relX) < Math.abs(xs1[best] - relX) ? i : best, 0)
+    const nearestIdx2 = xs2.length ? xs2.reduce((best, x, i) => Math.abs(x - relX) < Math.abs(xs2[best] - relX) ? i : best, 0) : null
+    setHovered({
+      index: nearestIdx,
+      x: xs1[nearestIdx],
+      y: ys1[nearestIdx],
+      score: points[nearestIdx].score,
+      date: points[nearestIdx].date,
+      score2: nearestIdx2 !== null && points2 ? points2[nearestIdx2].score : null,
+    })
   }
 
   return (
     <div>
+      {/* Legend (only when comparing) */}
+      {points2 && points2.length >= 2 && (
+        <div style={{ display: 'flex', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 10, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 12, height: 2, background: 'var(--coral)', display: 'inline-block', borderRadius: 1 }} />
+            <span style={{ color: 'var(--text2)' }}>{name1}</span>
+          </span>
+          <span style={{ fontSize: 10, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <span style={{ width: 12, height: 2, background: '#3b82f6', display: 'inline-block', borderRadius: 1 }} />
+            <span style={{ color: 'var(--text2)' }}>{name2}</span>
+          </span>
+        </div>
+      )}
+
       {/* Header row */}
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 4 }}>
         <span style={{ fontSize: 11, color: 'var(--text3)' }}>{points.length} day{points.length !== 1 ? 's' : ''} of data</span>
         <span style={{ fontSize: 11, fontWeight: 600, color: trendColor }}>{trendLabel}</span>
       </div>
 
-      {/* Fixed-height tooltip row — no layout shift on hover */}
-      <div style={{ height: 18, marginBottom: 2, display: 'flex', alignItems: 'center' }}>
+      {/* Fixed-height tooltip row */}
+      <div style={{ height: 18, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 8 }}>
         {hovered ? (
-          <span style={{
-            fontSize: 11, fontWeight: 600, color: 'var(--text)',
-            background: 'var(--bg2)', border: '0.5px solid var(--border)',
-            borderRadius: 5, padding: '1px 7px',
-          }}>
-            {hovered.score} · {hovered.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-          </span>
+          <>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--coral)', background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '1px 7px' }}>
+              {hovered.score} · {hovered.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+            </span>
+            {hovered.score2 !== null && (
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#3b82f6', background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 5, padding: '1px 7px' }}>
+                {hovered.score2}
+              </span>
+            )}
+          </>
         ) : (
           <span style={{ fontSize: 10, color: 'var(--text3)' }}>Hover to inspect</span>
         )}
@@ -179,57 +212,37 @@ function ScoreHistoryChart({ points }) {
           </linearGradient>
         </defs>
 
-        {/* Y-axis gridlines */}
         {[maxS, midS, minS].map(val => (
-          <line key={val}
-            x1={PL} y1={toY(val).toFixed(1)}
-            x2={W - PR} y2={toY(val).toFixed(1)}
-            stroke="var(--border)" strokeWidth="0.5" strokeDasharray="2,2"
-          />
+          <line key={val} x1={PL} y1={toY(val).toFixed(1)} x2={W - PR} y2={toY(val).toFixed(1)}
+            stroke="var(--border)" strokeWidth="0.5" strokeDasharray="2,2" />
+        ))}
+        {[maxS, midS, minS].map(val => (
+          <text key={val} x={PL - 2} y={toY(val).toFixed(1)} textAnchor="end" fontSize="4.5" fill="var(--text3)" dominantBaseline="middle">{val}</text>
         ))}
 
-        {/* Y-axis labels */}
-        {[maxS, midS, minS].map(val => (
-          <text key={val}
-            x={PL - 2} y={toY(val).toFixed(1)}
-            textAnchor="end" fontSize="4.5" fill="var(--text3)"
-            dominantBaseline="middle"
-          >{val}</text>
-        ))}
+        {/* Series 1 — coral */}
+        <path d={fill1} fill="url(#histGrad)" />
+        <path d={path1} fill="none" stroke="var(--coral)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
 
-        {/* Area + line */}
-        <path d={fillD} fill="url(#histGrad)" />
-        <path d={pathD} fill="none" stroke="var(--coral)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        {/* Series 2 — blue */}
+        {path2 && <path d={path2} fill="none" stroke="#3b82f6" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="3,2" />}
 
-        {/* Hover crosshair */}
         {hovered && (
           <>
-            <line
-              x1={hovered.x.toFixed(1)} y1={PT}
-              x2={hovered.x.toFixed(1)} y2={H - PB}
-              stroke="var(--text3)" strokeWidth="0.8" strokeDasharray="2,2"
-            />
+            <line x1={hovered.x.toFixed(1)} y1={PT} x2={hovered.x.toFixed(1)} y2={H - PB}
+              stroke="var(--text3)" strokeWidth="0.8" strokeDasharray="2,2" />
             <circle cx={hovered.x.toFixed(1)} cy={hovered.y.toFixed(1)} r="3" fill="var(--coral)" stroke="var(--surface)" strokeWidth="1.5" />
           </>
         )}
+        {!hovered && <circle cx={xs1[xs1.length-1].toFixed(1)} cy={ys1[ys1.length-1].toFixed(1)} r="2.5" fill="var(--coral)" />}
+        {!hovered && hasP2 && <circle cx={xs2[xs2.length-1].toFixed(1)} cy={ys2[ys2.length-1].toFixed(1)} r="2.5" fill="#3b82f6" />}
 
-        {/* Resting dot on latest point */}
-        {!hovered && (
-          <circle cx={xs[xs.length-1].toFixed(1)} cy={ys[ys.length-1].toFixed(1)} r="2.5" fill="var(--coral)" />
-        )}
-
-        {/* Invisible wider hit area for easier mousing */}
         <rect x={PL} y={0} width={W - PL - PR} height={H} fill="transparent" />
       </svg>
 
-      {/* X-axis labels */}
       <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 2 }}>
-        <span style={{ fontSize: 10, color: 'var(--text3)' }}>
-          {earliest.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-        </span>
-        <span style={{ fontSize: 10, color: 'var(--text3)' }}>
-          {latest.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-        </span>
+        <span style={{ fontSize: 10, color: 'var(--text3)' }}>{earliest.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
+        <span style={{ fontSize: 10, color: 'var(--text3)' }}>{latest.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</span>
       </div>
     </div>
   )
@@ -248,7 +261,9 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   const [votedComments, setVotedComments] = useState({})
   const [visibleArticles, setVisibleArticles] = useState(10)
   const [articlesLoading, setArticlesLoading] = useState(true)
-  const [scoreHistory, setScoreHistory] = useState([])
+  const [scoreHistory, setScoreHistory]         = useState([])
+  const [compareOutletId, setCompareOutletId]   = useState('')
+  const [compareHistory, setCompareHistory]     = useState([])
 
   const outlet = liveOutlet || allOutlets.find(o => o.id === outletId)
 
@@ -265,6 +280,8 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
     setVisibleArticles(10)
     setArticlesLoading(true)
     setScoreHistory([])
+    setCompareOutletId('')
+    setCompareHistory([])
 
     // Articles
     db.from('articles')
@@ -334,7 +351,40 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
     }
   }, [outletId, user])
 
+  // Fetch comparison outlet score history when selected
+  useEffect(() => {
+    if (!compareOutletId) { setCompareHistory([]); return }
+    const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
+    db.from('articles')
+      .select('accuracy_score, published_at')
+      .eq('outlet_id', compareOutletId)
+      .gt('accuracy_score', 0)
+      .gte('published_at', since30)
+      .order('published_at', { ascending: true })
+      .then(({ data: rows }) => {
+        if (!rows || rows.length < 2) { setCompareHistory([]); return }
+        const days = {}
+        rows.forEach(row => {
+          const dayKey = new Date(row.published_at).toISOString().slice(0, 10)
+          if (!days[dayKey]) days[dayKey] = { sum: 0, count: 0, date: new Date(row.published_at) }
+          days[dayKey].sum += row.accuracy_score
+          days[dayKey].count++
+        })
+        const pts = Object.entries(days)
+          .sort(([k1], [k2]) => k1.localeCompare(k2))
+          .map(([, v]) => ({ score: Math.round(v.sum / v.count), date: v.date }))
+          .slice(-30)
+        setCompareHistory(pts)
+      })
+  }, [compareOutletId])
+
   if (!outlet) return null
+
+  // Confidence tier based on 30-day article count
+  const articleCount30d = outlet.article_count_30d || articles.filter(a => a.accuracy_score > 0).length
+  const confidence = articleCount30d >= 50 ? { label: 'High data', color: 'var(--green)' }
+                   : articleCount30d >= 15 ? { label: 'Medium data', color: 'var(--amber)' }
+                   : { label: 'Low data', color: 'var(--text3)' }
 
   const [bg, fg] = outletColor(outlet.name)
   const score = outlet.overall_score || 0
@@ -730,9 +780,48 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
               )}
 
               <div className="widget">
-                <div className="widget-title">Score history</div>
+                {/* Widget header with confidence pill */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <div className="widget-title" style={{ marginBottom: 0 }}>Score history</div>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: confidence.color, background: 'var(--bg)', border: `0.5px solid ${confidence.color}`, borderRadius: 20, padding: '2px 8px' }}>
+                    {confidence.label}
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 10 }}>
+                  Based on {articleCount30d} article{articleCount30d !== 1 ? 's' : ''} in the last 30 days
+                </div>
+
                 {scoreHistory.length >= 2 ? (
-                  <ScoreHistoryChart points={scoreHistory} />
+                  <>
+                    <ScoreHistoryChart
+                      points={scoreHistory}
+                      points2={compareHistory.length >= 2 ? compareHistory : null}
+                      name1={outlet.name}
+                      name2={allOutlets.find(o => o.id === compareOutletId)?.name || ''}
+                    />
+
+                    {/* Compare selector */}
+                    <div style={{ marginTop: 12, paddingTop: 10, borderTop: '0.5px solid var(--border)' }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 6 }}>Compare with</div>
+                      <select
+                        value={compareOutletId}
+                        onChange={e => setCompareOutletId(e.target.value)}
+                        style={{
+                          width: '100%', padding: '6px 10px', fontSize: 12,
+                          background: 'var(--bg)', border: '0.5px solid var(--border)',
+                          borderRadius: 'var(--radius-sm)', color: 'var(--text1)',
+                          cursor: 'pointer', appearance: 'auto',
+                        }}
+                      >
+                        <option value=''>— Select an outlet —</option>
+                        {[...allOutlets]
+                          .filter(o => o.id !== outletId)
+                          .sort((a, b) => a.name.localeCompare(b.name))
+                          .map(o => <option key={o.id} value={o.id}>{o.name}</option>)
+                        }
+                      </select>
+                    </div>
+                  </>
                 ) : (
                   <div style={{ textAlign: 'center', padding: '18px 0' }}>
                     <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.5 }}>
@@ -740,6 +829,11 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                     </div>
                   </div>
                 )}
+
+                {/* Methodology link */}
+                <a href="/methodology" style={{ display: 'block', marginTop: 10, fontSize: 11, color: 'var(--text3)', textDecoration: 'none', textAlign: 'right' }}>
+                  How scores work →
+                </a>
               </div>
             </div>
           </div>

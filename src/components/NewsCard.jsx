@@ -125,8 +125,8 @@ export default function NewsCard({ article, index, onClick, navigate }) {
             {article.category}
           </div>
         )}
-        <div className="score-mini" style={{ marginLeft: 'auto', color: 'var(--text3)' }}>
-          💬 {commentCount}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span className="score-mini" style={{ color: 'var(--text3)' }}>💬 {commentCount}</span>
         </div>
       </div>
     </div>

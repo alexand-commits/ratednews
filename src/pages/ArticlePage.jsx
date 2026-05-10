@@ -562,22 +562,18 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               {alreadyRated ? '★ Already rated' : '★ Rate this article'}
             </button>
             <button className="btn-outline" onClick={async () => {
-              const shareUrl = `${window.location.origin}${window.location.pathname}?article=${articleId}`
-              // Build score summary line
+              const shareUrl = `https://ratednews.com/article/${articleSlug(article.title, article.id)}`
               const biasMap = { left: '← Left', centre: '◉ Centre', right: '→ Right' }
               const scoreParts = [
-                acc   ? `🎯 Accuracy ${acc}/100` : null,
-                article.bias_direction ? `⚖️ ${biasMap[article.bias_direction]}` : null,
-                com > 0 ? `⭐ ${(com / 20).toFixed(1)}/5 community` : null,
-                article.headline_vote && article.headline_vote !== 'fair' ? `📰 ${article.headline_vote} headline` : null,
+                acc ? `🎯 ${acc}/100 accuracy` : null,
+                article.bias_direction ? biasMap[article.bias_direction] : null,
+                article.headline_vote && article.headline_vote !== 'fair' ? `📰 ${article.headline_vote}` : null,
               ].filter(Boolean).join(' · ')
-              const shareText = [scoreParts, article.ai_summary || ''].filter(Boolean).join('\n\n')
+              const shareText = scoreParts ? `${scoreParts}\n\n${article.title}` : article.title
               if (navigator.share) {
-                try {
-                  await navigator.share({ title: article.title, text: shareText, url: shareUrl })
-                } catch (_) {}
+                try { await navigator.share({ title: article.title, text: shareText, url: shareUrl }) } catch (_) {}
               } else {
-                navigator.clipboard.writeText(`${article.title}\n${scoreParts}\n${shareUrl}`).then(() => showToast('Link copied!')).catch(() => showToast('Could not copy link'))
+                navigator.clipboard.writeText(shareUrl).then(() => showToast('Link copied!')).catch(() => showToast('Could not copy'))
               }
             }}>↑ Share</button>
           </div>

@@ -5,7 +5,7 @@
  * - Deduplicates by hashing IP + article_id within a 1-hour window (via in-memory cache)
  */
 
-const { createClient } = require('@supabase/supabase-js')
+import { createClient } from '@supabase/supabase-js'
 
 // Simple in-memory dedup cache: "ip:articleId" -> timestamp
 // Resets on each cold start, which is fine — it's a soft signal not an exact count
@@ -14,7 +14,7 @@ const DEDUP_WINDOW_MS = 60 * 60 * 1000 // 1 hour
 
 const BOT_UA_RE = /bot|crawler|spider|crawling|facebookexternalhit|Twitterbot|rogerbot|linkedinbot|embedly|quora link preview|showyoubot|outbrain|pinterest|slackbot|vkShare|W3C_Validator|whatsapp|Googlebot|Bingbot|Slurp|DuckDuckBot|Baiduspider|YandexBot|Sogou|Exabot|ia_archiver/i
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }

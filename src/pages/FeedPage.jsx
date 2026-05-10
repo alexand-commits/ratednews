@@ -73,11 +73,11 @@ const MIN_SCORES = [
 ]
 
 function getArticleRegion(article) {
-  return article.outlets?.country || 'International'
+  return article.article_region || article.outlets?.country || 'International'
 }
 
 export default function FeedPage({
-  articles, outlets, loading, navigate,
+  articles, trendingArticles = [], outlets, loading, navigate,
   initialCategory = 'all', initialRegion = 'all',
   totalArticleCount, user, followedOutletIds = new Set(),
   onLoginClick, loadMoreArticles, hasMoreArticles, loadingMore,
@@ -96,6 +96,7 @@ export default function FeedPage({
   // DB search state
   const [dbResults, setDbResults]   = useState(null)   // null = search not active
   const [dbLoading, setDbLoading]   = useState(false)
+  const [activeTopic, setActiveTopic] = useState(null) // trending topic filter
   const searchTimer                 = useRef(null)
   const searchInputRef              = useRef(null)
 
@@ -147,6 +148,7 @@ export default function FeedPage({
   // Debounced full-text DB search
   useEffect(() => {
     clearTimeout(searchTimer.current)
+    if (search.trim().length >= 2) setActiveTopic(null) // clear topic filter when searching
     if (search.trim().length < 2) {
       setDbResults(null)
       setDbLoading(false)
@@ -282,38 +284,72 @@ export default function FeedPage({
   // and appear frequently enough to matter.
 
   const COMMON_WORDS = useMemo(() => new Set([
-    // Generic adjectives / determiners common in title-case headlines
+    // Articles & determiners (also in PHRASE_CONNECTORS but must be here too for isProperNoun guard)
+    'the','a','an','this','that','these','those','every','each','any','all','some','no',
+    // Pronouns
+    'he','she','it','they','we','i','you','him','her','them','us','his','its','our','their',
+    // Conjunctions & subordinators (including preposition-style headline starters)
+    'but','and','or','nor','yet','so','if','unless','until','since','while','though',
+    'although','because','whether','after','before','during','despite','without',
+    'amid','following','regarding','concerning','pending','including','excluding',
+    'across','beyond','within','between','among','against','along','around',
+    // Common sentence-starters / adverbs
+    'here','there','now','then','still','just','even','also','too','not','never',
+    'always','often','again','already','only','very','quite','rather','more','most',
+    // Modal / auxiliary verbs
+    'may','might','must','can','will','shall','need','want','able',
+    // Generic adjectives / determiners
     'new','old','big','small','great','major','key','top','full','long','short',
     'high','low','good','bad','best','worst','next','last','first','second','third',
     'final','early','late','real','true','false','main','chief','senior','junior',
-    'former','young','recent','latest','another','other','more','less','many','few',
+    'former','young','recent','latest','another','other','less','many','few',
     'free','open','public','private','national','local','global','international',
     'further','several','same','own','right','left','both','such','certain',
-    // Generic nouns that appear everywhere in title-case news
+    'hard','easy','clear','dark','light','fast','slow','hot','cold','safe',
+    'huge','massive','rare','secret','hidden','historic','possible','impossible',
+    // Generic nouns
     'prize','award','deal','plan','move','push','call','sign','vote','ban','bid',
-    'plea','plea','warning','threat','pledge','claim','claims','concerns','fears',
-    'hopes','doubts','talks','talks','crisis','issue','issues','case','cases',
+    'plea','warning','threat','pledge','claim','claims','concerns','fears',
+    'hopes','doubts','talks','crisis','issue','issues','case','cases',
     'step','steps','way','ways','time','times','year','years','day','days',
-    'week','weeks','month','months','hour','hours','home','homes','world',
+    'week','weeks','month','months','hour','hours','home','homes','house','houses','world',
     'nation','nations','state','states','city','cities','town','towns',
     'area','areas','region','regions','group','groups','party','parties',
+    'street','streets','road','roads','building','buildings','office','offices',
     'people','man','woman','men','women','child','children','family','families',
     'leader','leaders','head','boss','official','officials','minister','ministers',
     'government','governments','court','courts','law','laws','rule','rules',
-    'war','peace','fight','battle','battle','death','deaths','life','lives',
+    'war','peace','fight','battle','death','deaths','life','lives',
     'money','cash','fund','funds','cost','costs','price','prices','tax','taxes',
     'shot','shots','fire','fires','attack','attacks','strike','strikes',
-    // Common verbs in title-case (mid-headline)
+    // Generic event nouns (describe type of event, not a specific named topic)
+    'police','officer','officers','cop','cops','detective','detectives','sheriff',
+    'hospital','hospitals','clinic','clinics','ambulance',
+    'flood','floods','flooding','earthquake','storm','storms','hurricane','wildfire','wildfires',
+    'shooting','shootings','stabbing','stabbings','explosion','explosions','blast','blasts',
+    'protest','protests','protester','protesters','demonstrator','demonstrators','rally','rallies',
+    'investigation','investigations','inquiry','inquiries','hearing','hearings','testimony',
+    'rescue','rescued','evacuation','evacuations','emergency','emergencies','disaster','disasters',
+    'election','elections','referendum','campaign','campaigns','candidate','candidates',
+    'parliament','senate','congress','assembly','council','councils','committee','committees',
+    'president','prime','premier','governor','governor','senator','senators','congressman',
+    'company','companies','firm','firms','corporation','corporations','industry','sector',
+    'market','markets','economy','recession','inflation','tariff','tariffs','sanction','sanctions',
+    'school','schools','college','colleges','university','universities','student','students',
+    'church','mosque','temple','synagogue','cathedral',
+    // Common verbs
     'win','wins','won','lose','loses','lost','hit','hits','face','faces','back',
     'set','get','make','take','give','come','rise','fall','drop','cut','end',
     'start','begin','grow','reach','help','lead','leave','use','see','run',
     'hold','keep','bring','turn','say','says','said','show','shows','told',
-    'call','calls','called','called','push','pushed','seek','seeks','sought',
+    'call','calls','called','push','pushed','seek','seeks','sought',
     'join','joins','joined','open','opens','opened','close','closes','closed',
     'launch','launches','launched','announce','announces','announced',
     'reveal','reveals','revealed','confirm','confirms','confirmed',
-    'deny','denies','denied','condemn','condemns','condemns','defend','defends',
-    // Sensitive standalone group/identity terms
+    'deny','denies','denied','condemn','condemns','defend','defends',
+    'warn','warns','warned','urge','urges','urged','slam','slams','slammed',
+    'blast','blasts','blasted','slam','vow','vows','vowed','pledge','pledged',
+    // Identity terms (standalone — too broad to be useful topics)
     'jews','jewish','muslims','christians','catholics','protestants',
     'blacks','whites','latinos','hispanics','asians','arabs',
     'immigrants','migrants','refugees','foreigners','natives',
@@ -330,48 +366,69 @@ export default function FeedPage({
     'analysis','opinion','comment','review','interview','exclusive','special','breaking',
     'update','report','reports','live','watch','listen','read','podcast','inside',
     'why','how','what','who','when','where','says','think','could','would','should',
+    // ── Media / outlet words ──
+    'news','network','channel','media','press','outlet','outlets','digital','online',
+    'weekly','daily','tonight','today','morning','evening','sunday',
+    'monday','tuesday','wednesday','thursday','friday','saturday',
+    'reporter','reporters','anchor','correspondent','journalist',
+    'editor','editors','spokesperson','spokesman','spokeswoman',
+    'source','sources','bulletin','broadcast','programme','program',
+  ]), [])
+
+  // Known media outlet acronyms — blocked as both standalone topics and phrase anchors
+  const MEDIA_ACRONYMS = useMemo(() => new Set([
+    'cbs','nbc','cnn','bbc','abc','pbs','npr','msnbc','cnbc','itv','skynews',
+    'afp','ap','upi','nhk','dw','rte','sbs','abc','sky','fox','rtc',
+    'nyt','wsj','espn','hbo','hulu','vice','vox','axios','politico',
   ]), [])
 
   // Stop-words allowed to sit *inside* a phrase but not start/end one
   const PHRASE_CONNECTORS = new Set(['of','the','and','in','on','at','to','for','by','with','from','over','into','as','a'])
 
   const trendingTopics = useMemo(() => {
-    const phraseFreq   = {}  // key → count  (multi-word phrases)
-    const singleFreq   = {}  // key → count  (single proper nouns / acronyms)
-    const displayForm  = {}  // key → display string
+    const phraseFreq  = {}
+    const singleFreq  = {}
+    const displayForm = {}
 
-    for (const article of articles.slice(0, 300)) {
+    // trendingArticles is already scoped to 24h by the dedicated fetch in index.jsx
+    for (const article of trendingArticles.slice(0, 300)) {
       const title = (article.title || '').trim()
       if (!title) continue
       const rawWords = title.split(/\s+/)
 
-      // ── Pass 1: collect phrases (2+ consecutive proper/acronym tokens) ──
-      let buffer = []   // [{word, key}]
+      // ── Pass 1: multi-word phrases ──
+      let buffer = []
 
       const flushBuffer = () => {
-        // Trim trailing connectors from buffer
+        // Trim trailing connectors
         while (buffer.length && PHRASE_CONNECTORS.has(buffer[buffer.length - 1].key)) buffer.pop()
-        if (buffer.length >= 2) {
-          const phrase   = buffer.map(t => t.word).join(' ')
-          const phraseKey = phrase.toLowerCase()
-          phraseFreq[phraseKey] = (phraseFreq[phraseKey] || 0) + 1
-          displayForm[phraseKey] = phrase
+        // Trim leading connectors
+        while (buffer.length && PHRASE_CONNECTORS.has(buffer[0].key)) buffer.shift()
+        if (buffer.length < 2) { buffer = []; return }
+        // Reject if any anchor word is a blocked media term
+        const nonConnectors = buffer.filter(t => !PHRASE_CONNECTORS.has(t.key))
+        if (nonConnectors.some(t => COMMON_WORDS.has(t.key) || MEDIA_ACRONYMS.has(t.key))) {
+          buffer = []; return
         }
+        const phrase    = buffer.map(t => t.word).join(' ')
+        const phraseKey = phrase.toLowerCase()
+        phraseFreq[phraseKey] = (phraseFreq[phraseKey] || 0) + 1
+        displayForm[phraseKey] = phrase
         buffer = []
       }
 
       rawWords.forEach((raw, idx) => {
         const clean = raw.replace(/[^a-zA-Z'-]/g, '').replace(/^'+|'+$/g, '')
         if (!clean) { flushBuffer(); return }
-
         const isAcronym    = /^[A-Z]{2,6}$/.test(clean)
-        const isProperNoun = idx > 0 && /^[A-Z][a-z]{1,}$/.test(clean)
-        const isConnector  = PHRASE_CONNECTORS.has(clean.toLowerCase())
-
+        const key0         = clean.toLowerCase()
+        // Allow idx === 0 too — "Trump", "Ukraine" etc. often lead headlines
+        // Guard via COMMON_WORDS and PHRASE_CONNECTORS so "The", "In", "And" etc. are excluded
+        const isProperNoun = /^[A-Z][a-z]{1,}$/.test(clean) && !COMMON_WORDS.has(key0) && !PHRASE_CONNECTORS.has(key0)
+        const isConnector  = PHRASE_CONNECTORS.has(key0)
         if (isAcronym || isProperNoun) {
           buffer.push({ word: isAcronym ? clean : clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase(), key: clean.toLowerCase() })
         } else if (isConnector && buffer.length > 0) {
-          // Allow connectors mid-phrase ("Secretary of State", "Isle of Man")
           buffer.push({ word: clean.toLowerCase(), key: clean.toLowerCase() })
         } else {
           flushBuffer()
@@ -383,15 +440,12 @@ export default function FeedPage({
       rawWords.forEach((raw, idx) => {
         const clean = raw.replace(/[^a-zA-Z]/g, '')
         if (!clean) return
-
         const isAcronym    = /^[A-Z]{2,6}$/.test(clean)
-        const isProperNoun = idx > 0 && /^[A-Z][a-z]{1,}$/.test(clean)
+        const key          = clean.toLowerCase()
+        const isProperNoun = /^[A-Z][a-z]{1,}$/.test(clean) && !COMMON_WORDS.has(key) && !PHRASE_CONNECTORS.has(key)
         if (!isAcronym && !isProperNoun) return
-
-        const key = clean.toLowerCase()
         if (key.length < 3) return
-        if (COMMON_WORDS.has(key)) return
-
+        if (COMMON_WORDS.has(key) || MEDIA_ACRONYMS.has(key)) return
         singleFreq[key] = (singleFreq[key] || 0) + 1
         if (!displayForm[key]) {
           displayForm[key] = isAcronym ? clean : clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase()
@@ -399,28 +453,54 @@ export default function FeedPage({
       })
     }
 
-    // ── Score & merge ──
-    // Phrases get 3× weight so they surface above ambiguous singles.
-    // Singles require freq ≥ 3 (stricter than phrases) to reduce noise.
+    // Phrases ≥ 2 mentions (specific enough by nature); singles ≥ 3 (stricter to cut noise)
     const scored = {}
     for (const [key, count] of Object.entries(phraseFreq)) {
       if (count >= 2) scored[key] = count * 3
     }
+    // Add singles only if no phrase already covers that word (e.g. skip "Iran" if "Iran Deal" exists)
+    const phraseKeys = Object.keys(scored)
     for (const [key, count] of Object.entries(singleFreq)) {
-      if (count >= 3 && !scored[key]) scored[key] = count
+      if (count >= 3 && !scored[key] && !phraseKeys.some(p => p.includes(key))) {
+        scored[key] = count
+      }
     }
 
     return Object.entries(scored)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12)
       .map(([key]) => displayForm[key] || key.charAt(0).toUpperCase() + key.slice(1))
-  }, [articles, COMMON_WORDS, PHRASE_CONNECTORS])
+  }, [trendingArticles, COMMON_WORDS, MEDIA_ACRONYMS])
+
+  // Topic insights — count + avg accuracy from the dedicated 24h trendingArticles fetch.
+  // This is a complete (non-paginated) dataset so counts are stable and accurate.
+  const topicInsights = useMemo(() => {
+    if (!trendingTopics.length) return []
+    return trendingTopics.slice(0, 8).map(topic => {
+      const key = topic.toLowerCase()
+      const matched = trendingArticles.filter(a =>
+        (a.title || '').toLowerCase().includes(key)
+      )
+      const scored = matched.filter(a => (a.accuracy_score || 0) > 0)
+      const avgAcc = scored.length
+        ? Math.round(scored.reduce((s, a) => s + a.accuracy_score, 0) / scored.length)
+        : null
+      return { topic, count: matched.length, avgAcc }
+    })
+    .filter(t => t.count >= 2)
+    .sort((a, b) => b.count - a.count) // highest count left to right
+  }, [trendingTopics, trendingArticles])
 
   // Which list to display — DB results when search active, interleaved otherwise
   const isSearchActive = dbResults !== null
-  const displayList = isSearchActive
+  const baseList = isSearchActive
     ? (minScore > 0 ? (dbResults || []).filter(a => (a.accuracy_score || 0) >= minScore) : dbResults)
     : interleaved
+  const displayList = activeTopic
+    ? trendingArticles.filter(a =>
+        (a.title || '').toLowerCase().includes(activeTopic.toLowerCase())
+      )
+    : baseList
 
   // Outlet search — match search term against outlet names
   const matchedOutlets = useMemo(() => {
@@ -478,6 +558,35 @@ export default function FeedPage({
           </div>
         </div>
 
+        {/* My feed context strip */}
+        {feedTab === 'following' && user && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, padding: '10px 14px', background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+            {followedOutletIds.size === 0 ? (
+              <span style={{ fontSize: 12, color: 'var(--text3)', flex: 1 }}>Follow outlets to build your personalised feed</span>
+            ) : (
+              <>
+                <div style={{ display: 'flex', gap: 6, flex: 1, overflow: 'hidden', flexWrap: 'nowrap' }}>
+                  {(outlets || []).filter(o => followedOutletIds.has(o.id)).slice(0, 8).map(o => (
+                    <OutletLogo key={o.id} name={o.name} size={26} borderRadius={6} />
+                  ))}
+                  {followedOutletIds.size > 8 && (
+                    <div style={{ width: 26, height: 26, borderRadius: 6, background: 'var(--bg2)', border: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: 'var(--text3)', fontWeight: 600, flexShrink: 0 }}>
+                      +{followedOutletIds.size - 8}
+                    </div>
+                  )}
+                </div>
+                <span style={{ fontSize: 11, color: 'var(--text3)', whiteSpace: 'nowrap' }}>{followedOutletIds.size} outlet{followedOutletIds.size !== 1 ? 's' : ''}</span>
+              </>
+            )}
+            <button
+              onClick={() => navigate('profile')}
+              style={{ fontSize: 11, color: 'var(--coral)', background: 'none', border: 'none', cursor: 'pointer', whiteSpace: 'nowrap', padding: 0, fontFamily: 'inherit' }}
+            >
+              Manage →
+            </button>
+          </div>
+        )}
+
         {/* Search */}
         <div className="search-bar">
           <span className="search-icon">🔍</span>
@@ -532,21 +641,48 @@ export default function FeedPage({
           </p>
         )}
 
-        {/* Trending topics */}
-        {!isSearchActive && trendingTopics.length > 0 && (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflowX: 'auto', paddingBottom: 2, WebkitOverflowScrolling: 'touch' }}>
-              <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', flexShrink: 0 }}>🔥 Trending</span>
-              {trendingTopics.map(topic => (
-                <button
-                  key={topic}
-                  className="pill"
-                  onClick={() => { setSearch(topic); searchInputRef.current?.focus() }}
-                  style={{ fontSize: 12, whiteSpace: 'nowrap', flexShrink: 0 }}
-                >
-                  {topic}
-                </button>
-              ))}
+        {/* Topic insight cards */}
+        {topicInsights.length > 0 && (
+          <div style={{ marginBottom: 14 }}>
+            <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+              🔥 Trending · 24h
+            </div>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
+              {topicInsights.map(({ topic, count, avgAcc }) => {
+                const isActive = activeTopic === topic
+                const accColor = avgAcc === null ? 'var(--text3)'
+                  : avgAcc >= 70 ? 'var(--green)'
+                  : avgAcc >= 50 ? 'var(--amber)'
+                  : 'var(--red)'
+                return (
+                  <div
+                    key={topic}
+                    onClick={() => setActiveTopic(isActive ? null : topic)}
+                    style={{
+                      flexShrink: 0, cursor: 'pointer',
+                      background: isActive ? 'var(--coral)' : 'var(--surface)',
+                      border: `0.5px solid ${isActive ? 'var(--coral)' : 'var(--border)'}`,
+                      borderRadius: 'var(--radius-sm)', padding: '10px 14px',
+                      minWidth: 120, maxWidth: 160,
+                      transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = 'var(--coral)' }}
+                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = 'var(--border)' }}
+                  >
+                    <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: isActive ? '#fff' : 'inherit' }}>
+                      {topic}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 6 }}>
+                      <span style={{ fontSize: 10, color: isActive ? 'rgba(255,255,255,0.8)' : 'var(--text3)' }}>{count} article{count !== 1 ? 's' : ''}</span>
+                      <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                        {avgAcc !== null && (
+                          <span style={{ fontSize: 10, fontWeight: 700, color: isActive ? '#fff' : accColor }}>✦{avgAcc}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}
@@ -719,27 +855,18 @@ export default function FeedPage({
                 ))
               )}
 
-              {/* Fallback load more button — visible when sentinel scroll doesn't fire */}
-              {!isSearchActive && feedTab === 'all' && hasMoreArticles && !loadingMore && (
-                <button
-                  onClick={loadMoreArticles}
-                  style={{
-                    width: '100%', padding: '11px', marginTop: 4,
-                    background: 'var(--surface)', border: '0.5px solid var(--border)',
-                    borderRadius: 'var(--radius)', fontSize: 13, fontWeight: 500,
-                    color: 'var(--text2)', cursor: 'pointer', transition: 'border-color 0.15s',
-                  }}
-                >
-                  Load more stories ↓
-                </button>
-              )}
-              {/* Infinite scroll sentinel — invisible div at bottom of feed */}
-              {!isSearchActive && feedTab === 'all' && (
-                <div ref={sentinelRef} style={{ height: 1 }} />
-              )}
-              {!isSearchActive && feedTab === 'all' && loadingMore && (
-                <div style={{ textAlign: 'center', padding: '16px 0', fontSize: 13, color: 'var(--text3)' }}>
-                  Loading more…
+              {/* Infinite scroll sentinel + spinner */}
+              {!isSearchActive && feedTab === 'all' && hasMoreArticles && (
+                <div ref={sentinelRef} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px 0', minHeight: 56 }}>
+                  {loadingMore && (
+                    <div style={{
+                      width: 20, height: 20,
+                      border: '2px solid var(--border)',
+                      borderTopColor: 'var(--text3)',
+                      borderRadius: '50%',
+                      animation: 'spin 0.7s linear infinite',
+                    }} />
+                  )}
                 </div>
               )}
               {!isSearchActive && feedTab === 'all' && !hasMoreArticles && displayList.length > 0 && (

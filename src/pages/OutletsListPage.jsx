@@ -186,7 +186,7 @@ function SuggestModal({ onClose, user, onLoginClick, showToast }) {
   )
 }
 
-export default function OutletsListPage({ outlets, outletsLoading, navigate, goBack, showToast, user, onLoginClick, onRefresh }) {
+export default function OutletsListPage({ outlets, outletsLoading, navigate, goBack, showToast, user, onLoginClick, onRefresh, followedOutletIds = new Set(), toggleFollow }) {
   const [search,  setSearch]  = useState('')
   const [region,  setRegion]  = useState('all')
   const [bias,    setBias]    = useState('all')
@@ -358,14 +358,31 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
                         )}
                       </div>
                     </div>
-                    <div style={{ textAlign: 'center', flexShrink: 0 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
                       <div style={{
                         fontSize: 15, fontWeight: 700, lineHeight: 1,
                         background: score >= 75 ? 'var(--green-light)' : score >= 60 ? '#fff3cd' : score > 0 ? '#fde8e8' : 'var(--bg2)',
                         color: score >= 75 ? 'var(--green-dark)' : score >= 60 ? '#856404' : score > 0 ? 'var(--red)' : 'var(--text3)',
                         padding: '4px 10px', borderRadius: 20,
                       }}>{score > 0 ? score : '—'}</div>
-                      <div style={{ fontSize: 9, color: 'var(--text3)', marginTop: 4 }}>TRUST</div>
+                      <button
+                        onClick={e => {
+                          e.stopPropagation()
+                          if (!user) { onLoginClick(); return }
+                          toggleFollow(o.id)
+                        }}
+                        style={{
+                          fontSize: 10, fontWeight: 600,
+                          padding: '3px 10px', borderRadius: 20,
+                          border: followedOutletIds.has(o.id) ? '1px solid var(--border)' : '1px solid var(--coral)',
+                          background: followedOutletIds.has(o.id) ? 'var(--bg)' : 'rgba(216,90,48,0.08)',
+                          color: followedOutletIds.has(o.id) ? 'var(--text3)' : 'var(--coral)',
+                          cursor: 'pointer', whiteSpace: 'nowrap',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        {followedOutletIds.has(o.id) ? '✓ Following' : '+ Follow'}
+                      </button>
                     </div>
                   </div>
 

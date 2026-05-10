@@ -86,6 +86,18 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
   "global" = clear international significance or spans multiple countries (e.g. "NATO summit agrees new defence targets", "Global inflation hits 40-year high").
   When in doubt between national and global, prefer "national".
 
+- "article_region": string, one of: "UK", "US", "Europe", "MiddleEast", "Africa", "AsiaPac", "Americas", "International".
+  The geographic region this article is primarily ABOUT — not where the outlet is based.
+  "UK" = stories primarily about the United Kingdom.
+  "US" = stories primarily about the United States.
+  "Europe" = stories about European countries (excluding UK), the EU, or pan-European topics (France, Germany, Spain, Italy, Russia, Ukraine, etc).
+  "MiddleEast" = stories about the Middle East (Israel, Gaza, Iran, Iraq, Saudi Arabia, Turkey, UAE, Yemen, Lebanon, Syria, etc).
+  "Africa" = stories about African countries or the African continent.
+  "AsiaPac" = stories about Asian or Pacific countries (China, Japan, India, South Korea, Australia, Southeast Asia, etc).
+  "Americas" = stories about Latin America, Canada, or the Caribbean.
+  "International" = stories spanning multiple regions or with global significance but no single clear geographic focus (e.g. global economy, climate summit, UN resolutions).
+  When a US outlet covers a UK story, tag "UK". When a UK outlet covers a US election, tag "US". Follow the story, not the outlet.
+
 - "ai_summary": string. A 1–2 sentence neutral summary of what the article is about.
   Write as if summarising for someone who hasn't read it. Do not editoralise.
 
@@ -126,19 +138,21 @@ Summary: ${article.summary || '(no summary available)'}`
   }
 
   // Validate required fields
-  const { accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, ai_summary } = parsed
+  const { accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary } = parsed
+  const VALID_REGIONS = ['UK', 'US', 'Europe', 'MiddleEast', 'Africa', 'AsiaPac', 'Americas', 'International']
   if (
     typeof accuracy_score !== 'number' ||
     typeof bias_score !== 'number' ||
     !['left', 'centre', 'right'].includes(bias_direction) ||
     !['fair', 'misleading', 'clickbait'].includes(headline_vote) ||
     !CATEGORIES.includes(category) ||
-    !['local', 'national', 'global'].includes(geographic_scope)
+    !['local', 'national', 'global'].includes(geographic_scope) ||
+    !VALID_REGIONS.includes(article_region)
   ) {
     throw new Error(`Unexpected response shape: ${raw.slice(0, 200)}`)
   }
 
-  return { accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, ai_summary: ai_summary || null }
+  return { accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary: ai_summary || null }
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -205,6 +219,7 @@ async function main() {
             headline_vote:     scores.headline_vote,
             category:          scores.category,
             geographic_scope:  scores.geographic_scope,
+            article_region:    scores.article_region,
             ai_summary:        scores.ai_summary,
           })
           .eq('id', article.id)

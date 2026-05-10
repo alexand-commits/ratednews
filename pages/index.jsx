@@ -12,29 +12,42 @@ export default function Feed({ initialArticles, initialCount }) {
   const { navigate, allOutlets, user, followedOutletIds, savedArticleIds,
           toggleSave, showToast, openAuthModal } = useAppContext()
 
-  const [articles,      setArticles]      = useState(initialArticles)
-  const [totalCount,    setTotalCount]    = useState(initialCount)
-  const [loading,       setLoading]       = useState(!initialArticles.length)
-  const [offset,        setOffset]        = useState(initialArticles.length)
-  const [hasMore,       setHasMore]       = useState(initialArticles.length === BATCH)
-  const [loadingMore,   setLoadingMore]   = useState(false)
+  const [articles,         setArticles]         = useState(initialArticles)
+  const [totalCount,       setTotalCount]       = useState(initialCount)
+  const [loading,          setLoading]          = useState(!initialArticles.length)
+  const [offset,           setOffset]           = useState(initialArticles.length)
+  const [hasMore,          setHasMore]          = useState(initialArticles.length === BATCH)
+  const [loadingMore,      setLoadingMore]      = useState(false)
+  const [trendingArticles, setTrendingArticles] = useState([])
 
-  // If SSR returned nothing (cold start), load client-side
+  // Always fetch fresh articles on mount — ISR data can be up to 5 min stale.
+  // If ISR returned data, show it immediately and silently swap in fresh results.
+  // If ISR returned nothing (cold start), show loading spinner until data arrives.
   useEffect(() => {
-    if (initialArticles.length) return
-    setLoading(true)
+    const hasCached = initialArticles.length > 0
+    if (!hasCached) setLoading(true)
+
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
     Promise.all([
+      // Main paginated feed
       db.from('articles')
         .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
       db.from('articles').select('*', { count: 'exact', head: true }),
-    ]).then(([{ data }, { count }]) => {
+      // Dedicated 24h fetch for trending — complete, not paginated
+      db.from('articles')
+        .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+        .gte('published_at', cutoff)
+        .order('published_at', { ascending: false }),
+    ]).then(([{ data }, { count }, { data: recent }]) => {
       setArticles(data || [])
       setTotalCount(count || 0)
       setOffset(BATCH)
       setHasMore((data || []).length === BATCH)
-      setLoading(false)
+      setTrendingArticles(recent || [])
+      if (!hasCached) setLoading(false)
     })
   }, [])
 
@@ -88,6 +101,7 @@ export default function Feed({ initialArticles, initialCount }) {
       </Head>
       <FeedPage
         articles={articles}
+        trendingArticles={trendingArticles}
         outlets={allOutlets}
         loading={loading}
         navigate={navigate}

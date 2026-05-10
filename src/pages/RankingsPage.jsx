@@ -24,6 +24,23 @@ const OUTLET_TABS = [
     tip: 'Average star rating given by RatedNews users (out of 100). Reflects reader trust and experience, independent of AI analysis.',
     chipLabel: 'avg community score', unit: '',
   },
+  {
+    id: 'headlines', label: 'Headlines', key: 'fair_rate',
+    desc: 'Headline fairness rate',
+    tip: 'Percentage of headlines rated fair by AI — not misleading or clickbait. Higher = more honest headline writing.',
+    chipLabel: 'avg fair headline rate', unit: '%',
+  },
+]
+
+const COVERAGE_REGIONS = [
+  { value: 'US',            label: 'US'           },
+  { value: 'UK',            label: 'UK'           },
+  { value: 'Europe',        label: 'Europe'       },
+  { value: 'MiddleEast',    label: 'Middle East'  },
+  { value: 'Africa',        label: 'Africa'       },
+  { value: 'AsiaPac',       label: 'Asia Pacific' },
+  { value: 'Americas',      label: 'Americas'     },
+  { value: 'International', label: 'International'},
 ]
 
 const BIAS_COLORS = { left: 'var(--blue, #3b82f6)', centre: 'var(--text3)', right: 'var(--red)' }
@@ -162,12 +179,31 @@ function ComparePanel({ a, b, navigate, onClear }) {
 }
 
 export default function RankingsPage({ outlets, outletsLoading, navigate, goBack, user, onRefresh }) {
-  const [section, setSection]     = useState('outlets')  // 'outlets' | 'leaderboard'
-  const [tab, setTab]             = useState('credibility')
-  const [region, setRegion]       = useState('all')
+  const [section, setSection]         = useState('outlets')
+  const [tab, setTab]                 = useState('credibility')
+  const [region, setRegion]           = useState('all')
   const [compareMode, setCompareMode] = useState(false)
   const [compareIds, setCompareIds]   = useState([])
+  const [coverage, setCoverage]       = useState([])
   const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
+
+  // Fetch coverage counts per region (last 7 days)
+  useEffect(() => {
+    const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+    Promise.all(
+      COVERAGE_REGIONS.map(r =>
+        db.from('articles')
+          .select('*', { count: 'exact', head: true })
+          .eq('article_region', r.value)
+          .gte('published_at', since7)
+          .then(({ count }) => ({ ...r, count: count || 0 }))
+      )
+    ).then(results => {
+      const total = results.reduce((s, r) => s + r.count, 0) || 1
+      setCoverage(results.map(r => ({ ...r, pct: Math.round((r.count / total) * 100) }))
+        .sort((a, b) => b.count - a.count))
+    })
+  }, [])
 
   function toggleCompareOutlet(id) {
     setCompareIds(prev => {
@@ -266,6 +302,9 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
           <div className={`tab${section === 'leaderboard' ? ' active' : ''}`} onClick={() => setSection('leaderboard')}>
             🏅 Contributors
           </div>
+          <div className={`tab${section === 'coverage' ? ' active' : ''}`} onClick={() => setSection('coverage')}>
+            🗺 Coverage
+          </div>
         </div>
 
         {/* ── OUTLETS SECTION ── */}
@@ -320,6 +359,48 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
               </div>
 
             </div>
+
+            {/* Biggest Movers */}
+            {(() => {
+              const withDelta = outlets.filter(o => o.accuracy_delta_7d !== null && o.accuracy_delta_7d !== undefined)
+              if (withDelta.length < 2) return null
+              const risers  = [...withDelta].sort((a, b) => b.accuracy_delta_7d - a.accuracy_delta_7d).slice(0, 3).filter(o => o.accuracy_delta_7d > 0)
+              const fallers = [...withDelta].sort((a, b) => a.accuracy_delta_7d - b.accuracy_delta_7d).slice(0, 3).filter(o => o.accuracy_delta_7d < 0)
+              if (!risers.length && !fallers.length) return null
+              return (
+                <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px', marginBottom: 20 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 12 }}>
+                    Score movers · 7-day accuracy change
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    {/* Risers */}
+                    <div>
+                      {risers.map(o => (
+                        <div key={o.id} onClick={() => navigate('outlet', { outletId: o.id })}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9, cursor: 'pointer' }}>
+                          <OutletLogo name={o.name} size={22} borderRadius={5} />
+                          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: '#22c55e', flexShrink: 0 }}>+{o.accuracy_delta_7d}</span>
+                        </div>
+                      ))}
+                      {!risers.length && <div style={{ fontSize: 12, color: 'var(--text3)' }}>No risers yet</div>}
+                    </div>
+                    {/* Fallers */}
+                    <div>
+                      {fallers.map(o => (
+                        <div key={o.id} onClick={() => navigate('outlet', { outletId: o.id })}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9, cursor: 'pointer' }}>
+                          <OutletLogo name={o.name} size={22} borderRadius={5} />
+                          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', flexShrink: 0 }}>{o.accuracy_delta_7d}</span>
+                        </div>
+                      ))}
+                      {!fallers.length && <div style={{ fontSize: 12, color: 'var(--text3)' }}>No fallers yet</div>}
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
 
             {/* Sub-tabs */}
             <div className="tabs" style={{ marginBottom: 16 }}>
@@ -383,86 +464,136 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
               return a && b ? <ComparePanel a={a} b={b} navigate={navigate} onClear={clearCompare} /> : null
             })()}
 
-            {/* List */}
-            <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-              {outletsLoading ? (
-                [0,1,2,3,4,5,6,7].map(i => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderBottom: i < 7 ? '0.5px solid var(--border)' : 'none' }}>
-                    <div className="skeleton-shimmer" style={{ width: 26, height: 14, borderRadius: 4, flexShrink: 0, background: 'var(--border)' }} />
-                    <div className="skeleton-shimmer" style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: 'var(--border)' }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="skeleton-line skeleton-shimmer" style={{ width: '55%', height: 13, marginBottom: 6 }} />
-                      <div className="skeleton-line skeleton-shimmer" style={{ width: '30%', height: 10 }} />
+            {/* Headlines tab — clickbait leaderboard */}
+            {tab === 'headlines' ? (() => {
+              const withHeadlines = outlets
+                .filter(o => region === 'all' || (o.country || 'International') === region)
+                .filter(o => o.fair_rate != null)
+              const fairest    = [...withHeadlines].sort((a, b) => (b.fair_rate || 0) - (a.fair_rate || 0)).slice(0, 8)
+              const clickbaity = [...withHeadlines].sort((a, b) => (b.clickbait_rate || 0) - (a.clickbait_rate || 0)).slice(0, 8)
+              if (!withHeadlines.length) return <div className="empty-state"><p>Headline data not yet available.</p></div>
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {/* Fairest headlines */}
+                  <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+                    <div style={{ padding: '12px 18px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14 }}>✓</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)' }}>Fairest headlines</span>
                     </div>
-                    <div style={{ width: 100, flexShrink: 0 }}>
-                      <div className="skeleton-shimmer" style={{ height: 6, borderRadius: 3, background: 'var(--border)' }} />
-                      <div className="skeleton-shimmer" style={{ width: 28, height: 10, borderRadius: 3, background: 'var(--border)', marginTop: 6, marginLeft: 'auto' }} />
-                    </div>
+                    {fairest.map((o, i) => (
+                      <div key={o.id} onClick={() => navigate('outlet', { outletId: o.id })}
+                        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px', borderBottom: i < fairest.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }}
+                        className="row-hover"
+                      >
+                        <span style={{ fontSize: 12, color: 'var(--text3)', width: 20, flexShrink: 0, textAlign: 'center' }}>{i + 1}</span>
+                        <OutletLogo name={o.name} size={30} borderRadius={7} />
+                        <span style={{ flex: 1, fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
+                        <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)' }}>{o.fair_rate}% fair</div>
+                          {o.clickbait_rate > 0 && <div style={{ fontSize: 10, color: 'var(--text3)' }}>{o.clickbait_rate}% clickbait</div>}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))
-              ) : sorted.length === 0 ? (
-                <div className="empty-state"><p>No outlets for this region yet.</p></div>
-              ) : (
-                sorted.map((o, i) => {
-                  const score      = o[activeTab.key] || 0
-                  const barWidth   = Math.round((score / 100) * 100)
-                  const isTop3     = i < 3
-                  const isSelected = compareIds.includes(o.id)
 
-                  return (
-                    <div
-                      key={o.id}
-                      style={{
-                        display: 'flex', alignItems: 'center', gap: 14,
-                        padding: '14px 18px',
-                        borderBottom: i < sorted.length - 1 ? '0.5px solid var(--border)' : 'none',
-                        cursor: 'pointer', transition: 'background 0.15s',
-                        background: isSelected ? 'rgba(216,90,48,0.06)' : i === 0 ? 'rgba(184,134,11,0.06)' : i === 1 ? 'rgba(160,160,160,0.05)' : i === 2 ? 'rgba(160,82,45,0.05)' : '',
-                      }}
-                      className="row-hover"
-                      onClick={() => compareMode ? toggleCompareOutlet(o.id) : navigate('outlet', { outletId: o.id })}
-                    >
-                      {/* Rank or compare circle */}
-                      {compareMode ? (
-                        <div style={{
-                          width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
-                          border: `2px solid ${isSelected ? 'var(--coral)' : 'var(--border)'}`,
-                          background: isSelected ? 'var(--coral)' : 'transparent',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          {isSelected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
-                        </div>
-                      ) : (
-                        <span style={{ fontSize: isTop3 ? 15 : 13, fontWeight: isTop3 ? 700 : 400, color: i === 0 ? '#b8860b' : i === 1 ? '#888' : i === 2 ? '#a0522d' : 'var(--text3)', width: 26, flexShrink: 0, textAlign: 'center' }}>
-                          {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
-                        </span>
-                      )}
-                      <OutletLogo name={o.name} size={38} borderRadius={10} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 2 }}>{o.name}</div>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.country || ''}</span>
-                          {o.bias_direction && <span style={{ fontSize: 11, color: BIAS_COLORS[o.bias_direction] || 'var(--text3)' }}>{BIAS_LABELS[o.bias_direction]}</span>}
-                          {o.total_ratings > 0 && <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.total_ratings} {o.total_ratings === 1 ? 'rating' : 'ratings'}</span>}
-                        </div>
-                      </div>
-                      <div style={{ width: 100, flexShrink: 0 }}>
-                        <div className="rank-bar-bg">
-                          <div className="rank-bar-fill" style={{ width: `${barWidth}%`, background: scoreColor(score) }} />
-                        </div>
-                        <div style={{ fontSize: 11, textAlign: 'right', marginTop: 3, color: scoreColor(score), fontWeight: 600 }}>
-                          {tab === 'community' && o.community_score > 0 ? `${(o.community_score / 20).toFixed(1)}★` : score}
-                        </div>
-                      </div>
+                  {/* Most clickbait */}
+                  <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+                    <div style={{ padding: '12px 18px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14 }}>⚠</span>
+                      <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)' }}>Most clickbait</span>
                     </div>
-                  )
-                })
-              )}
-            </div>
-
-            <div style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'center', marginTop: 16 }}>
-              Credibility and accuracy scores are AI-generated. Community scores reflect user ratings.
-            </div>
+                    {clickbaity.map((o, i) => (
+                      <div key={o.id} onClick={() => navigate('outlet', { outletId: o.id })}
+                        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px', borderBottom: i < clickbaity.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }}
+                        className="row-hover"
+                      >
+                        <span style={{ fontSize: 12, color: 'var(--text3)', width: 20, flexShrink: 0, textAlign: 'center' }}>{i + 1}</span>
+                        <OutletLogo name={o.name} size={30} borderRadius={7} />
+                        <span style={{ flex: 1, fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
+                        <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--red)' }}>{o.clickbait_rate}% clickbait</div>
+                          <div style={{ fontSize: 10, color: 'var(--text3)' }}>{o.misleading_rate}% misleading</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })() : (
+              <>
+                {/* Standard outlet list */}
+                <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+                  {outletsLoading ? (
+                    [0,1,2,3,4,5,6,7].map(i => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderBottom: i < 7 ? '0.5px solid var(--border)' : 'none' }}>
+                        <div className="skeleton-shimmer" style={{ width: 26, height: 14, borderRadius: 4, flexShrink: 0, background: 'var(--border)' }} />
+                        <div className="skeleton-shimmer" style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: 'var(--border)' }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div className="skeleton-line skeleton-shimmer" style={{ width: '55%', height: 13, marginBottom: 6 }} />
+                          <div className="skeleton-line skeleton-shimmer" style={{ width: '30%', height: 10 }} />
+                        </div>
+                        <div style={{ width: 100, flexShrink: 0 }}>
+                          <div className="skeleton-shimmer" style={{ height: 6, borderRadius: 3, background: 'var(--border)' }} />
+                          <div className="skeleton-shimmer" style={{ width: 28, height: 10, borderRadius: 3, background: 'var(--border)', marginTop: 6, marginLeft: 'auto' }} />
+                        </div>
+                      </div>
+                    ))
+                  ) : sorted.length === 0 ? (
+                    <div className="empty-state"><p>No outlets for this region yet.</p></div>
+                  ) : (
+                    sorted.map((o, i) => {
+                      const score      = o[activeTab.key] || 0
+                      const barWidth   = Math.round((score / 100) * 100)
+                      const isTop3     = i < 3
+                      const isSelected = compareIds.includes(o.id)
+                      return (
+                        <div key={o.id}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 14,
+                            padding: '14px 18px',
+                            borderBottom: i < sorted.length - 1 ? '0.5px solid var(--border)' : 'none',
+                            cursor: 'pointer', transition: 'background 0.15s',
+                            background: isSelected ? 'rgba(216,90,48,0.06)' : i === 0 ? 'rgba(184,134,11,0.06)' : i === 1 ? 'rgba(160,160,160,0.05)' : i === 2 ? 'rgba(160,82,45,0.05)' : '',
+                          }}
+                          className="row-hover"
+                          onClick={() => compareMode ? toggleCompareOutlet(o.id) : navigate('outlet', { outletId: o.id })}
+                        >
+                          {compareMode ? (
+                            <div style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, border: `2px solid ${isSelected ? 'var(--coral)' : 'var(--border)'}`, background: isSelected ? 'var(--coral)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              {isSelected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
+                            </div>
+                          ) : (
+                            <span style={{ fontSize: isTop3 ? 15 : 13, fontWeight: isTop3 ? 700 : 400, color: i === 0 ? '#b8860b' : i === 1 ? '#888' : i === 2 ? '#a0522d' : 'var(--text3)', width: 26, flexShrink: 0, textAlign: 'center' }}>
+                              {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}
+                            </span>
+                          )}
+                          <OutletLogo name={o.name} size={38} borderRadius={10} />
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 2 }}>{o.name}</div>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                              <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.country || ''}</span>
+                              {o.bias_direction && <span style={{ fontSize: 11, color: BIAS_COLORS[o.bias_direction] || 'var(--text3)' }}>{BIAS_LABELS[o.bias_direction]}</span>}
+                              {o.total_ratings > 0 && <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.total_ratings} {o.total_ratings === 1 ? 'rating' : 'ratings'}</span>}
+                            </div>
+                          </div>
+                          <div style={{ width: 100, flexShrink: 0 }}>
+                            <div className="rank-bar-bg">
+                              <div className="rank-bar-fill" style={{ width: `${barWidth}%`, background: scoreColor(score) }} />
+                            </div>
+                            <div style={{ fontSize: 11, textAlign: 'right', marginTop: 3, color: scoreColor(score), fontWeight: 600 }}>
+                              {tab === 'community' && o.community_score > 0 ? `${(o.community_score / 20).toFixed(1)}★` : score}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'center', marginTop: 16 }}>
+                  Credibility and accuracy scores are AI-generated. Community scores reflect user ratings.
+                </div>
+              </>
+            )}
           </>
         )}
 
@@ -545,6 +676,74 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                 You're not in the top 25 yet. Keep rating articles to climb the board!
               </div>
             )}
+          </>
+        )}
+
+        {/* ── COVERAGE SECTION ── */}
+        {section === 'coverage' && (
+          <>
+            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 20, lineHeight: 1.6 }}>
+              How articles published in the last 7 days are distributed across world regions. Regions under 5% of total coverage are flagged as gaps.
+            </div>
+
+            {coverage.length === 0 ? (
+              <div className="empty-state"><p>Loading coverage data…</p></div>
+            ) : (() => {
+              const maxCount = coverage[0].count || 1
+              const total = coverage.reduce((s, r) => s + r.count, 0)
+              const gaps = coverage.filter(r => r.pct < 5)
+              return (
+                <>
+                  {/* Summary chips */}
+                  <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+                    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 120 }}>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Total articles</div>
+                      <div style={{ fontSize: 22, fontWeight: 700 }}>{total.toLocaleString()}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text2)' }}>last 7 days</div>
+                    </div>
+                    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 120 }}>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Coverage gaps</div>
+                      <div style={{ fontSize: 22, fontWeight: 700, color: gaps.length ? 'var(--red)' : 'var(--green)' }}>{gaps.length}</div>
+                      <div style={{ fontSize: 12, color: 'var(--text2)' }}>{gaps.length ? `${gaps.map(g => g.label).join(', ')}` : 'All regions covered'}</div>
+                    </div>
+                  </div>
+
+                  {/* Bar chart */}
+                  <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 16 }}>
+                      Regional breakdown
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {coverage.map(r => (
+                        <div key={r.value}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                            <span style={{ fontSize: 13, color: r.pct < 5 ? 'var(--red)' : 'var(--text1)', fontWeight: r.pct < 5 ? 600 : 400 }}>
+                              {r.label}{r.pct < 5 ? ' ↓' : ''}
+                            </span>
+                            <span style={{ fontSize: 12, color: 'var(--text3)' }}>{r.count.toLocaleString()} articles · {r.pct}%</span>
+                          </div>
+                          <div style={{ height: 6, background: 'var(--border)', borderRadius: 3 }}>
+                            <div style={{
+                              height: '100%',
+                              width: `${(r.count / maxCount) * 100}%`,
+                              borderRadius: 3,
+                              background: r.pct < 5 ? 'var(--red)' : r.pct > 30 ? 'var(--coral)' : 'var(--text3)',
+                              transition: 'width 0.4s ease',
+                            }} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {gaps.length > 0 && (
+                    <div style={{ marginTop: 16, background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
+                      <strong style={{ color: 'var(--text1)' }}>Underrepresented regions:</strong> {gaps.map(g => g.label).join(', ')} each account for less than 5% of recent coverage. This reflects the outlets currently in our feed network, not global news importance.
+                    </div>
+                  )}
+                </>
+              )
+            })()}
           </>
         )}
 

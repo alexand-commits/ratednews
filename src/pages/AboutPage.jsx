@@ -172,6 +172,22 @@ export default function AboutPage({ navigate, goBack }) {
           </div>
         </div>
 
+        {/* Methodology link */}
+        <a href="/methodology" style={{ textDecoration: 'none', display: 'block', marginTop: 16 }}>
+          <div style={{
+            background: 'var(--surface)', border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius)', padding: '14px 18px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            transition: 'border-color 0.15s',
+          }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text1)', marginBottom: 2 }}>Full methodology</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)' }}>The scoring prompt, weighting formula, known limitations and changelog</div>
+            </div>
+            <span style={{ fontSize: 16, color: 'var(--text3)', flexShrink: 0, marginLeft: 12 }}>→</span>
+          </div>
+        </a>
+
         {/* Legal links */}
         <div style={{
           marginTop: 32,

@@ -85,7 +85,7 @@ async function run() {
     let all = [], from = 0
     while (true) {
       const { data, error } = await supabase
-        .from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction')
+        .from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, published_at')
         .not('accuracy_score', 'is', null)
         .gte('published_at', since)
         .range(from, from + PAGE - 1)
@@ -104,7 +104,7 @@ async function run() {
     let all = [], from = 0
     while (true) {
       const { data, error } = await supabase
-        .from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction')
+        .from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, published_at')
         .not('accuracy_score', 'is', null)
         .in('outlet_id', outletIds)
         .range(from, from + PAGE - 1)
@@ -167,6 +167,8 @@ async function run() {
   const updates = []
   const skipped = []
 
+  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000
+
   for (const outlet of outlets) {
     const arts = grouped[outlet.id] || []
     if (arts.length < MIN_ARTICLES) { skipped.push(outlet.name); continue }
@@ -178,6 +180,23 @@ async function run() {
     for (const a of arts) { const d = a.bias_direction || 'centre'; dirCounts[d] = (dirCounts[d] || 0) + 1 }
     const biasDirection = majorityDirection(dirCounts)
 
+    // Headline quality rates
+    const votedArts    = arts.filter(a => a.headline_vote)
+    const votedCount   = votedArts.length || 1
+    const fairRate     = Math.round(votedArts.filter(a => a.headline_vote === 'fair').length       / votedCount * 100)
+    const clickbaitRate= Math.round(votedArts.filter(a => a.headline_vote === 'clickbait').length  / votedCount * 100)
+    const misleadRate  = Math.round(votedArts.filter(a => a.headline_vote === 'misleading').length / votedCount * 100)
+
+    // 7-day delta — compare last 7 days vs previous period
+    const recentArts = arts.filter(a => a.published_at && new Date(a.published_at).getTime() >= sevenDaysAgo)
+    const olderArts  = arts.filter(a => a.published_at && new Date(a.published_at).getTime() <  sevenDaysAgo)
+    let accuracyDelta7d = null
+    if (recentArts.length >= 3 && olderArts.length >= 3) {
+      const recentAvg = Math.round(recentArts.reduce((s, a) => s + (a.accuracy_score || 0), 0) / recentArts.length)
+      const olderAvg  = Math.round(olderArts.reduce((s, a) => s + (a.accuracy_score || 0), 0) / olderArts.length)
+      accuracyDelta7d = recentAvg - olderAvg
+    }
+
     // Community
     const outletRatings = ratingsByOutlet[outlet.id] || []
     const voteCount     = outletRatings.length
@@ -186,7 +205,7 @@ async function run() {
 
     const overall = computeOverall({ accuracyScore: avgAccuracy, communityScore, voteCount })
 
-    updates.push({ id: outlet.id, name: outlet.name, accuracy_score: avgAccuracy, bias_score: avgBias, bias_direction: biasDirection, overall_score: overall, voteCount, communityScore })
+    updates.push({ id: outlet.id, name: outlet.name, accuracy_score: avgAccuracy, bias_score: avgBias, bias_direction: biasDirection, overall_score: overall, voteCount, communityScore, accuracyDelta7d, articleCount: arts.length, fairRate, clickbaitRate, misleadRate })
   }
 
   console.log(`\n📊  Updating ${updates.length} outlets (${skipped.length} skipped)\n`)
@@ -196,23 +215,51 @@ async function run() {
     const { error } = await supabase
       .from('outlets')
       .update({
-        accuracy_score:  u.accuracy_score,
-        bias_score:      u.bias_score,
-        bias_direction:  u.bias_direction,
-        overall_score:   u.overall_score,
-        community_score: u.communityScore || null,
-        total_ratings:   u.voteCount,
+        accuracy_score:      u.accuracy_score,
+        bias_score:          u.bias_score,
+        bias_direction:      u.bias_direction,
+        overall_score:       u.overall_score,
+        community_score:     u.communityScore || null,
+        total_ratings:       u.voteCount,
+        accuracy_delta_7d:   u.accuracyDelta7d,
+        article_count_30d:   u.articleCount,
+        fair_rate:           u.fairRate,
+        clickbait_rate:      u.clickbaitRate,
+        misleading_rate:     u.misleadRate,
       })
       .eq('id', u.id)
 
     const tier = u.voteCount === 0 ? 'AI-led' : u.voteCount < 5 ? 'early' : u.voteCount < 20 ? 'growing' : 'full'
+    const delta = u.accuracyDelta7d !== null ? (u.accuracyDelta7d >= 0 ? `+${u.accuracyDelta7d}` : `${u.accuracyDelta7d}`) : 'n/a'
     if (error) {
       console.error(`   ❌  ${u.name}: ${error.message}`)
     } else {
-      console.log(`   ✅  ${u.name.padEnd(25)} overall=${u.overall_score}  accuracy=${u.accuracy_score}  bias=${u.bias_direction.padEnd(6)}  community=${u.communityScore} (${u.voteCount} votes)  [${tier}]`)
+      console.log(`   ✅  ${u.name.padEnd(25)} overall=${u.overall_score}  accuracy=${u.accuracy_score} (${delta})  bias=${u.bias_direction.padEnd(6)}  community=${u.communityScore} (${u.voteCount} votes)  [${tier}]`)
       successCount++
     }
   }
+
+  // ── Daily snapshot upsert ──────────────────────────────────────────────────
+  const today = new Date().toISOString().slice(0, 10)
+  const snapshots = updates.map(u => ({
+    outlet_id:      u.id,
+    snapshot_date:  today,
+    accuracy_score: u.accuracy_score,
+    bias_score:     u.bias_score,
+    overall_score:  u.overall_score,
+    article_count:  u.articleCount,
+  }))
+
+  const SNAP_BATCH = 50
+  let snapCount = 0
+  for (let i = 0; i < snapshots.length; i += SNAP_BATCH) {
+    const { error: snapErr } = await supabase
+      .from('outlet_score_snapshots')
+      .upsert(snapshots.slice(i, i + SNAP_BATCH), { onConflict: 'outlet_id,snapshot_date' })
+    if (snapErr) console.error(`   ⚠️  Snapshot batch error: ${snapErr.message}`)
+    else snapCount += snapshots.slice(i, i + SNAP_BATCH).length
+  }
+  console.log(`\n📸  Saved ${snapCount} daily snapshots for ${today}`)
 
   console.log(`\n✨  Done — updated ${successCount}/${updates.length} outlets`)
 }

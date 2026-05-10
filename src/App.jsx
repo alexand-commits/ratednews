@@ -266,7 +266,7 @@ export default function App() {
         <OutletPage outletId={selectedOutletId} allOutlets={allOutlets} goBack={goBack} navigate={navigate} showToast={showToast} user={user} onLoginClick={() => setShowAuthModal(true)} followedOutletIds={followedOutletIds} toggleFollow={toggleFollow} />
       )}
       {currentPage === 'outlets' && (
-        <OutletsListPage outlets={allOutlets} navigate={navigate} goBack={goBack} showToast={showToast} user={user} onLoginClick={() => setShowAuthModal(true)} />
+        <OutletsListPage outlets={allOutlets} navigate={navigate} goBack={goBack} showToast={showToast} user={user} onLoginClick={() => setShowAuthModal(true)} followedOutletIds={followedOutletIds} toggleFollow={toggleFollow} />
       )}
       {currentPage === 'rankings' && (
         <RankingsPage outlets={allOutlets} navigate={navigate} goBack={goBack} showToast={showToast} user={user} />
