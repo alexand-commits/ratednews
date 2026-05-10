@@ -54,10 +54,14 @@ const SORTS = [
 ]
 
 const REGIONS = [
-  { value: 'all', label: 'All'           },
-  { value: 'UK',  label: 'UK'            },
-  { value: 'US',  label: 'US'            },
-  { value: 'int', label: 'International' },
+  { value: 'all',        label: '🌐 All'         },
+  { value: 'US',         label: '🇺🇸 US'         },
+  { value: 'UK',         label: '🇬🇧 UK'         },
+  { value: 'Europe',     label: '🇪🇺 Europe'     },
+  { value: 'MiddleEast', label: '🌙 Middle East' },
+  { value: 'Africa',     label: '🌍 Africa'      },
+  { value: 'AsiaPac',    label: '🌏 Asia Pacific'},
+  { value: 'Americas',   label: '🌎 Americas'    },
 ]
 
 const MIN_SCORES = [
@@ -69,10 +73,7 @@ const MIN_SCORES = [
 ]
 
 function getArticleRegion(article) {
-  const country = article.outlets?.country || ''
-  if (country === 'UK') return 'UK'
-  if (country === 'US') return 'US'
-  return 'int'
+  return article.outlets?.country || 'International'
 }
 
 export default function FeedPage({
