@@ -382,6 +382,52 @@ export default function FeedPage({
     'nyt','wsj','espn','hbo','hulu','vice','vox','axios','politico',
   ]), [])
 
+  // Full names of TV anchors / journalists — blocked as trending phrases.
+  // They appear in headlines as interviewers, not as genuine news topics.
+  const BLOCKED_ANCHOR_PHRASES = useMemo(() => new Set([
+    // CBS
+    'margaret brennan','norah odonnell','gayle king','tony dokoupil','john dickerson',
+    // NBC / MSNBC
+    'lester holt','savannah guthrie','hoda kotb','andrea mitchell','kristen welker',
+    'mika brzezinski','joe scarborough','chris hayes','joy reid','ari melber',
+    'ali velshi','rachel maddow','lawrence odonnell','nicolle wallace',
+    // CNN
+    'jake tapper','anderson cooper','wolf blitzer','erin burnett','dana bash',
+    'poppy harlow','kate bolduan','abby phillip','brianna keilar','john berman',
+    'jim sciutto','jim acosta','brian stelter','bianna golodryga','chris cuomo',
+    'don lemon','omar jimenez',
+    // Fox News
+    'bret baier','martha maccallum','neil cavuto','harris faulkner',
+    'ainsley earhardt','steve doocy','pete hegseth','jesse watters',
+    'laura ingraham','sean hannity','tucker carlson','chris wallace','sandra smith',
+    // ABC
+    'george stephanopoulos','martha raddatz','david muir','robin roberts',
+    'michael strahan','amy robach','gio benitez',
+    // PBS / NPR
+    'judy woodruff','gwen ifill','amna nawaz','geoff bennett',
+    // BBC
+    'huw edwards','sophie raworth','mishal husain','fiona bruce','andrew marr',
+    'laura kuenssberg','victoria derbyshire',
+    // Sky News
+    'kay burley','dermot murnaghan','anna botting','adam boulton',
+    // ITV
+    'piers morgan','susanna reid','phillip schofield','holly willoughby',
+    // Chuck Todd (NBC)
+    'chuck todd',
+  ]), [])
+
+  // Anchor last names — suppresses singles like "Brennan" appearing alone
+  const ANCHOR_LAST_NAMES = useMemo(() => new Set([
+    'brennan','tapper','cooper','blitzer','lemon','maddow','hannity','carlson',
+    'ingraham','cavuto','baier','maccallum','wallace','todd','stephanopoulos',
+    'raddatz','muir','welker','holt','mitchell','brzezinski','scarborough',
+    'hayes','reid','melber','velshi','guthrie','kotb','acosta','stelter',
+    'burnett','bash','harlow','bolduan','keilar','berman','sciutto','golodryga',
+    'faulkner','earhardt','doocy','watters','cuomo','dokoupil','dickerson',
+    'woodruff','husain','kuenssberg','burley','murnaghan','nawaz','benitez',
+    'strahan','robach','nawaz',
+  ]), [])
+
   // Stop-words allowed to sit *inside* a phrase but not start/end one
   const PHRASE_CONNECTORS = new Set(['of','the','and','in','on','at','to','for','by','with','from','over','into','as','a'])
 
@@ -456,12 +502,12 @@ export default function FeedPage({
     // Phrases ≥ 2 mentions (specific enough by nature); singles ≥ 3 (stricter to cut noise)
     const scored = {}
     for (const [key, count] of Object.entries(phraseFreq)) {
-      if (count >= 2) scored[key] = count * 3
+      if (count >= 2 && !BLOCKED_ANCHOR_PHRASES.has(key)) scored[key] = count * 3
     }
     // Add singles only if no phrase already covers that word (e.g. skip "Iran" if "Iran Deal" exists)
     const phraseKeys = Object.keys(scored)
     for (const [key, count] of Object.entries(singleFreq)) {
-      if (count >= 3 && !scored[key] && !phraseKeys.some(p => p.includes(key))) {
+      if (count >= 3 && !scored[key] && !phraseKeys.some(p => p.includes(key)) && !ANCHOR_LAST_NAMES.has(key)) {
         scored[key] = count
       }
     }
@@ -470,7 +516,7 @@ export default function FeedPage({
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12)
       .map(([key]) => displayForm[key] || key.charAt(0).toUpperCase() + key.slice(1))
-  }, [trendingArticles, COMMON_WORDS, MEDIA_ACRONYMS])
+  }, [trendingArticles, COMMON_WORDS, MEDIA_ACRONYMS, BLOCKED_ANCHOR_PHRASES, ANCHOR_LAST_NAMES])
 
   // Topic insights — just need count for ordering/filtering, no accuracy computation
   const topicInsights = useMemo(() => {
