@@ -504,10 +504,17 @@ export default function FeedPage({
     for (const [key, count] of Object.entries(phraseFreq)) {
       if (count >= 2 && !BLOCKED_ANCHOR_PHRASES.has(key)) scored[key] = count * 3
     }
-    // Add singles only if no phrase already covers that word (e.g. skip "Iran" if "Iran Deal" exists)
-    const phraseKeys = Object.keys(scored)
+    // Deduplicate singles against ALL extracted phrases (including blocked ones like
+    // "margaret brennan") — otherwise blocking a phrase removes it from the dedup
+    // set and lets the constituent first name slip through as a standalone topic.
+    const allPhraseKeys = Object.keys(phraseFreq)
     for (const [key, count] of Object.entries(singleFreq)) {
-      if (count >= 3 && !scored[key] && !phraseKeys.some(p => p.includes(key)) && !ANCHOR_LAST_NAMES.has(key)) {
+      if (
+        count >= 3 &&
+        !scored[key] &&
+        !allPhraseKeys.some(p => p.includes(key)) &&
+        !ANCHOR_LAST_NAMES.has(key)
+      ) {
         scored[key] = count
       }
     }
