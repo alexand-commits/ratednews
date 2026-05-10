@@ -142,28 +142,40 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
             {article.category}
           </div>
         )}
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span className="score-mini" style={{ color: 'var(--text3)' }}>💬 {commentCount}</span>
-        </div>
+        {commentCount > 0 && (
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span className="score-mini" style={{ color: 'var(--text3)' }}>
+              💬 {commentCount}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Multi-angle toggle — only shown when 2+ outlets cover same story */}
       {hasAngles && (
-        <div data-angles="true" style={{ borderTop: '0.5px solid var(--border)', marginTop: 8, paddingTop: 8 }}>
-          <button
+        <div
+          data-angles="true"
+          style={{ borderTop: '0.5px solid var(--border)', marginTop: 8, paddingTop: 4 }}
+        >
+          {/* Full-width tap target for mobile */}
+          <div
+            role="button"
             onClick={e => { e.stopPropagation(); setShowAngles(v => !v) }}
             style={{
               display: 'flex', alignItems: 'center', gap: 6,
-              background: 'none', border: 'none', cursor: 'pointer',
-              padding: 0, fontFamily: 'inherit',
-              fontSize: 11, fontWeight: 600,
-              color: showAngles ? 'var(--coral)' : 'var(--text3)',
-              transition: 'color 0.15s',
+              minHeight: 44, padding: '4px 0',
+              cursor: 'pointer',
             }}
           >
             <span style={{ fontSize: 13 }}>📰</span>
-            {allAngles.length} outlets covering this
-            {/* Bias dot preview — shows the spread at a glance */}
+            <span style={{
+              fontSize: 11, fontWeight: 600,
+              color: showAngles ? 'var(--coral)' : 'var(--text3)',
+              transition: 'color 0.15s',
+            }}>
+              {allAngles.length} outlets covering this
+            </span>
+            {/* Bias dot preview */}
             <span style={{ display: 'flex', gap: 3, marginLeft: 2 }}>
               {allAngles.map(a => {
                 const dot = BIAS_DOTS[a.outlets?.bias_direction]
@@ -175,11 +187,13 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
                 ) : null
               })}
             </span>
-            <span style={{ marginLeft: 'auto', fontSize: 10 }}>{showAngles ? '▲' : '▼'}</span>
-          </button>
+            <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text3)' }}>
+              {showAngles ? '▲' : '▼'}
+            </span>
+          </div>
 
           {showAngles && (
-            <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ marginBottom: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
               {allAngles.map(a => {
                 const o      = a.outlets || {}
                 const [oBg]  = outletColor(o.name || 'X')
@@ -196,7 +210,7 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
                   >
                     <div style={{
                       display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '7px 10px',
+                      padding: '10px 12px', minHeight: 44,
                       background: isPrimary ? 'var(--bg2)' : 'var(--surface)',
                       border: `0.5px solid ${isPrimary ? 'var(--coral)' : 'var(--border)'}`,
                       borderRadius: 8,
@@ -205,15 +219,10 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
                     onMouseEnter={e => { if (!isPrimary) e.currentTarget.style.borderColor = 'var(--coral)' }}
                     onMouseLeave={e => { if (!isPrimary) e.currentTarget.style.borderColor = 'var(--border)' }}
                     >
-                      {/* Outlet dot */}
-                      <span style={{
-                        width: 8, height: 8, borderRadius: '50%',
-                        background: oBg, flexShrink: 0,
-                      }} />
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: oBg, flexShrink: 0 }} />
 
-                      {/* Outlet name */}
                       <span style={{
-                        fontSize: 12, fontWeight: 600,
+                        fontSize: 13, fontWeight: 600,
                         color: 'var(--text)', flex: 1, minWidth: 0,
                         overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                       }}>
@@ -225,22 +234,16 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
                         )}
                       </span>
 
-                      {/* Bias */}
                       {oBias && (
-                        <span style={{
-                          fontSize: 10, fontWeight: 600,
-                          color: oBias.color, flexShrink: 0,
-                        }}>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: oBias.color, flexShrink: 0 }}>
                           {oBias.label}
                         </span>
                       )}
 
-                      {/* Accuracy score */}
                       {oAcc > 0 && (
                         <span style={{
-                          fontSize: 10, fontWeight: 600,
+                          fontSize: 11, fontWeight: 600, flexShrink: 0,
                           color: oAcc >= 70 ? 'var(--green)' : oAcc >= 50 ? 'var(--amber)' : 'var(--red)',
-                          flexShrink: 0,
                         }}>
                           ✦{oAcc}
                         </span>

@@ -35,6 +35,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   const [userProfiles, setUserProfiles] = useState({}) // { [user_id]: username }
   const [fetchedArticle, setFetchedArticle] = useState(null)
   const [relatedArticles, setRelatedArticles] = useState([])
+  const [sameStoryArticles, setSameStoryArticles] = useState([])
 
   const article = allArticles.find(a => a.id === articleId) || fetchedArticle
 
@@ -141,6 +142,55 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
     return () => { clearTimeout(realtimeTimer) }
   }, [articleId, user])
+
+  // Fetch same-story articles from other outlets using title keyword search
+  useEffect(() => {
+    if (!article?.title) return
+    setSameStoryArticles([])
+
+    const STOP = new Set([
+      'the','a','an','in','on','at','to','for','of','and','or','but','with',
+      'from','by','as','is','are','was','were','be','been','has','have','had',
+      'its','their','this','that','how','why','what','who','when','where',
+      'says','said','will','can','may','over','after','before','amid','about',
+      'into','new','after','first','second','top','more','than',
+    ])
+    const sigWords = [...new Set(
+      article.title.toLowerCase().split(/\W+/).filter(w => w.length > 3 && !STOP.has(w))
+    )]
+    if (sigWords.length < 2) return
+
+    // Search by the two strongest keywords; filter client-side for 3+ word overlap
+    const k1 = sigWords[0]
+    const k2 = sigWords[1] || sigWords[0]
+    const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
+
+    db.from('articles')
+      .select('*, outlets(name, bias_direction, logo_url)')
+      .neq('outlet_id', article.outlet_id)
+      .neq('id', article.id)
+      .ilike('title', `%${k1}%`)
+      .gte('published_at', cutoff)
+      .order('published_at', { ascending: false })
+      .limit(30)
+      .then(({ data }) => {
+        if (!data) return
+        const titleWords = new Set(sigWords)
+        const matched = data.filter(a => {
+          const aWords = (a.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !STOP.has(w))
+          const overlap = aWords.filter(w => titleWords.has(w)).length
+          return overlap >= 3
+        })
+        // Dedupe by outlet — keep most recent per outlet
+        const byOutlet = {}
+        matched.forEach(a => {
+          if (!byOutlet[a.outlet_id] || a.published_at > byOutlet[a.outlet_id].published_at) {
+            byOutlet[a.outlet_id] = a
+          }
+        })
+        setSameStoryArticles(Object.values(byOutlet).slice(0, 5))
+      })
+  }, [article?.id])
 
   // Fetch related articles once the current article is known
   useEffect(() => {
@@ -524,6 +574,63 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               {myRating.accuracyVote && <span style={{ fontSize: 11, background: 'var(--surface)', padding: '2px 8px', borderRadius: 20, color: 'var(--text2)' }}>{myRating.accuracyVote.replace('_', ' ')}</span>}
               {myRating.biasVote && <span style={{ fontSize: 11, background: 'var(--surface)', padding: '2px 8px', borderRadius: 20, color: 'var(--text2)' }}>{myRating.biasVote.replace('_', ' ')}</span>}
               {myRating.headlineVote && <span style={{ fontSize: 11, background: 'var(--surface)', padding: '2px 8px', borderRadius: 20, color: 'var(--text2)' }}>{myRating.headlineVote}</span>}
+            </div>
+          )}
+
+          {/* Same story across outlets */}
+          {sameStoryArticles.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{
+                fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
+                color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 8,
+              }}>
+                📰 Also covered by {sameStoryArticles.length} other outlet{sameStoryArticles.length !== 1 ? 's' : ''}
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {sameStoryArticles.map(a => {
+                  const o = a.outlets || {}
+                  const [oBg] = outletColor(o.name || 'X')
+                  const BIAS_DOTS = { left: '#4a90d9', centre: '#5cb85c', right: '#d9534f' }
+                  const biasColor = BIAS_DOTS[o.bias_direction]
+                  const BIAS_LABEL = { left: 'Left', centre: 'Centre', right: 'Right' }
+                  const oAcc = a.accuracy_score || 0
+                  return (
+                    <div
+                      key={a.id}
+                      onClick={() => navigate('article', { articleId: a.id, title: a.title })}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '10px 12px', minHeight: 44,
+                        background: 'var(--surface)',
+                        border: '0.5px solid var(--border)',
+                        borderRadius: 8, cursor: 'pointer',
+                        transition: 'border-color 0.15s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--coral)'}
+                      onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
+                    >
+                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: oBg, flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {o.name || 'Unknown'}
+                      </span>
+                      {biasColor && (
+                        <span style={{ fontSize: 11, fontWeight: 600, color: biasColor, flexShrink: 0 }}>
+                          {BIAS_LABEL[o.bias_direction]}
+                        </span>
+                      )}
+                      {oAcc > 0 && (
+                        <span style={{
+                          fontSize: 11, fontWeight: 600, flexShrink: 0,
+                          color: oAcc >= 70 ? 'var(--green)' : oAcc >= 50 ? 'var(--amber)' : 'var(--red)',
+                        }}>
+                          ✦{oAcc}
+                        </span>
+                      )}
+                      <span style={{ fontSize: 12, color: 'var(--text3)', flexShrink: 0 }}>→</span>
+                    </div>
+                  )
+                })}
+              </div>
             </div>
           )}
 
