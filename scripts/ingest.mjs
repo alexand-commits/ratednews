@@ -92,6 +92,7 @@ const JUNK_PATTERNS = [
   /\blisten:\s/i,                     // "Listen: Full interview…"
   // Live blogs — updated constantly, low signal
   /^live:/i,
+  /\bLIVE[!:]\s/,                        // "Celtic vs Rangers LIVE: …" / "Wardley vs Dubois LIVE! …"
   /\blive (blog|updates?|coverage|score)\b/i,
   /\bas it happened\b/i,
   // Factboxes & wires noise
@@ -194,12 +195,17 @@ const JUNK_PATTERNS = [
   // "Man Utd XI vs Chelsea: Predicted lineup, confirmed team news, TV, live stream"
   // These are preview/guide pages, not news — common on Evening Standard, ESPN etc.
   /\bpredicted (lineup|line.?up|starting (xi|eleven))\b/i,
+  /\b\w+ XI vs\b/,                          // "Man City XI vs Brentford: Starting lineup…"
+  /\bstarting lineup,?\s*confirmed\b/i,     // "Starting lineup, confirmed team news…"
   /\bkick.?off time\b.*\b(tv|live stream|odds)\b/i,
   /\bh2h results\b/i,
   /\bodds today\b/i,
   // How/where-to-watch event guides (NYP, sports outlets)
   /^(how|where) to watch\b/i,              // "How to watch..." / "Where to watch..."
   /:\s*(how|where) to watch\b/i,           // "WWE Backlash: Where To Watch, Start Time..."
+  /\bhow to watch\b/i,                     // "What to know and how to watch" mid-title
+  // WWE / pro wrestling — entertainment product, not news
+  /^WWE\b/i,
   // Sports betting picks dressed as previews
   /\bprediction:.*\b(picks?|best bets?)\b/i, // "Game 4 prediction: NHL picks, best bets"
 
@@ -289,7 +295,8 @@ const JUNK_PATTERNS = [
   // SI's rookie minicamp live notes, OTA observations, practice takeaways
   /\b(rookie|mandatory|OTA|offseason|training camp|minicamp)\b.{0,40}\b(observations?|notes?|updates?|impressions?|takeaways?|report)\b/i,
   /\bdepth chart\b/i,
-  /\bundrafted (free agents?|rookies?|class)\b/i,
+  /\bundrafted (free agents?|rookies?|class|picks?|signee?s?)\b/i,
+  /\bundrafted rookie\b/i,
   /\bjersey numbers?\b.*\b(rookie|class|draft|assign)\b/i,
 
   // ── TV highlights shows (BBC Sport, Sky Sports) ───────────────────────────────
