@@ -345,14 +345,14 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                 </div>
                 <div className="filter-bar">
                   {[
-                    { value: 'all',        label: '🌐 All'         },
-                    { value: 'US',         label: '🇺🇸 US'         },
-                    { value: 'UK',         label: '🇬🇧 UK'         },
-                    { value: 'Europe',     label: '🇪🇺 Europe'     },
-                    { value: 'MiddleEast', label: '🌙 Middle East' },
-                    { value: 'Africa',     label: '🌍 Africa'      },
-                    { value: 'AsiaPac',    label: '🌏 Asia Pacific'},
-                    { value: 'Americas',   label: '🌎 Americas'    },
+                    { value: 'all',        label: 'All'          },
+                    { value: 'US',         label: 'US'           },
+                    { value: 'UK',         label: 'UK'           },
+                    { value: 'Europe',     label: 'Europe'       },
+                    { value: 'MiddleEast', label: 'Middle East'  },
+                    { value: 'Africa',     label: 'Africa'       },
+                    { value: 'AsiaPac',    label: 'Asia Pacific' },
+                    { value: 'Americas',   label: 'Americas'     },
                   ].map(r => (
                     <button key={r.value} className={`pill${region === r.value ? ' active' : ''}`} onClick={() => setRegion(r.value)}>
                       {r.label}
