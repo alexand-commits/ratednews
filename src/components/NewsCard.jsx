@@ -112,65 +112,21 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
       <div className="score-row">
         {scored ? (
           <>
-            {/* Accuracy — dominant score block */}
-            {(() => {
-              const [blockBg, numColor, label] = acc >= 70
-                ? ['var(--green-light)', 'var(--green-dark)', 'Accurate']
-                : acc >= 50
-                ? ['var(--amber-light)', 'var(--amber)', 'Mixed']
-                : ['var(--red-light)', 'var(--red)', 'Low']
-              return (
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: 7,
-                  background: blockBg, borderRadius: 8, padding: '5px 10px', flexShrink: 0,
-                }}>
-                  <span style={{ fontSize: 22, fontWeight: 800, lineHeight: 1, color: numColor }}>
-                    {acc}
-                  </span>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: numColor, opacity: 0.8, lineHeight: 1 }}>
-                      {label}
-                    </span>
-                    {/* 5-pip accuracy bar */}
-                    <div style={{ display: 'flex', gap: 2 }}>
-                      {[0,1,2,3,4].map(i => (
-                        <div key={i} style={{
-                          width: 5, height: 4, borderRadius: 1,
-                          background: i < Math.round(acc / 20) ? numColor : `${numColor}33`,
-                        }} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )
-            })()}
+            {/* Accuracy — slim coloured pill with star, bigger number */}
+            <span className={accBadgeClass(acc)} style={{ fontSize: 13, fontWeight: 700, padding: '3px 10px' }}>
+              ✦ {acc}
+            </span>
 
-            {/* Bias spectrum bar */}
-            {bias && (article.bias_score || 0) >= 25 ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flexShrink: 0 }}>
-                <div style={{ display: 'flex', borderRadius: 3, overflow: 'hidden', height: 10 }}>
-                  <div style={{ width: 30, background: bias === 'left'   ? '#4a90d9' : 'var(--bg2)', transition: 'background 0.2s' }} />
-                  <div style={{ width: 2,  background: 'var(--surface)' }} />
-                  <div style={{ width: 30, background: bias === 'centre' ? '#5cb85c' : 'var(--bg2)', transition: 'background 0.2s' }} />
-                  <div style={{ width: 2,  background: 'var(--surface)' }} />
-                  <div style={{ width: 30, background: bias === 'right'  ? '#d9534f' : 'var(--bg2)', transition: 'background 0.2s' }} />
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', width: 94 }}>
-                  <span style={{ fontSize: 8, fontWeight: 700, color: bias === 'left'   ? '#4a90d9' : 'var(--text3)' }}>Left</span>
-                  <span style={{ fontSize: 8, fontWeight: 700, color: bias === 'centre' ? '#5cb85c' : 'var(--text3)' }}>Centre</span>
-                  <span style={{ fontSize: 8, fontWeight: 700, color: bias === 'right'  ? '#d9534f' : 'var(--text3)' }}>Right</span>
-                </div>
-              </div>
-            ) : (article.bias_score || 0) < 25 && (
-              <span style={{ fontSize: 10, fontWeight: 600, color: 'var(--text3)', background: 'var(--bg2)', padding: '3px 8px', borderRadius: 20, flexShrink: 0 }}>
-                ◉ Factual
-              </span>
-            )}
+            {/* Bias — original pill */}
+            {(article.bias_score || 0) < 25
+              ? <span className="score-badge score-badge-bias-centre">◉ Factual</span>
+              : biasLabel && <span className={biasLabel.cls}>{biasLabel.label}</span>
+            }
 
             {/* Headline vote — only shown when not fair */}
             {hlBadge && (
               <span style={{
-                fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 20, flexShrink: 0,
+                fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, flexShrink: 0,
                 background: hlBadge.bg, color: hlBadge.color,
               }}>
                 {hlBadge.label}
@@ -178,8 +134,8 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
             )}
           </>
         ) : (
-          <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg2)', padding: '3px 8px', borderRadius: 20 }}>
-            ⏳ Pending
+          <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg2)', padding: '2px 8px', borderRadius: 20 }}>
+            ⏳ Pending analysis
           </span>
         )}
 
