@@ -168,19 +168,23 @@ const JUNK_PATTERNS = [
   /\b(half.?price|£\d+ (deal|saving|off))\b.*\b(airer|dryer|gadget|device)\b/i,
 
   // ── Tabloid lifestyle / celebrity clickbait (Daily Mail, The Sun, etc.) ──────
-  // ALL-CAPS "YOUR" is the Daily Mail's signature engagement trigger
-  /\bYOUR\b/,                           // "judging YOUR bathroom", "YOUR home is…"
+  // ALL-CAPS "YOUR" is the Daily Mail's signature engagement trigger — narrowed to
+  // domestic/personal nouns to avoid catching legitimate news ("YOUR MP voted for X")
+  /\bYOUR (home|house|bathroom|kitchen|garden|wardrobe|diet|body|face|hair|skin|gut|partner|relationship|finances?|money|savings?|pension|mortgage|inbox)\b/,
   // Question-opener personal lifestyle titles
   /^(should|are|is|do|would|could) (you|your)\b/i,  // "Should you X", "Are you X"
   // "What your X says/reveals about you" — classic DM formula
   /\bwhat your [a-z ]+ (says?|reveals?|means?|shows?)\b/i,
   // Celebrity reaction / body / outfit clickbait
-  /\b(wows?|stuns?|shocks?|dazzles?) (fans?|followers?|internet|viewers?|critics?|crowds?)\b/i,
+  // Removed "critics" — "shocks critics" appears in legitimate political coverage
+  /\b(wows?|stuns?|shocks?|dazzles?) (fans?|followers?|the internet|viewers?|crowds?)\b/i,
   /\b(fans?|viewers?) (go wild|react|are (stunned|shocked|baffled|divided|furious))\b/i,
   /\b(shows? off|flaunts?|puts on a display|steps out)\b/i,
   /\blooks (incredible|stunning|unrecognisable|amazing) (as she|in|at)\b/i,
   // Health anxiety bait — no clinical value
-  /\b(signs? you (may|might|could) have|warning signs?)\b/i,
+  // "warning signs?" narrowed — bare form catches "warning signs of a recession" (legitimate)
+  /\bsigns? you (may|might|could) have\b/i,
+  /\bwarning signs?.{0,40}(you (have|may have|might have)|your (body|health|relationship|partner|skin|gut))\b/i,
   /\b(symptoms? (of|you should)|silent (killer|symptom))\b/i,
   // Domestic lifestyle tips that are not news
   /\b(home|kitchen|bathroom|bedroom|garden) (tips?|hacks?|tricks?|ideas?|inspo|inspiration|secrets?)\b/i,
@@ -420,7 +424,10 @@ const JUNK_PATTERNS = [
 
   // ── Net worth / celebrity biography SEO ───────────────────────────────────────
   // "X's net worth: how rich is [celebrity]" — pure SEO, no news value
-  /\bnet worth\b/i,
+  // Narrowed: bare "net worth" is too broad (catches legitimate financial news)
+  /\bnet worth[:\s–-].{0,30}how rich\b/i,
+  /\bnet worth (revealed|explored|explained|ranked|estimated|calculated)\b/i,
+  /\b(what is|how much is).{0,30}net worth\b/i,
   // "Who is X? Age, height, partner, career" — biography SEO roundups
   /^Who is [A-Z].{0,60}\? (Age|Height|Career|Wife|Husband|Partner|Family|Net worth|Everything)/i,
   /\bage,? height,? (and )?(partner|wife|husband|net worth|career|children|kids)\b/i,
@@ -456,7 +463,8 @@ const JUNK_PATTERNS = [
 
   // ── Social media reaction / celebrity post pieces ─────────────────────────────
   // Thin articles that are just "X posted this on Instagram"
-  /\b(just|has just|have just) (posted|shared|revealed|announced|confirmed|responded|clapped back|hit back|fired back)\b/i,
+  // Narrowed: removed "announced/confirmed/revealed" — those appear in legitimate breaking news
+  /\b(just|has just|have just) (posted|shared|clapped back|hit back|fired back)\b/i,
   /\b(responds?|claps? back|hits? back|fires? back|slams?|shuts? down|denies?) (to |after |amid |claims?|criticism|backlash|rumours?|reports?|speculation|trolls?)\b/i,
   /\btakes? (to|on) (instagram|twitter|tiktok|x|social media) (to|after|amid)\b/i,
 
@@ -480,12 +488,8 @@ const JUNK_PATTERNS = [
   // ── Breitbart opinion / commentary filler ─────────────────────────────────────
   // Breitbart publishes high volumes of opinion columns and wire rewrites
   // with inflammatory framing — mostly caught by accuracy scoring but filter early
-  /^(Exclusive|Breaking):\s/i,              // Breitbart overuses these as engagement hooks
   /\b(deep state|globalist|radical left|far-left|marxist|woke agenda)\b/i,
   /\b(mainstream media|fake news|legacy media|corporate media) (lies?|hides?|ignores?|refuses?|covers? up)\b/i,
-  // Wire rewrite format — "Report: X says Y" with no original reporting
-  /^Report:\s/i,
-  /^Exclusive - /i,
 
   // ── Fox News lifestyle & non-news filler ──────────────────────────────────────
   // Fox publishes high volumes of "faith & values", lifestyle, and entertainment
@@ -507,7 +511,8 @@ const JUNK_PATTERNS = [
 
   // ── Daily Mail / tabloid celebrity & lifestyle filler ─────────────────────────
   // "X's transformation" — before/after celebrity body clickbait
-  /\b(dramatic|incredible|stunning|unbelievable|shocking|remarkable)?\s*transformation\b/i,
+  // Adjective now required — bare "transformation" catches legitimate news ("Ukraine's transformation")
+  /\b(dramatic|incredible|stunning|unbelievable|shocking|remarkable) transformation\b/i,
   // "X, Y" celeb couple appearance pieces with no news value
   /\b(cuddles?|kisses?|embraces?|holds? hands?|packs? on the PDA)\b/i,
   // "X debuts new look / shows off X" appearance pieces
