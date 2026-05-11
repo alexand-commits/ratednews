@@ -193,7 +193,7 @@ body { background: var(--bg); color: var(--text); min-height: 100dvh; overflow-x
 /* HOW IT WORKS */
 .rating-breakdown { display: flex; flex-direction: column; gap: 8px; }
 .rb-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
-.rb-label { width: 80px; color: var(--text2); font-size: 11px; }
+.rb-label { width: 108px; flex-shrink: 0; color: var(--text2); font-size: 11px; }
 .rb-bar-bg { flex: 1; background: var(--bg2); border-radius: 3px; height: 5px; overflow: hidden; }
 .rb-bar-fill { height: 5px; border-radius: 3px; }
 .rb-val { width: 28px; text-align: right; font-size: 11px; font-weight: 500; }

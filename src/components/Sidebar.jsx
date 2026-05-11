@@ -46,20 +46,16 @@ export default function Sidebar({ outlets, navigate }) {
         </div>
         <div className="rating-breakdown">
           <div className="rb-row">
-            <span className="rb-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              AI analysis
-              <InfoTip text="Every article is scored by Claude AI for accuracy, bias direction, and headline fairness. Scores are averaged across the outlet's last 30 days of articles." />
-            </span>
+            <span className="rb-label">AI analysis</span>
             <div className="rb-bar-bg"><div className="rb-bar-fill" style={{ width: '70%', background: 'var(--blue)' }}></div></div>
             <span className="rb-val" style={{ color: 'var(--blue)' }}>70%</span>
+            <InfoTip text="Every article is scored by Claude AI for accuracy, bias direction, and headline fairness. Scores are averaged across the outlet's last 30 days of articles." />
           </div>
           <div className="rb-row">
-            <span className="rb-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              Editorial baseline
-              <InfoTip text="A neutral anchor (50/100) applied to all outlets equally. Prevents a handful of unusual articles from producing a wildly unrepresentative outlet score." />
-            </span>
+            <span className="rb-label">Editorial baseline</span>
             <div className="rb-bar-bg"><div className="rb-bar-fill" style={{ width: '30%', background: 'var(--green)' }}></div></div>
             <span className="rb-val" style={{ color: 'var(--green-dark)' }}>30%</span>
+            <InfoTip text="A neutral anchor (50/100) applied to all outlets equally. Prevents a handful of unusual articles from producing a wildly unrepresentative outlet score." />
           </div>
         </div>
 
