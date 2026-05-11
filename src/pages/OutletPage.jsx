@@ -264,6 +264,8 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   const [scoreHistory, setScoreHistory]         = useState([])
   const [compareOutletId, setCompareOutletId]   = useState('')
   const [compareHistory, setCompareHistory]     = useState([])
+  const [bestArticles, setBestArticles]         = useState([])
+  const [worstArticles, setWorstArticles]       = useState([])
 
   const outlet = liveOutlet || allOutlets.find(o => o.id === outletId)
 
@@ -282,6 +284,8 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
     setScoreHistory([])
     setCompareOutletId('')
     setCompareHistory([])
+    setBestArticles([])
+    setWorstArticles([])
 
     // Articles
     db.from('articles')
@@ -290,6 +294,23 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
       .order('published_at', { ascending: false })
       .limit(25)
       .then(({ data }) => { setArticles(data || []); setArticlesLoading(false) })
+
+    // Best & worst scored articles (all-time, not just latest 25)
+    db.from('articles')
+      .select('id, title, accuracy_score, published_at')
+      .eq('outlet_id', outletId)
+      .gt('accuracy_score', 0)
+      .order('accuracy_score', { ascending: false })
+      .limit(3)
+      .then(({ data }) => setBestArticles(data || []))
+
+    db.from('articles')
+      .select('id, title, accuracy_score, published_at')
+      .eq('outlet_id', outletId)
+      .gt('accuracy_score', 0)
+      .order('accuracy_score', { ascending: true })
+      .limit(3)
+      .then(({ data }) => setWorstArticles(data || []))
 
     // Community ratings
     db.from('outlet_ratings')
@@ -428,6 +449,19 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
     clickbait:  scoredArticles.filter(a => a.headline_vote === 'clickbait').length,
   }
   const fairRate  = aiCount ? Math.round((headlineBreakdown.fair / aiCount) * 100) : null
+
+  // Category coverage — derived from fetched articles
+  const categoryMap = {}
+  articles.forEach(a => { if (a.category) categoryMap[a.category] = (categoryMap[a.category] || 0) + 1 })
+  const sortedCategories = Object.entries(categoryMap).sort(([, a], [, b]) => b - a).slice(0, 6)
+  const totalCategorised = sortedCategories.reduce((s, [, c]) => s + c, 0)
+
+  // Ranking position — overall and within outlet's country
+  const rankedAll     = [...allOutlets].filter(o => (o.accuracy_score || 0) > 0).sort((a, b) => (b.accuracy_score || 0) - (a.accuracy_score || 0))
+  const rankOverall   = rankedAll.findIndex(o => o.id === outletId) + 1
+  const countryPeers  = rankedAll.filter(o => o.country === outlet?.country)
+  const rankCountry   = countryPeers.findIndex(o => o.id === outletId) + 1
+
   const dominantBias = aiCount
     ? (biasBreakdown.left > biasBreakdown.right && biasBreakdown.left > biasBreakdown.centre ? '← Left'
      : biasBreakdown.right > biasBreakdown.left && biasBreakdown.right > biasBreakdown.centre ? '→ Right'
@@ -556,6 +590,14 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
               }}>
                 {score >= 90 ? '● High credibility' : score >= 75 ? '● Good credibility' : score >= 60 ? '● Mixed credibility' : score > 0 ? '● Low credibility' : 'Not yet rated'}
               </div>
+              {rankOverall > 0 && (
+                <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text3)' }}>
+                  {rankCountry > 0 && outlet?.country
+                    ? <>Ranked <strong style={{ color: 'var(--text2)' }}>#{rankCountry}</strong> of {countryPeers.length} {outlet.country} outlets · <strong style={{ color: 'var(--text2)' }}>#{rankOverall}</strong> overall</>
+                    : <>Ranked <strong style={{ color: 'var(--text2)' }}>#{rankOverall}</strong> of {rankedAll.length} outlets</>
+                  }
+                </div>
+              )}
             </div>
             <div className="outlet-hero-score-divider" />
             <div className="outlet-hero-actions">
@@ -684,6 +726,25 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                         <span style={{ fontSize: 11, color: 'var(--text3)', minWidth: 30, textAlign: 'right' }}>{headlineBreakdown[key]}</span>
                       </div>
                     ))}
+                  </div>
+                </>
+              )}
+
+              {/* Category coverage */}
+              {sortedCategories.length > 0 && (
+                <>
+                  <div className="section-label">Coverage focus</div>
+                  <div className="widget" style={{ marginBottom: 14 }}>
+                    {sortedCategories.map(([cat, count]) => (
+                      <div key={cat} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                        <span style={{ fontSize: 11, color: 'var(--text2)', minWidth: 88, fontWeight: 500 }}>{cat}</span>
+                        <div style={{ flex: 1, height: 5, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
+                          <div style={{ height: '100%', width: `${Math.round((count / sortedCategories[0][1]) * 100)}%`, background: 'var(--coral)', borderRadius: 3 }} />
+                        </div>
+                        <span style={{ fontSize: 11, color: 'var(--text3)', minWidth: 28, textAlign: 'right' }}>{Math.round((count / totalCategorised) * 100)}%</span>
+                      </div>
+                    ))}
+                    <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 4 }}>Based on last {articles.length} articles</div>
                   </div>
                 </>
               )}
@@ -835,6 +896,31 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                   How scores work →
                 </a>
               </div>
+
+              {/* Best & worst articles */}
+              {(bestArticles.length > 0 || worstArticles.length > 0) && (
+                <div className="widget">
+                  <div className="widget-title">Highest scored</div>
+                  {bestArticles.map(a => (
+                    <Link key={a.id} href={`/article/${articleSlug(a.title, a.id)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 0', borderBottom: '0.5px solid var(--border)', cursor: 'pointer' }} className="border-hover">
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--green-dark)', background: 'var(--green-light)', borderRadius: 20, padding: '1px 7px', flexShrink: 0, marginTop: 1 }}>✦ {a.accuracy_score}</span>
+                        <span style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.title}</span>
+                      </div>
+                    </Link>
+                  ))}
+
+                  <div className="widget-title" style={{ marginTop: 14 }}>Lowest scored</div>
+                  {worstArticles.map(a => (
+                    <Link key={a.id} href={`/article/${articleSlug(a.title, a.id)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 0', borderBottom: '0.5px solid var(--border)', cursor: 'pointer' }} className="border-hover">
+                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', background: 'var(--red-light)', borderRadius: 20, padding: '1px 7px', flexShrink: 0, marginTop: 1 }}>✦ {a.accuracy_score}</span>
+                        <span style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.title}</span>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
