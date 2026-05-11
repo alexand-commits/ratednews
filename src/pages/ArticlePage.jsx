@@ -156,7 +156,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
         .eq('cluster_id', article.cluster_id)
         .neq('id', article.id)
         .order('published_at', { ascending: false })
-        .limit(10)
+        .limit(20)
         .then(({ data }) => {
           if (!data?.length) return
           // Dedupe by outlet — keep most recent per outlet
@@ -166,7 +166,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               byOutlet[a.outlet_id] = a
             }
           })
-          setSameStoryArticles(Object.values(byOutlet).slice(0, 5))
+          setSameStoryArticles(Object.values(byOutlet).slice(0, 10))
         })
       return
     }
@@ -207,7 +207,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
             byOutlet[a.outlet_id] = a
           }
         })
-        setSameStoryArticles(Object.values(byOutlet).slice(0, 5))
+        setSameStoryArticles(Object.values(byOutlet).slice(0, 10))
       })
   }, [article?.id])
 
