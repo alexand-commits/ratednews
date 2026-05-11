@@ -143,11 +143,36 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     return () => { clearTimeout(realtimeTimer) }
   }, [articleId, user])
 
-  // Fetch same-story articles from other outlets using title keyword search
+  // Fetch same-story articles — use pre-computed cluster_id when available,
+  // fall back to title keyword search for articles not yet clustered.
   useEffect(() => {
-    if (!article?.title) return
+    if (!article) return
     setSameStoryArticles([])
 
+    if (article.cluster_id) {
+      // Fast path: cluster already computed server-side
+      db.from('articles')
+        .select('*, outlets(name, bias_direction, logo_url)')
+        .eq('cluster_id', article.cluster_id)
+        .neq('id', article.id)
+        .order('published_at', { ascending: false })
+        .limit(10)
+        .then(({ data }) => {
+          if (!data?.length) return
+          // Dedupe by outlet — keep most recent per outlet
+          const byOutlet = {}
+          data.forEach(a => {
+            if (!byOutlet[a.outlet_id] || a.published_at > byOutlet[a.outlet_id].published_at) {
+              byOutlet[a.outlet_id] = a
+            }
+          })
+          setSameStoryArticles(Object.values(byOutlet).slice(0, 5))
+        })
+      return
+    }
+
+    // Fallback: title keyword search for articles not yet clustered
+    if (!article.title) return
     const STOP = new Set([
       'the','a','an','in','on','at','to','for','of','and','or','but','with',
       'from','by','as','is','are','was','were','be','been','has','have','had',
@@ -159,14 +184,8 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
       article.title.toLowerCase().split(/\W+/).filter(w => w.length > 3 && !STOP.has(w))
     )]
     if (sigWords.length < 2) return
-
-    // OR across ALL significant keywords so we catch outlets that cover the same
-    // story with different wording (e.g. "Clasico" articles that don't mention
-    // "Rashford" and vice versa). The DB net is wide; the client-side 3-word
-    // overlap filter below keeps quality high.
     const orFilter = sigWords.map(k => `title.ilike.%${k}%`).join(',')
     const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
-
     db.from('articles')
       .select('*, outlets(name, bias_direction, logo_url)')
       .neq('outlet_id', article.outlet_id)
@@ -180,14 +199,8 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
         const titleWords = new Set(sigWords)
         const matched = data.filter(a => {
           const aWords = (a.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !STOP.has(w))
-          const overlap = aWords.filter(w => titleWords.has(w)).length
-          // Use 2-word threshold (not 3) because the article page can't do the
-          // transitive cluster walk that FeedPage does. Cluster members may share
-          // only 2 words with the current article but clearly cover the same story.
-          // The OR filter + 72h window + 2-word overlap is a strong enough signal.
-          return overlap >= 2
+          return aWords.filter(w => titleWords.has(w)).length >= 2
         })
-        // Dedupe by outlet — keep most recent per outlet
         const byOutlet = {}
         matched.forEach(a => {
           if (!byOutlet[a.outlet_id] || a.published_at > byOutlet[a.outlet_id].published_at) {

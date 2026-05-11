@@ -566,76 +566,8 @@ export default function FeedPage({
       )
     : baseList
 
-  // Combined article pool for clustering — merges the paginated feed with the
-  // full 24h trendingArticles set. Without this, topic-filtered cards (which
-  // come from trendingArticles) could have related articles that sit outside
-  // the first 50 paginated results and never get clustered.
-  const clusterPool = useMemo(() => {
-    const seen = new Set()
-    const combined = []
-    for (const a of [...articles, ...trendingArticles]) {
-      if (!seen.has(a.id)) { seen.add(a.id); combined.push(a) }
-    }
-    return combined
-  }, [articles, trendingArticles])
-
-  // Story clustering — groups articles about the same event across outlets.
-  // Only surfaces when there's genuine outlet diversity (2+ outlets, ideally
-  // different bias directions). Runs on the combined pool so topic-filtered
-  // cards get the same cluster data as the article page.
-  const storyGroups = useMemo(() => {
-    const STOP = new Set([
-      'the','a','an','in','on','at','to','for','of','and','or','but','with',
-      'from','by','as','is','are','was','were','be','been','has','have','had',
-      'its','their','this','that','these','those','how','why','what','who',
-      'when','where','says','said','will','can','may','over','after','before',
-      'amid','about','into','over','says','new','after','first','second',
-    ])
-    function sigWords(title) {
-      return [...new Set(
-        (title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !STOP.has(w))
-      )]
-    }
-
-    // Work from the combined pool (paginated feed + 24h trending) so related
-    // articles in different categories or outside the first 50 results are found
-    const pool = clusterPool
-    const groups = new Map()   // articleId → [related articles]
-    const taken  = new Set()   // indices already assigned as secondary
-
-    for (let i = 0; i < pool.length; i++) {
-      if (taken.has(i)) continue
-      const primary = pool[i]
-      const pWords  = new Set(sigWords(primary.title))
-      if (pWords.size < 2) continue
-
-      const related = []
-      for (let j = 0; j < pool.length; j++) {
-        if (i === j || taken.has(j)) continue
-        // Must be a different outlet
-        if (pool[j].outlet_id === primary.outlet_id) continue
-        const overlap = sigWords(pool[j].title).filter(w => pWords.has(w)).length
-        if (overlap >= 3) {
-          related.push(pool[j])
-          taken.add(j)
-        }
-      }
-
-      if (related.length === 0) continue
-
-      // Any 2+ outlets covering the same story qualifies — bias diversity
-      // is a nice-to-have but shouldn't gate the feature. Index EVERY
-      // cluster member so storyGroups.get() works regardless of which
-      // article the interleaved feed surfaces as the displayed card.
-      const cluster = [primary, ...related]
-      for (const member of cluster) {
-        const others = cluster.filter(a => a.id !== member.id)
-        groups.set(member.id, others)
-      }
-      taken.add(i)
-    }
-    return groups
-  }, [articles])
+  // cluster_peers is now pre-computed server-side by scripts/cluster.mjs and
+  // stored directly on each article row. No client-side clustering needed.
 
   // Outlet search — match search term against outlet names
   const matchedOutlets = useMemo(() => {
@@ -1058,7 +990,7 @@ export default function FeedPage({
                       navigate('article', { articleId: a.id, title: a.title })
                     }}
                     navigate={navigate}
-                    relatedArticles={storyGroups.get(a.id) || []}
+                    relatedArticles={a.cluster_peers || []}
                   />
                 ))
               )}
