@@ -418,6 +418,65 @@ const JUNK_PATTERNS = [
   /\bI (asked|used|got|had|made|tried) (AI|ChatGPT|Claude|Gemini|Copilot|Grok|an? AI|the AI)\b/i,
   /\b(AI|ChatGPT|Gemini|Copilot) (told|said|thinks?|rates?|ranks?|picks?|chose|designed|wrote|created|predicted|reveals?)\b.{0,40}\b(best|worst|top|winner|answer|result)\b/i,
 
+  // ── Net worth / celebrity biography SEO ───────────────────────────────────────
+  // "X's net worth: how rich is [celebrity]" — pure SEO, no news value
+  /\bnet worth\b/i,
+  // "Who is X? Age, height, partner, career" — biography SEO roundups
+  /^Who is [A-Z].{0,60}\? (Age|Height|Career|Wife|Husband|Partner|Family|Net worth|Everything)/i,
+  /\bage,? height,? (and )?(partner|wife|husband|net worth|career|children|kids)\b/i,
+  // "X's wiki: age, height, net worth" — tabloid bio format
+  /\b(wiki|bio(graphy)?)[:\s].{0,30}(age|height|net worth|born|nationality)\b/i,
+
+  // ── "You've been doing X wrong" revelation bait ────────────────────────────────
+  /\byou'?ve been (doing|making|eating|cooking|cleaning|washing|using|wearing|storing|saying|reading|sleeping|breathing|sitting|standing) .{0,40} (all )?wrong\b/i,
+  /\bthe (right|correct|proper) way to (do|make|eat|cook|clean|wash|use|fold|store)\b/i,
+  /\byou'?re (doing|making|eating|cooking|using|wearing) (it|this|that|them|these) (all )?wrong\b/i,
+
+  // ── Career / job advice listicles ─────────────────────────────────────────────
+  // Business Insider's core content type — not journalism
+  /\b(things?|habits?|rules?|traits?) (of )?(highly |truly |insanely |incredibly )?(successful|rich|happy|productive|effective|confident) (people|leaders?|executives?|entrepreneurs?|women|men)\b/i,
+  /\b(highest|best|top).?paying (jobs?|careers?|professions?|roles?|positions?)\b/i,
+  /\b(jobs?|careers?|professions?) (that (pay|earn)|with (the )?highest|you can do from home|you didn't know)\b/i,
+  /\bthings (never|always) (do|say|ask) (in|at|during|before|after) (a job interview|work|the office|your boss)\b/i,
+  /\b(interview|workplace|office|career|job) (tips?|hacks?|advice|mistakes?|red flags?|secrets?|dos? and don'?ts?)\b/i,
+
+  // ── Sleep / wellness / daily routine ──────────────────────────────────────────
+  /\b(morning|night|bedtime|evening|daily|weekly) routine\b/i,
+  /\bwhat I eat in a day\b/i,
+  /\b(how to|tips? (for|to)) (fall asleep|sleep (better|faster|deeper|longer)|get (better|more|enough) sleep)\b/i,
+  /\b(sleep (tips?|hacks?|tricks?|advice|hygiene|schedule|routine))\b/i,
+  /\b(gut health|sleep quality|cortisol|inflammation|longevity|lifespan).{0,40}(tips?|hacks?|foods?|habits?|routine|boost|improve)\b/i,
+  /\bself.?care (routine|tips?|ideas?|Sunday|day|practice)\b/i,
+
+  // ── "Where are they now?" nostalgia ───────────────────────────────────────────
+  /\bwhere (are|is) (they|he|she|the cast|the stars?) now\b/i,
+  /\b(then and now|then vs\.? now)\b.{0,40}(cast|stars?|celebrit|look|transform)/i,
+  /\b\d+ years? (on|later|after)[:\s].{0,40}(where|what|how|who|cast|star|remember|look)\b/i,
+  /\bdo you remember\b/i,
+
+  // ── Social media reaction / celebrity post pieces ─────────────────────────────
+  // Thin articles that are just "X posted this on Instagram"
+  /\b(just|has just|have just) (posted|shared|revealed|announced|confirmed|responded|clapped back|hit back|fired back)\b/i,
+  /\b(responds?|claps? back|hits? back|fires? back|slams?|shuts? down|denies?) (to |after |amid |claims?|criticism|backlash|rumours?|reports?|speculation|trolls?)\b/i,
+  /\btakes? (to|on) (instagram|twitter|tiktok|x|social media) (to|after|amid)\b/i,
+
+  // ── ICYMI / throwback / "on this day" ────────────────────────────────────────
+  /^ICYMI\b/i,
+  /^Throwback\b/i,
+  /\bthrowback (thursday|friday|to when|photo|post|moment)\b/i,
+  /^On [Tt]his [Dd]ay\b/,                   // "On This Day: May 11, 1969…"
+  /\b\d+ years? ago (today|this week|this month|this year)\b/i,
+
+  // ── Baby names listicles ──────────────────────────────────────────────────────
+  /\bbaby (names?|name (ideas?|inspiration|trends?|list|meaning))\b/i,
+  /\b(most popular|trending|unique|rare|unusual|old.?fashioned|classic) (baby |girl |boy )names?\b/i,
+  /\bnames? (that mean|inspired by|for (boys?|girls?|babies?|twins?))\b/i,
+
+  // ── Budget lifestyle content ──────────────────────────────────────────────────
+  /\bbudget (meal|recipe|dinner|lunch|breakfast|makeover|holiday|travel|wedding|decor|fashion|outfit|renovation|hack)\b/i,
+  /\b(cheap|affordable|inexpensive).{0,30}(meals?|recipes?|outfits?|looks?|decor|holiday|getaway|ways? to)\b/i,
+  /\bhow to (eat|travel|live|look good|dress well|decorate).{0,30}(on a budget|for less|cheaply|without spending)\b/i,
+
   // ── Breitbart opinion / commentary filler ─────────────────────────────────────
   // Breitbart publishes high volumes of opinion columns and wire rewrites
   // with inflammatory framing — mostly caught by accuracy scoring but filter early
