@@ -382,26 +382,21 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
         showToast('Could not remove vote — please try again')
         return
       }
-      // NOTE: count sync uses read-modify-write — safe enough at this scale but
-      // ideally replaced with a DB-side RPC: rpc('decrement_comment_vote', { cid, field })
-      const { data } = await db.from('comments').select(field).eq('id', commentId).single()
-      if (data) await db.from('comments').update({ [field]: Math.max(0, (data[field] || 0) - 1) }).eq('id', commentId)
+      // Atomic DB-side decrement — no read-modify-write race
+      await db.rpc('delta_comment_vote', { comment_id: commentId, field_name: field, delta: -1 })
       return
     }
 
     // Vote: insert into DB — unique constraint prevents duplicates across sessions
     const { error } = await db.from('comment_votes').insert({ user_id: user.id, comment_id: commentId, dir })
     if (error) {
-      // Revert optimistic state and inform user
       showToast('Could not register vote — please try again')
       return
     }
     setVotedComments(prev => ({ ...prev, [key]: true }))
     applyDelta(1)
-    // NOTE: count sync uses read-modify-write — safe enough at this scale but
-    // ideally replaced with a DB-side RPC: rpc('increment_comment_vote', { cid, field })
-    const { data } = await db.from('comments').select(field).eq('id', commentId).single()
-    if (data) await db.from('comments').update({ [field]: (data[field] || 0) + 1 }).eq('id', commentId)
+    // Atomic DB-side increment — no read-modify-write race
+    await db.rpc('delta_comment_vote', { comment_id: commentId, field_name: field, delta: 1 })
   }
 
   function CommentRow({ c, isReply = false }) {
