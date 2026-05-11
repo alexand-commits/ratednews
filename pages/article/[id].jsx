@@ -69,18 +69,18 @@ export default function ArticleDetail({ article }) {
     '@context': 'https://schema.org',
     '@type':    'Review',
     name:       `${article.title} — Accuracy & Bias Analysis`,
-    url:        `https://ratednews.com/article/${canonicalSlug}`,
+    url:        `https://www.ratednews.com/article/${canonicalSlug}`,
     datePublished: article.published_at,
     author: {
       '@type': 'Organization',
       name:    'RatedNews',
-      url:     'https://ratednews.com',
+      url:     'https://www.ratednews.com',
     },
     publisher: {
       '@type': 'Organization',
       name:    'RatedNews',
-      url:     'https://ratednews.com',
-      logo: { '@type': 'ImageObject', url: 'https://ratednews.com/og-image.png' },
+      url:     'https://www.ratednews.com',
+      logo: { '@type': 'ImageObject', url: 'https://www.ratednews.com/og-image.png' },
     },
     ...(acc > 0 && {
       reviewRating: {
@@ -116,7 +116,7 @@ export default function ArticleDetail({ article }) {
     '@type':    'NewsArticle',
     headline:   article.title,
     url:        article.url,
-    mainEntityOfPage: `https://ratednews.com/article/${canonicalSlug}`,
+    mainEntityOfPage: `https://www.ratednews.com/article/${canonicalSlug}`,
     datePublished:  article.published_at,
     dateModified:   article.published_at,
     ...(summary && { description: summary }),
@@ -130,8 +130,8 @@ export default function ArticleDetail({ article }) {
     publisher: {
       '@type': 'Organization',
       name:    'RatedNews',
-      url:     'https://ratednews.com',
-      logo:    { '@type': 'ImageObject', url: 'https://ratednews.com/icon-192.png', width: 192, height: 192 },
+      url:     'https://www.ratednews.com',
+      logo:    { '@type': 'ImageObject', url: 'https://www.ratednews.com/icon-192.png', width: 192, height: 192 },
     },
     ...(keywords && { keywords }),
   }
@@ -140,9 +140,9 @@ export default function ArticleDetail({ article }) {
     '@context': 'https://schema.org',
     '@type':    'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home',       item: 'https://ratednews.com/' },
-      ...(article.category ? [{ '@type': 'ListItem', position: 2, name: article.category, item: `https://ratednews.com/categories/${article.category.toLowerCase()}` }] : []),
-      { '@type': 'ListItem', position: article.category ? 3 : 2, name: article.title, item: `https://ratednews.com/article/${canonicalSlug}` },
+      { '@type': 'ListItem', position: 1, name: 'Home',       item: 'https://www.ratednews.com/' },
+      ...(article.category ? [{ '@type': 'ListItem', position: 2, name: article.category, item: `https://www.ratednews.com/categories/${article.category.toLowerCase()}` }] : []),
+      { '@type': 'ListItem', position: article.category ? 3 : 2, name: article.title, item: `https://www.ratednews.com/article/${canonicalSlug}` },
     ],
   }
 
@@ -151,16 +151,16 @@ export default function ArticleDetail({ article }) {
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={metaDesc} />
-        <link rel="canonical" href={`https://ratednews.com/article/${canonicalSlug}`} />
+        <link rel="canonical" href={`https://www.ratednews.com/article/${canonicalSlug}`} />
         <meta property="og:title"       content={article.title} />
         <meta property="og:description" content={metaDesc} />
-        <meta property="og:url"         content={`https://ratednews.com/article/${canonicalSlug}`} />
+        <meta property="og:url"         content={`https://www.ratednews.com/article/${canonicalSlug}`} />
         <meta property="og:type"        content="article" />
-        <meta property="og:image"       content={`https://ratednews.com/api/og?title=${encodeURIComponent(article.title)}${acc > 0 ? `&score=${acc}` : ''}${biasDir ? `&bias=${biasDir}` : ''}&outlet=${encodeURIComponent(outletName)}`} />
+        <meta property="og:image"       content={`https://www.ratednews.com/api/og?title=${encodeURIComponent(article.title)}${acc > 0 ? `&score=${acc}` : ''}${biasDir ? `&bias=${biasDir}` : ''}&outlet=${encodeURIComponent(outletName)}`} />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content={pageTitle} />
         <meta name="twitter:description" content={metaDesc} />
-        <meta name="twitter:image"      content={`https://ratednews.com/api/og?title=${encodeURIComponent(article.title)}${acc > 0 ? `&score=${acc}` : ''}${biasDir ? `&bias=${biasDir}` : ''}&outlet=${encodeURIComponent(outletName)}`} />
+        <meta name="twitter:image"      content={`https://www.ratednews.com/api/og?title=${encodeURIComponent(article.title)}${acc > 0 ? `&score=${acc}` : ''}${biasDir ? `&bias=${biasDir}` : ''}&outlet=${encodeURIComponent(outletName)}`} />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/<\//g, '<\\/') }}

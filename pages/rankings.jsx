@@ -17,12 +17,12 @@ export default function Rankings() {
     '@context': 'https://schema.org',
     '@type':    'ItemList',
     name:       'Most Accurate News Outlets — RatedNews',
-    url:        'https://ratednews.com/rankings',
+    url:        'https://www.ratednews.com/rankings',
     numberOfItems: scoredOutlets.length,
     itemListElement: scoredOutlets.slice(0, 20).map((o, i) => ({
       '@type':    'ListItem',
       position:  i + 1,
-      url:       `https://ratednews.com/outlet/${toOutletSlug(o.name)}`,
+      url:       `https://www.ratednews.com/outlet/${toOutletSlug(o.name)}`,
       name:      o.name,
     })),
   } : null
@@ -32,12 +32,12 @@ export default function Rankings() {
       <Head>
         <title>News Outlet Bias & Accuracy Rankings — RatedNews</title>
         <meta name="description" content="Which news outlets are most accurate and least biased? RatedNews ranks 50+ UK, US and international outlets by accuracy score, political bias, and headline fairness — updated hourly." />
-        <link rel="canonical" href="https://ratednews.com/rankings" />
+        <link rel="canonical" href="https://www.ratednews.com/rankings" />
         <meta property="og:title"       content="News Outlet Bias & Accuracy Rankings — RatedNews" />
         <meta property="og:description" content="Which news outlets are most accurate and least biased? RatedNews ranks 50+ outlets by accuracy, political bias, and headline fairness — updated hourly." />
-        <meta property="og:url"         content="https://ratednews.com/rankings" />
+        <meta property="og:url"         content="https://www.ratednews.com/rankings" />
         <meta property="og:type"        content="website" />
-        <meta property="og:image"       content="https://ratednews.com/og-image.png" />
+        <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="News Outlet Bias & Accuracy Rankings — RatedNews" />
         <meta name="twitter:description" content="Ranked by accuracy, political bias, and headline fairness across 50+ outlets." />

@@ -24,10 +24,10 @@ export default function OutletDetail({ outlet }) {
           name="description"
           content={`See ${outlet.name}'s AI-powered bias rating, accuracy score, and headline fairness breakdown on RatedNews. Scores updated hourly from real published articles.`}
         />
-        <link rel="canonical" href={`https://ratednews.com/outlet/${canonicalSlug}`} />
+        <link rel="canonical" href={`https://www.ratednews.com/outlet/${canonicalSlug}`} />
         <meta property="og:title"       content={`${outlet.name} — Bias & Accuracy Rating`} />
         <meta property="og:description" content={`${outlet.name} has an accuracy score of ${outlet.overall_score ?? '–'}/100 on RatedNews. See the full breakdown.`} />
-        <meta property="og:url"         content={`https://ratednews.com/outlet/${canonicalSlug}`} />
+        <meta property="og:url"         content={`https://www.ratednews.com/outlet/${canonicalSlug}`} />
         <meta property="og:type"        content="website" />
 
         {/* Organisation structured data — helps Google understand the page
@@ -39,7 +39,7 @@ export default function OutletDetail({ outlet }) {
             '@type':    'NewsMediaOrganization',
             name:        outlet.name,
             description: outlet.description || `${outlet.name} is a news outlet tracked and rated by RatedNews for accuracy, political bias, and headline fairness.`,
-            url:         `https://ratednews.com/outlet/${canonicalSlug}`,
+            url:         `https://www.ratednews.com/outlet/${canonicalSlug}`,
             ...(outlet.country === 'UK' && { areaServed: 'GB' }),
             ...(outlet.country === 'US' && { areaServed: 'US' }),
             aggregateRating: outlet.overall_score ? {

@@ -30,7 +30,6 @@ function accBadgeClass(score) {
 
 export default function NewsCard({ article, index, onClick, navigate, relatedArticles = [] }) {
   const [imgFailed, setImgFailed] = useState(false)
-  const [showAngles, setShowAngles] = useState(false)
 
   const outlet = article.outlets || {}
   const [bg] = outletColor(outlet.name || 'X')
@@ -53,7 +52,6 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
 
   function handleCardClick(e) {
     if (e.target.closest('a')) return
-    if (e.target.closest('[data-angles]')) return
     onClick?.(e)
   }
 
@@ -151,29 +149,23 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
         )}
       </div>
 
-      {/* Multi-angle toggle — only shown when 2+ outlets cover same story */}
+      {/* Multi-outlet chip — taps through to article page where full coverage lives */}
       {hasAngles && (
-        <div
-          data-angles="true"
-          style={{ borderTop: '1px solid var(--divider)', marginTop: 8, paddingTop: 4 }}
+        <Link
+          href={`/article/${slug}`}
+          style={{ textDecoration: 'none' }}
+          onClick={e => e.stopPropagation()}
         >
-          {/* Full-width tap target for mobile */}
-          <div
-            role="button"
-            onClick={e => { e.stopPropagation(); setShowAngles(v => !v) }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              minHeight: 44, padding: '4px 0',
-              cursor: 'pointer',
-            }}
-          >
+          <div style={{
+            borderTop: '1px solid var(--divider)',
+            marginTop: 8,
+            display: 'flex', alignItems: 'center', gap: 6,
+            minHeight: 44, padding: '10px 0 4px',
+            cursor: 'pointer',
+          }}>
             <span style={{ fontSize: 13 }}>📰</span>
-            <span style={{
-              fontSize: 11, fontWeight: 600,
-              color: showAngles ? 'var(--coral)' : 'var(--text3)',
-              transition: 'color 0.15s',
-            }}>
-              {allAngles.length} outlets covering this
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>
+              Also covered by other outlets
             </span>
             {/* Bias dot preview */}
             <span style={{ display: 'flex', gap: 3, marginLeft: 2 }}>
@@ -187,76 +179,9 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
                 ) : null
               })}
             </span>
-            <span style={{ marginLeft: 'auto', fontSize: 10, color: 'var(--text3)' }}>
-              {showAngles ? '▲' : '▼'}
-            </span>
+            <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>→</span>
           </div>
-
-          {showAngles && (
-            <div style={{ marginBottom: 4, display: 'flex', flexDirection: 'column', gap: 4 }}>
-              {allAngles.map(a => {
-                const o      = a.outlets || {}
-                const [oBg]  = outletColor(o.name || 'X')
-                const oBias  = BIAS_DOTS[o.bias_direction]
-                const oAcc   = a.accuracy_score || 0
-                const oSlug  = articleSlug(a.title, a.id)
-                const isPrimary = a.id === article.id
-                return (
-                  <Link
-                    key={a.id}
-                    href={`/article/${oSlug}`}
-                    style={{ textDecoration: 'none' }}
-                    onClick={e => e.stopPropagation()}
-                  >
-                    <div style={{
-                      display: 'flex', alignItems: 'center', gap: 8,
-                      padding: '10px 12px', minHeight: 44,
-                      background: isPrimary ? 'var(--bg2)' : 'var(--surface)',
-                      border: `0.5px solid ${isPrimary ? 'var(--coral)' : 'var(--border)'}`,
-                      borderRadius: 8,
-                      transition: 'border-color 0.15s',
-                    }}
-                    onMouseEnter={e => { if (!isPrimary) e.currentTarget.style.borderColor = 'var(--coral)' }}
-                    onMouseLeave={e => { if (!isPrimary) e.currentTarget.style.borderColor = 'var(--border)' }}
-                    >
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: oBg, flexShrink: 0 }} />
-
-                      <span style={{
-                        fontSize: 13, fontWeight: 600,
-                        color: 'var(--text)', flex: 1, minWidth: 0,
-                        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      }}>
-                        {o.name || 'Unknown'}
-                        {isPrimary && (
-                          <span style={{ fontSize: 10, color: 'var(--text3)', fontWeight: 400, marginLeft: 5 }}>
-                            (this article)
-                          </span>
-                        )}
-                      </span>
-
-                      {oBias && (
-                        <span style={{ fontSize: 11, fontWeight: 600, color: oBias.color, flexShrink: 0 }}>
-                          {oBias.label}
-                        </span>
-                      )}
-
-                      {oAcc > 0 && (
-                        <span style={{
-                          fontSize: 11, fontWeight: 600, flexShrink: 0,
-                          color: oAcc >= 70 ? 'var(--green)' : oAcc >= 50 ? 'var(--amber)' : 'var(--red)',
-                        }}>
-                          ✦{oAcc}
-                        </span>
-                      )}
-
-                      <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>→</span>
-                    </div>
-                  </Link>
-                )
-              })}
-            </div>
-          )}
-        </div>
+        </Link>
       )}
     </div>
   )

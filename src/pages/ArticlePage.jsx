@@ -671,7 +671,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               {alreadyRated ? '★ Already rated' : '★ Rate this article'}
             </button>
             <button className="btn-outline" onClick={async () => {
-              const shareUrl = `https://ratednews.com/article/${articleSlug(article.title, article.id)}`
+              const shareUrl = `https://www.ratednews.com/article/${articleSlug(article.title, article.id)}`
               const biasMap = { left: '← Left', centre: '◉ Centre', right: '→ Right' }
               const scoreParts = [
                 acc ? `🎯 ${acc}/100 accuracy` : null,

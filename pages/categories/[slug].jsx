@@ -139,7 +139,7 @@ export default function CategoryLanding({ slug, initialArticles, initialCount, c
     setHasMore((data || []).length === BATCH)
   }
 
-  const canonical = `https://ratednews.com/categories/${slug}`
+  const canonical = `https://www.ratednews.com/categories/${slug}`
   const pageTitle = `${categoryMeta.title} | RatedNews`
 
   // ItemList schema — helps Google surface category pages in Search with article links
@@ -153,7 +153,7 @@ export default function CategoryLanding({ slug, initialArticles, initialCount, c
     itemListElement: articles.slice(0, 10).map((a, i) => ({
       '@type':    'ListItem',
       position:   i + 1,
-      url:        `https://ratednews.com/article/${articleSlug(a.title, a.id)}`,
+      url:        `https://www.ratednews.com/article/${articleSlug(a.title, a.id)}`,
       name:       a.title,
     })),
   } : null
@@ -168,11 +168,11 @@ export default function CategoryLanding({ slug, initialArticles, initialCount, c
         <meta property="og:description" content={categoryMeta.description} />
         <meta property="og:url"         content={canonical} />
         <meta property="og:type"        content="website" />
-        <meta property="og:image"       content="https://ratednews.com/og-image.png" />
+        <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content={categoryMeta.title + ' | RatedNews'} />
         <meta name="twitter:description" content={categoryMeta.description} />
-        <meta name="twitter:image"      content="https://ratednews.com/og-image.png" />
+        <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
         {itemListLd && (
           <script
             type="application/ld+json"

@@ -15,12 +15,12 @@ export default function Trending({ articles, generatedAt }) {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: 'Trending News — RatedNews',
-    url: 'https://ratednews.com/trending',
+    url: 'https://www.ratednews.com/trending',
     numberOfItems: Math.min(articles.length, 10),
     itemListElement: articles.slice(0, 10).map((a, i) => ({
       '@type': 'ListItem',
       position: i + 1,
-      url: `https://ratednews.com/article/${articleSlug(a.title, a.id)}`,
+      url: `https://www.ratednews.com/article/${articleSlug(a.title, a.id)}`,
       name: a.title,
     })),
   } : null
@@ -30,12 +30,12 @@ export default function Trending({ articles, generatedAt }) {
       <Head>
         <title>Trending News — Accuracy &amp; Bias Rated | RatedNews</title>
         <meta name="description" content="The most discussed news stories right now, ranked by reader activity. Every article rated for accuracy and political bias." />
-        <link rel="canonical" href="https://ratednews.com/trending" />
+        <link rel="canonical" href="https://www.ratednews.com/trending" />
         <meta property="og:title"       content="Trending News — Accuracy & Bias Rated | RatedNews" />
         <meta property="og:description" content="The most discussed news stories right now, ranked by reader activity. Every article rated for accuracy and political bias." />
-        <meta property="og:url"         content="https://ratednews.com/trending" />
+        <meta property="og:url"         content="https://www.ratednews.com/trending" />
         <meta property="og:type"        content="website" />
-        <meta property="og:image"       content="https://ratednews.com/og-image.png" />
+        <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="Trending News — Accuracy & Bias Rated | RatedNews" />
         <meta name="twitter:description" content="The most discussed news stories right now, ranked by reader activity. Every article rated for accuracy and political bias." />

@@ -11,15 +11,15 @@ const CATEGORY_SLUGS = [
 ]
 
 const STATIC_PAGES = [
-  { url: 'https://ratednews.com/',           priority: '1.0', changefreq: 'hourly'  },
-  { url: 'https://ratednews.com/outlets',    priority: '0.9', changefreq: 'daily'   },
-  { url: 'https://ratednews.com/rankings',   priority: '0.9', changefreq: 'hourly'  },
-  { url: 'https://ratednews.com/trending',   priority: '0.9', changefreq: 'hourly'  },
-  { url: 'https://ratednews.com/sports',     priority: '0.9', changefreq: 'hourly'  },
-  { url: 'https://ratednews.com/categories', priority: '0.8', changefreq: 'daily'   },
-  { url: 'https://ratednews.com/about',      priority: '0.5', changefreq: 'monthly' },
+  { url: 'https://www.ratednews.com/',           priority: '1.0', changefreq: 'hourly'  },
+  { url: 'https://www.ratednews.com/outlets',    priority: '0.9', changefreq: 'daily'   },
+  { url: 'https://www.ratednews.com/rankings',   priority: '0.9', changefreq: 'hourly'  },
+  { url: 'https://www.ratednews.com/trending',   priority: '0.9', changefreq: 'hourly'  },
+  { url: 'https://www.ratednews.com/sports',     priority: '0.9', changefreq: 'hourly'  },
+  { url: 'https://www.ratednews.com/categories', priority: '0.8', changefreq: 'daily'   },
+  { url: 'https://www.ratednews.com/about',      priority: '0.5', changefreq: 'monthly' },
   ...CATEGORY_SLUGS.map(slug => ({
-    url:        `https://ratednews.com/categories/${slug}`,
+    url:        `https://www.ratednews.com/categories/${slug}`,
     priority:   '0.8',
     changefreq: 'hourly',
   })),
@@ -67,14 +67,14 @@ export async function getServerSideProps({ res }) {
   ])
 
   const outletPages = (outlets || []).map(o => ({
-    url:        `https://ratednews.com/outlet/${toSlug(o.name)}`,
+    url:        `https://www.ratednews.com/outlet/${toSlug(o.name)}`,
     priority:   '0.8',
     changefreq: 'hourly',
     lastmod:    o.updated_at?.slice(0, 10),
   }))
 
   const articlePages = (articles || []).map(a => ({
-    url:        `https://ratednews.com/article/${toArticleSlug(a.title, a.id)}`,
+    url:        `https://www.ratednews.com/article/${toArticleSlug(a.title, a.id)}`,
     priority:   '0.6',
     changefreq: 'weekly',
     lastmod:    a.published_at?.slice(0, 10),

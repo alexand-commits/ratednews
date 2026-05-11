@@ -12,12 +12,12 @@ export default function Document() {
         <link rel="apple-touch-icon" href="/social-icon.png" />
         <link rel="manifest" href="/manifest.json" />
         {/* Fallback OG image for any page that doesn't set its own */}
-        <meta property="og:image"        content="https://ratednews.com/og-image.png" />
+        <meta property="og:image"        content="https://www.ratednews.com/og-image.png" />
         <meta property="og:image:type"   content="image/png" />
         <meta property="og:image:width"  content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"        content="summary_large_image" />
-        <meta name="twitter:image"       content="https://ratednews.com/og-image.png" />
+        <meta name="twitter:image"       content="https://www.ratednews.com/og-image.png" />
         {/* Preconnect to Supabase — saves DNS+TLS round trip on first data fetch */}
         <link rel="preconnect" href={process.env.VITE_SUPABASE_URL} />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
