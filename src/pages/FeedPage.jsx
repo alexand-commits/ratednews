@@ -435,9 +435,11 @@ export default function FeedPage({
   const PHRASE_CONNECTORS = new Set(['of','the','and','in','on','at','to','for','by','with','from','over','into','as','a'])
 
   const trendingTopics = useMemo(() => {
-    const phraseFreq  = {}
-    const singleFreq  = {}
-    const displayForm = {}
+    const phraseFreq   = {}
+    const phraseOutlets = {}  // phrase key → Set of outlet_ids
+    const singleFreq   = {}
+    const singleOutlets = {}  // single key → Set of outlet_ids
+    const displayForm  = {}
 
     // trendingArticles is already scoped to 24h by the dedicated fetch in index.jsx
     for (const article of trendingArticles.slice(0, 300)) {
@@ -462,6 +464,8 @@ export default function FeedPage({
         const phrase    = buffer.map(t => t.word).join(' ')
         const phraseKey = phrase.toLowerCase()
         phraseFreq[phraseKey] = (phraseFreq[phraseKey] || 0) + 1
+        if (!phraseOutlets[phraseKey]) phraseOutlets[phraseKey] = new Set()
+        phraseOutlets[phraseKey].add(article.outlet_id)
         displayForm[phraseKey] = phrase
         buffer = []
       }
@@ -496,16 +500,24 @@ export default function FeedPage({
         if (key.length < 3) return
         if (COMMON_WORDS.has(key) || MEDIA_ACRONYMS.has(key)) return
         singleFreq[key] = (singleFreq[key] || 0) + 1
+        if (!singleOutlets[key]) singleOutlets[key] = new Set()
+        singleOutlets[key].add(article.outlet_id)
         if (!displayForm[key]) {
           displayForm[key] = isAcronym ? clean : clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase()
         }
       })
     }
 
-    // Phrases ≥ 2 mentions (specific enough by nature); singles ≥ 3 (stricter to cut noise)
+    // Phrases ≥ 4 mentions across ≥ 2 outlets; singles ≥ 4 across ≥ 2 outlets.
+    // Outlet diversity prevents tabloid clustering: 4 Sun articles about the same
+    // celebrity story don't constitute a trending topic — real news spreads.
     const scored = {}
     for (const [key, count] of Object.entries(phraseFreq)) {
-      if (count >= 2 && !BLOCKED_ANCHOR_PHRASES.has(key)) scored[key] = count * 3
+      if (
+        count >= 4 &&
+        (phraseOutlets[key]?.size ?? 0) >= 2 &&
+        !BLOCKED_ANCHOR_PHRASES.has(key)
+      ) scored[key] = count * 3
     }
     // Deduplicate singles against ALL extracted phrases (including blocked ones like
     // "margaret brennan") — otherwise blocking a phrase removes it from the dedup
@@ -513,7 +525,8 @@ export default function FeedPage({
     const allPhraseKeys = Object.keys(phraseFreq)
     for (const [key, count] of Object.entries(singleFreq)) {
       if (
-        count >= 3 &&
+        count >= 4 &&
+        (singleOutlets[key]?.size ?? 0) >= 2 &&
         !scored[key] &&
         !allPhraseKeys.some(p => p.includes(key)) &&
         !ANCHOR_LAST_NAMES.has(key)
