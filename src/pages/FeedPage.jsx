@@ -79,6 +79,7 @@ function getArticleRegion(article) {
 export default function FeedPage({
   articles, trendingArticles = [], outlets, loading, navigate,
   initialCategory = 'all', initialRegion = 'all',
+  initialTopic = null, initialTab = 'all',
   totalArticleCount, user, followedOutletIds = new Set(),
   onLoginClick, loadMoreArticles, hasMoreArticles, loadingMore,
   savedArticleIds = new Set(), toggleSave, onRefresh,
@@ -88,7 +89,7 @@ export default function FeedPage({
   const [minScore, setMinScore] = useState(0)
   const [search, setSearch]     = useState('')
   const [sort, setSort]         = useState('latest')
-  const [feedTab, setFeedTab]         = useState('all') // 'all' | 'following'
+  const [feedTab, setFeedTab]         = useState(initialTab) // 'all' | 'following'
   const [legalDoc, setLegalDoc]       = useState(null)  // 'privacy' | 'terms' | 'guidelines'
   const [showWelcome, setShowWelcome] = useState(() => {
     try { return !localStorage.getItem('rn_seenWelcome') } catch { return false }
@@ -99,9 +100,21 @@ export default function FeedPage({
   // DB search state
   const [dbResults, setDbResults]   = useState(null)   // null = search not active
   const [dbLoading, setDbLoading]   = useState(false)
-  const [activeTopic, setActiveTopic] = useState(null) // trending topic filter
+  const [activeTopic, setActiveTopic] = useState(initialTopic) // trending topic filter
   const searchTimer                 = useRef(null)
   const searchInputRef              = useRef(null)
+
+  // Sync activeTopic + feedTab into the URL so back-navigation restores them
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (activeTopic) params.set('topic', activeTopic); else params.delete('topic')
+    if (feedTab !== 'all') params.set('tab', feedTab); else params.delete('tab')
+    const newSearch = params.toString() ? `?${params}` : ''
+    if (window.location.search !== newSearch) {
+      window.history.replaceState({ ...window.history.state }, '', window.location.pathname + newSearch)
+    }
+  }, [activeTopic, feedTab])
 
   // Search history (localStorage-persisted)
   const [searchHistory, setSearchHistory] = useState(() => {

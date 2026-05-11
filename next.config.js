@@ -20,6 +20,9 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  experimental: {
+    scrollRestoration: true,  // restore scroll position on back navigation
+  },
   // Map existing Vite env var names to Next.js public env vars so
   // Vercel's existing environment variables need no changes.
   env: {

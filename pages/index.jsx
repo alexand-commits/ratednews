@@ -108,6 +108,8 @@ export default function Feed({ initialArticles, initialCount }) {
         showToast={showToast}
         initialCategory={router.query.category || 'all'}
         initialRegion={router.query.region   || 'all'}
+        initialTopic={router.query.topic     || null}
+        initialTab={router.query.tab         || 'all'}
         totalArticleCount={totalCount}
         user={user}
         followedOutletIds={followedOutletIds}
