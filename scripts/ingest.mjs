@@ -368,6 +368,56 @@ const JUNK_PATTERNS = [
   /^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday) Morning$/i,
   /^(Meet the Press|Face the Nation|State of the Union|This Week with|Good Morning America|Sunday Morning|Morning Joe)(\s*[-–:].*)?$/i,
 
+  // ── Podcast episode entries ───────────────────────────────────────────────────
+  // "Ep. 23: Interview with X" / "Episode 12 — What we learned"
+  /^Ep\.?\s*\d+\b/i,
+  /^Episode \d+\b/i,
+  /^#\d+[:\s–-]/,                          // "#234: Guest Name" format
+
+  // ── First-person expert / professional lifestyle ──────────────────────────────
+  // "I'm a nutritionist and here's what I eat" — BI, HuffPost, DM staple
+  /^I'?m (a|an) [a-z].{0,60}(and |here'?s |this is |so )/i,
+  // "As a [profession], I…" — same format, different opener
+  /^As (a|an) [a-z].{0,40}, I\b/i,
+  // "I'm [age] years old and…"
+  /^I'?m \d+ (years? old|and)\b/i,
+
+  // ── Salary / money confession pieces ─────────────────────────────────────────
+  // "I earn £60k a year, here's how I budget" — BI, HuffPost, Metro
+  /\bI (earn|make|save|spend|invest|budget|live on|survive on).{0,40}(salary|income|a year|per year|a month|per month|a week|paycheck|take.?home)\b/i,
+  /\b(my salary|my income|my wage|my paycheck|my finances|my money|my debt)\b.{0,40}(revealed?|exposed?|confession|diary|breakdown|challenge)\b/i,
+
+  // ── Confession / diary format ─────────────────────────────────────────────────
+  /^Confessions? of (a|an)\b/i,            // "Confessions of a stay-at-home mum"
+  /\b(money|sex|love|dating|diet|fitness) diary\b/i,  // "My money diary: week 3"
+
+  // ── Viral content writeups ────────────────────────────────────────────────────
+  // Thin articles that are just "this video is going around"
+  /\b(video|clip|photo|post|tweet|thread|reel|tiktok) (goes?|went|is) viral\b/i,
+  /\bviral (video|clip|moment|photo|post|tweet|thread|reel)\b/i,
+  /\binternet (reacts?|divided|can't stop|loses? it|is obsessed)\b/i,
+
+  // ── SEO evergreen guides ──────────────────────────────────────────────────────
+  /\b(ultimate|complete|definitive|comprehensive|essential|beginners?'?) guide (to|for)\b/i,
+  /\bthings (to know|you should know|worth knowing) (about|before|if)\b/i,
+  /\bneed to know (about|before|if)\b/i,
+
+  // ── Ranked: / Best X of year listicles ───────────────────────────────────────
+  /^Ranked:\s/i,
+  /\bwe ranked (every|all|the)\b/i,
+
+  // ── Award show / red carpet fashion ──────────────────────────────────────────
+  /\b(red carpet|best dressed|worst dressed|who wore (it best|what))\b/i,
+  /\b(Oscars?|BAFTAs?|Grammys?|Emmys?|Golden Globes?|Met Gala).{0,40}(looks?|outfits?|dresses?|fashion|style|gowns?|wore)\b/i,
+
+  // ── Relationship red-flag / sign bait ────────────────────────────────────────
+  /\b(signs?|red flags?|warnings?) (your|that your) (partner|relationship|boyfriend|girlfriend|husband|wife|boss|friend|ex)\b/i,
+  /\bhow to (know|tell|spot) if (your|you're|he'?s|she'?s)\b/i,
+
+  // ── "I asked AI to…" novelty pieces ──────────────────────────────────────────
+  /\bI (asked|used|got|had|made|tried) (AI|ChatGPT|Claude|Gemini|Copilot|Grok|an? AI|the AI)\b/i,
+  /\b(AI|ChatGPT|Gemini|Copilot) (told|said|thinks?|rates?|ranks?|picks?|chose|designed|wrote|created|predicted|reveals?)\b.{0,40}\b(best|worst|top|winner|answer|result)\b/i,
+
   // ── Breitbart opinion / commentary filler ─────────────────────────────────────
   // Breitbart publishes high volumes of opinion columns and wire rewrites
   // with inflammatory framing — mostly caught by accuracy scoring but filter early
