@@ -261,8 +261,8 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
   const HEADLINE_STYLES = {
     fair:       { bg: 'var(--green-light)', color: 'var(--green-dark)', label: '✓ Fair headline'  },
-    misleading: { bg: 'var(--amber-light)', color: 'var(--amber)', label: '⚠ Misleading' },
-    clickbait:  { bg: 'var(--red-light)',   color: 'var(--red)',   label: '✗ Clickbait'  },
+    misleading: { bg: 'var(--amber-light)', color: 'var(--amber)', label: '⚠ Misleading headline' },
+    clickbait:  { bg: 'var(--red-light)',   color: 'var(--red)',   label: '✗ Clickbait headline'  },
   }
   const BIAS_INFO = {
     left:   { label: '← Left',   color: 'var(--blue, #3b82f6)', bar: 20 },

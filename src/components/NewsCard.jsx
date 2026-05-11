@@ -5,8 +5,8 @@ import { articleSlug, outletColor, scoreDot, timeAgo } from '../utils/helpers'
 import { toSlug } from '../utils/navigate'
 
 const HEADLINE_BADGES = {
-  misleading: { bg: '#fff3cd', color: '#856404', label: '⚠ Misleading' },
-  clickbait:  { bg: '#fde8e8', color: 'var(--red)', label: '✗ Clickbait' },
+  misleading: { bg: '#fff3cd', color: '#856404', label: '⚠ Misleading headline' },
+  clickbait:  { bg: '#fde8e8', color: 'var(--red)', label: '✗ Clickbait headline' },
 }
 
 const BIAS_LABELS = {
