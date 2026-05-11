@@ -104,6 +104,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   const [articles, setArticles] = useState([])
   const [activeTab, setActiveTab] = useState('overview')
   const [outletRatings, setOutletRatings] = useState([])
+  const [raterProfiles, setRaterProfiles] = useState({})
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [alreadyRated, setAlreadyRated] = useState(false)
   const [myRating, setMyRating] = useState(null)
@@ -148,12 +149,26 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
       .limit(3)
       .then(({ data }) => setBestArticles(data || []))
 
-    // Community ratings
+    // Community ratings — then fetch usernames so avatars show initials not UUID
     db.from('outlet_ratings')
       .select('*')
       .eq('outlet_id', outletId)
       .order('created_at', { ascending: false })
-      .then(({ data }) => setOutletRatings(data || []))
+      .then(({ data }) => {
+        const ratings = data || []
+        setOutletRatings(ratings)
+        const ids = [...new Set(ratings.map(r => r.user_id).filter(Boolean))]
+        if (ids.length > 0) {
+          db.from('profiles').select('user_id, username').in('user_id', ids)
+            .then(({ data: profiles }) => {
+              if (profiles) {
+                const map = {}
+                profiles.forEach(p => { map[p.user_id] = p.username })
+                setRaterProfiles(map)
+              }
+            })
+        }
+      })
 
     // Outlet comments
     db.from('comments')
@@ -705,9 +720,11 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                       <div key={r.id} style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                           <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--purple-light)', color: 'var(--purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 500 }}>
-                            {r.user_id ? getInitials(r.user_id) : '??'}
+                            {getInitials(raterProfiles[r.user_id] || null)}
                           </div>
-                          <span style={{ fontSize: 13, fontWeight: 500 }}>Community member</span>
+                          <span style={{ fontSize: 13, fontWeight: 500 }}>
+                            {raterProfiles[r.user_id] || 'Community member'}
+                          </span>
                           <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>{timeAgo(r.created_at)}</span>
                         </div>
                         <div style={{ fontSize: 18, color: 'var(--amber)', marginBottom: 8 }}>

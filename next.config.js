@@ -25,12 +25,18 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_SUPABASE_URL:      process.env.VITE_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.VITE_SUPABASE_ANON_KEY,
+    NEXT_PUBLIC_GA_ID:             process.env.NEXT_PUBLIC_GA_ID,
   },
-  // Allow images from any HTTPS source (news thumbnails come from many domains)
+  // News thumbnails come from hundreds of different CDN domains so a strict
+  // hostname whitelist isn't practical. Mitigate SSRF/XSS risk by:
+  //   - blocking SVG (can embed scripts)
+  //   - serving images with a sandbox CSP so any embedded JS can't execute
+  //   - attachment disposition so browsers don't render unknown MIME types inline
   images: {
-    remotePatterns: [
-      { protocol: 'https', hostname: '**' },
-    ],
+    remotePatterns: [{ protocol: 'https', hostname: '**' }],
+    dangerouslyAllowSVG: false,
+    contentDispositionType: 'attachment',
+    contentSecurityPolicy: "default-src 'none'; script-src 'none'; sandbox;",
   },
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }]

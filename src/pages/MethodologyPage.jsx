@@ -36,25 +36,43 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
   "misleading" = headline implies something not supported by the summary.
   "clickbait" = headline uses emotional bait, exaggeration, or withholds key info to drive clicks.
   IMPORTANT — sport headlines: colourful verbs ("fires", "nets", "slots home", "inspires") and
-  player-focused framing are normal sports-writing conventions. Only mark "misleading" if the headline
-  states or strongly implies a fact that the summary contradicts. Sensational but accurate sports
-  language should be "fair", not "misleading".
-  IMPORTANT — tribute, memorial and human interest content: emotional or reverential language in
-  articles about deaths, memorials, tributes, retirements, and community stories is appropriate
-  writing style. Do not inflate bias_score for emotional tone alone.
+  player-focused framing ("Rashford fires Barca to title") are normal sports-writing conventions.
+  Only mark "misleading" if the headline states or strongly implies a fact that the summary contradicts
+  (e.g. headline says player scored a hat-trick but summary says he scored once). Sensational but
+  accurate sports language should be "fair", not "misleading".
+  IMPORTANT — tribute, memorial and human interest content: articles about deaths, memorials,
+  tributes, retirements, community stories and human interest pieces naturally use emotional,
+  reverential or narrative language. This is appropriate writing style, not inaccuracy or bias.
+  Do NOT penalise accuracy_score for empathetic or emotional framing in these contexts — a
+  factually correct tribute piece should score 75–90. Only lower accuracy_score if the reported
+  facts themselves appear wrong. Similarly do not inflate bias_score for emotional tone alone.
 
 - "category": string, one of: "Politics", "Business", "Sport", "Tech", "Science", "Health",
   "Environment", "Entertainment", "Crime", "Travel", "Education", "Conflict", "World".
-  Use "Conflict" for armed conflict, wars, military operations, airstrikes, and active conflict zones.
-  Use "Tech" for technology companies, AI, software, hardware, and cybersecurity — even with a business angle.
+  Use "Conflict" for stories about armed conflict, wars, military operations, airstrikes, battles,
+  casualties in war zones, or geopolitical tensions involving military force — this includes Ukraine,
+  Gaza, Middle East, Sudan, and any active conflict zone. Do NOT assign these to Politics or World.
+  Use "Tech" for stories about technology companies, AI, software, hardware, cybersecurity, social
+  media platforms, and the tech industry — even if they have a business angle.
+  Use "Entertainment" for arts, music, film, TV, celebrity, fashion, food, culture, and lifestyle stories.
+  Use "World" for international news or stories that don't fit another category.
 
 - "geographic_scope": string, one of: "local", "national", "global".
-  How broad is the story's relevance? "local" = city/region, "national" = country-wide, "global" = multi-country significance.
+  How broad is the story's relevance to a general reader?
+  "local" = primarily about a specific city, town, county, or sub-national region with little wider significance.
+  "national" = relevant across an entire country.
+  "global" = clear international significance or spans multiple countries.
+  When in doubt between national and global, prefer "national".
 
 - "article_region": string, one of: "UK", "US", "Europe", "MiddleEast", "Africa", "AsiaPac",
   "Americas", "International".
   The geographic region this article is primarily ABOUT — not where the outlet is based.
-  Follow the story, not the outlet.
+  "Europe" = European countries excluding UK (France, Germany, Russia, Ukraine, etc).
+  "MiddleEast" = Israel, Gaza, Iran, Iraq, Saudi Arabia, Turkey, UAE, Yemen, Lebanon, Syria, etc.
+  "AsiaPac" = China, Japan, India, South Korea, Australia, Southeast Asia, etc.
+  "Americas" = Latin America, Canada, or the Caribbean.
+  "International" = spanning multiple regions with no single clear geographic focus.
+  When a US outlet covers a UK story, tag "UK". Follow the story, not the outlet.
 
 - "ai_summary": string. A 1–2 sentence neutral summary of what the article is about.
   Write as if summarising for someone who hasn't read it. Do not editorialise.
@@ -72,7 +90,7 @@ const CHANGELOG = [
   {
     date: 'May 2026',
     entries: [
-      'Outlet reputation gate added — low credibility badges (below 50) are suppressed for outlets whose own 30-day average is 65 or above. This prevents a single edge-case article from generating a misleading badge against a consistently reliable source.',
+      'All scored articles now always display their credibility badge — an earlier outlet reputation gate that suppressed low scores for high-reputation outlets was removed in favour of full transparency.',
       'Scoring prompt updated: added sports match report carve-out. Colourful match-report language ("fires", "nets", "stunner") is now correctly treated as convention, not inaccuracy. Transfer knowledge cut-off caveat added — article claims about player club affiliations are trusted over training data.',
       'Scoring prompt updated: added tribute and memorial carve-out. Emotional or reverential language in articles about deaths, retirements, and community stories is no longer penalised for accuracy or inflated for bias.',
       'Headline verdict badges renamed for clarity — "⚠ Misleading headline" and "✗ Clickbait headline" now appear in-card only when a verdict other than "fair" is returned.',

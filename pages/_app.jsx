@@ -15,7 +15,7 @@ import { SpeedInsights } from '@vercel/speed-insights/next'
 import { playfair, lato } from '../src/lib/fonts'
 import '../src/styles/globals.css'
 
-const GA_ID = 'G-FK738TW9V4'
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID || ''
 
 // ── Global app context ──────────────────────────────────────────────────────
 const AppContext = createContext({})
@@ -38,7 +38,7 @@ export default function App({ Component, pageProps }) {
   useEffect(() => {
     const handleRouteChange = (url) => {
       if (typeof window.gtag === 'function') {
-        window.gtag('config', 'G-FK738TW9V4', { page_path: url })
+        window.gtag('config', GA_ID, { page_path: url })
       }
     }
     router.events.on('routeChangeComplete', handleRouteChange)
