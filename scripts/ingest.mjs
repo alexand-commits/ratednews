@@ -171,8 +171,9 @@ const JUNK_PATTERNS = [
   // ALL-CAPS "YOUR" is the Daily Mail's signature engagement trigger — narrowed to
   // domestic/personal nouns to avoid catching legitimate news ("YOUR MP voted for X")
   /\bYOUR (home|house|bathroom|kitchen|garden|wardrobe|diet|body|face|hair|skin|gut|partner|relationship|finances?|money|savings?|pension|mortgage|inbox)\b/,
-  // Question-opener personal lifestyle titles
-  /^(should|are|is|do|would|could) (you|your)\b/i,  // "Should you X", "Are you X"
+  // Question-opener personal lifestyle titles — narrowed to avoid catching
+  // legitimate health/safety journalism ("Should you be worried about the variant?")
+  /^(should|are|do|would|could) you (eat|drink|take|buy|wear|try|use|avoid|stop|start|switch|follow|join|get|book|order|install|download)\b/i,
   // "What your X says/reveals about you" — classic DM formula
   /\bwhat your [a-z ]+ (says?|reveals?|means?|shows?)\b/i,
   // Celebrity reaction / body / outfit clickbait
@@ -250,7 +251,9 @@ const JUNK_PATTERNS = [
   // ── Personal narrative lifestyle pieces (BI, Mirror, tabloids) ───────────────
   // "I lost a third of my bodyweight after..." / "I was convinced my mother-in-law..."
   // Distinct from "I visited" (already caught) — broader personal confession/journey openers
-  /^I (lost|gained|had|have|spent|quit|left|gave|told|couldn't|didn't|never|asked|found|tried to|woke up|grew up|moved|retired|survived)\b/i,
+  // Narrowed: removed "survived/fled/escaped" — these appear in legitimate first-person
+  // news accounts ("I survived the attack", "I fled Ukraine")
+  /^I (lost|gained|spent|quit|gave up|tried to|woke up|grew up|moved|retired)\b/i,
   /^My (mother.in.law|husband|wife|partner|mum|dad|boss|doctor|neighbour|neighbor)\b/i,
 
   // ── Section / category homepage links mistakenly pulled as articles ───────────
@@ -403,8 +406,10 @@ const JUNK_PATTERNS = [
 
   // ── SEO evergreen guides ──────────────────────────────────────────────────────
   /\b(ultimate|complete|definitive|comprehensive|essential|beginners?'?) guide (to|for)\b/i,
-  /\bthings (to know|you should know|worth knowing) (about|before|if)\b/i,
-  /\bneed to know (about|before|if)\b/i,
+  // Narrowed: "things to know about X" catches context journalism (Gaza ceasefire, election guides)
+  // Only block when preceded by a number or "key" — pure listicle framing
+  /\b\d+ things (to know|you should know|worth knowing) (about|before)\b/i,
+  /\bkey things (to know|you need to know) (about|before)\b/i,
 
   // ── Ranked: / Best X of year listicles ───────────────────────────────────────
   /^Ranked:\s/i,
@@ -521,7 +526,9 @@ const JUNK_PATTERNS = [
   // "Is X the new Y?" substitution clickbait
   /\bis [a-z ]+ the new [a-z ]+\?/i,
   // "X opens up about Y" — interview-derived lifestyle fluff
-  /\b(opens? up|breaks? (silence|cover)|speaks? out) (about|on) (her|his|their) (weight|body|marriage|divorce|split|baby|pregnancy|health|battle|struggle)\b/i,
+  // Narrowed: politicians/officials legitimately "break silence" and "speak out" on issues
+  // Only block when followed by personal/health topics, not political ones
+  /\b(opens? up|breaks? silence|speaks? out) (about|on) (her|his|their) (weight|body|marriage|divorce|split|baby|pregnancy|health battle|mental health|addiction|affair|cheating|feud)\b/i,
   // "Everything you need to know about X" — SEO evergreen, not news
   /\beverything you need to know\b/i,
   // Countdown listicles with no news hook

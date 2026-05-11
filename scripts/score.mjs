@@ -136,7 +136,7 @@ Summary: ${article.summary || '(no summary available)'}`
 
   const response = await anthropic.messages.create({
     model:      'claude-haiku-4-5',
-    max_tokens: 200,
+    max_tokens: 250,
     system: [
       {
         type: 'text',
@@ -195,8 +195,8 @@ async function main() {
       .from('articles')
       .select('id, title, summary, outlets(name)')
       .is('accuracy_score', null)
-      .gte('published_at', stalenessCutoff)   // skip articles too old to appear in feed
-      .order('published_at', { ascending: false })
+      .gte('created_at', stalenessCutoff)   // use created_at (row insert time) not published_at
+      .order('published_at', { ascending: false })  // so slow-publishing outlets (Economist, Bellingcat) aren't skipped
       .limit(BATCH_SIZE)
 
     // Exclude any IDs that have already failed this run to avoid infinite loops
