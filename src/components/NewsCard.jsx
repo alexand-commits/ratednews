@@ -169,7 +169,7 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
           }}>
             <span style={{ fontSize: 13 }}>📰</span>
             <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>
-              Also covered by other outlets
+              Also covered by {relatedArticles.length} other outlet{relatedArticles.length !== 1 ? 's' : ''}
             </span>
             {/* Bias dot preview */}
             <span style={{ display: 'flex', gap: 3, marginLeft: 2 }}>
