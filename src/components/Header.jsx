@@ -75,9 +75,10 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
                 width: 32, height: 32, borderRadius: '50%', background: 'var(--coral)', color: '#fff',
                 border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700,
                 fontFamily: 'var(--font-lato), sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                flexShrink: 0, transition: 'opacity 0.15s',
-                outline: menuOpen ? '2px solid var(--coral)' : 'none',
-                outlineOffset: 2,
+                flexShrink: 0, transition: 'box-shadow 0.15s',
+                boxShadow: menuOpen
+                  ? '0 0 0 2.5px var(--bg), 0 0 0 4.5px var(--coral)'
+                  : '0 0 0 2px var(--bg), 0 0 0 3.5px transparent',
               }}
               title={user.email}
             >
@@ -87,8 +88,9 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
             {menuOpen && (
               <div style={{
                 position: 'absolute', top: 40, right: 0, zIndex: 200,
-                background: 'var(--surface)', border: '0.5px solid var(--border)',
-                borderRadius: 12, boxShadow: '0 8px 28px rgba(0,0,0,0.14)',
+                background: 'var(--surface)', border: '1px solid var(--border2)',
+                borderRadius: 12,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.14), 0 0 0 1px rgba(255,255,255,0.04)',
                 width: 220, overflow: 'hidden',
               }}>
 
