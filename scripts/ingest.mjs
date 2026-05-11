@@ -368,6 +368,34 @@ const JUNK_PATTERNS = [
   /^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday) Morning$/i,
   /^(Meet the Press|Face the Nation|State of the Union|This Week with|Good Morning America|Sunday Morning|Morning Joe)(\s*[-–:].*)?$/i,
 
+  // ── Breitbart opinion / commentary filler ─────────────────────────────────────
+  // Breitbart publishes high volumes of opinion columns and wire rewrites
+  // with inflammatory framing — mostly caught by accuracy scoring but filter early
+  /^(Exclusive|Breaking):\s/i,              // Breitbart overuses these as engagement hooks
+  /\b(deep state|globalist|radical left|far-left|marxist|woke agenda)\b/i,
+  /\b(mainstream media|fake news|legacy media|corporate media) (lies?|hides?|ignores?|refuses?|covers? up)\b/i,
+  // Wire rewrite format — "Report: X says Y" with no original reporting
+  /^Report:\s/i,
+  /^Exclusive - /i,
+
+  // ── Fox News lifestyle & non-news filler ──────────────────────────────────────
+  // Fox publishes high volumes of "faith & values", lifestyle, and entertainment
+  /\b(faith|prayer|miracle|blessing|god's? (plan|will|grace))\b.{0,40}\b(story|moment|message|sign)\b/i,
+  /\bhow (one|a) (man|woman|family|couple|teen|mom|dad|pastor|veteran)\b.{0,60}\b(changed|transformed|overcame|survived|inspired)\b/i,
+  // Fox crime/missing persons local filler (not national news)
+  /^(Police|Cops?|Deputies|Authorities) (search|seek|look) (for|to identify)\b/i,
+  /\bremains? (found|identified|discovered) (in|near|at)\b/i,
+
+  // ── The Telegraph lifestyle / culture bleed ───────────────────────────────────
+  // Telegraph's culture/travel/food sections pull in via their main RSS
+  /\b(best|top) (hotels?|restaurants?|beaches?|villages?|towns?|cities|destinations?) (in|for|to visit)\b/i,
+  /\b(where to (stay|eat|drink|visit|go)) (in|near|for)\b/i,
+  /\b(travel|food|wine|interiors?) (guide|edit|special|supplement)\b/i,
+  /\bTelegraph (Travel|Food|Property|Gardens?|Luxury|Motoring)\b/i,
+  // Property porn — Telegraph runs heavy property coverage
+  /\b(for sale|on the market|asking price|guide price|offers over)\b.{0,40}\b(home|house|flat|cottage|manor|estate)\b/i,
+  /\binside (the|a|this) (stunning|incredible|beautiful|charming|magnificent).{0,30}(home|house|flat|cottage|barn|farmhouse)\b/i,
+
   // ── Daily Mail / tabloid celebrity & lifestyle filler ─────────────────────────
   // "X's transformation" — before/after celebrity body clickbait
   /\b(dramatic|incredible|stunning|unbelievable|shocking|remarkable)?\s*transformation\b/i,
@@ -458,8 +486,9 @@ function cleanTitle(title, outletName) {
 // Legitimate news headlines rarely exceed 120 chars — anything longer from
 // these outlets is almost always celebrity gossip, sex advice, or sponsored fluff.
 const OUTLET_MAX_TITLE_LENGTH = {
-  'Daily Mail': 110,  // tightened from 125 — DM's junk rate is 62%, cap aggressively
-  'The Sun':    100,  // tightened from 110
+  'Daily Mail':    110,  // tightened from 125 — DM's junk rate is 62%, cap aggressively
+  'The Sun':       100,  // tightened from 110
+  'The Telegraph': 115,  // lifestyle/culture section bleeds in with long descriptive titles
 }
 
 // ── Per-outlet per-run article caps ──────────────────────────────────────────
@@ -467,8 +496,11 @@ const OUTLET_MAX_TITLE_LENGTH = {
 // High-volume tabloids with poor signal/noise ratios burn API scoring budget;
 // cap them so quality outlets aren't crowded out.
 const OUTLET_MAX_PER_RUN = {
-  'Daily Mail': 8,   // was ingesting 15–20/run at 62% junk; cap saves ~7 AI calls/run
-  'The Sun':    6,   // tiny RSS footprint but very high junk rate
+  'Daily Mail':    8,   // was ingesting 15–20/run at 62% junk; cap saves ~7 AI calls/run
+  'The Sun':       6,   // tiny RSS footprint but very high junk rate
+  'The Telegraph': 10,  // 46.7% junk rate — cap to reduce scoring waste
+  'Fox News':      10,  // 30.4% junk, high volume (69 articles/month)
+  'Breitbart':     6,   // 41.3% junk + worst accuracy score (28.3% low) — tight cap
 }
 
 function isTitleTooLong(title, outletName) {

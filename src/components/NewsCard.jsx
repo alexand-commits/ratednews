@@ -112,10 +112,8 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
       <div className="score-row">
         {scored ? (
           <>
-            {/* Credibility score — coloured pill, outlet-reputation gate on red */}
-            {!(acc < 50 && (outlet.accuracy_score || 0) >= 65) && (
-              <span className={accBadgeClass(acc)}>✦ {acc}</span>
-            )}
+            {/* Credibility score — always shown when scored */}
+            <span className={accBadgeClass(acc)}>✦ {acc}</span>
 
             {/* Bias — original pill */}
             {(article.bias_score || 0) < 25
