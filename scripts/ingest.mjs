@@ -148,6 +148,18 @@ const JUNK_PATTERNS = [
   // "Fri 8 May 2026 – Programmes" style schedule pages
   /\b[A-Z][a-z]{2} \d{1,2} [A-Z][a-z]+ \d{4} [–-] Programmes?\b/,
 
+  // ── Travel booking packages & event hospitality deals ────────────────────────
+  // "Book luxury Austrian Grand Prix for under £900 with F1 package including flights..."
+  /^Book (your |the |a |luxury |cheap |an? )?(trip|holiday|stay|seat|package|place|tickets?|break|getaway)\b/i,
+  /\bpackage including (flights?|transfers?|accommodation|hotel)\b/i,
+  /\b\d+ nights? (at|in) (a |the )?\d+-star\b/i,      // "5 nights at 4-star hotel"
+  /\b(flights?|accommodation|hotel) (included?|included)\b/i,
+  /\bhospitality (package|deal|ticket)\b/i,
+  /\b(vip|luxury|hospitality) package\b/i,
+  /\bincluding flights? and\b/i,                       // "including flights and hotel"
+  // Price-led travel offers: "for under £900", "from £299 including flights"
+  /\b(from|for|under|just) [£$€]\d{2,}.{0,40}(flight|hotel|night|package|stay)\b/i,
+
   // ── Sun / tabloid travel & consumer puff ─────────────────────────────────────
   // "I visited the foodie city..." personal travel pieces used as destination ads
   /^I (visited|tried|tested|went to|stayed at|ate at)\b/i,

@@ -38,36 +38,47 @@ export default function Sidebar({ outlets, navigate }) {
         </button>
       </div>
       <div className="widget">
-        <div className="widget-title">How ratings work</div>
+        <div className="widget-title">How scores are built</div>
+
+        {/* Current state — what's actually running right now */}
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: 'var(--text3)', marginBottom: 8 }}>
+          Current weighting
+        </div>
         <div className="rating-breakdown">
           <div className="rb-row">
             <span className="rb-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              Community
-              <InfoTip text="Readers rate outlets directly. Weight starts low and grows as more votes arrive — this protects against early manipulation. At 20+ votes it reaches full 40% weight." />
-            </span>
-            <div className="rb-bar-bg"><div className="rb-bar-fill" style={{ width: '40%', background: 'var(--coral)' }}></div></div>
-            <span className="rb-val" style={{ color: 'var(--coral-dark)' }}>40%</span>
-          </div>
-          <div className="rb-row">
-            <span className="rb-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
               AI analysis
-              <InfoTip text="Every article is scored by Claude AI for accuracy, bias and headline fairness. Scores are averaged across all of an outlet's articles. AI carries 70% of the score until community votes build up." />
+              <InfoTip text="Every article is scored by Claude AI for accuracy, bias direction, and headline fairness. Scores are averaged across the outlet's last 30 days of articles." />
             </span>
-            <div className="rb-bar-bg"><div className="rb-bar-fill" style={{ width: '35%', background: 'var(--blue)' }}></div></div>
-            <span className="rb-val" style={{ color: 'var(--blue)' }}>35%</span>
+            <div className="rb-bar-bg"><div className="rb-bar-fill" style={{ width: '70%', background: 'var(--blue)' }}></div></div>
+            <span className="rb-val" style={{ color: 'var(--blue)' }}>70%</span>
           </div>
           <div className="rb-row">
             <span className="rb-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              Editorial
-              <InfoTip text="A neutral baseline applied equally to all outlets. This will be replaced by editorial reviews as the platform grows." />
+              Editorial baseline
+              <InfoTip text="A neutral anchor (50/100) applied to all outlets equally. Prevents a handful of unusual articles from producing a wildly unrepresentative outlet score." />
             </span>
-            <div className="rb-bar-bg"><div className="rb-bar-fill" style={{ width: '25%', background: 'var(--green)' }}></div></div>
-            <span className="rb-val" style={{ color: 'var(--green-dark)' }}>25%</span>
+            <div className="rb-bar-bg"><div className="rb-bar-fill" style={{ width: '30%', background: 'var(--green)' }}></div></div>
+            <span className="rb-val" style={{ color: 'var(--green-dark)' }}>30%</span>
           </div>
         </div>
-        <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 10, lineHeight: 1.6, borderTop: '0.5px solid var(--border)', paddingTop: 10 }}>
-          Percentages shown are the target weights at full engagement. Hover the <span style={{ fontStyle: 'italic' }}>ⓘ</span> icons for details.
+
+        {/* How community changes the balance */}
+        <div style={{ marginTop: 14, padding: '10px 12px', background: 'var(--bg)', borderRadius: 8, border: '0.5px solid var(--border)' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)', marginBottom: 4 }}>
+            📊 As community ratings grow
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.6 }}>
+            Community votes earn weight gradually — reaching up to <strong style={{ color: 'var(--text2)' }}>40%</strong> at 20+ ratings per outlet. This keeps early scores stable until enough voices have weighed in.
+          </div>
         </div>
+
+        <a
+          href="/methodology"
+          style={{ display: 'block', marginTop: 10, fontSize: 11, color: 'var(--text3)', textDecoration: 'none', textAlign: 'right' }}
+        >
+          Full methodology →
+        </a>
       </div>
     </div>
   )
