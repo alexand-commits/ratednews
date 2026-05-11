@@ -566,10 +566,23 @@ export default function FeedPage({
       )
     : baseList
 
+  // Combined article pool for clustering — merges the paginated feed with the
+  // full 24h trendingArticles set. Without this, topic-filtered cards (which
+  // come from trendingArticles) could have related articles that sit outside
+  // the first 50 paginated results and never get clustered.
+  const clusterPool = useMemo(() => {
+    const seen = new Set()
+    const combined = []
+    for (const a of [...articles, ...trendingArticles]) {
+      if (!seen.has(a.id)) { seen.add(a.id); combined.push(a) }
+    }
+    return combined
+  }, [articles, trendingArticles])
+
   // Story clustering — groups articles about the same event across outlets.
   // Only surfaces when there's genuine outlet diversity (2+ outlets, ideally
-  // different bias directions). Runs on the full loaded articles pool so
-  // clusters survive category/region filtering on the primary card.
+  // different bias directions). Runs on the combined pool so topic-filtered
+  // cards get the same cluster data as the article page.
   const storyGroups = useMemo(() => {
     const STOP = new Set([
       'the','a','an','in','on','at','to','for','of','and','or','but','with',
@@ -584,9 +597,9 @@ export default function FeedPage({
       )]
     }
 
-    // Work from the full loaded articles pool (not displayList) so related
-    // articles in different categories can still be linked to the primary
-    const pool = articles
+    // Work from the combined pool (paginated feed + 24h trending) so related
+    // articles in different categories or outside the first 50 results are found
+    const pool = clusterPool
     const groups = new Map()   // articleId → [related articles]
     const taken  = new Set()   // indices already assigned as secondary
 
