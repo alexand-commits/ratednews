@@ -36,7 +36,7 @@ const SCORES = [
       { label: '← Left',    color: 'var(--blue)',  text: 'Progressive or liberal framing' },
       { label: '◉ Centre',  color: 'var(--text2)', text: 'Balanced or no clear lean' },
       { label: '→ Right',   color: 'var(--red)',   text: 'Conservative framing' },
-      { label: '◉ Factual', color: 'var(--text2)', text: 'Partisan intensity too low to assign a direction — consistent with factual reporting' },
+      { label: '✓ Factual', color: 'var(--text2)', text: 'Partisan intensity too low to assign a direction — consistent with factual reporting' },
     ],
   },
   {
