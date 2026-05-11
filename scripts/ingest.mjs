@@ -367,6 +367,37 @@ const JUNK_PATTERNS = [
   // ── Bare TV / podcast show titles with no news content ───────────────────────
   /^(Sunday|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday) Morning$/i,
   /^(Meet the Press|Face the Nation|State of the Union|This Week with|Good Morning America|Sunday Morning|Morning Joe)(\s*[-–:].*)?$/i,
+
+  // ── Daily Mail / tabloid celebrity & lifestyle filler ─────────────────────────
+  // "X's transformation" — before/after celebrity body clickbait
+  /\b(dramatic|incredible|stunning|unbelievable|shocking|remarkable)?\s*transformation\b/i,
+  // "X, Y" celeb couple appearance pieces with no news value
+  /\b(cuddles?|kisses?|embraces?|holds? hands?|packs? on the PDA)\b/i,
+  // "X debuts new look / shows off X" appearance pieces
+  /\b(debuts? (new|a|her|his) (look|hairstyle|hair|figure|baby bump|bump|bikini body))\b/i,
+  /\bshows? off (her|his|their|a) (figure|curves?|abs?|legs?|baby bump|bump|bikini body|new look)\b/i,
+  // "Is X the new Y?" substitution clickbait
+  /\bis [a-z ]+ the new [a-z ]+\?/i,
+  // "X opens up about Y" — interview-derived lifestyle fluff
+  /\b(opens? up|breaks? (silence|cover)|speaks? out) (about|on) (her|his|their) (weight|body|marriage|divorce|split|baby|pregnancy|health|battle|struggle)\b/i,
+  // "Everything you need to know about X" — SEO evergreen, not news
+  /\beverything you need to know\b/i,
+  // Countdown listicles with no news hook
+  /^\d+ (things?|ways?|reasons?) (you|to|that|why)\b/i,
+  // "We tried X so you don't have to" — product/lifestyle
+  /\bso you don't have to\b/i,
+  // "Spotted: X leaving/arriving at Y" — paparazzi log entries
+  /\b(spotted|seen|pictured|photographed) (leaving|arriving|heading|out and about)\b/i,
+  // Femail / body image columns — DM's dedicated lifestyle section
+  /\bFemail\b/i,
+  // "Readers share their X" — UGC aggregation, not journalism
+  /\breaders? (share|reveal|confess|admit|react)\b/i,
+  // "What the X says about you" personality quiz bait (catches remaining variants)
+  /\bsays? (a lot )?about (your|you)\b/i,
+  // "As seen on TV / social media / TikTok" — product promotion
+  /\bas seen on (tv|social media|tiktok|instagram|youtube)\b/i,
+  // Generic "X is back" / "X is here" trend announcements with no news value
+  /\b(summer|spring|winter|autumn|fall) is (here|back|coming)\b.*\b(style|fashion|beauty|diet|body|fitness)\b/i,
 ]
 
 const MAX_ARTICLE_AGE_DAYS = 1  // default: skip articles older than 1 day
@@ -427,8 +458,17 @@ function cleanTitle(title, outletName) {
 // Legitimate news headlines rarely exceed 120 chars — anything longer from
 // these outlets is almost always celebrity gossip, sex advice, or sponsored fluff.
 const OUTLET_MAX_TITLE_LENGTH = {
-  'Daily Mail': 125,
-  'The Sun':    110,  // tighter — sub-125 lifestyle/consumer junk still slipping through
+  'Daily Mail': 110,  // tightened from 125 — DM's junk rate is 62%, cap aggressively
+  'The Sun':    100,  // tightened from 110
+}
+
+// ── Per-outlet per-run article caps ──────────────────────────────────────────
+// Limits how many articles we take from a single outlet per ingest run.
+// High-volume tabloids with poor signal/noise ratios burn API scoring budget;
+// cap them so quality outlets aren't crowded out.
+const OUTLET_MAX_PER_RUN = {
+  'Daily Mail': 8,   // was ingesting 15–20/run at 62% junk; cap saves ~7 AI calls/run
+  'The Sun':    6,   // tiny RSS footprint but very high junk rate
 }
 
 function isTitleTooLong(title, outletName) {
@@ -450,7 +490,8 @@ async function ingestOutlet(outlet) {
     return { inserted: 0, skipped: 0, errors: 1 }
   }
 
-  const items = feed.items.slice(0, 25)
+  const runCap = OUTLET_MAX_PER_RUN[outlet.name] ?? 25
+  const items = feed.items.slice(0, runCap)
   let inserted = 0, skipped = 0, errors = 0
 
   const urls   = items.map(i => i.link || i.guid).filter(Boolean)
