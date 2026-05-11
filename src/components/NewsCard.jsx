@@ -147,7 +147,7 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
           {commentCount > 0 && (
             <span className="score-mini" style={{ color: 'var(--text3)' }}>💬 {commentCount}</span>
           )}
-          {commentCount >= 10 && (
+          {commentCount >= 3 && (
             <span className="trending-chip">🔥 Hot</span>
           )}
         </div>
