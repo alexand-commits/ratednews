@@ -92,7 +92,7 @@ export default function CategoryLanding({ slug, initialArticles, initialCount, c
     setLoading(true)
     Promise.all([
       db.from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
         .eq('category', categoryMeta.value)
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
@@ -110,7 +110,7 @@ export default function CategoryLanding({ slug, initialArticles, initialCount, c
     if (loadingMore || !hasMore) return
     setLoadingMore(true)
     const { data } = await db.from('articles')
-      .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+      .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
       .eq('category', categoryMeta.value)
       .order('published_at', { ascending: false })
       .range(offset, offset + BATCH - 1)
@@ -127,7 +127,7 @@ export default function CategoryLanding({ slug, initialArticles, initialCount, c
   async function refresh() {
     const [{ data }, { count }] = await Promise.all([
       db.from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
         .eq('category', categoryMeta.value)
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
@@ -220,7 +220,7 @@ export async function getStaticProps({ params }) {
     )
     const [{ data: articles }, { count }] = await Promise.all([
       supabase.from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
         .eq('category', cat.value)
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),

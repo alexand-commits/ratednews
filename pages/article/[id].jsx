@@ -250,7 +250,7 @@ export async function getStaticProps({ params }) {
   const pfx = shortMatch[1]
   const { data: article } = await supabase
     .from('articles')
-    .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+    .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
     .gte('id', `${pfx}-0000-0000-0000-000000000000`)
     .lte('id', `${pfx}-ffff-ffff-ffff-ffffffffffff`)
     .single()

@@ -62,6 +62,10 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
   Player transfers and loan moves happen constantly and your knowledge may be outdated. If an article says
   a player scored for a club, trust the article — do not flag it as inaccurate because you believe the player
   is at a different club. Judge only the internal consistency between title and summary.
+  IMPORTANT — tribute, memorial and human interest content: emotional or reverential language in
+  articles about deaths, memorials, tributes, retirements, and community stories is appropriate
+  writing style, not a sign of inaccuracy. Score these 75–90 if the facts are internally consistent.
+  Do NOT penalise for empathetic tone, first-person community framing, or lack of hard data sources.
 
 - "bias_direction": string, one of: "left", "centre", "right".
   The political lean of the article's framing and perspective.
@@ -84,6 +88,12 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
   Only mark "misleading" if the headline states or strongly implies a fact that the summary contradicts
   (e.g. headline says player scored a hat-trick but summary says he scored once). Sensational but
   accurate sports language should be "fair", not "misleading".
+  IMPORTANT — tribute, memorial and human interest content: articles about deaths, memorials,
+  tributes, retirements, community stories and human interest pieces naturally use emotional,
+  reverential or narrative language. This is appropriate writing style, not inaccuracy or bias.
+  Do NOT penalise accuracy_score for empathetic or emotional framing in these contexts — a
+  factually correct tribute piece should score 75–90. Only lower accuracy_score if the reported
+  facts themselves appear wrong. Similarly do not inflate bias_score for emotional tone alone.
 
 - "category": string, one of: "Politics", "Business", "Sport", "Tech", "Science", "Health", "Environment", "Entertainment", "Crime", "Travel", "Education", "Conflict", "World".
   Pick the single best-fitting category for this article's subject matter.

@@ -113,8 +113,10 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
       <div className="score-row">
         {scored ? (
           <>
-            {/* Credibility — only badge outliers; silence = normal */}
-            {acc < 70 && (
+            {/* Credibility — only badge outliers; silence = normal.
+                Suppress Flagged for high-trust outlets (outlet avg ≥ 65)
+                since a single low-scoring article is likely a prompt artefact. */}
+            {acc < 70 && !(acc < 50 && (outlet.accuracy_score || 0) >= 65) && (
               <span className={credLabel.cls}>
                 {credLabel.label}
               </span>

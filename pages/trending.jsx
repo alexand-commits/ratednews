@@ -80,7 +80,7 @@ export async function getStaticProps() {
 
     const { data, error } = await supabase
       .from('articles')
-      .select('id, title, published_at, accuracy_score, bias_direction, category, ai_summary, image_url, view_count, outlets(name, bias_direction, logo_url), comments(count)')
+      .select('id, title, published_at, accuracy_score, bias_direction, category, ai_summary, image_url, view_count, outlets(name, bias_direction, logo_url, accuracy_score), comments(count)')
       .gte('published_at', since24h)
       .not('accuracy_score', 'is', null)
       .order('published_at', { ascending: false })

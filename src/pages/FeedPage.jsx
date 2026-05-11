@@ -164,7 +164,7 @@ export default function FeedPage({
       const escaped = term.replace(/[%_\\]/g, '\\$&')
       const { data } = await db
         .from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
         .or(`title.ilike.%${escaped}%,ai_summary.ilike.%${escaped}%,summary.ilike.%${escaped}%`)
         .order('published_at', { ascending: false })
         .limit(50)
@@ -200,7 +200,7 @@ export default function FeedPage({
     setFollowingLoading(true)
     const ids = [...followedOutletIds]
     db.from('articles')
-      .select('*, outlets(name, logo_url, country, bias_direction), comments(count)')
+      .select('*, outlets(name, logo_url, country, bias_direction, accuracy_score), comments(count)')
       .in('outlet_id', ids)
       .order('published_at', { ascending: false })
       .limit(100)
