@@ -492,7 +492,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               )}
               {aiScored && (
                 isFactual
-                  ? <span className="score-badge score-badge-bias-centre">◉ Factual</span>
+                  ? <span className="score-badge score-badge-bias-centre">✓ Factual</span>
                   : biasInfo && <span className={`score-badge score-badge-bias-${article.bias_direction}`}>
                       {{ left: '← Left', centre: '◉ Centre', right: '→ Right' }[article.bias_direction]}
                     </span>

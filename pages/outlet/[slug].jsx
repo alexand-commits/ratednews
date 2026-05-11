@@ -29,6 +29,14 @@ export default function OutletDetail({ outlet }) {
         <meta property="og:description" content={`${outlet.name} has an accuracy score of ${outlet.overall_score ?? '–'}/100 on RatedNews. See the full breakdown.`} />
         <meta property="og:url"         content={`https://www.ratednews.com/outlet/${canonicalSlug}`} />
         <meta property="og:type"        content="website" />
+        <meta property="og:image"       content={`https://www.ratednews.com/api/og?type=outlet&outlet=${encodeURIComponent(outlet.name)}${outlet.overall_score ? `&score=${outlet.overall_score}` : ''}${outlet.bias_direction ? `&bias=${outlet.bias_direction}` : ''}`} />
+        <meta property="og:image:type"  content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:card"        content="summary_large_image" />
+        <meta name="twitter:title"       content={`${outlet.name} — Bias & Accuracy Rating | RatedNews`} />
+        <meta name="twitter:description" content={`${outlet.name} scores ${outlet.overall_score ?? '–'}/100 for accuracy on RatedNews. AI-powered analysis updated hourly.`} />
+        <meta name="twitter:image"       content={`https://www.ratednews.com/api/og?type=outlet&outlet=${encodeURIComponent(outlet.name)}${outlet.overall_score ? `&score=${outlet.overall_score}` : ''}${outlet.bias_direction ? `&bias=${outlet.bias_direction}` : ''}`} />
 
         {/* Organisation structured data — helps Google understand the page
             and can trigger rich results for outlet-related searches */}

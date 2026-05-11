@@ -5,26 +5,59 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
 - "accuracy_score": integer 0–100. How factually reliable does this article appear based on its title and summary?
   100 = highly factual, well-sourced journalism. 0 = clearly false or fabricated.
   Use 70–85 as baseline for mainstream outlets with no obvious issues.
+  IMPORTANT — sport match reports: goals, scores, results, and player actions are verifiable facts.
+  Do NOT penalise accuracy for dramatic or colourful match-report language ("fires", "nets", "slots home",
+  "brilliant", "stunner") — these are standard sports-writing conventions, not inaccuracies.
+  A factually correct match report with vivid language should score 75–90.
+  Only lower accuracy_score if the reported facts themselves appear wrong (wrong scoreline, wrong scorer, etc.).
+  CRITICAL — do NOT use your training-data knowledge of player club affiliations to judge accuracy.
+  Player transfers and loan moves happen constantly and your knowledge may be outdated. If an article says
+  a player scored for a club, trust the article — do not flag it as inaccurate because you believe the player
+  is at a different club. Judge only the internal consistency between title and summary.
+  IMPORTANT — tribute, memorial and human interest content: emotional or reverential language in
+  articles about deaths, memorials, tributes, retirements, and community stories is appropriate
+  writing style, not a sign of inaccuracy. Score these 75–90 if the facts are internally consistent.
+  Do NOT penalise for empathetic tone, first-person community framing, or lack of hard data sources.
 
 - "bias_direction": string, one of: "left", "centre", "right".
   The political lean of the article's framing and perspective.
+  "left" = progressive or liberal framing. "right" = conservative framing. "centre" = balanced or no clear lean.
 
 - "bias_score": integer 0–100. Partisan intensity — how opinionated or one-sided is the writing style,
   regardless of which direction it leans?
-  0 = completely objective. 50 = some framing detectable. 100 = highly partisan.
+  0 = completely objective, factual reporting with no editorial voice.
+  50 = some framing or perspective detectable but not dominant.
+  100 = highly partisan, strongly one-sided language, clear agenda being pushed.
+  Important: a calm left-leaning article can score 10. A neutral-topic opinion piece can score 80.
+  Direction and intensity are independent.
 
 - "headline_vote": string, one of: "fair", "misleading", "clickbait".
+  "fair" = headline accurately reflects the content.
+  "misleading" = headline implies something not supported by the summary.
+  "clickbait" = headline uses emotional bait, exaggeration, or withholds key info to drive clicks.
+  IMPORTANT — sport headlines: colourful verbs ("fires", "nets", "slots home", "inspires") and
+  player-focused framing are normal sports-writing conventions. Only mark "misleading" if the headline
+  states or strongly implies a fact that the summary contradicts. Sensational but accurate sports
+  language should be "fair", not "misleading".
+  IMPORTANT — tribute, memorial and human interest content: emotional or reverential language in
+  articles about deaths, memorials, tributes, retirements, and community stories is appropriate
+  writing style. Do not inflate bias_score for emotional tone alone.
 
 - "category": string, one of: "Politics", "Business", "Sport", "Tech", "Science", "Health",
   "Environment", "Entertainment", "Crime", "Travel", "Education", "Conflict", "World".
+  Use "Conflict" for armed conflict, wars, military operations, airstrikes, and active conflict zones.
+  Use "Tech" for technology companies, AI, software, hardware, and cybersecurity — even with a business angle.
 
 - "geographic_scope": string, one of: "local", "national", "global".
+  How broad is the story's relevance? "local" = city/region, "national" = country-wide, "global" = multi-country significance.
 
 - "article_region": string, one of: "UK", "US", "Europe", "MiddleEast", "Africa", "AsiaPac",
   "Americas", "International".
   The geographic region this article is primarily ABOUT — not where the outlet is based.
+  Follow the story, not the outlet.
 
 - "ai_summary": string. A 1–2 sentence neutral summary of what the article is about.
+  Write as if summarising for someone who hasn't read it. Do not editorialise.
 
 Respond with ONLY the JSON object — no markdown, no explanation, no code fences.`
 
@@ -39,9 +72,13 @@ const CHANGELOG = [
   {
     date: 'May 2026',
     entries: [
+      'Outlet reputation gate added — low credibility badges (below 50) are suppressed for outlets whose own 30-day average is 65 or above. This prevents a single edge-case article from generating a misleading badge against a consistently reliable source.',
+      'Scoring prompt updated: added sports match report carve-out. Colourful match-report language ("fires", "nets", "stunner") is now correctly treated as convention, not inaccuracy. Transfer knowledge cut-off caveat added — article claims about player club affiliations are trusted over training data.',
+      'Scoring prompt updated: added tribute and memorial carve-out. Emotional or reverential language in articles about deaths, retirements, and community stories is no longer penalised for accuracy or inflated for bias.',
+      'Headline verdict badges renamed for clarity — "⚠ Misleading headline" and "✗ Clickbait headline" now appear in-card only when a verdict other than "fair" is returned.',
+      'Outlet pages redesigned: added ranking position (country and global), category coverage breakdown, and highest-scored articles widget. Score history chart removed — individual article score variance was too high to produce meaningful trend lines.',
       'Added article_region field — articles are now tagged with the geographic region they are about, not just the outlet\'s home country. Powers region filtering in the feed.',
       'Launched "Score movers" on Rankings page — tracks 7-day accuracy changes per outlet and saves daily snapshots.',
-      '/api/view route fixed — article view counts now register correctly.',
     ]
   },
   {

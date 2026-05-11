@@ -119,7 +119,7 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
 
             {/* Bias — original pill */}
             {(article.bias_score || 0) < 25
-              ? <span className="score-badge score-badge-bias-centre">◉ Factual</span>
+              ? <span className="score-badge score-badge-bias-centre">✓ Factual</span>
               : biasLabel && <span className={biasLabel.cls}>{biasLabel.label}</span>
             }
 
