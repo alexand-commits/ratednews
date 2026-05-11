@@ -90,6 +90,9 @@ export default function FeedPage({
   const [sort, setSort]         = useState('latest')
   const [feedTab, setFeedTab]         = useState('all') // 'all' | 'following'
   const [legalDoc, setLegalDoc]       = useState(null)  // 'privacy' | 'terms' | 'guidelines'
+  const [showWelcome, setShowWelcome] = useState(() => {
+    try { return !localStorage.getItem('rn_seenWelcome') } catch { return false }
+  })
   const [followingArticles, setFollowingArticles] = useState([])
   const [followingLoading, setFollowingLoading]   = useState(false)
 
@@ -161,7 +164,7 @@ export default function FeedPage({
       const escaped = term.replace(/[%_\\]/g, '\\$&')
       const { data } = await db
         .from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
         .or(`title.ilike.%${escaped}%,ai_summary.ilike.%${escaped}%,summary.ilike.%${escaped}%`)
         .order('published_at', { ascending: false })
         .limit(50)
@@ -197,7 +200,7 @@ export default function FeedPage({
     setFollowingLoading(true)
     const ids = [...followedOutletIds]
     db.from('articles')
-      .select('*, outlets(name, logo_url, country, bias_direction), comments(count)')
+      .select('*, outlets(name, logo_url, country, bias_direction, accuracy_score), comments(count)')
       .in('outlet_id', ids)
       .order('published_at', { ascending: false })
       .limit(100)
@@ -643,6 +646,91 @@ export default function FeedPage({
             </div>
           )
         })()}
+
+        {/* First-visit explainer banner */}
+        {showWelcome && (
+          <div style={{
+            background: 'var(--surface)',
+            border: '0.5px solid var(--border)',
+            borderRadius: 'var(--radius-sm)',
+            padding: '14px 16px',
+            marginBottom: 14,
+            position: 'relative',
+          }}>
+            <button
+              onClick={() => {
+                setShowWelcome(false)
+                try { localStorage.setItem('rn_seenWelcome', '1') } catch {}
+              }}
+              style={{
+                position: 'absolute', top: 10, right: 12,
+                background: 'none', border: 'none', cursor: 'pointer',
+                fontSize: 16, color: 'var(--text3)', lineHeight: 1, padding: 4,
+              }}
+              aria-label="Dismiss"
+            >✕</button>
+
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>
+              Trust the source, not just the story
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
+              Every article is rated by AI across three dimensions:
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+              <div style={{
+                flex: '1 1 120px', padding: '10px 12px',
+                background: 'var(--bg2)', borderRadius: 8,
+              }}>
+                <div style={{ marginBottom: 6 }}>
+                  <span className="score-badge score-badge-green" style={{ fontSize: 13, fontWeight: 700 }}>✦ 82</span>
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Accuracy</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)' }}>0–100 factual reliability score. 70+ is solid journalism.</div>
+              </div>
+              <div style={{
+                flex: '1 1 120px', padding: '10px 12px',
+                background: 'var(--bg2)', borderRadius: 8,
+              }}>
+                <div style={{ fontSize: 16, marginBottom: 4 }}>⇄</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Bias</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)' }}>Political lean (Left / Centre / Right) and how partisan the writing is.</div>
+              </div>
+              <div style={{
+                flex: '1 1 120px', padding: '10px 12px',
+                background: 'var(--bg2)', borderRadius: 8,
+              }}>
+                <div style={{ fontSize: 16, marginBottom: 4 }}>🏷</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Headline</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)' }}>Fair, Misleading, or Clickbait — does the headline match the story?</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <a
+                href="/methodology"
+                style={{ fontSize: 12, color: 'var(--coral)', fontWeight: 600, textDecoration: 'none' }}
+              >
+                How it works →
+              </a>
+              <button
+                onClick={() => {
+                  setShowWelcome(false)
+                  try { localStorage.setItem('rn_seenWelcome', '1') } catch {}
+                }}
+                style={{
+                  marginLeft: 'auto',
+                  fontSize: 12, fontWeight: 600,
+                  padding: '6px 16px',
+                  background: 'var(--coral)', color: '#fff',
+                  border: 'none', borderRadius: 20, cursor: 'pointer',
+                }}
+              >
+                Got it
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Feed tabs — All / My Feed */}
         <div className="tabs" style={{ marginBottom: 14 }}>

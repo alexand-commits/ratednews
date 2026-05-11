@@ -32,13 +32,13 @@ export default function Feed({ initialArticles, initialCount }) {
     Promise.all([
       // Main paginated feed
       db.from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
       db.from('articles').select('*', { count: 'exact', head: true }),
       // Dedicated 24h fetch for trending — complete, not paginated
       db.from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
         .gte('published_at', cutoff)
         .order('published_at', { ascending: false }),
     ]).then(([{ data }, { count }, { data: recent }]) => {
@@ -55,7 +55,7 @@ export default function Feed({ initialArticles, initialCount }) {
     if (loadingMore || !hasMore) return
     setLoadingMore(true)
     const { data } = await db.from('articles')
-      .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+      .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
       .order('published_at', { ascending: false })
       .range(offset, offset + BATCH - 1)
     if (data?.length) {
@@ -71,7 +71,7 @@ export default function Feed({ initialArticles, initialCount }) {
   async function refresh() {
     const [{ data }, { count }] = await Promise.all([
       db.from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
       db.from('articles').select('*', { count: 'exact', head: true }),
@@ -132,7 +132,7 @@ export async function getStaticProps() {
     )
     const [{ data: articles }, { count }] = await Promise.all([
       supabase.from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
       supabase.from('articles').select('*', { count: 'exact', head: true }),

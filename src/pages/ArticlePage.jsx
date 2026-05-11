@@ -151,20 +151,20 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     const STOP = new Set([
       'the','a','an','in','on','at','to','for','of','and','or','but','with',
       'from','by','as','is','are','was','were','be','been','has','have','had',
-      'its','their','this','that','how','why','what','who','when','where',
-      'says','said','will','can','may','over','after','before','amid','about',
-      'into','new','after','first','second','top','more','than',
+      'its','their','this','that','these','those','how','why','what','who',
+      'when','where','says','said','will','can','may','over','after','before',
+      'amid','about','into','new','first','second',
     ])
     const sigWords = [...new Set(
       article.title.toLowerCase().split(/\W+/).filter(w => w.length > 3 && !STOP.has(w))
     )]
     if (sigWords.length < 2) return
 
-    // OR across top 3 keywords so we catch outlets that cover the same story
-    // without using the exact same words (e.g. Clasico articles that don't
-    // mention "Rashford"). Client-side 3-word overlap filter keeps quality high.
-    const keys = sigWords.slice(0, 3)
-    const orFilter = keys.map(k => `title.ilike.%${k}%`).join(',')
+    // OR across ALL significant keywords so we catch outlets that cover the same
+    // story with different wording (e.g. "Clasico" articles that don't mention
+    // "Rashford" and vice versa). The DB net is wide; the client-side 3-word
+    // overlap filter below keeps quality high.
+    const orFilter = sigWords.map(k => `title.ilike.%${k}%`).join(',')
     const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
 
     db.from('articles')
@@ -181,7 +181,11 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
         const matched = data.filter(a => {
           const aWords = (a.title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !STOP.has(w))
           const overlap = aWords.filter(w => titleWords.has(w)).length
-          return overlap >= 3
+          // Use 2-word threshold (not 3) because the article page can't do the
+          // transitive cluster walk that FeedPage does. Cluster members may share
+          // only 2 words with the current article but clearly cover the same story.
+          // The OR filter + 72h window + 2-word overlap is a strong enough signal.
+          return overlap >= 2
         })
         // Dedupe by outlet — keep most recent per outlet
         const byOutlet = {}
@@ -257,8 +261,8 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
   const HEADLINE_STYLES = {
     fair:       { bg: 'var(--green-light)', color: 'var(--green-dark)', label: '✓ Fair headline'  },
-    misleading: { bg: 'var(--amber-light)', color: 'var(--amber)', label: '⚠ Misleading' },
-    clickbait:  { bg: 'var(--red-light)',   color: 'var(--red)',   label: '✗ Clickbait'  },
+    misleading: { bg: 'var(--amber-light)', color: 'var(--amber)', label: '⚠ Misleading headline' },
+    clickbait:  { bg: 'var(--red-light)',   color: 'var(--red)',   label: '✗ Clickbait headline'  },
   }
   const BIAS_INFO = {
     left:   { label: '← Left',   color: 'var(--blue, #3b82f6)', bar: 20 },
@@ -268,6 +272,12 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   const hlStyle  = article.headline_vote ? HEADLINE_STYLES[article.headline_vote] : null
   const biasInfo = article.bias_direction ? BIAS_INFO[article.bias_direction] : null
   const aiScored = acc > 0
+
+  function accBadgeClass(score) {
+    if (score >= 70) return 'score-badge score-badge-green'
+    if (score >= 50) return 'score-badge score-badge-amber'
+    return 'score-badge score-badge-red'
+  }
 
   let hostname = 'source'
   try { hostname = article.url ? new URL(article.url).hostname : 'source' } catch (_) {}
@@ -477,10 +487,8 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               <div style={{ fontSize: 11, color: 'var(--text2)' }}>{outlet.country || ''} · {timeAgo(article.published_at)}</div>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              {aiScored && (
-                <span className={acc >= 70 ? 'score-badge score-badge-green' : acc >= 50 ? 'score-badge score-badge-amber' : 'score-badge score-badge-red'}>
-                  ✦ {acc}
-                </span>
+              {aiScored && !(acc < 50 && (outlet.accuracy_score || 0) >= 65) && (
+                <span className={accBadgeClass(acc)}>✦ {acc}</span>
               )}
               {aiScored && (
                 isFactual
@@ -643,7 +651,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 <span style={{ opacity: 0.85 }}>{hostname}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>Score: {acc}</span>
+                {acc > 0 && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>Score: {acc}</span>}
                 <span className="rn-browser-badge">Opens in app</span>
               </div>
             </div>
@@ -707,7 +715,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                       <Link href={`/article/${articleSlug(a.title, a.id)}`} style={{ fontSize: 13, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>{a.title}</Link>
                       <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span>{timeAgo(a.published_at)}</span>
-                        {a.accuracy_score > 0 && <span className={a.accuracy_score >= 70 ? 'score-badge score-badge-green' : a.accuracy_score >= 50 ? 'score-badge score-badge-amber' : 'score-badge score-badge-red'} style={{ fontSize: 10, padding: '1px 5px' }}>✦ {a.accuracy_score}</span>}
+                        {a.accuracy_score > 0 && <span className={accBadgeClass(a.accuracy_score)} style={{ fontSize: 10, padding: '1px 5px' }}>✦ {a.accuracy_score}</span>}
                         {a.bias_direction && <span className={`score-badge score-badge-bias-${a.bias_direction}`} style={{ fontSize: 10, padding: '1px 5px' }}>{{ left: '← Left', centre: '◉ Centre', right: '→ Right' }[a.bias_direction]}</span>}
                       </div>
                     </div>
@@ -738,7 +746,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                       <Link href={`/article/${articleSlug(a.title, a.id)}`} style={{ fontSize: 13, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>{a.title}</Link>
                       <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span>{a.outlets?.name} · {timeAgo(a.published_at)}</span>
-                        {a.accuracy_score > 0 && <span className={a.accuracy_score >= 70 ? 'score-badge score-badge-green' : a.accuracy_score >= 50 ? 'score-badge score-badge-amber' : 'score-badge score-badge-red'} style={{ fontSize: 10, padding: '1px 5px' }}>✦ {a.accuracy_score}</span>}
+                        {a.accuracy_score > 0 && <span className={accBadgeClass(a.accuracy_score)} style={{ fontSize: 10, padding: '1px 5px' }}>✦ {a.accuracy_score}</span>}
                         {a.bias_direction && <span className={`score-badge score-badge-bias-${a.bias_direction}`} style={{ fontSize: 10, padding: '1px 5px' }}>{{ left: '← Left', centre: '◉ Centre', right: '→ Right' }[a.bias_direction]}</span>}
                       </div>
                     </div>
