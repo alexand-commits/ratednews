@@ -237,12 +237,14 @@ export default function LegalModal({ doc, onClose }) {
         style={{
           background: 'var(--surface)',
           borderRadius: '20px 20px 0 0',
+          border: '1px solid var(--border2)',
+          borderBottom: 'none',
           width: '100%',
           maxWidth: 680,
           maxHeight: '88vh',
           display: 'flex',
           flexDirection: 'column',
-          boxShadow: '0 -8px 40px rgba(0,0,0,0.18)',
+          boxShadow: '0 -4px 24px rgba(0,0,0,0.18), 0 -1px 0 rgba(255,255,255,0.04)',
         }}
       >
         {/* Handle bar */}
