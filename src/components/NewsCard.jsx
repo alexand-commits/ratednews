@@ -113,10 +113,12 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
       <div className="score-row">
         {scored ? (
           <>
-            {/* Credibility — word-based label, no false-precision number */}
-            <span className={credLabel.cls}>
-              {credLabel.label}
-            </span>
+            {/* Credibility — only badge outliers; silence = normal */}
+            {acc < 70 && (
+              <span className={credLabel.cls}>
+                {credLabel.label}
+              </span>
+            )}
 
             {/* Bias — original pill */}
             {(article.bias_score || 0) < 25
