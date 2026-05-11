@@ -59,27 +59,9 @@ export default async function handler(req, res) {
   try {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // NOTE: read-modify-write race condition — two concurrent requests can both read
-    // the same count and each write +1, losing one view. Fix: create a Supabase RPC:
-    //   create or replace function increment_view(article_id uuid)
-    //   returns void language sql as $$ update articles set view_count = view_count + 1 where id = article_id $$;
-    // Then replace below with: await supabase.rpc('increment_view', { article_id: id })
-    // At current traffic levels the data loss is negligible.
-    const { data, error: fetchError } = await supabase
-      .from('articles')
-      .select('view_count')
-      .eq('id', id)
-      .single()
-
-    if (fetchError) {
-      console.error('[view] fetch error:', fetchError.message)
-      return res.status(500).json({ error: 'Internal server error' })
-    }
-
+    // Atomic DB-side increment — no read-modify-write race
     const { error: updateError } = await supabase
-      .from('articles')
-      .update({ view_count: (data?.view_count || 0) + 1 })
-      .eq('id', id)
+      .rpc('increment_view', { article_id: id })
 
     if (updateError) {
       console.error('[view] update error:', updateError.message)
