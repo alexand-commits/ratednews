@@ -360,10 +360,12 @@ body { background: var(--bg); color: var(--text); min-height: 100dvh; overflow-x
     /* Frosted glass — matches header style */
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    /* Force GPU compositing — prevents iOS Safari fixed-position jumping */
-    transform: translateZ(0);
-    -webkit-transform: translateZ(0);
-    will-change: transform;
+    /* Force GPU compositing — prevents iOS Safari fixed-position jumping.
+       will-change: transform intentionally omitted — it creates a compositor
+       layer that doesn't track the visual viewport when browser chrome
+       animates in/out, causing the nav to briefly float at the wrong position */
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
   }
   .bottom-nav-item {
     flex: 1;
