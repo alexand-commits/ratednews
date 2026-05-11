@@ -22,10 +22,10 @@ const BIAS_DOTS = {
   right:  { color: '#d9534f', label: 'Right'  },
 }
 
-function credibilityLabel(score) {
-  if (score >= 70) return { cls: 'score-badge score-badge-green',  label: '✓ Reliable' }
-  if (score >= 50) return { cls: 'score-badge score-badge-amber',  label: '≈ Mixed'    }
-  return                   { cls: 'score-badge score-badge-red',   label: '⚠ Flagged'  }
+function accBadgeClass(score) {
+  if (score >= 70) return 'score-badge score-badge-green'
+  if (score >= 50) return 'score-badge score-badge-amber'
+  return 'score-badge score-badge-red'
 }
 
 export default function NewsCard({ article, index, onClick, navigate, relatedArticles = [] }) {
@@ -40,7 +40,6 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
   const hlBadge   = article.headline_vote ? HEADLINE_BADGES[article.headline_vote] : null
   const biasLabel = bias ? BIAS_LABELS[bias] : null
   const scored    = acc > 0
-  const credLabel = credibilityLabel(acc)
   const slug      = articleSlug(article.title, article.id)
 
   const hasAngles = relatedArticles.length > 0
@@ -113,18 +112,14 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
       <div className="score-row">
         {scored ? (
           <>
-            {/* Credibility — only badge outliers; silence = normal.
-                Suppress Flagged for high-trust outlets (outlet avg ≥ 65)
-                since a single low-scoring article is likely a prompt artefact. */}
-            {acc < 70 && !(acc < 50 && (outlet.accuracy_score || 0) >= 65) && (
-              <span className={credLabel.cls}>
-                {credLabel.label}
-              </span>
+            {/* Credibility score — coloured pill, outlet-reputation gate on red */}
+            {!(acc < 50 && (outlet.accuracy_score || 0) >= 65) && (
+              <span className={accBadgeClass(acc)}>✦ {acc}</span>
             )}
 
             {/* Bias — original pill */}
             {(article.bias_score || 0) < 25
-              ? <span className="score-badge score-badge-bias-centre">◉ Balanced</span>
+              ? <span className="score-badge score-badge-bias-centre">◉ Factual</span>
               : biasLabel && <span className={biasLabel.cls}>{biasLabel.label}</span>
             }
 

@@ -273,15 +273,10 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   const biasInfo = article.bias_direction ? BIAS_INFO[article.bias_direction] : null
   const aiScored = acc > 0
 
-  function credLabel(score) {
-    if (score >= 70) return { cls: 'score-badge score-badge-green',  label: '✓ Reliable' }
-    if (score >= 50) return { cls: 'score-badge score-badge-amber',  label: '≈ Mixed'    }
-    return                   { cls: 'score-badge score-badge-red',   label: '⚠ Flagged'  }
-  }
-  function credWord(score) {
-    if (score >= 70) return 'Reliable'
-    if (score >= 50) return 'Mixed'
-    return 'Flagged'
+  function accBadgeClass(score) {
+    if (score >= 70) return 'score-badge score-badge-green'
+    if (score >= 50) return 'score-badge score-badge-amber'
+    return 'score-badge score-badge-red'
   }
 
   let hostname = 'source'
@@ -492,14 +487,12 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               <div style={{ fontSize: 11, color: 'var(--text2)' }}>{outlet.country || ''} · {timeAgo(article.published_at)}</div>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              {aiScored && (
-                <span className={credLabel(acc).cls}>
-                  {credLabel(acc).label}
-                </span>
+              {aiScored && !(acc < 50 && (outlet.accuracy_score || 0) >= 65) && (
+                <span className={accBadgeClass(acc)}>✦ {acc}</span>
               )}
               {aiScored && (
                 isFactual
-                  ? <span className="score-badge score-badge-bias-centre">◉ Balanced</span>
+                  ? <span className="score-badge score-badge-bias-centre">◉ Factual</span>
                   : biasInfo && <span className={`score-badge score-badge-bias-${article.bias_direction}`}>
                       {{ left: '← Left', centre: '◉ Centre', right: '→ Right' }[article.bias_direction]}
                     </span>
@@ -516,7 +509,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
           <div className="article-headline-full">{article.title || ''}</div>
 
           <div className="article-score-strip">
-            <div className="asc"><strong style={{ color: scoreColor(acc) }}>{acc > 0 ? credWord(acc) : '—'}</strong><span>Credibility</span></div>
+            <div className="asc"><strong style={{ color: scoreColor(acc) }}>{acc || '—'}</strong><span>Accuracy</span></div>
             {com > 0 && <div className="asc"><strong style={{ color: 'var(--amber)' }}>{(com / 20).toFixed(1)}★</strong><span>Community</span></div>}
             <div className="asc"><strong>{article.total_ratings || 0}</strong><span>Ratings</span></div>
             <div className="asc"><strong style={{ color: 'var(--text2)' }}>{comments.length}</strong><span>Comments</span></div>
@@ -532,7 +525,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
                     <span style={{ color: 'var(--text2)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 3 }}>
-                      Credibility <InfoTip text="How credible this article appears based on its headline and summary — does it look like reliable, well-sourced journalism?" />
+                      Accuracy <InfoTip text="How factually reliable this article appears based on its headline and summary. 100 = well-sourced, credible reporting." />
                     </span>
                     <span style={{ fontWeight: 700, color: scoreColor(acc) }}>{acc}/100</span>
                   </div>
@@ -640,7 +633,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                           fontSize: 11, fontWeight: 600, flexShrink: 0,
                           color: oAcc >= 70 ? 'var(--green)' : oAcc >= 50 ? 'var(--amber)' : 'var(--red)',
                         }}>
-                          {credWord(oAcc)}
+                          ✦{oAcc}
                         </span>
                       )}
                       <span style={{ fontSize: 12, color: 'var(--text3)', flexShrink: 0 }}>→</span>
@@ -658,7 +651,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 <span style={{ opacity: 0.85 }}>{hostname}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {acc > 0 && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>{credWord(acc)}</span>}
+                {acc > 0 && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>Score: {acc}</span>}
                 <span className="rn-browser-badge">Opens in app</span>
               </div>
             </div>
@@ -689,7 +682,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               const shareUrl = `https://ratednews.com/article/${articleSlug(article.title, article.id)}`
               const biasMap = { left: '← Left', centre: '◉ Centre', right: '→ Right' }
               const scoreParts = [
-                acc ? `🎯 ${credWord(acc)}` : null,
+                acc ? `🎯 ${acc}/100 accuracy` : null,
                 article.bias_direction ? biasMap[article.bias_direction] : null,
                 article.headline_vote && article.headline_vote !== 'fair' ? `📰 ${article.headline_vote}` : null,
               ].filter(Boolean).join(' · ')
@@ -722,7 +715,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                       <Link href={`/article/${articleSlug(a.title, a.id)}`} style={{ fontSize: 13, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>{a.title}</Link>
                       <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span>{timeAgo(a.published_at)}</span>
-                        {a.accuracy_score > 0 && <span className={credLabel(a.accuracy_score).cls} style={{ fontSize: 10, padding: '1px 5px' }}>{credLabel(a.accuracy_score).label}</span>}
+                        {a.accuracy_score > 0 && <span className={accBadgeClass(a.accuracy_score)} style={{ fontSize: 10, padding: '1px 5px' }}>✦ {a.accuracy_score}</span>}
                         {a.bias_direction && <span className={`score-badge score-badge-bias-${a.bias_direction}`} style={{ fontSize: 10, padding: '1px 5px' }}>{{ left: '← Left', centre: '◉ Centre', right: '→ Right' }[a.bias_direction]}</span>}
                       </div>
                     </div>
@@ -753,7 +746,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                       <Link href={`/article/${articleSlug(a.title, a.id)}`} style={{ fontSize: 13, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>{a.title}</Link>
                       <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span>{a.outlets?.name} · {timeAgo(a.published_at)}</span>
-                        {a.accuracy_score > 0 && <span className={credLabel(a.accuracy_score).cls} style={{ fontSize: 10, padding: '1px 5px' }}>{credLabel(a.accuracy_score).label}</span>}
+                        {a.accuracy_score > 0 && <span className={accBadgeClass(a.accuracy_score)} style={{ fontSize: 10, padding: '1px 5px' }}>✦ {a.accuracy_score}</span>}
                         {a.bias_direction && <span className={`score-badge score-badge-bias-${a.bias_direction}`} style={{ fontSize: 10, padding: '1px 5px' }}>{{ left: '← Left', centre: '◉ Centre', right: '→ Right' }[a.bias_direction]}</span>}
                       </div>
                     </div>
