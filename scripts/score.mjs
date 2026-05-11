@@ -41,9 +41,10 @@ const supabase  = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY })
 
 const BATCH_SIZE      = 20
-const MAX_PER_RUN     = 300   // hard cap — prevents runaway costs on large backfills
+const MAX_PER_RUN     = 80    // ingest caps mean ~60 new articles/run max; 80 gives headroom
 const MIN_TITLE_LEN   = 15    // skip malformed / very short titles
 const MIN_CONTENT_LEN = 30    // skip articles with neither a real title nor summary
+const MAX_ARTICLE_AGE_HOURS = 36  // skip unscored articles older than this — they'll never appear in feed
 
 // ── System prompt (cached — never changes between articles) ─────────────────
 const CATEGORIES = ['Politics', 'Business', 'Sport', 'Tech', 'Science', 'Health', 'Environment', 'Entertainment', 'Crime', 'Travel', 'Education', 'Conflict', 'World']
@@ -135,7 +136,7 @@ Summary: ${article.summary || '(no summary available)'}`
 
   const response = await anthropic.messages.create({
     model:      'claude-haiku-4-5',
-    max_tokens: 300,
+    max_tokens: 200,
     system: [
       {
         type: 'text',
@@ -187,11 +188,14 @@ async function main() {
   let totalScored = 0, totalFailed = 0, totalThin = 0, batch = 1
   const skippedIds = new Set()   // articles that failed — excluded from future fetches
 
+  const stalenessCutoff = new Date(Date.now() - MAX_ARTICLE_AGE_HOURS * 60 * 60 * 1000).toISOString()
+
   while (totalScored + totalFailed < MAX_PER_RUN) {
     let query = supabase
       .from('articles')
       .select('id, title, summary, outlets(name)')
       .is('accuracy_score', null)
+      .gte('published_at', stalenessCutoff)   // skip articles too old to appear in feed
       .order('published_at', { ascending: false })
       .limit(BATCH_SIZE)
 
