@@ -306,8 +306,9 @@ const JUNK_PATTERNS = [
 
   // ── Recruiting / college commitments ─────────────────────────────────────────
   // "2027 QB Andre Phillip II Commits to West Virginia" / "Offers Scholarship to"
+  // "commits to" removed — too broad, catches "Government commits to X" (legitimate news)
   /\b20\d{2} (recruit|prospect|commit|class)\b/i,
-  /\b(commits? to|announces? (college )?commitment)\b/i,
+  /\bannounces? (college )?commitment\b/i,
   /\b(official|campus) visit to\b/i,
 
   // ── Minicamp / practice observation filler ───────────────────────────────────
@@ -493,15 +494,17 @@ const JUNK_PATTERNS = [
   // ── Breitbart opinion / commentary filler ─────────────────────────────────────
   // Breitbart publishes high volumes of opinion columns and wire rewrites
   // with inflammatory framing — mostly caught by accuracy scoring but filter early
-  /\b(deep state|globalist|radical left|far-left|marxist|woke agenda)\b/i,
+  // Narrowed: these terms appear in legitimate political reporting as subjects being covered
+  // Only block when used as editorial framing, not when quoted or reported on
   /\b(mainstream media|fake news|legacy media|corporate media) (lies?|hides?|ignores?|refuses?|covers? up)\b/i,
 
   // ── Fox News lifestyle & non-news filler ──────────────────────────────────────
   // Fox publishes high volumes of "faith & values", lifestyle, and entertainment
   /\b(faith|prayer|miracle|blessing|god's? (plan|will|grace))\b.{0,40}\b(story|moment|message|sign)\b/i,
   /\bhow (one|a) (man|woman|family|couple|teen|mom|dad|pastor|veteran)\b.{0,60}\b(changed|transformed|overcame|survived|inspired)\b/i,
-  // Fox crime/missing persons local filler (not national news)
-  /^(Police|Cops?|Deputies|Authorities) (search|seek|look) (for|to identify)\b/i,
+  // Fox crime/missing persons local filler — narrowed: "Police search for" alone
+  // catches major national crime stories. Require local geography markers instead.
+  /^(Police|Cops?|Deputies|Authorities) (search|seek|look) (for|to identify).{0,60}(county|township|parish|borough|suburb|neighborhood|neighbourhood)\b/i,
   /\bremains? (found|identified|discovered) (in|near|at)\b/i,
 
   // ── The Telegraph lifestyle / culture bleed ───────────────────────────────────
