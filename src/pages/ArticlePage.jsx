@@ -79,7 +79,8 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
     Promise.all([ratingsPromise, commentsPromise, votesPromise]).then(
       ([{ data: ratingData }, { data: commentData }, { data: votesData }]) => {
-        // Apply ratings
+        // Apply ratings — DB first, fall back to localStorage for users who
+        // rated while logged out and haven't re-rated since signing in
         if (ratingData) {
           setAlreadyRated(true)
           setMyRating({
@@ -88,6 +89,14 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
             biasVote:     ratingData.bias_vote,
             headlineVote: ratingData.headline_vote,
           })
+        } else if (user) {
+          // Logged-in user with no DB rating — check localStorage in case they
+          // rated as a guest. Show their cached rating so the button doesn't reset.
+          const stored = localStorage.getItem(`rated_${articleId}`)
+          if (stored) {
+            setAlreadyRated(true)
+            try { setMyRating(JSON.parse(stored)) } catch (_) {}
+          }
         }
 
         // Apply comments
@@ -185,7 +194,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     ])
     const sigWords = [...new Set(
       article.title.toLowerCase().split(/\W+/).filter(w => w.length > 3 && !STOP.has(w))
-    )]
+    )].slice(0, 5)  // cap at 5 — more OR clauses = wider full-table scan with no benefit
     if (sigWords.length < 2) return
     const orFilter = sigWords.map(k => `title.ilike.%${k}%`).join(',')
     const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()

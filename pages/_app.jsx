@@ -165,13 +165,27 @@ export default function App({ Component, pageProps }) {
     if (!user) return
     const isFollowing = followedOutletIds.has(outletId)
     if (isFollowing) {
-      await db.from('follows').delete().eq('user_id', user.id).eq('outlet_id', outletId)
+      // Optimistic update first
       setFollowedOutletIds(prev => { const n = new Set(prev); n.delete(outletId); return n })
+      const { error } = await db.from('follows').delete().eq('user_id', user.id).eq('outlet_id', outletId)
+      if (error) {
+        // Revert
+        setFollowedOutletIds(prev => new Set([...prev, outletId]))
+        showToast('Could not unfollow — please try again')
+        return
+      }
       if (navigator.vibrate) navigator.vibrate(20)
       showToast('Unfollowed')
     } else {
-      await db.from('follows').insert({ user_id: user.id, outlet_id: outletId })
+      // Optimistic update first
       setFollowedOutletIds(prev => new Set([...prev, outletId]))
+      const { error } = await db.from('follows').insert({ user_id: user.id, outlet_id: outletId })
+      if (error) {
+        // Revert
+        setFollowedOutletIds(prev => { const n = new Set(prev); n.delete(outletId); return n })
+        showToast('Could not follow — please try again')
+        return
+      }
       if (navigator.vibrate) navigator.vibrate([30, 40, 60])
       showToast('Following!')
     }

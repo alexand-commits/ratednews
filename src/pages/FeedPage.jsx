@@ -200,8 +200,10 @@ export default function FeedPage({
   // followed outlet IDs so we're not limited to whatever's in the main feed batch
   useEffect(() => {
     if (feedTab !== 'following') return
-    if (followedOutletIds.size === 0) { setFollowingArticles([]); return }
+    if (followedOutletIds.size === 0) { setFollowingArticles([]); setFollowingLoading(false); return }
 
+    // Clear stale articles immediately so user sees spinner not old results on re-entry
+    setFollowingArticles([])
     setFollowingLoading(true)
     const ids = [...followedOutletIds]
     db.from('articles')

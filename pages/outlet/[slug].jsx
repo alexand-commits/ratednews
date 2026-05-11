@@ -109,9 +109,15 @@ export async function getStaticPaths() {
 
 export async function getStaticProps({ params }) {
   const supabase = await getSupabase()
-  const { data: outlets } = await supabase.from('outlets').select('*')
-  const outlet = (outlets || []).find(o => toSlug(o.name) === params.slug)
 
+  // Step 1: fetch only id + name to find the matching slug — avoids loading
+  // every column of every outlet just to do a JS-side slug comparison
+  const { data: stubs } = await supabase.from('outlets').select('id, name')
+  const match = (stubs || []).find(o => toSlug(o.name) === params.slug)
+  if (!match) return { notFound: true }
+
+  // Step 2: fetch the full outlet row by ID
+  const { data: outlet } = await supabase.from('outlets').select('*').eq('id', match.id).single()
   if (!outlet) return { notFound: true }
 
   return {
