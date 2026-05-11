@@ -136,7 +136,7 @@ Summary: ${article.summary || '(no summary available)'}`
 
   const response = await anthropic.messages.create({
     model:      'claude-haiku-4-5',
-    max_tokens: 250,
+    max_tokens: 400,
     system: [
       {
         type: 'text',

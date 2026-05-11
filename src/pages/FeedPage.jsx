@@ -160,8 +160,13 @@ export default function FeedPage({
     setDbLoading(true)
     searchTimer.current = setTimeout(async () => {
       const term = search.trim()
-      // Escape LIKE metacharacters so user input can't corrupt the filter or cause full-table scans
-      const escaped = term.replace(/[%_\\]/g, '\\$&')
+      // Escape LIKE metacharacters, then strip PostgREST filter syntax characters
+      // (comma, parentheses, colon) which could break the .or() filter string if present
+      const escaped = term
+        .replace(/[%_\\]/g, '\\$&')   // LIKE metacharacters
+        .replace(/[,()\.:]/g, ' ')     // PostgREST syntax chars — replace with space, not dropped
+        .trim()
+      if (!escaped) { setDbResults([]); setDbLoading(false); return }
       const { data } = await db
         .from('articles')
         .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')

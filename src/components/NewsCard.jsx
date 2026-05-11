@@ -115,10 +115,10 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
             {/* Credibility score — always shown when scored */}
             <span className={accBadgeClass(acc)}>✦ {acc}</span>
 
-            {/* Bias — original pill */}
-            {(article.bias_score || 0) < 25
+            {/* Bias — only shown when scored, prevents unscored articles showing ✓ Factual */}
+            {scored && (article.bias_score || 0) < 25
               ? <span className="score-badge score-badge-bias-centre">✓ Factual</span>
-              : biasLabel && <span className={biasLabel.cls}>{biasLabel.label}</span>
+              : scored && biasLabel && <span className={biasLabel.cls}>{biasLabel.label}</span>
             }
 
             {/* Headline vote — only shown when not fair */}

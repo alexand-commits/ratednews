@@ -99,7 +99,10 @@ async function main() {
     const primary = pool[i]
     if (primary.words.size < 2) continue
 
-    const members = [primary]
+    // Collect candidate indices first — don't mark assigned until cluster is confirmed valid.
+    // Previously, assigned.add(j) fired inside the inner loop even when primary turned out
+    // to be a singleton, permanently excluding those candidates from future clusters.
+    const candidateIndices = []
 
     for (let j = 0; j < pool.length; j++) {
       if (i === j || assigned.has(j)) continue
@@ -107,15 +110,15 @@ async function main() {
       // Must be a different outlet
       if (candidate.outlet_id === primary.outlet_id) continue
       const overlap = [...candidate.words].filter(w => primary.words.has(w)).length
-      if (overlap >= MIN_OVERLAP) {
-        members.push(candidate)
-        assigned.add(j)
-      }
+      if (overlap >= MIN_OVERLAP) candidateIndices.push(j)
     }
 
-    if (members.length < 2) continue   // singleton — not a cluster
+    if (candidateIndices.length < 1) continue   // singleton — not a cluster
 
+    // Cluster is valid — now mark everyone as assigned
     assigned.add(i)
+    candidateIndices.forEach(j => assigned.add(j))
+    const members = [primary, ...candidateIndices.map(j => pool[j])]
     clusters.push({ clusterId: randomUUID(), members })
   }
 

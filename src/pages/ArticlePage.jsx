@@ -119,8 +119,10 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     )
 
     // Defer realtime subscription — set up after initial render, not on mount
+    // channel declared in outer scope so the cleanup function can reach it
+    let channel = null
     const realtimeTimer = setTimeout(() => {
-      const channel = db
+      channel = db
         .channel(`comments-${articleId}`)
         .on('postgres_changes', {
           event: 'INSERT',
@@ -136,11 +138,12 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
           }
         })
         .subscribe()
-
-      return () => { db.removeChannel(channel) }
     }, 3000)
 
-    return () => { clearTimeout(realtimeTimer) }
+    return () => {
+      clearTimeout(realtimeTimer)
+      if (channel) db.removeChannel(channel)
+    }
   }, [articleId, user])
 
   // Fetch same-story articles — use pre-computed cluster_id when available,
@@ -379,6 +382,8 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
         showToast('Could not remove vote — please try again')
         return
       }
+      // NOTE: count sync uses read-modify-write — safe enough at this scale but
+      // ideally replaced with a DB-side RPC: rpc('decrement_comment_vote', { cid, field })
       const { data } = await db.from('comments').select(field).eq('id', commentId).single()
       if (data) await db.from('comments').update({ [field]: Math.max(0, (data[field] || 0) - 1) }).eq('id', commentId)
       return
@@ -393,6 +398,8 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     }
     setVotedComments(prev => ({ ...prev, [key]: true }))
     applyDelta(1)
+    // NOTE: count sync uses read-modify-write — safe enough at this scale but
+    // ideally replaced with a DB-side RPC: rpc('increment_comment_vote', { cid, field })
     const { data } = await db.from('comments').select(field).eq('id', commentId).single()
     if (data) await db.from('comments').update({ [field]: (data[field] || 0) + 1 }).eq('id', commentId)
   }

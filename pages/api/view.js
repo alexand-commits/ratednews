@@ -59,7 +59,12 @@ export default async function handler(req, res) {
   try {
     const supabase = createClient(supabaseUrl, supabaseKey)
 
-    // Fetch current view count then increment — avoids relying on a DB RPC function
+    // NOTE: read-modify-write race condition — two concurrent requests can both read
+    // the same count and each write +1, losing one view. Fix: create a Supabase RPC:
+    //   create or replace function increment_view(article_id uuid)
+    //   returns void language sql as $$ update articles set view_count = view_count + 1 where id = article_id $$;
+    // Then replace below with: await supabase.rpc('increment_view', { article_id: id })
+    // At current traffic levels the data loss is negligible.
     const { data, error: fetchError } = await supabase
       .from('articles')
       .select('view_count')
