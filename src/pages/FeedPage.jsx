@@ -380,6 +380,11 @@ export default function FeedPage({
     'war','peace','fight','battle','death','deaths','life','lives',
     'money','cash','fund','funds','cost','costs','price','prices','tax','taxes',
     'shot','shots','fire','fires','attack','attacks','strike','strikes',
+    // Sports event nouns — generic containers, not specific topics
+    'cup','cups','league','leagues','trophy','trophies','title','titles',
+    'fixture','fixtures','match','matches','game','games','tie','ties',
+    'semi','final','finals','round','rounds','leg','legs','stage','stages',
+    'season','seasons','tournament','tournaments','championship','championships',
     // Generic event nouns (describe type of event, not a specific named topic)
     'police','officer','officers','cop','cops','detective','detectives','sheriff',
     'hospital','hospitals','clinic','clinics','ambulance',
