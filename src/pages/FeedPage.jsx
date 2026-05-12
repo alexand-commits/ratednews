@@ -425,6 +425,18 @@ export default function FeedPage({
     'andrew','joshua','ryan','adam','luke','alex','sam','ben','tom','tim','jim','bob',
     'bill','mike','phil','andy','dave','steve','sean','jake','liam','owen','evan',
     'neil','eric','carl','dean','rose','ruth','anne','june','dawn','amy','eva','mia',
+    // UK tabloid tone/narrative words — describe mood, not topic; often start sentence-case headlines
+    // e.g. "Fury as minister…", "Chaos in schools…", "Row over budget…", "Probe launched into…"
+    'fury','chaos','row','rows','probe','probes','scandal','scandals','outrage','backlash',
+    'shame','shock','blunder','blunders','snub','snubs','gaffe','gaffes','feud','feuds',
+    'crisis','crises','drama','dramas','farce','fiasco','uproar','furore','furor',
+    'fallout','aftermath','impact','impacts','effect','effects','consequence','consequences',
+    'number',  // "Number 10" → strips to "Number", not a real topic
+    // Overly broad geography — appear in too many headlines to signal a specific topic
+    'london','britain','england','scotland','wales','ireland','europe','america',
+    'africa','asia','australia','germany','france','italy','spain','canada',
+    'china','russia','india','pakistan','ukraine','mexico','brazil','japan',
+    'england','britain','uk','gb',  // UK/GB are 2 chars (already blocked by length) but listed for clarity
     // Generic news format words
     'analysis','opinion','comment','review','interview','exclusive','special','breaking',
     'update','report','reports','live','watch','listen','read','podcast','inside',
