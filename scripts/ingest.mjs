@@ -120,6 +120,11 @@ const JUNK_PATTERNS = [
   /\bSpectator Boardroom\b/i,
   /\bWinemaker (Dinner|Lunch)\b/i,
   /\bCarol Service\b/i,
+  // The Spectator's Google News feed also pulls in archive index pages and data tracker
+  // dashboards — e.g. "22 Oct 1943 - The Spectator Archive", "Polls - The Spectator data tracker",
+  // "Home » The Spectator Archive". None of these are editorial articles.
+  /\bSpectator Archive\b/i,
+  /\bSpectator data tracker\b/i,
   // Generic "magazine covers" and cartoon listings
   /\b\d{1,2} \w+ \d{4} (Cover|Cartoons?)\b/i,
   /\b20\d{2} [Cc]overs?\b/,
