@@ -86,10 +86,10 @@ export default function Feed({ initialArticles, initialCount }) {
     <>
       <Head>
         <title>RatedNews — Trust the source, not just the story</title>
-        <meta name="description" content="AI-powered bias and accuracy ratings for 50+ news outlets including BBC, CNN, Fox News and The Guardian. Every article scored for accuracy, political bias, and headline fairness — updated hourly." />
+        <meta name="description" content="AI-powered bias and accuracy ratings for 100+ news outlets including BBC, CNN, Fox News and The Guardian. Every article scored for accuracy, political bias, and headline fairness — updated hourly." />
         <link rel="canonical" href="https://www.ratednews.com/" />
         <meta property="og:title"       content="RatedNews — Trust the source, not just the story" />
-        <meta property="og:description" content="AI-powered bias and accuracy ratings for 50+ news outlets. Updated hourly." />
+        <meta property="og:description" content="AI-powered bias and accuracy ratings for 100+ news outlets. Updated hourly." />
         <meta property="og:url"         content="https://www.ratednews.com/" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
@@ -97,7 +97,26 @@ export default function Feed({ initialArticles, initialCount }) {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
+        <meta name="twitter:title"      content="RatedNews — Trust the source, not just the story" />
+        <meta name="twitter:description" content="AI-powered bias and accuracy ratings for 100+ news outlets. Every article scored for accuracy, political bias, and headline fairness — updated hourly." />
         <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: 'RatedNews',
+            url: 'https://www.ratednews.com',
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: {
+                '@type': 'EntryPoint',
+                urlTemplate: 'https://www.ratednews.com/?topic={search_term_string}',
+              },
+              'query-input': 'required name=search_term_string',
+            },
+          }) }}
+        />
       </Head>
       <FeedPage
         articles={articles}

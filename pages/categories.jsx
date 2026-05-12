@@ -16,9 +16,13 @@ export default function Categories() {
         <meta property="og:url"         content="https://www.ratednews.com/categories" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
+        <meta property="og:image:type"  content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="Rated News by Topic — RatedNews" />
         <meta name="twitter:description" content="Browse Politics, Business, Tech, Health, Sport and more — every article scored for accuracy and bias." />
+        <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
       </Head>
       <CategoryPage navigate={navigate} goBack={goBack} />
     </>

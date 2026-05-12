@@ -142,6 +142,17 @@ export default function CategoryLanding({ slug, initialArticles, initialCount, c
   const canonical = `https://www.ratednews.com/categories/${slug}`
   const pageTitle = `${categoryMeta.title} | RatedNews`
 
+  // BreadcrumbList schema — Home > Categories > [Category]
+  const breadcrumbLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home',       item: 'https://www.ratednews.com' },
+      { '@type': 'ListItem', position: 2, name: 'Categories', item: 'https://www.ratednews.com/categories' },
+      { '@type': 'ListItem', position: 3, name: categoryMeta.title, item: canonical },
+    ],
+  }
+
   // ItemList schema — helps Google surface category pages in Search with article links
   const itemListLd = articles.length ? {
     '@context':     'https://schema.org',
@@ -169,10 +180,17 @@ export default function CategoryLanding({ slug, initialArticles, initialCount, c
         <meta property="og:url"         content={canonical} />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
+        <meta property="og:image:type"  content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content={categoryMeta.title + ' | RatedNews'} />
         <meta name="twitter:description" content={categoryMeta.description} />
         <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd).replace(/<\//g, '<\\/') }}
+        />
         {itemListLd && (
           <script
             type="application/ld+json"
