@@ -129,6 +129,21 @@ const JUNK_PATTERNS = [
   /\b\d{1,2} \w+ \d{4} (Cover|Cartoons?)\b/i,
   /\b20\d{2} [Cc]overs?\b/,
 
+  // ── Outlet homepage / section index pages ────────────────────────────────────
+  // RSS feeds occasionally surface homepage or section landing pages as articles.
+  // Pattern: outlet name repeated, or generic site-wide labels.
+  /^log in or create an account\b/i,              // NYMag / generic auth wall
+  /\blearn american english with voa\b/i,          // VOA Learning English homepage
+  /\bvoa learning english (podcast|lesson)\b/i,   // VOA language-learning series
+  /^(ask a teacher|let'?s learn english)\b/i,     // VOA ESL content
+  /^lesson \d+:/i,                                 // VOA "Lesson 3: I'm Here!" etc.
+  /^voa ?60\b/i,                                   // VOA60 video series
+  /\bplay free online games\b/i,                  // USA Today games section
+  /\bfree online word games\b/i,                  // USA Today games section
+  /\b(soccer|nfl|nba|mlb|nhl) (news,? scores?|standings)\b/i,  // USA Today sports section pages
+  /\bnba scores & live updates\b/i,               // USA Today live scores page
+  /^help cent(er|re)\s*[-–]\s/i,                  // USA Today / generic help page
+
   // ── Magazine shopping / product recommendation sections ───────────────────────
   // New York Magazine's "The Strategist" is a product rec section, not journalism
   /\bThe Strategist\b/i,
