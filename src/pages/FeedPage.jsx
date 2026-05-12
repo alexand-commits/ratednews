@@ -158,6 +158,41 @@ export default function FeedPage({
   // Infinite scroll sentinel
   const sentinelRef = useRef(null)
 
+  // "New articles" background poll — checks every 2 minutes for articles
+  // newer than the most recent one currently in the feed
+  const [newArticleCount, setNewArticleCount] = useState(0)
+  const latestPublishedAtRef = useRef(null)
+
+  // Keep latestPublishedAtRef in sync whenever articles change
+  useEffect(() => {
+    if (!articles.length) return
+    const latest = articles.reduce((max, a) =>
+      a.published_at > max ? a.published_at : max, articles[0].published_at)
+    latestPublishedAtRef.current = latest
+    setNewArticleCount(0) // clear banner when feed refreshes
+  }, [articles])
+
+  useEffect(() => {
+    // Don't poll when a search or topic filter is active — banner would be confusing
+    if (search || activeTopic || feedTab === 'following') return
+    const poll = async () => {
+      if (!latestPublishedAtRef.current) return
+      const { count } = await db
+        .from('articles')
+        .select('*', { count: 'exact', head: true })
+        .gt('published_at', latestPublishedAtRef.current)
+      if (count > 0) setNewArticleCount(count)
+    }
+    const id = setInterval(poll, 2 * 60 * 1000) // every 2 minutes
+    return () => clearInterval(id)
+  }, [search, activeTopic, feedTab])
+
+  function handleNewArticlesBanner() {
+    setNewArticleCount(0)
+    onRefresh?.()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   // Pull-to-refresh
   const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
 
@@ -941,6 +976,25 @@ export default function FeedPage({
                 {displayList.length > 0 && (
                   <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '12px 0 8px' }}>Articles</div>
                 )}
+              </div>
+            )}
+
+            {/* New articles banner */}
+            {newArticleCount > 0 && !search && !activeTopic && feedTab === 'all' && (
+              <div
+                onClick={handleNewArticlesBanner}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  gap: 6, cursor: 'pointer',
+                  background: 'var(--accent, #ef4444)', color: '#fff',
+                  borderRadius: 999, padding: '8px 18px',
+                  fontSize: 13, fontWeight: 600, letterSpacing: '0.01em',
+                  margin: '0 auto 12px', width: 'fit-content',
+                  boxShadow: '0 2px 12px rgba(239,68,68,0.35)',
+                  animation: 'fadeSlideDown 0.25s ease',
+                }}
+              >
+                ↑ {newArticleCount} new article{newArticleCount !== 1 ? 's' : ''} — tap to refresh
               </div>
             )}
 
