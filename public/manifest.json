@@ -1,7 +1,7 @@
 {
   "name": "RatedNews",
   "short_name": "RatedNews",
-  "description": "AI-powered bias and accuracy ratings for 50+ news outlets — trust the source, not just the story.",
+  "description": "AI-powered bias and accuracy ratings for 100+ news outlets — trust the source, not just the story.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F8F6F4",

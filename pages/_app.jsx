@@ -139,7 +139,7 @@ export default function App({ Component, pageProps }) {
         // Revert on failure
         setSavedArticleIds(prev => new Set([...prev, articleId]))
         showToast('Could not remove — please try again')
-        console.error('[toggleSave] delete failed:', error)
+        if (process.env.NODE_ENV !== 'production') console.error('[toggleSave] delete failed:', error)
       } else {
         if (navigator.vibrate) navigator.vibrate(20)
         showToast('Removed from saved')
@@ -152,7 +152,7 @@ export default function App({ Component, pageProps }) {
         // Revert on failure
         setSavedArticleIds(prev => { const n = new Set(prev); n.delete(articleId); return n })
         showToast('Could not save — please try again')
-        console.error('[toggleSave] insert failed:', error)
+        if (process.env.NODE_ENV !== 'production') console.error('[toggleSave] insert failed:', error)
       } else {
         if (navigator.vibrate) navigator.vibrate([40, 30, 40])
         showToast('Article saved! 🔖')

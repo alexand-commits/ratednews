@@ -131,7 +131,7 @@ export default function ArticleDetail({ article }) {
       '@type': 'Organization',
       name:    'RatedNews',
       url:     'https://www.ratednews.com',
-      logo:    { '@type': 'ImageObject', url: 'https://www.ratednews.com/icon-192.png', width: 192, height: 192 },
+      logo:    { '@type': 'ImageObject', url: 'https://www.ratednews.com/og-image.png', width: 1200, height: 630 },
     },
     ...(keywords && { keywords }),
   }
