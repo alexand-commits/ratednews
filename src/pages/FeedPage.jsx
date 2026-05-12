@@ -260,7 +260,7 @@ export default function FeedPage({
       .order('published_at', { ascending: false })
       .limit(100)
       .then(({ data, error }) => {
-        if (error) console.error('[MyFeed] query failed:', error)
+        if (error && process.env.NODE_ENV !== 'production') console.error('[MyFeed] query failed:', error)
         setFollowingArticles(data || [])
         setFollowingLoading(false)
       })
