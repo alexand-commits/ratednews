@@ -11,6 +11,10 @@ export default function Document() {
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="apple-touch-icon" href="/social-icon.png" />
         <link rel="manifest" href="/manifest.json" />
+        {/* iOS PWA — required for full-screen standalone mode on iPhone/iPad */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="RatedNews" />
         {/* Fallback OG image for any page that doesn't set its own */}
         <meta property="og:image"        content="https://www.ratednews.com/og-image.png" />
         <meta property="og:image:type"   content="image/png" />
