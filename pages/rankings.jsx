@@ -38,9 +38,13 @@ export default function Rankings() {
         <meta property="og:url"         content="https://www.ratednews.com/rankings" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
+        <meta property="og:image:type"  content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="News Outlet Bias & Accuracy Rankings — RatedNews" />
         <meta name="twitter:description" content="Ranked by accuracy, political bias, and headline fairness across 50+ outlets." />
+        <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
         {itemListLd && (
           <script
             type="application/ld+json"

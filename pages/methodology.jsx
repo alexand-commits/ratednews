@@ -16,9 +16,13 @@ export default function Methodology() {
         <meta property="og:url"         content="https://www.ratednews.com/methodology" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
+        <meta property="og:image:type"  content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="Methodology — How RatedNews Scores the News" />
         <meta name="twitter:description" content="Full transparency on how RatedNews AI scoring works — including the exact prompt, weighting formula, and limitations." />
+        <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
       </Head>
       <MethodologyPage goBack={goBack} />
     </>

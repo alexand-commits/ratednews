@@ -16,9 +16,13 @@ export default function Outlets() {
         <meta property="og:url"         content="https://www.ratednews.com/outlets" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
+        <meta property="og:image:type"  content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="News Outlet Bias Ratings — RatedNews" />
         <meta name="twitter:description" content="Bias and accuracy scores for 50+ major news outlets — updated hourly." />
+        <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
       </Head>
       <OutletsListPage
         outlets={allOutlets}
