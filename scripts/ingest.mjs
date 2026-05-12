@@ -253,7 +253,10 @@ const JUNK_PATTERNS = [
   // Distinct from "I visited" (already caught) — broader personal confession/journey openers
   // Narrowed: removed "survived/fled/escaped" — these appear in legitimate first-person
   // news accounts ("I survived the attack", "I fled Ukraine")
-  /^I (lost|gained|spent|quit|gave up|tried to|woke up|grew up|moved|retired)\b/i,
+  // Leading quote marks handled — "'I lived a dangerous double life...'"
+  /^['"]?I (lost|gained|spent|quit|gave up|tried to|woke up|grew up|moved|retired|lived a)\b/i,
+  // "I had my [body part] removed" — personal health clickbait
+  /^['"]?I had (my )?.{0,30}(removed|taken out|amputated)\b/i,
   /^My (mother.in.law|husband|wife|partner|mum|dad|boss|doctor|neighbour|neighbor)\b/i,
 
   // ── Section / category homepage links mistakenly pulled as articles ───────────
@@ -339,6 +342,9 @@ const JUNK_PATTERNS = [
   // ── Numbered health / lifestyle listicles ──────────────────────────────────────
   /^\d+ (cancer|weight.?loss|anti.?aging|sleep|gut.?health|longevity).*(habit|tip|food|sign|way|thing)/i,
   /^How to (manage|deal with|cope with) your (health )?(anxiety|stress|worry)\b/i,
+  // "The three birthdays when you start ageing EVEN faster" — wellness clickbait
+  /\bstart.{0,10}ageing? (EVEN |even )?(faster|quicker|more rapidly)\b/i,
+  /\b(age(s|ing)?|ageing?).{0,20}(EVEN |even )?(faster|quicker).{0,20}(birthday|decade|after)\b/i,
 
   // ── Personal finance clickbait ────────────────────────────────────────────────
   // "How nearly half of women are cheating themselves out of free money"
@@ -516,6 +522,37 @@ const JUNK_PATTERNS = [
   // Property porn — Telegraph runs heavy property coverage
   /\b(for sale|on the market|asking price|guide price|offers over)\b.{0,40}\b(home|house|flat|cottage|manor|estate)\b/i,
   /\binside (the|a|this) (stunning|incredible|beautiful|charming|magnificent).{0,30}(home|house|flat|cottage|barn|farmhouse)\b/i,
+
+  // ── Reality TV show content ───────────────────────────────────────────────────
+  // Married At First Sight (MAFS) — reality show drama, not news
+  /\bMAFS\b/i,
+
+  // ── Celebrity "stuns in" outfit / body pieces ─────────────────────────────────
+  // "Helen Flanagan stuns in skimpy gym gear" — appearance-only filler
+  /\bstuns? in (skimpy|tiny|revealing|her|his).{0,20}(gear|outfit|bikini|swimsuit|swimwear|leotard|dress|top)\b/i,
+
+  // ── Horse racing tips (race-by-race format) ───────────────────────────────────
+  // "Race-by-race tips and previews for Kensington" — tipster column
+  /\brace.by.race\b/i,
+
+  // ── Product price comparison / shopping filler ────────────────────────────────
+  // "'Add style to any space' with B&M mirror that 'looks like' £135 Dusk option"
+  /\blooks like.{0,40}[£€\$]\d/i,
+
+  // ── Banking / financial product promos disguised as news ─────────────────────
+  // "Nationwide £3,500 update for new and existing customers"
+  /\bupdate for (new and )?existing customers\b/i,
+  /\b(cashback|interest rate|savings rate) (offer|deal|available) (for |to )?(new and )?existing customers\b/i,
+
+  // ── Niche lifestyle rules / "know your rights" filler ────────────────────────
+  // "What you're allowed to do if your neighbour's cat poos in your garden"
+  // "Legal rules on paying council tax if you live on a boat"
+  /\bwhat (you'?re|you are) (allowed|legally allowed|permitted) to do if\b/i,
+  /\b(legal |your )?(rights?|rules?) (on |for |if ).{0,30}(council tax|neighbour|neighbor|pet|cat|dog|boat)\b/i,
+
+  // ── Celebrity TV show no-show gossip ─────────────────────────────────────────
+  // "Katie Price's husband pulls out of Good Morning Britain"
+  /\b(husband|wife|partner|boyfriend|girlfriend).{0,30}(pulls? out of|misses?|skips?|won'?t appear on).{0,30}(Good Morning Britain|This Morning|Lorraine|GMB|Loose Women|Daybreak)\b/i,
 
   // ── Daily Mail / tabloid celebrity & lifestyle filler ─────────────────────────
   // "X's transformation" — before/after celebrity body clickbait
