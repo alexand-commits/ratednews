@@ -11,7 +11,6 @@ import PasswordResetModal from '../src/components/PasswordResetModal'
 import ErrorBoundary from '../src/components/ErrorBoundary'
 import { createNavigate } from '../src/utils/navigate'
 import { Analytics } from '@vercel/analytics/react'
-import { SpeedInsights } from '@vercel/speed-insights/next'
 import { playfair, lato } from '../src/lib/fonts'
 import '../src/styles/globals.css'
 
@@ -266,7 +265,6 @@ export default function App({ Component, pageProps }) {
 
       <BottomNav navigate={navigate} />
       <Analytics />
-      <SpeedInsights />
       </div>
     </AppContext.Provider>
   )

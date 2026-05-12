@@ -160,9 +160,9 @@ export async function getStaticProps() {
     ])
     return {
       props: { initialArticles: articles || [], initialCount: count || 0 },
-      revalidate: 300, // regenerate every 5 minutes
+      revalidate: 1800, // regenerate every 30 minutes — matches ingest cadence
     }
   } catch {
-    return { props: { initialArticles: [], initialCount: 0 }, revalidate: 300 }
+    return { props: { initialArticles: [], initialCount: 0 }, revalidate: 1800 }
   }
 }

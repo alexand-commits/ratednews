@@ -122,6 +122,7 @@ function RankedRow({ a, rank, isLast, navigate }) {
             fill
             sizes="72px"
             style={{ objectFit: 'cover' }}
+            unoptimized
             onError={() => setImgFailed(true)}
           />
         </div>

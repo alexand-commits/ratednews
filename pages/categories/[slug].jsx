@@ -251,7 +251,7 @@ export async function getStaticProps({ params }) {
         initialCount: count || 0,
         categoryMeta: { value: cat.value, emoji: cat.emoji, slug: cat.slug, title: cat.title, description: cat.description },
       },
-      revalidate: 300,
+      revalidate: 1800,
     }
   } catch {
     return {
@@ -261,7 +261,7 @@ export async function getStaticProps({ params }) {
         initialCount: 0,
         categoryMeta: { value: cat.value, emoji: cat.emoji, slug: cat.slug, title: cat.title, description: cat.description },
       },
-      revalidate: 300,
+      revalidate: 1800,
     }
   }
 }

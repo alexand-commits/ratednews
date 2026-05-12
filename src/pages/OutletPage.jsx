@@ -76,6 +76,7 @@ function ArticleCard({ a, onClick }) {
               fill
               sizes="80px"
               style={{ objectFit: 'cover' }}
+              unoptimized
               onError={() => setImgFailed(true)}
             />
           </div>

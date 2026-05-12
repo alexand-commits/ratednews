@@ -103,6 +103,7 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
               sizes="80px"
               style={{ objectFit: 'cover' }}
               priority={index < 2}
+              unoptimized
               onError={() => setImgFailed(true)}
             />
           </div>

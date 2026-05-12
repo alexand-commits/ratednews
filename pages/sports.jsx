@@ -97,7 +97,7 @@ export async function getStaticProps() {
         articles: articles || [],
         generatedAt: new Date().toISOString(),
       },
-      revalidate: 900, // refresh every 15 minutes
+      revalidate: 1800, // refresh every 30 minutes — matches ingest cadence
     }
   } catch (err) {
     console.error('sports getStaticProps error:', err)
@@ -106,7 +106,7 @@ export async function getStaticProps() {
         articles: [],
         generatedAt: new Date().toISOString(),
       },
-      revalidate: 900,
+      revalidate: 1800,
     }
   }
 }
