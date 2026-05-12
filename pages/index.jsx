@@ -36,11 +36,14 @@ export default function Feed({ initialArticles, initialCount }) {
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
       db.from('articles').select('*', { count: 'exact', head: true }),
-      // Dedicated 24h fetch for trending — complete, not paginated
+      // Dedicated 24h fetch for trending — capped at 300 rows.
+      // Previously had no limit, causing 4000+ full rows to be fetched on every
+      // page load (~8MB/visit). FeedPage.trendingTopics slices to 300 anyway.
       db.from('articles')
         .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
         .gte('published_at', cutoff)
-        .order('published_at', { ascending: false }),
+        .order('published_at', { ascending: false })
+        .limit(300),
     ]).then(([{ data }, { count }, { data: recent }]) => {
       setArticles(data || [])
       setTotalCount(count || 0)
