@@ -31,10 +31,10 @@ export default function Rankings() {
     <>
       <Head>
         <title>News Outlet Bias & Accuracy Rankings — RatedNews</title>
-        <meta name="description" content="Which news outlets are most accurate and least biased? RatedNews ranks 50+ UK, US and international outlets by accuracy score, political bias, and headline fairness — updated hourly." />
+        <meta name="description" content="Which news outlets are most accurate and least biased? RatedNews ranks 100+ UK, US and international outlets by accuracy score, political bias, and headline fairness — updated hourly." />
         <link rel="canonical" href="https://www.ratednews.com/rankings" />
         <meta property="og:title"       content="News Outlet Bias & Accuracy Rankings — RatedNews" />
-        <meta property="og:description" content="Which news outlets are most accurate and least biased? RatedNews ranks 50+ outlets by accuracy, political bias, and headline fairness — updated hourly." />
+        <meta property="og:description" content="Which news outlets are most accurate and least biased? RatedNews ranks 100+ outlets by accuracy, political bias, and headline fairness — updated hourly." />
         <meta property="og:url"         content="https://www.ratednews.com/rankings" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
@@ -43,7 +43,7 @@ export default function Rankings() {
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="News Outlet Bias & Accuracy Rankings — RatedNews" />
-        <meta name="twitter:description" content="Ranked by accuracy, political bias, and headline fairness across 50+ outlets." />
+        <meta name="twitter:description" content="Ranked by accuracy, political bias, and headline fairness across 100+ outlets." />
         <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
         {itemListLd && (
           <script

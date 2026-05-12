@@ -21,8 +21,42 @@ export default function About() {
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="How RatedNews Works" />
-        <meta name="twitter:description" content="AI-powered accuracy and bias ratings for 50+ news outlets, updated every hour." />
+        <meta name="twitter:description" content="AI-powered accuracy and bias ratings for 100+ news outlets, updated every hour." />
         <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: [
+              {
+                '@type': 'Question',
+                name: 'What is RatedNews?',
+                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews is an AI-powered news rating platform that scores every article for factual accuracy, political bias direction, and headline fairness across 100+ UK, US and international news outlets.' },
+              },
+              {
+                '@type': 'Question',
+                name: 'How does RatedNews score articles?',
+                acceptedAnswer: { '@type': 'Answer', text: 'Each article is analysed by an AI model that scores three dimensions: accuracy (0–100), bias direction (left/centre/right), and headline fairness. Scores are weighted — accuracy counts for 60%, bias for 25%, and headline fairness for 15%.' },
+              },
+              {
+                '@type': 'Question',
+                name: 'How often are scores updated?',
+                acceptedAnswer: { '@type': 'Answer', text: 'New articles are ingested and scored every 30 minutes. Outlet-level scores are recalculated as an aggregate of recent article scores.' },
+              },
+              {
+                '@type': 'Question',
+                name: 'Which news outlets does RatedNews cover?',
+                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews covers 100+ major news outlets including BBC, CNN, Fox News, The Guardian, The New York Times, Wall Street Journal, Daily Mail, Reuters, AP, and many more UK, US, and international sources.' },
+              },
+              {
+                '@type': 'Question',
+                name: 'Can I rate articles myself?',
+                acceptedAnswer: { '@type': 'Answer', text: 'Yes. Registered users can submit their own accuracy and bias ratings on any article, and leave comments. Community ratings are displayed alongside AI scores.' },
+              },
+            ],
+          }) }}
+        />
       </Head>
       <AboutPage navigate={navigate} goBack={goBack} />
     </>

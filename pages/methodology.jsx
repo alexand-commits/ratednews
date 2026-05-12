@@ -23,6 +23,26 @@ export default function Methodology() {
         <meta name="twitter:title"      content="Methodology — How RatedNews Scores the News" />
         <meta name="twitter:description" content="Full transparency on how RatedNews AI scoring works — including the exact prompt, weighting formula, and limitations." />
         <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'TechArticle',
+            headline: 'Methodology — How RatedNews Scores the News',
+            description: 'Full transparency on how RatedNews AI scoring works — including the exact prompt, weighting formula, known limitations, and changelog.',
+            url: 'https://www.ratednews.com/methodology',
+            publisher: {
+              '@type': 'Organization',
+              name: 'RatedNews',
+              url: 'https://www.ratednews.com',
+            },
+            about: [
+              { '@type': 'Thing', name: 'News bias detection' },
+              { '@type': 'Thing', name: 'AI journalism analysis' },
+              { '@type': 'Thing', name: 'Media accuracy scoring' },
+            ],
+          }) }}
+        />
       </Head>
       <MethodologyPage goBack={goBack} />
     </>
