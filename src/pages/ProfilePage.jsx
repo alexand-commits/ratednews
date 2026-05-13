@@ -374,12 +374,15 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
         {/* Onboarding banner */}
         {showOnboarding && (
           <div style={{
-            background: 'linear-gradient(135deg, #fff7f4 0%, #fff 100%)',
-            border: '1.5px solid var(--coral)',
+            background: 'var(--surface)',
             borderRadius: 'var(--radius)',
             padding: '18px 20px',
             marginBottom: 16,
             position: 'relative',
+            borderLeft: '3px solid var(--coral)',
+            border: '0.5px solid var(--border)',
+            borderLeftWidth: 3,
+            borderLeftColor: 'var(--coral)',
           }}>
             {/* Header */}
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
