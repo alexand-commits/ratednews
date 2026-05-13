@@ -83,7 +83,7 @@ const JUNK_PATTERNS = [
   /^best \d+ /i,                      // "Best 10 VPNs for…"
   /\b(buy now|shop now|order now)\b/i,
   // Horoscopes & puzzles
-  /\b(horoscope|star sign|crossword|wordle answer|quiz)\b/i,
+  /\b(horoscope|star sign|crossword|wordle answer|quiz|superquiz)\b/i,
   // Weather & traffic (very local, no editorial value)
   /^(weather|traffic) (update|alert|warning|forecast)/i,
   // Listicle bait with no news value
@@ -93,7 +93,7 @@ const JUNK_PATTERNS = [
   /\bin photos?\b/i,
   /\bpictures? of the (day|week|year|month)\b/i,
   /\bphoto ?gallery\b/i,
-  /\bwatch:\s/i,                      // "Watch: Moment when…"
+  /\bwatch(\s+live)?:\s/i,             // "Watch: Moment when…" / "Watch live: Vance gives remarks"
   /\blisten:\s/i,                     // "Listen: Full interview…"
   // Live blogs — updated constantly, low signal
   /^live:/i,
@@ -749,6 +749,16 @@ const OUTLET_MAX_PER_RUN = {
   'France 24':           4,   // solid international news, burst pattern (max 8/run vs avg 1.5)
   'TechCrunch':          5,   // quality tech news, burst pattern (max 8/run vs avg 0.6)
   'Metro':               3,   // UK tabloid tendencies, clickbait/45-scored articles creeping in — soft cap
+  // ── Second sweep (high-volume uncapped outlets) ──────────────────────────────
+  'New York Times':      8,   // high quality but spikes to 6/run, high daily volume
+  'The Hill':            5,   // political news, mix of left/right opinion, spikes to 5/run
+  'CNN':                 5,   // quality news, burst pattern, duplicate same-story coverage
+  'NBC News':            5,   // quality news, same-story duplicates within runs
+  'The Daily Wire':      2,   // right-wing opinion, same profile as The Federalist
+  'Sports Illustrated':  4,   // mix of quality sports and clickbait listicles
+  'ESPN':                4,   // solid sports news, occasional odds/betting framing
+  'HuffPost':            3,   // left-leaning, opinion-heavy headlines
+  'Business Insider':    4,   // ~half non-news lifestyle/personal essay content
 }
 
 function isTitleTooLong(title, outletName) {
