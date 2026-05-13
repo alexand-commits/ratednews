@@ -698,6 +698,8 @@ const OUTLET_MAX_PER_RUN = {
   'Breitbart':     6,   // 41.3% junk + worst accuracy score (28.3% low) — tight cap
   'New York Post': 4,   // ~299/day natural rate — cap at 4/run for even 24h spread (~192/day)
   'The Hindu':     3,   // burst publish pattern — cap at 3/run for even 24h spread (~144/day)
+  'The Mirror':    4,   // UK tabloid, same profile as The Sun — cap for scoring budget
+  'Newsweek':      4,   // mix of real news and SEO/listicle filler — cap to reduce waste
 }
 
 function isTitleTooLong(title, outletName) {
