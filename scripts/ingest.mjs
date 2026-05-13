@@ -196,6 +196,19 @@ const JUNK_PATTERNS = [
   // ALL-CAPS "YOUR" is the Daily Mail's signature engagement trigger — narrowed to
   // domestic/personal nouns to avoid catching legitimate news ("YOUR MP voted for X")
   /\bYOUR (home|house|bathroom|kitchen|garden|wardrobe|diet|body|face|hair|skin|gut|partner|relationship|finances?|money|savings?|pension|mortgage|inbox)\b/,
+  // Title-case "Your [room] will look/feel/smell" — Mirror/tabloid product rec opener
+  // Safe to catch: "Your MP will vote" is distinct; "Your house will look" is always lifestyle filler
+  /\bYour (home|house|room|kitchen|bathroom|bedroom|garden|hallway|lounge|living room) will (look|feel|smell|be transformed)\b/i,
+  // Price + budget store combination — "£10 Home Bargains item", "B&M find for £8"
+  // Targets product recommendation pieces dressed as news
+  /\b[£€\$]\d+.{0,50}\b(Home Bargains|B&M|Dunelm|Wilko|Poundland|Primark)\b/i,
+  /\b(Home Bargains|B&M Bargains?|Dunelm|Wilko|Poundland|Primark).{0,50}[£€\$]\d+\b/i,
+  // Budget store + product noun — "B&M buy that shoppers love", "Dunelm find that transforms"
+  /\b(Home Bargains|B&M|Dunelm|Wilko|Poundland|Primark|TK Maxx).{0,40}\b(buy|find|pick|item|product|haul|bargain)\b/i,
+  // Quoted-adjective product rec format — 'beautiful', 'lasts years' in single quotes
+  // Tabloid shorthand for embedding a reader/reviewer quote in a product headline
+  /\bwill (look|feel|smell|taste) '[^']+' with\b/i,
+  /\b'[a-z ]+' with [£€\$]\d+\b/i,
   // Question-opener personal lifestyle titles — narrowed to avoid catching
   // legitimate health/safety journalism ("Should you be worried about the variant?")
   /^(should|are|do|would|could) you (eat|drink|take|buy|wear|try|use|avoid|stop|start|switch|follow|join|get|book|order|install|download)\b/i,
