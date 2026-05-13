@@ -276,6 +276,12 @@ const JUNK_PATTERNS = [
   /\bWordle\b/i,
   /\bQuordle\b/i,
 
+  // ── Gear guides & product roundups (Wired, The Verge style) ─────────────────
+  // "Best Air Purifiers (2026): Coway, AirDoctor..." — product buying guides, not news
+  /^Best .{3,40} \(\d{4}\):/i,
+  // "Submit Your Questions:" — reader Q&A solicitations
+  /^Submit Your (Questions?|Stories?|Tips?)\b/i,
+
   // ── Poll pages ────────────────────────────────────────────────────────────────
   /^POLL:/i,
 
@@ -714,6 +720,8 @@ function cleanTitle(title, outletName) {
     .replace(/&rdquo;/g,  '”')
     // Strip "- Outlet Name" suffix added by Google News RSS
     .replace(new RegExp(`\\s*[|\\-–]\\s*${outletName}\\s*$`, 'i'), '')
+    // Strip "- The Outlet Name" variant (e.g. "- The Washington Post", "- The Guardian")
+    .replace(new RegExp(`\\s*[|\\-–]\\s*The ${outletName}\\s*$`, 'i'), '')
     // Strip "- domain.tld" suffix some outlets append (e.g. "- lbc.co.uk", "- politico.eu")
     .replace(/\s*[-–|]\s*[\w-]+\.[a-z]{2,4}\s*$/i, '')
     .trim()
@@ -769,6 +777,10 @@ const OUTLET_MAX_PER_RUN = {
   'Bloomberg':           6,   // quality financial journalism, burst to 5/run
   'CBS News':            5,   // quality US news, SEO/Q&A filler sneaking in
   'Slate':               2,   // advice-column letters (Dear Prudence) mixed in with real content
+  // ── Fourth sweep ─────────────────────────────────────────────────────────────
+  'National Review':     2,   // right-wing opinion, same profile as The Federalist — 45/100 articles
+  'New Statesman':       3,   // arts reviews + culture opinion mixed with news, spikes to 5/run
+  'New Scientist':       3,   // quality science journalism, occasional 4/run burst
 }
 
 function isTitleTooLong(title, outletName) {
