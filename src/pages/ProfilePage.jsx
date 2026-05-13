@@ -210,6 +210,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteInput, setDeleteInput]             = useState('')
   const [deleting, setDeleting]                   = useState(false)
+  const [showOnboarding, setShowOnboarding]       = useState(false)
 
   const followedOutlets = allOutlets.filter(o => followedOutletIds.has(o.id))
 
@@ -217,6 +218,19 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
   useEffect(() => {
     if (!user) navigate('feed')
   }, [user])
+
+  // Onboarding banner — show until explicitly dismissed
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const dismissed = localStorage.getItem('rn_onboarding_dismissed')
+      if (!dismissed) setShowOnboarding(true)
+    }
+  }, [])
+
+  function dismissOnboarding() {
+    localStorage.setItem('rn_onboarding_dismissed', '1')
+    setShowOnboarding(false)
+  }
 
   useEffect(() => {
     if (!user) return
@@ -356,6 +370,122 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
     <div className="page-content">
       <div className="container" style={{ maxWidth: 700 }}>
         <button className="back-btn" onClick={goBack}>← Back</button>
+
+        {/* Onboarding banner */}
+        {showOnboarding && (
+          <div style={{
+            background: 'linear-gradient(135deg, #fff7f4 0%, #fff 100%)',
+            border: '1.5px solid var(--coral)',
+            borderRadius: 'var(--radius)',
+            padding: '18px 20px',
+            marginBottom: 16,
+            position: 'relative',
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>
+                  Welcome to RatedNews 👋
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>
+                  Here's what you can do — your profile builds up as you use the site.
+                </div>
+              </div>
+              <button
+                onClick={dismissOnboarding}
+                aria-label="Dismiss"
+                style={{
+                  flexShrink: 0,
+                  width: 26, height: 26,
+                  borderRadius: '50%',
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  color: 'var(--text3)',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  lineHeight: 1,
+                }}
+              >✕</button>
+            </div>
+
+            {/* Feature tiles */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 16 }}>
+              {[
+                {
+                  emoji: '⭐',
+                  title: 'Rate articles',
+                  desc: 'Score accuracy, bias and headline quality on any article',
+                  action: 'Browse articles →',
+                  onClick: () => navigate('feed'),
+                },
+                {
+                  emoji: '🔖',
+                  title: 'Save for later',
+                  desc: 'Bookmark articles to read later from your Saved tab',
+                  action: null,
+                },
+                {
+                  emoji: '📰',
+                  title: 'Follow outlets',
+                  desc: 'Track the outlets you trust and watch their scores',
+                  action: 'Browse outlets →',
+                  onClick: () => navigate('outlets'),
+                },
+                {
+                  emoji: '🧠',
+                  title: 'Bias fingerprint',
+                  desc: 'See which way you lean based on what you actually read',
+                  action: null,
+                },
+              ].map(({ emoji, title, desc, action, onClick }) => (
+                <div key={title} style={{
+                  background: 'var(--surface)',
+                  border: '0.5px solid var(--border)',
+                  borderRadius: 10,
+                  padding: '12px 14px',
+                }}>
+                  <div style={{ fontSize: 20, marginBottom: 6 }}>{emoji}</div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{title}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text2)', lineHeight: 1.5, marginBottom: action ? 8 : 0 }}>{desc}</div>
+                  {action && (
+                    <button
+                      onClick={onClick}
+                      style={{
+                        fontSize: 11,
+                        color: 'var(--coral)',
+                        background: 'none',
+                        border: 'none',
+                        padding: 0,
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        fontFamily: 'inherit',
+                      }}
+                    >{action}</button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Dismiss */}
+            <button
+              onClick={dismissOnboarding}
+              style={{
+                fontSize: 12,
+                padding: '7px 20px',
+                borderRadius: 20,
+                border: '1.5px solid var(--coral)',
+                background: 'var(--coral)',
+                color: '#fff',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-dm-sans), sans-serif',
+                fontWeight: 600,
+              }}
+            >
+              Got it
+            </button>
+          </div>
+        )}
 
         {/* Hero card */}
         <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
