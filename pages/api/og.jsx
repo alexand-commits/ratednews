@@ -126,28 +126,26 @@ function Bar({ value, color, height = 6, bg = 'rgba(255,255,255,0.08)' }) {
 }
 
 // ── Shared: warm gradient bg with coral accent bar ────────────────────────────
+// ImageResponse only supports flexbox — no position:absolute allowed
 function Bg({ children }) {
   return (
     <div style={{
       width: '100%', height: '100%', display: 'flex',
       background: `linear-gradient(135deg, ${BG1} 0%, ${BG2} 100%)`,
-      position: 'relative',
     }}>
       {/* Left coral accent bar */}
       <div style={{
-        position: 'absolute', top: 0, left: 0,
-        width: 6, height: '100%',
+        width: 6, height: '100%', flexShrink: 0,
         background: `linear-gradient(180deg, ${CORAL2} 0%, ${CORAL} 100%)`,
       }} />
-      {/* Top accent line */}
-      <div style={{
-        position: 'absolute', top: 0, left: 6,
-        width: 'calc(100% - 6px)', height: 2,
-        background: `rgba(216,90,48,0.3)`,
-      }} />
-      {/* Content */}
-      <div style={{ display: 'flex', flex: 1, marginLeft: 6 }}>
-        {children}
+      {/* Right side: top accent line + content */}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+        {/* Top accent line */}
+        <div style={{ width: '100%', height: 2, flexShrink: 0, background: 'rgba(216,90,48,0.28)' }} />
+        {/* Content area */}
+        <div style={{ display: 'flex', flex: 1 }}>
+          {children}
+        </div>
       </div>
     </div>
   )
