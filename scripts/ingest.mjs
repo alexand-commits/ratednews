@@ -691,14 +691,27 @@ function isJunk(title) {
 // Strip it so we don't store "Story headline - Hindustan Times" in the DB.
 function cleanTitle(title, outletName) {
   return title
-    // Decode common HTML entities that some feeds fail to unescape
-    .replace(/&#0*39;/g, "'")
-    .replace(/&amp;/g, '&')
-    .replace(/&quot;/g, '"')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
+    // Decode numeric HTML entities (&#8216; &#x2019; etc.) — covers curly quotes, dashes, ellipsis
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#([0-9]+);/g,      (_, dec) => String.fromCodePoint(parseInt(dec, 10)))
+    // Decode named HTML entities
+    .replace(/&amp;/g,    '&')
+    .replace(/&quot;/g,   '"')
+    .replace(/&apos;/g,   "'")
+    .replace(/&lt;/g,     '<')
+    .replace(/&gt;/g,     '>')
+    .replace(/&nbsp;/g,   ' ')
+    .replace(/&ndash;/g,  '–')
+    .replace(/&mdash;/g,  '—')
+    .replace(/&hellip;/g, '…')
+    .replace(/&lsquo;/g,  '‘')
+    .replace(/&rsquo;/g,  '’')
+    .replace(/&ldquo;/g,  '“')
+    .replace(/&rdquo;/g,  '”')
     // Strip "- Outlet Name" suffix added by Google News RSS
     .replace(new RegExp(`\\s*[|\\-–]\\s*${outletName}\\s*$`, 'i'), '')
+    // Strip "- domain.tld" suffix some outlets append (e.g. "- lbc.co.uk", "- politico.eu")
+    .replace(/\s*[-–|]\s*[\w-]+\.[a-z]{2,4}\s*$/i, '')
     .trim()
 }
 
@@ -721,13 +734,21 @@ const OUTLET_MAX_PER_RUN = {
   'Daily Mail':    8,   // was ingesting 15–20/run at 62% junk; cap saves ~7 AI calls/run
   'The Sun':       3,   // high junk rate + high volume (~194/day) — tightened to 3 for even 24h spread
   'The Telegraph': 10,  // 46.7% junk rate — cap to reduce scoring waste
-  'Fox News':      10,  // 30.4% junk, high volume (69 articles/month)
+  'Fox News':       6,   // tightened from 10 — cap wasn't biting at avg 3.1/run, politics skews misleading/right
   'Breitbart':     6,   // 41.3% junk + worst accuracy score (28.3% low) — tight cap
   'New York Post': 4,   // ~299/day natural rate — cap at 4/run for even 24h spread (~192/day)
   'The Hindu':     3,   // burst publish pattern — cap at 3/run for even 24h spread (~144/day)
   'The Mirror':    4,   // UK tabloid, same profile as The Sun — cap for scoring budget
-  'Newsweek':         4,   // mix of real news and SEO/listicle filler — cap to reduce waste
-  'Evening Standard': 3,   // London-local lifestyle filler bleeds in — aggressive cap to keep hard news only
+  'Newsweek':            4,   // mix of real news and SEO/listicle filler — cap to reduce waste
+  'Evening Standard':    3,   // London-local lifestyle filler bleeds in — aggressive cap to keep hard news only
+  'The Independent':     7,   // quality content but spikes to 12/run (248/day) — cap at 7 to cut bursts
+  'Channel NewsAsia':    5,   // good Asia-Pac news, occasional 9/run spike + wire dupes — cap at 5
+  'Washington Examiner': 4,   // right-leaning opinion heavy, spikes to 8/run — cap at 4
+  'iNews':               4,   // good UK news/analysis, burst pattern only (max 9/run vs avg 0.8)
+  'The Federalist':      2,   // extreme partisan opinion, scores 15–45/100, almost all misleading/right
+  'France 24':           4,   // solid international news, burst pattern (max 8/run vs avg 1.5)
+  'TechCrunch':          5,   // quality tech news, burst pattern (max 8/run vs avg 0.6)
+  'Metro':               3,   // UK tabloid tendencies, clickbait/45-scored articles creeping in — soft cap
 }
 
 function isTitleTooLong(title, outletName) {
