@@ -715,7 +715,7 @@ export default function FeedPage({
                 <div style={{ marginBottom: 6 }}>
                   <span className="score-badge score-badge-green" style={{ fontSize: 13, fontWeight: 700 }}>✦ 82</span>
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Accuracy</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Credibility</div>
                 <div style={{ fontSize: 11, color: 'var(--text3)' }}>0–100 factual reliability score. 70+ is solid journalism.</div>
               </div>
               <div style={{

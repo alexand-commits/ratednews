@@ -165,7 +165,7 @@ export default function MethodologyPage({ goBack }) {
           </p>
           <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 14 }}>
             <strong>Articles</strong> are scored as they are ingested — every 30 minutes, across 100+ syndicated feeds.
-            Each article receives an accuracy score, bias direction, partisan intensity, headline verdict, category,
+            Each article receives a credibility score, bias direction, partisan intensity, headline verdict, category,
             geographic scope, and region tag. These are generated in a single AI call per article.
           </p>
           <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.75 }}>
@@ -287,11 +287,11 @@ export default function MethodologyPage({ goBack }) {
           {[
             {
               title: 'Scores are based on syndicated content only',
-              body: 'Accuracy and bias scores are derived from the headline and syndicated summary — the content publishers explicitly provide for distribution. We don\'t fetch or process full article HTML. A misleading article with a factual-sounding headline can score well. A nuanced long-read might score differently in full. Treat scores as signals, not verdicts.',
+              body: 'Credibility and bias scores are derived from the headline and syndicated summary — the content publishers explicitly provide for distribution. We don\'t fetch or process full article HTML. A misleading article with a factual-sounding headline can score well. A nuanced long-read might score differently in full. Treat scores as signals, not verdicts.',
             },
             {
-              title: 'Accuracy scores are probabilistic, not verified',
-              body: '"Accuracy score: 82" does not mean 82% of the claims in the article are true. It means the writing pattern matches what well-sourced, factual journalism tends to look like. We are pattern-matching on language, not fact-checking claims. No automated system can do that reliably at this scale.',
+              title: 'Credibility scores are probabilistic, not verified',
+              body: '"Credibility score: 82" does not mean 82% of the claims in the article are true. It means the writing pattern matches what well-sourced, trustworthy journalism tends to look like. We are pattern-matching on language, not fact-checking claims. No automated system can do that reliably at this scale.',
             },
             {
               title: 'Small sample sizes produce unstable outlet scores',

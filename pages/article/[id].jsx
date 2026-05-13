@@ -53,14 +53,14 @@ export default function ArticleDetail({ article }) {
   const biasDir    = article.outlets?.bias_direction || article.bias_direction || null
   const biasLabel  = { left: 'left-leaning', centre: 'centrist', right: 'right-leaning' }[biasDir] || null
 
-  const scorePart = acc > 0 ? `Accuracy ${acc}/100${biasLabel ? ` · ${biasLabel}` : ''}. ` : ''
+  const scorePart = acc > 0 ? `Credibility ${acc}/100${biasLabel ? ` · ${biasLabel}` : ''}. ` : ''
   const metaDesc  = summary
     ? `${scorePart}${summary}`.slice(0, 155)
-    : `AI accuracy & bias analysis of "${article.title}" by ${outletName} on RatedNews.`
+    : `AI credibility & bias analysis of "${article.title}" by ${outletName} on RatedNews.`
 
   const keywords = [
     outletName, article.category, biasLabel,
-    'news analysis', 'bias rating', 'accuracy score', 'fact check',
+    'news analysis', 'bias rating', 'credibility score', 'fact check',
   ].filter(Boolean).join(', ')
 
   const canonicalSlug = articleSlug(article.title, article.id)
@@ -68,7 +68,7 @@ export default function ArticleDetail({ article }) {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type':    'Review',
-    name:       `${article.title} — Accuracy & Bias Analysis`,
+    name:       `${article.title} — Credibility & Bias Analysis`,
     url:        `https://www.ratednews.com/article/${canonicalSlug}`,
     datePublished: article.published_at,
     author: {
@@ -88,7 +88,7 @@ export default function ArticleDetail({ article }) {
         ratingValue:         acc,
         bestRating:          100,
         worstRating:         0,
-        ratingExplanation:   'AI-assessed accuracy score based on factual claims, source quality, and editorial standards.',
+        ratingExplanation:   'AI-assessed credibility score based on journalistic quality, source reliability, and editorial standards.',
       },
     }),
     ...(summary   && { reviewBody: summary }),
@@ -105,7 +105,7 @@ export default function ArticleDetail({ article }) {
   }
 
   const pageTitle = acc > 0
-    ? `${article.title} · Accuracy ${acc}/100 — RatedNews`
+    ? `${article.title} · Credibility ${acc}/100 — RatedNews`
     : `${article.title} — RatedNews`
 
   // Top-level NewsArticle schema — required for Google News carousel / Top Stories eligibility.

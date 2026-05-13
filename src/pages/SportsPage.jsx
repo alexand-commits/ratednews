@@ -135,7 +135,7 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
             )}
           </div>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text2)' }}>
-            Accuracy-rated coverage across all major sports
+            Credibility-rated coverage across all major sports
           </p>
         </div>
 

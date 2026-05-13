@@ -66,7 +66,7 @@ function ScoreChip({ score }) {
       borderRadius: 100, padding: '6px 16px',
     }}>
       <span style={{ color: scoreColor(score), fontSize: 13, fontWeight: 700, fontFamily: 'sans-serif' }}>✦</span>
-      <span style={{ color: '#f9fafb', fontSize: 15, fontWeight: 700, fontFamily: 'sans-serif' }}>Accuracy {score}/100</span>
+      <span style={{ color: '#f9fafb', fontSize: 15, fontWeight: 700, fontFamily: 'sans-serif' }}>Credibility {score}/100</span>
     </div>
   )
 }
@@ -115,7 +115,7 @@ export default function handler(req) {
           {/* Centre: outlet name + descriptor */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#6b7280', fontFamily: 'sans-serif' }}>
-              Media Bias &amp; Accuracy Report
+              Media Bias &amp; Credibility Report
             </div>
             <div style={{
               color: '#f9fafb', fontFamily: 'serif',

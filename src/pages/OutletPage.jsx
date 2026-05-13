@@ -449,7 +449,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
               <div className="widget" style={{ marginBottom: 14 }}>
                 {avgAccuracy !== null ? (
                   <>
-                    <ScoreBar label="Avg article accuracy" value={avgAccuracy} tip="Average factual reliability score across this outlet's recent articles, as assessed by AI." />
+                    <ScoreBar label="Avg credibility" value={avgAccuracy} tip="Average credibility score across this outlet's recent articles, as assessed by AI." />
                     {fairRate !== null && <ScoreBar label="Fair headline rate" value={fairRate} tip="Percentage of articles where the headline accurately reflects the content — not misleading or clickbait." />}
                     {avgBiasScore !== null && (
                       <div className="score-bar-row">

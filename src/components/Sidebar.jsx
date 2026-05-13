@@ -49,7 +49,7 @@ export default function Sidebar({ outlets, navigate }) {
             <span className="rb-label">AI analysis</span>
             <div className="rb-bar-bg"><div className="rb-bar-fill" style={{ width: '70%', background: 'var(--blue)' }}></div></div>
             <span className="rb-val" style={{ color: 'var(--blue)' }}>70%</span>
-            <InfoTip text="Every article is scored by Claude AI for accuracy, bias direction, and headline fairness. Scores are averaged across the outlet's last 30 days of articles." />
+            <InfoTip text="Every article is scored by Claude AI for credibility, bias direction, and headline fairness. Scores are averaged across the outlet's last 30 days of articles." />
           </div>
           <div className="rb-row">
             <span className="rb-label">Editorial baseline</span>

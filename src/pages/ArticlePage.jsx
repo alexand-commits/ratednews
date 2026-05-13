@@ -533,7 +533,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
           <div className="article-headline-full">{article.title || ''}</div>
 
           <div className="article-score-strip">
-            <div className="asc"><strong style={{ color: scoreColor(acc) }}>{acc || '—'}</strong><span>Accuracy</span></div>
+            <div className="asc"><strong style={{ color: scoreColor(acc) }}>{acc || '—'}</strong><span>Credibility</span></div>
             {com > 0 && <div className="asc"><strong style={{ color: 'var(--amber)' }}>{(com / 20).toFixed(1)}★</strong><span>Community</span></div>}
             <div className="asc"><strong>{article.total_ratings || 0}</strong><span>Ratings</span></div>
             <div className="asc"><strong style={{ color: 'var(--text2)' }}>{comments.length}</strong><span>Comments</span></div>
@@ -549,7 +549,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
                     <span style={{ color: 'var(--text2)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 3 }}>
-                      Accuracy <InfoTip text="How factually reliable this article appears based on its headline and summary. 100 = well-sourced, credible reporting." />
+                      Credibility <InfoTip text="How credible this article's reporting appears based on its headline and summary. 100 = well-sourced, trustworthy journalism." />
                     </span>
                     <span style={{ fontWeight: 700, color: scoreColor(acc) }}>{acc}/100</span>
                   </div>
@@ -706,7 +706,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               const shareUrl = `https://www.ratednews.com/article/${articleSlug(article.title, article.id)}`
               const biasMap = { left: '← Left', centre: '◉ Centre', right: '→ Right' }
               const scoreParts = [
-                acc ? `🎯 ${acc}/100 accuracy` : null,
+                acc ? `🎯 ${acc}/100 credibility` : null,
                 article.bias_direction ? biasMap[article.bias_direction] : null,
                 article.headline_vote && article.headline_vote !== 'fair' ? `📰 ${article.headline_vote}` : null,
               ].filter(Boolean).join(' · ')

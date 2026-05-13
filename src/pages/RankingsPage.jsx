@@ -14,9 +14,9 @@ const OUTLET_TABS = [
   },
   {
     id: 'accuracy', label: 'Most Accurate', key: 'accuracy_score',
-    desc: 'AI accuracy score',
-    tip: 'AI-assessed factual reliability of each article. Outlets are ranked by the average accuracy score across their recent articles.',
-    chipLabel: 'avg accuracy', unit: '',
+    desc: 'AI credibility score',
+    tip: 'AI-assessed credibility of each article. Outlets are ranked by their average credibility score across recent articles.',
+    chipLabel: 'avg credibility', unit: '',
   },
   {
     id: 'community', label: 'Community', key: 'community_score',
@@ -370,7 +370,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
               return (
                 <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px', marginBottom: 20 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 12 }}>
-                    Score movers · 7-day accuracy change
+                    Score movers · 7-day credibility change
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                     {/* Risers */}
@@ -590,7 +590,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                   )}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'center', marginTop: 16 }}>
-                  Credibility and accuracy scores are AI-generated. Community scores reflect user ratings.
+                  Credibility scores are AI-generated. Community scores reflect user ratings.
                 </div>
               </>
             )}

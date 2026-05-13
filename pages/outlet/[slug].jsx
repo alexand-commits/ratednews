@@ -19,14 +19,14 @@ export default function OutletDetail({ outlet }) {
   return (
     <>
       <Head>
-        <title>{outlet.name} Bias Rating & Accuracy Score — RatedNews</title>
+        <title>{outlet.name} Bias Rating & Credibility Score — RatedNews</title>
         <meta
           name="description"
-          content={`See ${outlet.name}'s AI-powered bias rating, accuracy score, and headline fairness breakdown on RatedNews. Scores updated hourly from real published articles.`}
+          content={`See ${outlet.name}'s AI-powered bias rating, credibility score, and headline fairness breakdown on RatedNews. Scores updated hourly from real published articles.`}
         />
         <link rel="canonical" href={`https://www.ratednews.com/outlet/${canonicalSlug}`} />
-        <meta property="og:title"       content={`${outlet.name} — Bias & Accuracy Rating`} />
-        <meta property="og:description" content={`${outlet.name} has an accuracy score of ${outlet.overall_score ?? '–'}/100 on RatedNews. See the full breakdown.`} />
+        <meta property="og:title"       content={`${outlet.name} — Bias & Credibility Rating`} />
+        <meta property="og:description" content={`${outlet.name} has a credibility score of ${outlet.overall_score ?? '–'}/100 on RatedNews. See the full breakdown.`} />
         <meta property="og:url"         content={`https://www.ratednews.com/outlet/${canonicalSlug}`} />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content={`https://www.ratednews.com/api/og?type=outlet&outlet=${encodeURIComponent(outlet.name)}${outlet.overall_score ? `&score=${outlet.overall_score}` : ''}${outlet.bias_direction ? `&bias=${outlet.bias_direction}` : ''}`} />
@@ -34,8 +34,8 @@ export default function OutletDetail({ outlet }) {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"        content="summary_large_image" />
-        <meta name="twitter:title"       content={`${outlet.name} — Bias & Accuracy Rating | RatedNews`} />
-        <meta name="twitter:description" content={`${outlet.name} scores ${outlet.overall_score ?? '–'}/100 for accuracy on RatedNews. AI-powered analysis updated hourly.`} />
+        <meta name="twitter:title"       content={`${outlet.name} — Bias & Credibility Rating | RatedNews`} />
+        <meta name="twitter:description" content={`${outlet.name} scores ${outlet.overall_score ?? '–'}/100 for credibility on RatedNews. AI-powered analysis updated hourly.`} />
         <meta name="twitter:image"       content={`https://www.ratednews.com/api/og?type=outlet&outlet=${encodeURIComponent(outlet.name)}${outlet.overall_score ? `&score=${outlet.overall_score}` : ''}${outlet.bias_direction ? `&bias=${outlet.bias_direction}` : ''}`} />
 
         {/* Organisation structured data — helps Google understand the page
@@ -56,7 +56,7 @@ export default function OutletDetail({ outlet }) {
               bestRating:   100,
               worstRating:  0,
               ratingCount:  outlet.total_articles || 1,
-              reviewAspect: 'Accuracy and impartiality',
+              reviewAspect: 'Credibility and impartiality',
             } : undefined,
             additionalProperty: [
               outlet.bias_direction && {
@@ -66,7 +66,7 @@ export default function OutletDetail({ outlet }) {
               },
               outlet.overall_score && {
                 '@type': 'PropertyValue',
-                name:    'Accuracy score',
+                name:    'Credibility score',
                 value:   `${outlet.overall_score}/100`,
               },
             ].filter(Boolean),

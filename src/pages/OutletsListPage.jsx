@@ -388,7 +388,7 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
 
                   {/* Accuracy bar */}
                   <div className="score-bar-row" style={{ margin: 0 }}>
-                    <span className="sbl" style={{ width: 70, fontSize: 11 }}>Accuracy</span>
+                    <span className="sbl" style={{ width: 70, fontSize: 11 }}>Credibility</span>
                     <div className="sb-bg">
                       <div className="sb-fill" style={{ width: `${accuracy}%`, background: scoreColor(accuracy) }} />
                     </div>
