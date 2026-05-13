@@ -692,10 +692,12 @@ const OUTLET_MAX_TITLE_LENGTH = {
 // cap them so quality outlets aren't crowded out.
 const OUTLET_MAX_PER_RUN = {
   'Daily Mail':    8,   // was ingesting 15–20/run at 62% junk; cap saves ~7 AI calls/run
-  'The Sun':       6,   // tiny RSS footprint but very high junk rate
+  'The Sun':       3,   // high junk rate + high volume (~194/day) — tightened to 3 for even 24h spread
   'The Telegraph': 10,  // 46.7% junk rate — cap to reduce scoring waste
   'Fox News':      10,  // 30.4% junk, high volume (69 articles/month)
   'Breitbart':     6,   // 41.3% junk + worst accuracy score (28.3% low) — tight cap
+  'New York Post': 4,   // ~299/day natural rate — cap at 4/run for even 24h spread (~192/day)
+  'The Hindu':     3,   // burst publish pattern — cap at 3/run for even 24h spread (~144/day)
 }
 
 function isTitleTooLong(title, outletName) {
