@@ -1,6 +1,6 @@
 import Head from 'next/head'
 import { useRouter } from 'next/router'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useAppContext } from '../_app'
 import ArticlePage from '../../src/pages/ArticlePage'
 import ErrorBoundary from '../../src/components/ErrorBoundary'
@@ -19,10 +19,22 @@ const FULL_UUID_SUFFIX_RE = /-([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[
 //   "obama-slams-trump-4f3ff8a6"
 const SHORT_ID_SUFFIX_RE = /-([0-9a-f]{8})$/i
 
-export default function ArticleDetail({ article }) {
+export default function ArticleDetail({ article: initialArticle }) {
   const router = useRouter()
   const { navigate, goBack, showToast, user, openAuthModal,
           savedArticleIds, toggleSave } = useAppContext()
+
+  // ISR pages can be up to 1h stale — refresh score data client-side so the
+  // credibility card always reflects the latest accuracy_score, bias, etc.
+  const [article, setArticle] = useState(initialArticle)
+  useEffect(() => {
+    if (!initialArticle?.id) return
+    db.from('articles')
+      .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+      .eq('id', initialArticle.id)
+      .single()
+      .then(({ data }) => { if (data) setArticle(data) })
+  }, [initialArticle?.id])
 
   // Track view — sessionStorage dedup so navigating back doesn't double-count
   useEffect(() => {
