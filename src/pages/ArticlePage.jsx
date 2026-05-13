@@ -155,20 +155,22 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     }
   }, [articleId, user])
 
-  // Fetch same-story articles — use pre-computed cluster_id when available,
+  // Fetch same-story articles — use pre-computed cluster_peers when available,
   // fall back to title keyword search for articles not yet clustered.
+  // cluster_peers is a stable snapshot; cluster_id gets reassigned on every
+  // cluster.mjs run so querying by it returns only the most recently re-clustered
+  // subset — causing the "29 on feed, 2 on article page" mismatch.
   useEffect(() => {
     if (!article) return
     setSameStoryArticles([])
 
-    if (article.cluster_id) {
-      // Fast path: cluster already computed server-side
+    if (article.cluster_peers?.length) {
+      // Fast path: use pre-computed peer IDs — same source as the feed card count
+      const peerIds = article.cluster_peers.map(p => p.id).slice(0, 20)
       db.from('articles')
         .select('*, outlets(name, bias_direction, logo_url)')
-        .eq('cluster_id', article.cluster_id)
-        .neq('id', article.id)
+        .in('id', peerIds)
         .order('published_at', { ascending: false })
-        .limit(20)
         .then(({ data }) => {
           if (!data?.length) return
           // Dedupe by outlet — keep most recent per outlet
@@ -178,7 +180,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               byOutlet[a.outlet_id] = a
             }
           })
-          setSameStoryArticles(Object.values(byOutlet).slice(0, 10))
+          setSameStoryArticles(Object.values(byOutlet).slice(0, 8))
         })
       return
     }
@@ -618,7 +620,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
                 color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 8,
               }}>
-                📰 Also covered by {sameStoryArticles.length} other outlet{sameStoryArticles.length !== 1 ? 's' : ''}
+                📰 Also covered by {(article.cluster_peers?.length || sameStoryArticles.length)} other outlet{(article.cluster_peers?.length || sameStoryArticles.length) !== 1 ? 's' : ''}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {sameStoryArticles.map(a => {
@@ -665,6 +667,11 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                   )
                 })}
               </div>
+              {(article.cluster_peers?.length || 0) > sameStoryArticles.length && (
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 6, paddingLeft: 2 }}>
+                  and {(article.cluster_peers.length) - sameStoryArticles.length} more outlet{(article.cluster_peers.length - sameStoryArticles.length) !== 1 ? 's' : ''} covering this story
+                </div>
+              )}
             </div>
           )}
 
