@@ -388,6 +388,10 @@ const JUNK_PATTERNS = [
   // "How nearly half of women are cheating themselves out of free money"
   /\bcheating (themselves|yourself|himself|herself) out of\b/i,
   /\bone extra (dollar|pound|penny) (on|in|triggers?)\b/i,
+  // CNBC-style stock tip / investment recommendation content (not news)
+  /\b(our|my) (favorite|top|best) (stock|pick|way to (play|trade|hedge))\b/i,
+  /\bstock.{0,50}\b(go higher|going higher|buy now|worth buying|undervalued|oversold)\b/i,
+  /\bhow to (play|trade) (it|this|the (dip|rally|volatility|rotation))\b/i,
 
   // ── Chicago Tribune specific ──────────────────────────────────────────────────
   // Jumble — daily puzzle (appears as "Jumble Daily" or "Jumble for [date]")
@@ -759,6 +763,12 @@ const OUTLET_MAX_PER_RUN = {
   'ESPN':                4,   // solid sports news, occasional odds/betting framing
   'HuffPost':            3,   // left-leaning, opinion-heavy headlines
   'Business Insider':    4,   // ~half non-news lifestyle/personal essay content
+  // ── Third sweep ──────────────────────────────────────────────────────────────
+  'MSNBC':               4,   // left-leaning mirror of Fox News — 35–45/100 articles, misleading/left
+  'CNBC':                4,   // real financial news mixed with stock-tip content
+  'Bloomberg':           6,   // quality financial journalism, burst to 5/run
+  'CBS News':            5,   // quality US news, SEO/Q&A filler sneaking in
+  'Slate':               2,   // advice-column letters (Dear Prudence) mixed in with real content
 }
 
 function isTitleTooLong(title, outletName) {
