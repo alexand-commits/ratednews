@@ -41,10 +41,12 @@ const supabase  = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY })
 
 const BATCH_SIZE      = 20
-const MAX_PER_RUN     = 150   // raised from 80 to drain 1,200-article backlog; revisit once caps stabilise ingest volume
+const MAX_PER_RUN     = 150   // total cap per run (fresh + backlog combined)
+const FRESH_CAP       = 60    // max articles from the last 2h scored first (keeps live feed current)
 const MIN_TITLE_LEN   = 15    // skip malformed / very short titles
 const MIN_CONTENT_LEN = 30    // skip articles with neither a real title nor summary
 const MAX_ARTICLE_AGE_HOURS = 36  // skip unscored articles older than this — they'll never appear in feed
+const FRESH_WINDOW_HOURS = 2  // articles younger than this are scored in the priority pass
 
 // ── System prompt (cached — never changes between articles) ─────────────────
 const CATEGORIES = ['Politics', 'Business', 'Sport', 'Tech', 'Science', 'Health', 'Environment', 'Entertainment', 'Crime', 'Travel', 'Education', 'Conflict', 'World']
@@ -189,107 +191,138 @@ Summary: ${article.summary || '(no summary available)'}`
   return { accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary: ai_summary || null }
 }
 
+// ── Score a batch of articles from a query ───────────────────────────────────
+async function scoreBatch(articles, skippedIds, totalThin) {
+  let scored = 0, failed = 0
+
+  for (const article of articles) {
+    const outletName = article.outlets?.name || 'Unknown'
+
+    const titleLen   = (article.title || '').trim().length
+    const summaryLen = (article.summary || '').trim().length
+    if (titleLen < MIN_TITLE_LEN || titleLen + summaryLen < MIN_CONTENT_LEN) {
+      console.log(`  ⏭  Thin content skipped: "${(article.title || '').slice(0, 50)}"`)
+      skippedIds.add(article.id)
+      totalThin.count++
+      continue
+    }
+
+    process.stdout.write(`  Scoring: "${article.title.slice(0, 60)}..." `)
+
+    try {
+      const scores = await scoreArticle({ ...article, outlet_name: outletName })
+
+      const { error: updateError } = await supabase
+        .from('articles')
+        .update({
+          accuracy_score:    scores.accuracy_score,
+          bias_score:        scores.bias_score,
+          bias_direction:    scores.bias_direction,
+          headline_vote:     scores.headline_vote,
+          category:          scores.category,
+          geographic_scope:  scores.geographic_scope,
+          article_region:    scores.article_region,
+          ai_summary:        scores.ai_summary,
+        })
+        .eq('id', article.id)
+
+      if (updateError) {
+        console.log(`❌ DB error: ${updateError.message}`)
+        skippedIds.add(article.id)
+        failed++
+      } else {
+        console.log(`✅ acc=${scores.accuracy_score} bias=${scores.bias_direction}(${scores.bias_score}) hl=${scores.headline_vote}`)
+        scored++
+      }
+    } catch (err) {
+      console.log(`❌ ${err.message}`)
+      skippedIds.add(article.id)
+      failed++
+    }
+
+    await new Promise(r => setTimeout(r, 200))
+  }
+
+  return { scored, failed }
+}
+
+// ── Fetch unscored articles ───────────────────────────────────────────────────
+async function fetchUnscored({ newerThan, olderThan, limit, skippedIds, ascending }) {
+  let query = supabase
+    .from('articles')
+    .select('id, title, summary, outlets(name)')
+    .is('accuracy_score', null)
+  if (newerThan) query = query.gte('created_at', newerThan)
+  if (olderThan) query = query.lt('created_at', olderThan)
+  if (skippedIds.size > 0) query = query.not('id', 'in', `(${[...skippedIds].join(',')})`)
+  query = query.order('created_at', { ascending }).limit(limit)
+  const { data, error } = await query
+  if (error) throw new Error(`Failed to fetch articles: ${error.message}`)
+  return data || []
+}
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 async function main() {
   console.log('🤖 RatedNews AI Scoring')
   console.log('========================\n')
 
-  let totalScored = 0, totalFailed = 0, totalThin = 0, batch = 1
-  const skippedIds = new Set()   // articles that failed — excluded from future fetches
+  let totalScored = 0, totalFailed = 0
+  const totalThin  = { count: 0 }   // mutable counter passed into scoreBatch
+  const skippedIds = new Set()
 
-  const stalenessCutoff = new Date(Date.now() - MAX_ARTICLE_AGE_HOURS * 60 * 60 * 1000).toISOString()
+  const now             = new Date()
+  const stalenessCutoff = new Date(now - MAX_ARTICLE_AGE_HOURS * 60 * 60 * 1000).toISOString()
+  const freshCutoff     = new Date(now - FRESH_WINDOW_HOURS   * 60 * 60 * 1000).toISOString()
 
-  while (totalScored + totalFailed < MAX_PER_RUN) {
-    let query = supabase
-      .from('articles')
-      .select('id, title, summary, outlets(name)')
-      .is('accuracy_score', null)
-      .gte('created_at', stalenessCutoff)   // use created_at (row insert time) not published_at
-      .order('created_at', { ascending: true })   // FIFO — score oldest-ingested first so nothing expires unscored
-      .limit(BATCH_SIZE)
+  // ── Pass 1: Fresh articles (last 2h) — scored newest-first to keep feed current ──
+  console.log(`Pass 1 — fresh articles (last ${FRESH_WINDOW_HOURS}h), up to ${FRESH_CAP}\n`)
+  let remaining = FRESH_CAP
+  while (remaining > 0 && totalScored + totalFailed < MAX_PER_RUN) {
+    const articles = await fetchUnscored({
+      newerThan: freshCutoff,
+      limit:     Math.min(BATCH_SIZE, remaining),
+      skippedIds,
+      ascending: false,   // newest-ingested first
+    })
+    if (!articles.length) { console.log('  ✅ No fresh articles left\n'); break }
 
-    // Exclude any IDs that have already failed this run to avoid infinite loops
-    if (skippedIds.size > 0) {
-      query = query.not('id', 'in', `(${[...skippedIds].join(',')})`)
-    }
-
-    const { data: articles, error } = await query
-
-    if (error) {
-      console.error('Failed to fetch articles:', error.message)
-      process.exit(1)
-    }
-
-    if (!articles || articles.length === 0) {
-      console.log('\n✅ All articles scored!')
-      break
-    }
-
-    console.log(`Batch ${batch} — ${articles.length} articles\n`)
-
-    let scored = 0, failed = 0
-
-    for (const article of articles) {
-      const outletName = article.outlets?.name || 'Unknown'
-
-      // Skip thin-content articles — scoring on just a title produces unreliable results
-      const titleLen   = (article.title || '').trim().length
-      const summaryLen = (article.summary || '').trim().length
-      if (titleLen < MIN_TITLE_LEN || titleLen + summaryLen < MIN_CONTENT_LEN) {
-        console.log(`  ⏭  Thin content skipped: "${(article.title || '').slice(0, 50)}"`)
-        skippedIds.add(article.id)
-        totalThin++
-        continue
-      }
-
-      process.stdout.write(`  Scoring: "${article.title.slice(0, 60)}..." `)
-
-      try {
-        const scores = await scoreArticle({ ...article, outlet_name: outletName })
-
-        const { error: updateError } = await supabase
-          .from('articles')
-          .update({
-            accuracy_score:    scores.accuracy_score,
-            bias_score:        scores.bias_score,
-            bias_direction:    scores.bias_direction,
-            headline_vote:     scores.headline_vote,
-            category:          scores.category,
-            geographic_scope:  scores.geographic_scope,
-            article_region:    scores.article_region,
-            ai_summary:        scores.ai_summary,
-          })
-          .eq('id', article.id)
-
-        if (updateError) {
-          console.log(`❌ DB error: ${updateError.message}`)
-          skippedIds.add(article.id)
-          failed++
-        } else {
-          console.log(`✅ acc=${scores.accuracy_score} bias=${scores.bias_direction}(${scores.bias_score}) hl=${scores.headline_vote}`)
-          scored++
-        }
-      } catch (err) {
-        console.log(`❌ ${err.message}`)
-        skippedIds.add(article.id)
-        failed++
-      }
-
-      await new Promise(r => setTimeout(r, 200))
-    }
-
+    const { scored, failed } = await scoreBatch(articles, skippedIds, totalThin)
     totalScored += scored
     totalFailed += failed
-    console.log(`\nBatch ${batch} done — ✅ ${scored}  ❌ ${failed}`)
-    batch++
+    remaining   -= articles.length
+    console.log(`  Pass 1 batch done — ✅ ${scored}  ❌ ${failed}\n`)
+  }
+
+  // ── Pass 2: Backlog (older than 2h) — scored oldest-first to prevent expiry ──
+  const backlogBudget = MAX_PER_RUN - totalScored - totalFailed
+  if (backlogBudget > 0) {
+    console.log(`Pass 2 — backlog (older than ${FRESH_WINDOW_HOURS}h), up to ${backlogBudget}\n`)
+    let batchNum = 1
+    while (totalScored + totalFailed < MAX_PER_RUN) {
+      const articles = await fetchUnscored({
+        newerThan: stalenessCutoff,
+        olderThan: freshCutoff,
+        limit:     BATCH_SIZE,
+        skippedIds,
+        ascending: true,   // oldest-ingested first — drain backlog before expiry
+      })
+      if (!articles.length) { console.log('  ✅ Backlog clear\n'); break }
+
+      console.log(`  Backlog batch ${batchNum} — ${articles.length} articles`)
+      const { scored, failed } = await scoreBatch(articles, skippedIds, totalThin)
+      totalScored += scored
+      totalFailed += failed
+      console.log(`  Backlog batch ${batchNum} done — ✅ ${scored}  ❌ ${failed}\n`)
+      batchNum++
+    }
   }
 
   if (totalScored + totalFailed >= MAX_PER_RUN) {
-    console.log(`\n⚠️  Hit MAX_PER_RUN cap (${MAX_PER_RUN}) — remaining articles will be scored next run`)
+    console.log(`⚠️  Hit MAX_PER_RUN cap (${MAX_PER_RUN}) — remaining articles will be scored next run`)
   }
 
   console.log(`\n========================`)
-  console.log(`✅ Total scored: ${totalScored}  ❌ Failed: ${totalFailed}  ⏭ Thin content skipped: ${totalThin}`)
+  console.log(`✅ Total scored: ${totalScored}  ❌ Failed: ${totalFailed}  ⏭ Thin content skipped: ${totalThin.count}`)
 
   // Write output for GitHub Actions conditional steps
   if (process.env.GITHUB_OUTPUT) {
