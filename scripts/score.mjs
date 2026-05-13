@@ -67,6 +67,11 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
   articles about deaths, memorials, tributes, retirements, and community stories is appropriate
   writing style, not a sign of inaccuracy. Score these 75–90 if the facts are internally consistent.
   Do NOT penalise for empathetic tone, first-person community framing, or lack of hard data sources.
+  IMPORTANT — sports preview and anticipation journalism: articles about upcoming fixtures, squad
+  announcements, tournament preparations, transfer windows, and scheduled events routinely use
+  forward-looking language ("set to", "expected to", "preparing to", "poised to", "due to announce",
+  "likely to", "tipped to"). This is standard sports reporting convention, not a credibility problem.
+  Score these 70–85 if the factual content is internally consistent between title and summary.
 
 - "bias_direction": string, one of: "left", "centre", "right".
   The political lean of the article's framing and perspective.
@@ -89,6 +94,10 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
   Only mark "misleading" if the headline states or strongly implies a fact that the summary contradicts
   (e.g. headline says player scored a hat-trick but summary says he scored once). Sensational but
   accurate sports language should be "fair", not "misleading".
+  IMPORTANT — sports preview and anticipation journalism: forward-looking language in the headline
+  ("set to", "expected to", "preparing to", "poised to", "due to", "tipped to") that is echoed or
+  supported by the summary is NOT misleading — it is standard preview writing. Only mark "misleading"
+  if the headline makes a specific factual claim the summary directly contradicts.
   IMPORTANT — tribute, memorial and human interest content: articles about deaths, memorials,
   tributes, retirements, community stories and human interest pieces naturally use emotional,
   reverential or narrative language. This is appropriate writing style, not inaccuracy or bias.
