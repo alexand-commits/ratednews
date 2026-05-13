@@ -4,6 +4,18 @@ import { useAppContext } from '../_app'
 import OutletPage from '../../src/pages/OutletPage'
 import { toSlug } from '../../src/utils/navigate'
 
+function outletOgUrl(o) {
+  const base = 'https://www.ratednews.com/api/og?type=outlet'
+  const p = new URLSearchParams({ outlet: o.name || '' })
+  if (o.overall_score)     p.set('score',      o.overall_score)
+  if (o.bias_direction)    p.set('bias',        o.bias_direction)
+  if (o.fair_rate != null) p.set('fair',        Math.round(o.fair_rate))
+  if (o.misleading_rate != null) p.set('misleading', Math.round(o.misleading_rate))
+  if (o.clickbait_rate != null)  p.set('clickbait',  Math.round(o.clickbait_rate))
+  if (o.article_count_30d) p.set('articles',    o.article_count_30d)
+  return `${base}&${p.toString()}`
+}
+
 export default function OutletDetail({ outlet }) {
   const router = useRouter()
   const { navigate, goBack, showToast, user, openAuthModal,
@@ -29,14 +41,14 @@ export default function OutletDetail({ outlet }) {
         <meta property="og:description" content={`${outlet.name} has a credibility score of ${outlet.overall_score ?? '–'}/100 on RatedNews. See the full breakdown.`} />
         <meta property="og:url"         content={`https://www.ratednews.com/outlet/${canonicalSlug}`} />
         <meta property="og:type"        content="website" />
-        <meta property="og:image"       content={`https://www.ratednews.com/api/og?type=outlet&outlet=${encodeURIComponent(outlet.name)}${outlet.overall_score ? `&score=${outlet.overall_score}` : ''}${outlet.bias_direction ? `&bias=${outlet.bias_direction}` : ''}`} />
+        <meta property="og:image"       content={outletOgUrl(outlet)} />
         <meta property="og:image:type"  content="image/png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"        content="summary_large_image" />
         <meta name="twitter:title"       content={`${outlet.name} — Bias & Credibility Rating | RatedNews`} />
         <meta name="twitter:description" content={`${outlet.name} scores ${outlet.overall_score ?? '–'}/100 for credibility on RatedNews. AI-powered analysis updated hourly.`} />
-        <meta name="twitter:image"       content={`https://www.ratednews.com/api/og?type=outlet&outlet=${encodeURIComponent(outlet.name)}${outlet.overall_score ? `&score=${outlet.overall_score}` : ''}${outlet.bias_direction ? `&bias=${outlet.bias_direction}` : ''}`} />
+        <meta name="twitter:image"       content={outletOgUrl(outlet)} />
 
         {/* Organisation structured data — helps Google understand the page
             and can trigger rich results for outlet-related searches */}
