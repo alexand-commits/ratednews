@@ -41,7 +41,7 @@ const supabase  = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY })
 
 const BATCH_SIZE      = 20
-const MAX_PER_RUN     = 80    // ingest caps mean ~60 new articles/run max; 80 gives headroom
+const MAX_PER_RUN     = 150   // raised from 80 to drain 1,200-article backlog; revisit once caps stabilise ingest volume
 const MIN_TITLE_LEN   = 15    // skip malformed / very short titles
 const MIN_CONTENT_LEN = 30    // skip articles with neither a real title nor summary
 const MAX_ARTICLE_AGE_HOURS = 36  // skip unscored articles older than this — they'll never appear in feed
@@ -205,7 +205,7 @@ async function main() {
       .select('id, title, summary, outlets(name)')
       .is('accuracy_score', null)
       .gte('created_at', stalenessCutoff)   // use created_at (row insert time) not published_at
-      .order('published_at', { ascending: false })  // so slow-publishing outlets (Economist, Bellingcat) aren't skipped
+      .order('created_at', { ascending: true })   // FIFO — score oldest-ingested first so nothing expires unscored
       .limit(BATCH_SIZE)
 
     // Exclude any IDs that have already failed this run to avoid infinite loops
