@@ -69,6 +69,11 @@ const JUNK_PATTERNS = [
   /\bnap\s*$/i,                      // title ending in "… NAP"
   /\b(accumulator|acca) tips?\b/i,   // "accumulator tips"
   /\b(best bets?|top picks?|selections?) (today|tonight|this week)\b/i,
+  // Sports odds dressed as news — "X rising fast in odds to sign Y", "odds to become Z"
+  // Targets Newsweek-style sports speculation framed around betting markets
+  /\b(rising|climbing|shortening|drifting|surging).{0,30}\bodds\b/i,
+  /\bodds.{0,30}(to sign|to join|to move|to land|to hire|to become|to win)\b/i,
+  /\bfavourites?\b.{0,30}\b(to sign|to join|to land|to hire|to become)\b/i,
   // Sponsored / advertorial
   /\b(sponsored|advertorial|paid post|partner content|promoted)\b/i,
   // Deals & commerce
@@ -569,6 +574,15 @@ const JUNK_PATTERNS = [
   // "Legal rules on paying council tax if you live on a boat"
   /\bwhat (you'?re|you are) (allowed|legally allowed|permitted) to do if\b/i,
   /\b(legal |your )?(rights?|rules?) (on |for |if ).{0,30}(council tax|neighbour|neighbor|pet|cat|dog|boat)\b/i,
+
+  // ── Pet lifestyle / animal behaviour filler ──────────────────────────────────
+  // "6 subtle distress signs your dog may be giving" — tabloid animal content
+  // with no news value. Distinct from genuine animal welfare/science journalism.
+  // Guard: only block when combined with pet + behavioural/appearance signals.
+  /\b(subtle|hidden|secret|warning|tell.?tale).{0,30}signs?.{0,30}(your )?(dog|cat|pet)\b/i,
+  /\b(your )?(dog|cat|pet).{0,30}(is trying to tell you|may be (telling|signalling|showing|giving))\b/i,
+  /\bthings? your (dog|cat|pet) (does|is doing|wants you to know)\b/i,
+  /\bwhat your (dog|cat|pet).{0,30}(means?|is saying|is telling)\b/i,
 
   // ── Celebrity TV show no-show gossip ─────────────────────────────────────────
   // "Katie Price's husband pulls out of Good Morning Britain"
