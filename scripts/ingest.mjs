@@ -551,6 +551,19 @@ const JUNK_PATTERNS = [
   /^(Police|Cops?|Deputies|Authorities) (search|seek|look) (for|to identify).{0,60}(county|township|parish|borough|suburb|neighborhood|neighbourhood)\b/i,
   /\bremains? (found|identified|discovered) (in|near|at)\b/i,
 
+  // ── Evening Standard London lifestyle / food / entertainment bleed ───────────
+  // ES publishes real London news alongside restaurant reviews, food guides,
+  // kitchen gadget pieces, and celebrity-at-London-venue filler
+  /\bLondon (restaurants|chefs?|bars|cafes?|eats|food scene|foodie)\b/i,
+  /\b(chefs?|cooks?|restaurateurs?) (swear by|love|recommend|can't live without)\b/i,
+  /\b(kitchen|home|interiors?) (gadgets?|buys?|finds?|picks?|staples?).{0,30}(swear by|love|recommend|under £)\b/i,
+  // "Everything we know about X" — soft explainer filler (distinct from "everything you need to know")
+  /\beverything we know about\b/i,
+  // London property / rental market filler
+  /\b(average|typical|median) (rent|house price|property price).{0,30}(London|borough|zone \d)\b/i,
+  // "Premier League permutations" — speculative title decider pieces, not news
+  /\bpremier league permutations?\b/i,
+
   // ── The Telegraph lifestyle / culture bleed ───────────────────────────────────
   // Telegraph's culture/travel/food sections pull in via their main RSS
   /\b(best|top) (hotels?|restaurants?|beaches?|villages?|towns?|cities|destinations?) (in|for|to visit)\b/i,
@@ -694,9 +707,10 @@ function cleanTitle(title, outletName) {
 // Legitimate news headlines rarely exceed 120 chars — anything longer from
 // these outlets is almost always celebrity gossip, sex advice, or sponsored fluff.
 const OUTLET_MAX_TITLE_LENGTH = {
-  'Daily Mail':    110,  // tightened from 125 — DM's junk rate is 62%, cap aggressively
-  'The Sun':       100,  // tightened from 110
-  'The Telegraph': 115,  // lifestyle/culture section bleeds in with long descriptive titles
+  'Daily Mail':       110,  // tightened from 125 — DM's junk rate is 62%, cap aggressively
+  'The Sun':          100,  // tightened from 110
+  'The Telegraph':    115,  // lifestyle/culture section bleeds in with long descriptive titles
+  'Evening Standard': 110,  // London lifestyle/food/entertainment pieces tend to run long
 }
 
 // ── Per-outlet per-run article caps ──────────────────────────────────────────
@@ -712,7 +726,8 @@ const OUTLET_MAX_PER_RUN = {
   'New York Post': 4,   // ~299/day natural rate — cap at 4/run for even 24h spread (~192/day)
   'The Hindu':     3,   // burst publish pattern — cap at 3/run for even 24h spread (~144/day)
   'The Mirror':    4,   // UK tabloid, same profile as The Sun — cap for scoring budget
-  'Newsweek':      4,   // mix of real news and SEO/listicle filler — cap to reduce waste
+  'Newsweek':         4,   // mix of real news and SEO/listicle filler — cap to reduce waste
+  'Evening Standard': 3,   // London-local lifestyle filler bleeds in — aggressive cap to keep hard news only
 }
 
 function isTitleTooLong(title, outletName) {
