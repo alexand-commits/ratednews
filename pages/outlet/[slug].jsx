@@ -46,7 +46,7 @@ export default function OutletDetail({ outlet }) {
             '@context': 'https://schema.org',
             '@type':    'NewsMediaOrganization',
             name:        outlet.name,
-            description: outlet.description || `${outlet.name} is a news outlet tracked and rated by RatedNews for accuracy, political bias, and headline fairness.`,
+            description: outlet.description || `${outlet.name} is a news outlet tracked and rated by RatedNews for credibility, political bias, and headline fairness.`,
             url:         `https://www.ratednews.com/outlet/${canonicalSlug}`,
             ...(outlet.country === 'UK' && { areaServed: 'GB' }),
             ...(outlet.country === 'US' && { areaServed: 'US' }),

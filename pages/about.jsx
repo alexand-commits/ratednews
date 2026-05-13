@@ -9,10 +9,10 @@ export default function About() {
     <>
       <Head>
         <title>How It Works — RatedNews</title>
-        <meta name="description" content="Learn how RatedNews uses AI to score news articles for accuracy, bias direction, and headline fairness across 100+ outlets — updated every hour." />
+        <meta name="description" content="Learn how RatedNews uses AI to score news articles for credibility, bias direction, and headline fairness across 100+ outlets — updated every hour." />
         <link rel="canonical" href="https://www.ratednews.com/about" />
         <meta property="og:title"       content="How RatedNews Works — AI-Powered News Credibility Ratings" />
-        <meta property="og:description" content="Learn how RatedNews uses AI to score news articles for accuracy, bias direction, and headline fairness across 100+ outlets — updated every hour." />
+        <meta property="og:description" content="Learn how RatedNews uses AI to score news articles for credibility, bias direction, and headline fairness across 100+ outlets — updated every hour." />
         <meta property="og:url"         content="https://www.ratednews.com/about" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
@@ -32,12 +32,12 @@ export default function About() {
               {
                 '@type': 'Question',
                 name: 'What is RatedNews?',
-                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews is an AI-powered news rating platform that scores every article for factual accuracy, political bias direction, and headline fairness across 100+ UK, US and international news outlets.' },
+                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews is an AI-powered news rating platform that scores every article for credibility, political bias direction, and headline fairness across 100+ UK, US and international news outlets.' },
               },
               {
                 '@type': 'Question',
                 name: 'How does RatedNews score articles?',
-                acceptedAnswer: { '@type': 'Answer', text: 'Each article is analysed by an AI model that scores three dimensions: accuracy (0–100), bias direction (left/centre/right), and headline fairness. Scores are weighted — accuracy counts for 60%, bias for 25%, and headline fairness for 15%.' },
+                acceptedAnswer: { '@type': 'Answer', text: 'Each article is analysed by an AI model that scores three dimensions: credibility (0–100), bias direction (left/centre/right), and headline fairness. Scores are weighted — credibility counts for 60%, bias for 25%, and headline fairness for 15%.' },
               },
               {
                 '@type': 'Question',
@@ -52,7 +52,7 @@ export default function About() {
               {
                 '@type': 'Question',
                 name: 'Can I rate articles myself?',
-                acceptedAnswer: { '@type': 'Answer', text: 'Yes. Registered users can submit their own accuracy and bias ratings on any article, and leave comments. Community ratings are displayed alongside AI scores.' },
+                acceptedAnswer: { '@type': 'Answer', text: 'Yes. Registered users can submit their own credibility and bias ratings on any article, and leave comments. Community ratings are displayed alongside AI scores.' },
               },
             ],
           }) }}

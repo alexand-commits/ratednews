@@ -28,11 +28,11 @@ export default function Trending({ articles, generatedAt }) {
   return (
     <>
       <Head>
-        <title>Trending News — Accuracy &amp; Bias Rated | RatedNews</title>
-        <meta name="description" content="The most discussed news stories right now, ranked by reader activity. Every article rated for accuracy and political bias." />
+        <title>Trending News — Credibility &amp; Bias Rated | RatedNews</title>
+        <meta name="description" content="The most discussed news stories right now, ranked by reader activity. Every article rated for credibility and political bias." />
         <link rel="canonical" href="https://www.ratednews.com/trending" />
-        <meta property="og:title"       content="Trending News — Accuracy & Bias Rated | RatedNews" />
-        <meta property="og:description" content="The most discussed news stories right now, ranked by reader activity. Every article rated for accuracy and political bias." />
+        <meta property="og:title"       content="Trending News — Credibility & Bias Rated | RatedNews" />
+        <meta property="og:description" content="The most discussed news stories right now, ranked by reader activity. Every article rated for credibility and political bias." />
         <meta property="og:url"         content="https://www.ratednews.com/trending" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
@@ -40,8 +40,8 @@ export default function Trending({ articles, generatedAt }) {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
-        <meta name="twitter:title"      content="Trending News — Accuracy & Bias Rated | RatedNews" />
-        <meta name="twitter:description" content="The most discussed news stories right now, ranked by reader activity. Every article rated for accuracy and political bias." />
+        <meta name="twitter:title"      content="Trending News — Credibility & Bias Rated | RatedNews" />
+        <meta name="twitter:description" content="The most discussed news stories right now, ranked by reader activity. Every article rated for credibility and political bias." />
         <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
         {itemListLd && (
           <script
