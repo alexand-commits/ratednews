@@ -50,14 +50,15 @@ export default function Feed({ initialArticles, initialCount }) {
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
       db.from('articles').select('*', { count: 'exact', head: true }),
-      // Dedicated 24h fetch for trending — capped at 100 rows.
-      // FeedPage only needs enough articles to surface trending topics; 100 covers
-      // all real clusters without fetching hundreds of full rows on every visit.
+      // Dedicated 24h fetch for trending — only the two fields the algorithm uses.
+      // trendingTopics slices to 300 and needs ≥4 mentions across ≥2 outlets to
+      // surface a topic, so 300 rows is the right sample size. Fetching only
+      // title + outlet_id keeps egress ~10× lower than the original select('*').
       db.from('articles')
-        .select(ARTICLE_SELECT)
+        .select('title, outlet_id')
         .gte('published_at', cutoff)
         .order('published_at', { ascending: false })
-        .limit(100),
+        .limit(300),
     ]).then(([{ data }, { count }, { data: recent }]) => {
       setArticles(data || [])
       setTotalCount(count || 0)
