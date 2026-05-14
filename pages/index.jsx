@@ -59,13 +59,13 @@ export default function Feed({ initialArticles, initialCount }) {
         .order('published_at', { ascending: false })
         .limit(150),
       // Minimal 24h fetch for trending topic computation only.
-      // trendingTopics needs ≥4 mentions across ≥2 outlets from a 300-row sample.
-      // Only title + outlet_id are read by the algorithm — no display columns needed.
+      // title + outlet_id is ~100 bytes/row, so 1000 rows ≈ 100KB — negligible egress.
+      // A higher ceiling means topics that spiked earlier in the day still surface.
       db.from('articles')
         .select('title, outlet_id')
         .gte('published_at', cutoff)
         .order('published_at', { ascending: false })
-        .limit(300),
+        .limit(1000),
     ]).then(([{ data }, { count }, { data: recent }, { data: topicsSrc }]) => {
       setArticles(data || [])
       setTotalCount(count || 0)

@@ -529,8 +529,8 @@ export default function FeedPage({
     const singleOutlets = {}  // single key → Set of outlet_ids
     const displayForm  = {}
 
-    // topicsSource: 300-row minimal set (title+outlet_id) dedicated to this computation
-    for (const article of topicsSource.slice(0, 300)) {
+    // topicsSource: up to 1000 rows, title+outlet_id only — full 24h window
+    for (const article of topicsSource.slice(0, 1000)) {
       const title = (article.title || '').trim()
       if (!title) continue
       const rawWords = title.split(/\s+/)
