@@ -96,44 +96,50 @@ function Shell({ children }) {
 // ── Article ───────────────────────────────────────────────────────────────────
 function ArticleCard({ title: raw, score, bias, outlet }) {
   const full  = raw || 'RatedNews'
-  const title = full.length > 88 ? full.slice(0, 85) + '…' : full
+  const title = full.length > 100 ? full.slice(0, 97) + '…' : full
   const sc    = Number(score) || 0
   const has   = sc > 0
   const rgb   = has ? scoreRgb(sc) : null
   const info  = biasInfo(bias)
-  const fs    = title.length > 80 ? 32 : title.length > 60 ? 38 : title.length > 40 ? 44 : 52
+  // Larger base sizes — card is 1200×630, there's room to be bold
+  const fs    = title.length > 80 ? 38 : title.length > 60 ? 46 : title.length > 40 ? 54 : 62
 
   return (
     <Shell>
-      <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', flex: 1, padding: '48px 60px' }}>
-        {/* Logo row */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Logo size={38} />
-          {outlet ? <span style={{ color: TEXT3, fontSize: 16, fontFamily: SF }}>{outlet}</span> : null}
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '44px 64px 40px' }}>
+        {/* Logo + outlet row */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 36 }}>
+          <Logo size={36} />
+          {outlet
+            ? <span style={{ color: TEXT3, fontSize: 15, fontFamily: SF, letterSpacing: '0.04em' }}>{outlet}</span>
+            : null}
         </div>
-        {/* Headline block */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-          {has && (
-            <div style={{ display: 'flex', gap: 10 }}>
-              <div style={{ display: 'flex', padding: '5px 16px', borderRadius: 7, background: `rgba(${rgb},0.13)`, border: `1.5px solid rgba(${rgb},0.38)` }}>
-                <span style={{ color: scoreColor(sc), fontSize: 14, fontWeight: 700, fontFamily: SF, letterSpacing: '0.06em' }}>CREDIBILITY {sc}/100</span>
-              </div>
-              {info && (
-                <div style={{ display: 'flex', padding: '5px 16px', borderRadius: 7, background: `rgba(${info.rgb},0.13)`, border: `1.5px solid rgba(${info.rgb},0.38)` }}>
-                  <span style={{ color: info.color, fontSize: 14, fontWeight: 700, fontFamily: SF, letterSpacing: '0.06em' }}>{info.label.toUpperCase()}</span>
-                </div>
-              )}
+        {/* Badges */}
+        {has && (
+          <div style={{ display: 'flex', gap: 10, marginBottom: 22 }}>
+            <div style={{ display: 'flex', padding: '6px 18px', borderRadius: 8, background: `rgba(${rgb},0.15)`, border: `1.5px solid rgba(${rgb},0.40)` }}>
+              <span style={{ color: scoreColor(sc), fontSize: 15, fontWeight: 700, fontFamily: SF, letterSpacing: '0.07em' }}>CREDIBILITY {sc}/100</span>
             </div>
-          )}
-          <div style={{ color: TEXT1, fontFamily: SE, fontSize: fs, fontWeight: 700, lineHeight: 1.25, display: 'flex' }}>
+            {info && (
+              <div style={{ display: 'flex', padding: '6px 18px', borderRadius: 8, background: `rgba(${info.rgb},0.13)`, border: `1.5px solid rgba(${info.rgb},0.38)` }}>
+                <span style={{ color: info.color, fontSize: 15, fontWeight: 700, fontFamily: SF, letterSpacing: '0.07em' }}>{info.label.toUpperCase()}</span>
+              </div>
+            )}
+          </div>
+        )}
+        {/* Headline — grows to fill available space */}
+        <div style={{ display: 'flex', flex: 1, alignItems: 'flex-start' }}>
+          <div style={{ color: TEXT1, fontFamily: SE, fontSize: fs, fontWeight: 700, lineHeight: 1.22, display: 'flex' }}>
             {title}
           </div>
-          {has && <Bar value={sc} color={scoreColor(sc)} height={4} />}
         </div>
-        {/* Footer */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ color: TEXT4, fontSize: 15, fontFamily: SF }}>ratednews.com</span>
-          <span style={{ color: TEXT3, fontSize: 13, fontFamily: SF }}>AI-powered credibility rating</span>
+        {/* Score bar + footer */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 18, marginTop: 28 }}>
+          {has && <Bar value={sc} color={scoreColor(sc)} height={5} />}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ color: TEXT4, fontSize: 14, fontFamily: SF }}>ratednews.com</span>
+            <span style={{ color: TEXT3, fontSize: 13, fontFamily: SF }}>AI-powered credibility rating</span>
+          </div>
         </div>
       </div>
     </Shell>
