@@ -229,7 +229,7 @@ export async function getStaticPaths() {
     paths: (articles || []).map(a => ({
       params: { id: articleSlug(a.title, a.id) },
     })),
-    fallback: true, // show skeleton immediately — no blank wait for new articles
+    fallback: 'blocking', // server-render on first hit — prevents Google indexing skeleton (no canonical)
   }
 }
 
@@ -271,6 +271,16 @@ export async function getStaticProps({ params }) {
     .single()
 
   if (!article) return { notFound: true }
+
+  // ── Canonical slug drift guard ────────────────────────────────────────────
+  // The ingest script sometimes updates article titles after first publish
+  // (e.g. filling in a complete headline). If that happened, the URL slug no
+  // longer matches the current canonical. Redirect so Google sees a single
+  // authoritative URL and never marks this page as "Alternative with canonical".
+  const canonical = articleSlug(article.title, article.id)
+  if (slug !== canonical) {
+    return { redirect: { destination: `/article/${canonical}`, permanent: true } }
+  }
 
   return { props: { article }, revalidate: 3600 }
 }
