@@ -507,6 +507,18 @@ export default function FeedPage({
     'strahan','robach','nawaz',
   ]), [])
 
+  // Words that are generic adjectives in isolation but act as place-name prefixes
+  // when capitalized and followed by a proper noun (e.g. "New York", "North Korea",
+  // "West Bank", "Great Britain", "San Francisco", "Fort Worth", "Mount Everest").
+  // These are in COMMON_WORDS (so standalone "new/old/north/south" don't surface)
+  // but should NOT block phrase building when they appear capitalised mid-title.
+  const PLACE_PREFIXES = new Set([
+    'new','old','north','south','east','west','central',
+    'great','grand','upper','lower','inner','outer',
+    'san','los','las','el','la','port','fort','mount','lake','cape',
+    'saint','santa','sri','abu','al',
+  ])
+
   // Stop-words allowed to sit *inside* a phrase but not start/end one
   const PHRASE_CONNECTORS = new Set(['of','the','and','in','on','at','to','for','by','with','from','over','into','as','a'])
 
@@ -551,12 +563,16 @@ export default function FeedPage({
         if (!clean) { flushBuffer(); return }
         const isAcronym    = /^[A-Z]{2,6}$/.test(clean)
         const key0         = clean.toLowerCase()
-        // Allow idx === 0 too — "Trump", "Ukraine" etc. often lead headlines
-        // Guard via COMMON_WORDS and PHRASE_CONNECTORS so "The", "In", "And" etc. are excluded
-        const isProperNoun = /^[A-Z][a-z]{1,}$/.test(clean) && !COMMON_WORDS.has(key0) && !PHRASE_CONNECTORS.has(key0)
-        const isConnector  = PHRASE_CONNECTORS.has(key0)
-        if (isAcronym || isProperNoun) {
-          buffer.push({ word: isAcronym ? clean : clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase(), key: clean.toLowerCase() })
+        // A word is a proper noun if it starts with a capital letter AND is not a
+        // common stop-word. Exception: capitalised PLACE_PREFIXES (New, North, San…)
+        // are allowed into the buffer so "New York", "North Korea" etc. form correctly.
+        // The flushBuffer check still rejects any phrase where a COMMON_WORDS term
+        // is a non-connector, so "New deal" or "North facing" won't surface.
+        const isPlacePrefix = /^[A-Z][a-z]+$/.test(clean) && PLACE_PREFIXES.has(key0)
+        const isProperNoun  = /^[A-Z][a-z]{1,}$/.test(clean) && !COMMON_WORDS.has(key0) && !PHRASE_CONNECTORS.has(key0)
+        const isConnector   = PHRASE_CONNECTORS.has(key0)
+        if (isAcronym || isProperNoun || isPlacePrefix) {
+          buffer.push({ word: isAcronym ? clean : clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase(), key: key0 })
         } else if (isConnector && buffer.length > 0) {
           buffer.push({ word: clean.toLowerCase(), key: clean.toLowerCase() })
         } else {
@@ -615,7 +631,7 @@ export default function FeedPage({
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12)
       .map(([key]) => displayForm[key] || key.charAt(0).toUpperCase() + key.slice(1))
-  }, [topicsSource, COMMON_WORDS, MEDIA_ACRONYMS, BLOCKED_ANCHOR_PHRASES, ANCHOR_LAST_NAMES])
+  }, [topicsSource, COMMON_WORDS, PLACE_PREFIXES, MEDIA_ACRONYMS, BLOCKED_ANCHOR_PHRASES, ANCHOR_LAST_NAMES])
 
   // Topic insights — count uses topicsSource (300 rows) for accurate frequency
   const topicInsights = useMemo(() => {
