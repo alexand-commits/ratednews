@@ -133,9 +133,9 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
     setArticlesLoading(true)
     setBestArticles([])
 
-    // Articles
+    // Articles — explicit columns to avoid fetching unused/large fields
     db.from('articles')
-      .select('*')
+      .select('id, title, published_at, outlet_id, accuracy_score, bias_direction, headline_vote, category, ai_summary, summary, url, image_url')
       .eq('outlet_id', outletId)
       .order('published_at', { ascending: false })
       .limit(25)

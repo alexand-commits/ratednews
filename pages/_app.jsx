@@ -100,7 +100,10 @@ export default function App({ Component, pageProps }) {
       }
     } catch (e) {}
 
-    db.from('outlets').select('*').order('overall_score', { ascending: false })
+    // Explicit column list — avoids fetching any future large columns automatically.
+    // Includes all fields used across FeedPage, OutletPage, and NewsCard.
+    const OUTLET_SELECT = 'id, name, country, overall_score, accuracy_score, bias_score, bias_direction, logo_url, type, description, website_url, rss_url, community_score, total_ratings, fair_rate, misleading_rate, clickbait_rate, article_count_30d'
+    db.from('outlets').select(OUTLET_SELECT).order('overall_score', { ascending: false })
       .then(({ data }) => {
         const outlets = data || []
         setAllOutlets(outlets)
@@ -110,7 +113,8 @@ export default function App({ Component, pageProps }) {
   }, [])
 
   async function refreshOutlets() {
-    const { data } = await db.from('outlets').select('*').order('overall_score', { ascending: false })
+    const OUTLET_SELECT = 'id, name, country, overall_score, accuracy_score, bias_score, bias_direction, logo_url, type, description, website_url, rss_url, community_score, total_ratings, fair_rate, misleading_rate, clickbait_rate, article_count_30d'
+    const { data } = await db.from('outlets').select(OUTLET_SELECT).order('overall_score', { ascending: false })
     if (data) {
       setAllOutlets(data)
       try { sessionStorage.setItem('rn_outlets_cache', JSON.stringify({ data, ts: Date.now() })) } catch (e) {}

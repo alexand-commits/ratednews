@@ -7,6 +7,20 @@ import { useAppContext } from './_app'
 
 const BATCH = 50
 
+// Minimal column list — avoids fetching large/unused columns on every page load.
+// 'summary' kept as fallback for cards without ai_summary and for client-side search.
+// Add columns here explicitly rather than using select('*') so future DB additions
+// don't silently inflate egress.
+const ARTICLE_SELECT = [
+  'id', 'title', 'published_at', 'outlet_id',
+  'accuracy_score', 'bias_score', 'bias_direction', 'headline_vote',
+  'category', 'geographic_scope', 'article_region',
+  'ai_summary', 'summary', 'url', 'image_url',
+  'total_ratings', 'community_score', 'cluster_peers',
+  'outlets(name, country, bias_direction, logo_url, accuracy_score)',
+  'comments(count)',
+].join(', ')
+
 export default function Feed({ initialArticles, initialCount }) {
   const router  = useRouter()
   const { navigate, allOutlets, user, followedOutletIds, savedArticleIds,
@@ -32,18 +46,18 @@ export default function Feed({ initialArticles, initialCount }) {
     Promise.all([
       // Main paginated feed
       db.from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+        .select(ARTICLE_SELECT)
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
       db.from('articles').select('*', { count: 'exact', head: true }),
-      // Dedicated 24h fetch for trending — capped at 300 rows.
-      // Previously had no limit, causing 4000+ full rows to be fetched on every
-      // page load (~8MB/visit). FeedPage.trendingTopics slices to 300 anyway.
+      // Dedicated 24h fetch for trending — capped at 100 rows.
+      // FeedPage only needs enough articles to surface trending topics; 100 covers
+      // all real clusters without fetching hundreds of full rows on every visit.
       db.from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+        .select(ARTICLE_SELECT)
         .gte('published_at', cutoff)
         .order('published_at', { ascending: false })
-        .limit(300),
+        .limit(100),
     ]).then(([{ data }, { count }, { data: recent }]) => {
       setArticles(data || [])
       setTotalCount(count || 0)
@@ -58,7 +72,7 @@ export default function Feed({ initialArticles, initialCount }) {
     if (loadingMore || !hasMore) return
     setLoadingMore(true)
     const { data } = await db.from('articles')
-      .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+      .select(ARTICLE_SELECT)
       .order('published_at', { ascending: false })
       .range(offset, offset + BATCH - 1)
     if (data?.length) {
@@ -74,7 +88,7 @@ export default function Feed({ initialArticles, initialCount }) {
   async function refresh() {
     const [{ data }, { count }] = await Promise.all([
       db.from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+        .select(ARTICLE_SELECT)
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
       db.from('articles').select('*', { count: 'exact', head: true }),
@@ -154,9 +168,10 @@ export async function getStaticProps() {
       process.env.VITE_SUPABASE_URL,
       process.env.VITE_SUPABASE_ANON_KEY,
     )
+    const SSR_SELECT = ARTICLE_SELECT // same minimal columns at build time
     const [{ data: articles }, { count }] = await Promise.all([
       supabase.from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+        .select(SSR_SELECT)
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
       supabase.from('articles').select('*', { count: 'exact', head: true }),

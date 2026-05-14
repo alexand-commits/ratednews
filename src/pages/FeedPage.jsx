@@ -217,7 +217,7 @@ export default function FeedPage({
       if (!escaped) { setDbResults([]); setDbLoading(false); return }
       const { data } = await db
         .from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+        .select('id, title, published_at, outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
         .or(`title.ilike.%${escaped}%,ai_summary.ilike.%${escaped}%,summary.ilike.%${escaped}%`)
         .order('published_at', { ascending: false })
         .limit(50)
@@ -255,7 +255,7 @@ export default function FeedPage({
     setFollowingLoading(true)
     const ids = [...followedOutletIds]
     db.from('articles')
-      .select('*, outlets(name, logo_url, country, bias_direction, accuracy_score), comments(count)')
+      .select('id, title, published_at, outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, logo_url, country, bias_direction, accuracy_score), comments(count)')
       .in('outlet_id', ids)
       .order('published_at', { ascending: false })
       .limit(100)

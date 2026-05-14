@@ -7,6 +7,16 @@ import { articleSlug } from '../../src/utils/helpers'
 
 const BATCH = 50
 
+const ARTICLE_SELECT = [
+  'id', 'title', 'published_at', 'outlet_id',
+  'accuracy_score', 'bias_score', 'bias_direction', 'headline_vote',
+  'category', 'geographic_scope', 'article_region',
+  'ai_summary', 'summary', 'url', 'image_url',
+  'total_ratings', 'community_score', 'cluster_peers',
+  'outlets(name, country, bias_direction, logo_url, accuracy_score)',
+  'comments(count)',
+].join(', ')
+
 export const CATEGORY_META = [
   {
     value: 'Politics', slug: 'politics', emoji: '🏛',
@@ -92,7 +102,7 @@ export default function CategoryLanding({ slug, initialArticles, initialCount, c
     setLoading(true)
     Promise.all([
       db.from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+        .select(ARTICLE_SELECT)
         .eq('category', categoryMeta.value)
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
@@ -110,7 +120,7 @@ export default function CategoryLanding({ slug, initialArticles, initialCount, c
     if (loadingMore || !hasMore) return
     setLoadingMore(true)
     const { data } = await db.from('articles')
-      .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+      .select(ARTICLE_SELECT)
       .eq('category', categoryMeta.value)
       .order('published_at', { ascending: false })
       .range(offset, offset + BATCH - 1)
@@ -127,7 +137,7 @@ export default function CategoryLanding({ slug, initialArticles, initialCount, c
   async function refresh() {
     const [{ data }, { count }] = await Promise.all([
       db.from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+        .select(ARTICLE_SELECT)
         .eq('category', categoryMeta.value)
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
@@ -238,7 +248,7 @@ export async function getStaticProps({ params }) {
     )
     const [{ data: articles }, { count }] = await Promise.all([
       supabase.from('articles')
-        .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+        .select(ARTICLE_SELECT)
         .eq('category', cat.value)
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
