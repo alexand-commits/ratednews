@@ -14,7 +14,6 @@
 import { ImageResponse } from 'next/og'
 
 export const runtime = 'edge'
-export const config  = { api: { bodyParser: false } }
 
 const W = 1200
 const H = 630
@@ -63,7 +62,8 @@ function Bar({ value, color, height = 8 }) {
   const pct = Math.min(100, Math.max(0, Number(value) || 0))
   return (
     <div style={{ display: 'flex', width: '100%', height, borderRadius: height, background: 'rgba(255,255,255,0.09)' }}>
-      <div style={{ display: 'flex', width: `${pct}%`, height: '100%', borderRadius: height, background: color }} />
+      {/* alignSelf:stretch fills parent height — more reliable than height:'100%' in satori */}
+      <div style={{ display: 'flex', width: `${pct}%`, alignSelf: 'stretch', borderRadius: height, background: color }} />
     </div>
   )
 }
@@ -188,11 +188,11 @@ function OutletCard({ outlet, score, bias, fair, misleading, clickbait, stars, a
                   {cbPct   > 0 && <span style={{ color: '#C0392B', fontSize: 13, fontFamily: SF }}>✗ {cbPct}%</span>}
                 </div>
               </div>
-              <div style={{ display: 'flex', width: '100%', height: 9, borderRadius: 9, overflow: 'hidden' }}>
-                {fairPct > 0 && <div style={{ display: 'flex', width: `${fairPct}%`, height: '100%', background: '#639922' }} />}
-                {missPct > 0 && <div style={{ display: 'flex', width: `${missPct}%`, height: '100%', background: '#C8930A' }} />}
-                {cbPct   > 0 && <div style={{ display: 'flex', width: `${cbPct}%`,   height: '100%', background: '#C0392B' }} />}
-                <div style={{ display: 'flex', flex: 1, height: '100%', background: 'rgba(255,255,255,0.09)' }} />
+              <div style={{ display: 'flex', width: '100%', height: 9, borderRadius: 9 }}>
+                {fairPct > 0 && <div style={{ display: 'flex', width: `${fairPct}%`, alignSelf: 'stretch', background: '#639922' }} />}
+                {missPct > 0 && <div style={{ display: 'flex', width: `${missPct}%`, alignSelf: 'stretch', background: '#C8930A' }} />}
+                {cbPct   > 0 && <div style={{ display: 'flex', width: `${cbPct}%`,   alignSelf: 'stretch', background: '#C0392B' }} />}
+                <div style={{ display: 'flex', flex: 1, alignSelf: 'stretch', background: 'rgba(255,255,255,0.09)' }} />
               </div>
             </div>
           )}
@@ -316,7 +316,7 @@ function LeaderboardCard({ title, items }) {
                 <span style={{ color: top ? CORAL : TEXT3, fontSize: 14, fontWeight: 800, fontFamily: SF, width: 20, textAlign: 'right', flexShrink: 0 }}>{i + 1}</span>
                 <span style={{ color: top ? TEXT1 : TEXT2, fontSize: 16, fontWeight: top ? 700 : 500, fontFamily: SF, width: 200, flexShrink: 0 }}>{(row.name || '').slice(0, 22)}</span>
                 <div style={{ display: 'flex', flex: 1, height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 6 }}>
-                  <div style={{ display: 'flex', width: `${barW}%`, height: '100%', background: sc > 0 ? scoreColor(sc) : 'transparent', borderRadius: 6 }} />
+                  <div style={{ display: 'flex', width: `${barW}%`, alignSelf: 'stretch', background: sc > 0 ? scoreColor(sc) : 'transparent', borderRadius: 6 }} />
                 </div>
                 <span style={{ color: sc > 0 ? scoreColor(sc) : TEXT3, fontSize: 17, fontWeight: 800, fontFamily: SF, width: 36, textAlign: 'right', flexShrink: 0 }}>{sc > 0 ? sc : '—'}</span>
                 <span style={{ color: info ? info.color : 'transparent', fontSize: 12, fontFamily: SF, fontWeight: 600, width: 80, flexShrink: 0 }}>{info ? info.label : ''}</span>
@@ -331,39 +331,44 @@ function LeaderboardCard({ title, items }) {
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 export default function handler(req) {
-  const { searchParams } = new URL(req.url)
-  const type = searchParams.get('type') || 'article'
-  const opts = {
-    width: W, height: H,
-    headers: { 'Cache-Control': 'public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800' },
-  }
+  try {
+    const { searchParams } = new URL(req.url)
+    const type = searchParams.get('type') || 'article'
+    const opts = { width: W, height: H }
 
-  if (type === 'outlet') {
-    return new ImageResponse(<OutletCard
+    if (type === 'outlet') {
+      return new ImageResponse(<OutletCard
+        outlet={searchParams.get('outlet') || ''}
+        score={searchParams.get('score')}   bias={searchParams.get('bias')}
+        fair={searchParams.get('fair')}     misleading={searchParams.get('misleading')}
+        clickbait={searchParams.get('clickbait')} stars={searchParams.get('stars')}
+        articles={searchParams.get('articles')}
+      />, opts)
+    }
+    if (type === 'compare') {
+      return new ImageResponse(<CompareCard
+        aOutlet={searchParams.get('a_outlet') || ''} aScore={searchParams.get('a_score')}
+        aBias={searchParams.get('a_bias')}            aHead={searchParams.get('a_head') || ''}
+        bOutlet={searchParams.get('b_outlet') || ''} bScore={searchParams.get('b_score')}
+        bBias={searchParams.get('b_bias')}            bHead={searchParams.get('b_head') || ''}
+        caption={searchParams.get('caption') || ''}
+      />, opts)
+    }
+    if (type === 'leaderboard') {
+      let items = []
+      try { items = JSON.parse(searchParams.get('items') || '[]') } catch (_) {}
+      return new ImageResponse(<LeaderboardCard title={searchParams.get('title') || 'Outlet Rankings'} items={items} />, opts)
+    }
+    return new ImageResponse(<ArticleCard
+      title={searchParams.get('title') || ''}
+      score={searchParams.get('score')} bias={searchParams.get('bias')}
       outlet={searchParams.get('outlet') || ''}
-      score={searchParams.get('score')}   bias={searchParams.get('bias')}
-      fair={searchParams.get('fair')}     misleading={searchParams.get('misleading')}
-      clickbait={searchParams.get('clickbait')} stars={searchParams.get('stars')}
-      articles={searchParams.get('articles')}
     />, opts)
+  } catch (err) {
+    // Return a plain-text error in dev so we can see what broke
+    return new Response(`OG render error: ${err?.message || err}`, {
+      status: 500,
+      headers: { 'Content-Type': 'text/plain' },
+    })
   }
-  if (type === 'compare') {
-    return new ImageResponse(<CompareCard
-      aOutlet={searchParams.get('a_outlet') || ''} aScore={searchParams.get('a_score')}
-      aBias={searchParams.get('a_bias')}            aHead={searchParams.get('a_head') || ''}
-      bOutlet={searchParams.get('b_outlet') || ''} bScore={searchParams.get('b_score')}
-      bBias={searchParams.get('b_bias')}            bHead={searchParams.get('b_head') || ''}
-      caption={searchParams.get('caption') || ''}
-    />, opts)
-  }
-  if (type === 'leaderboard') {
-    let items = []
-    try { items = JSON.parse(searchParams.get('items') || '[]') } catch (_) {}
-    return new ImageResponse(<LeaderboardCard title={searchParams.get('title') || 'Outlet Rankings'} items={items} />, opts)
-  }
-  return new ImageResponse(<ArticleCard
-    title={searchParams.get('title') || ''}
-    score={searchParams.get('score')} bias={searchParams.get('bias')}
-    outlet={searchParams.get('outlet') || ''}
-  />, opts)
 }
