@@ -544,9 +544,11 @@ export default function FeedPage({
         // Trim leading connectors
         while (buffer.length && PHRASE_CONNECTORS.has(buffer[0].key)) buffer.shift()
         if (buffer.length < 2) { buffer = []; return }
-        // Reject if any anchor word is a blocked media term
+        // Reject phrases containing a COMMON_WORDS token (e.g. "Major Plans", "Latest Deal"),
+        // UNLESS that token is a PLACE_PREFIX — "New York", "North Korea", "San Francisco"
+        // are valid phrases even though "new/north/san" are common words.
         const nonConnectors = buffer.filter(t => !PHRASE_CONNECTORS.has(t.key))
-        if (nonConnectors.some(t => COMMON_WORDS.has(t.key) || MEDIA_ACRONYMS.has(t.key))) {
+        if (nonConnectors.some(t => (COMMON_WORDS.has(t.key) && !PLACE_PREFIXES.has(t.key)) || MEDIA_ACRONYMS.has(t.key))) {
           buffer = []; return
         }
         const phrase    = buffer.map(t => t.word).join(' ')
