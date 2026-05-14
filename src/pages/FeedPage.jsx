@@ -77,13 +77,17 @@ function getArticleRegion(article) {
 }
 
 export default function FeedPage({
-  articles, trendingArticles = [], outlets, loading, navigate,
+  articles, trendingArticles = [], trendingTopicsSource,
+  outlets, loading, navigate,
   initialCategory = 'all', initialRegion = 'all',
   initialTopic = null, initialTab = 'all',
   totalArticleCount, user, followedOutletIds = new Set(),
   onLoginClick, loadMoreArticles, hasMoreArticles, loadingMore,
   savedArticleIds = new Set(), toggleSave, onRefresh,
 }) {
+  // trendingTopicsSource: 300 minimal rows (title+outlet_id) for topic computation.
+  // Falls back to trendingArticles so categories page still works without the prop.
+  const topicsSource = trendingTopicsSource || trendingArticles
   const [category, setCategory] = useState(initialCategory)
   const [region, setRegion]     = useState(initialRegion)
   const [minScore, setMinScore] = useState(0)
@@ -513,8 +517,8 @@ export default function FeedPage({
     const singleOutlets = {}  // single key → Set of outlet_ids
     const displayForm  = {}
 
-    // trendingArticles is already scoped to 24h by the dedicated fetch in index.jsx
-    for (const article of trendingArticles.slice(0, 300)) {
+    // topicsSource: 300-row minimal set (title+outlet_id) dedicated to this computation
+    for (const article of topicsSource.slice(0, 300)) {
       const title = (article.title || '').trim()
       if (!title) continue
       const rawWords = title.split(/\s+/)
@@ -611,21 +615,21 @@ export default function FeedPage({
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12)
       .map(([key]) => displayForm[key] || key.charAt(0).toUpperCase() + key.slice(1))
-  }, [trendingArticles, COMMON_WORDS, MEDIA_ACRONYMS, BLOCKED_ANCHOR_PHRASES, ANCHOR_LAST_NAMES])
+  }, [topicsSource, COMMON_WORDS, MEDIA_ACRONYMS, BLOCKED_ANCHOR_PHRASES, ANCHOR_LAST_NAMES])
 
-  // Topic insights — just need count for ordering/filtering, no accuracy computation
+  // Topic insights — count uses topicsSource (300 rows) for accurate frequency
   const topicInsights = useMemo(() => {
     if (!trendingTopics.length) return []
     return trendingTopics.slice(0, 8).map(topic => {
       const key = topic.toLowerCase()
-      const count = trendingArticles.filter(a =>
+      const count = topicsSource.filter(a =>
         (a.title || '').toLowerCase().includes(key)
       ).length
       return { topic, count }
     })
     .filter(t => t.count >= 2)
     .sort((a, b) => b.count - a.count)
-  }, [trendingTopics, trendingArticles])
+  }, [trendingTopics, topicsSource])
 
   // Which list to display — DB results when search active, interleaved otherwise
   const isSearchActive = dbResults !== null

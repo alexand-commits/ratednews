@@ -32,7 +32,8 @@ export default function Feed({ initialArticles, initialCount }) {
   const [offset,           setOffset]           = useState(initialArticles.length)
   const [hasMore,          setHasMore]          = useState(initialArticles.length === BATCH)
   const [loadingMore,      setLoadingMore]      = useState(false)
-  const [trendingArticles, setTrendingArticles] = useState([])
+  const [trendingArticles,     setTrendingArticles]     = useState([]) // full data — for card rendering under topics
+  const [trendingTopicsSource, setTrendingTopicsSource] = useState([]) // title+outlet_id only — for topic computation
 
   // Always fetch fresh articles on mount — ISR data can be up to 5 min stale.
   // If ISR returned data, show it immediately and silently swap in fresh results.
@@ -50,21 +51,28 @@ export default function Feed({ initialArticles, initialCount }) {
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
       db.from('articles').select('*', { count: 'exact', head: true }),
-      // Dedicated 24h fetch for trending — only the two fields the algorithm uses.
-      // trendingTopics slices to 300 and needs ≥4 mentions across ≥2 outlets to
-      // surface a topic, so 300 rows is the right sample size. Fetching only
-      // title + outlet_id keeps egress ~10× lower than the original select('*').
+      // Full-data 24h articles for card rendering when a trending topic is active.
+      // 150 rows with all display columns — enough to fill any topic's article list.
+      db.from('articles')
+        .select(ARTICLE_SELECT)
+        .gte('published_at', cutoff)
+        .order('published_at', { ascending: false })
+        .limit(150),
+      // Minimal 24h fetch for trending topic computation only.
+      // trendingTopics needs ≥4 mentions across ≥2 outlets from a 300-row sample.
+      // Only title + outlet_id are read by the algorithm — no display columns needed.
       db.from('articles')
         .select('title, outlet_id')
         .gte('published_at', cutoff)
         .order('published_at', { ascending: false })
         .limit(300),
-    ]).then(([{ data }, { count }, { data: recent }]) => {
+    ]).then(([{ data }, { count }, { data: recent }, { data: topicsSrc }]) => {
       setArticles(data || [])
       setTotalCount(count || 0)
       setOffset(BATCH)
       setHasMore((data || []).length === BATCH)
       setTrendingArticles(recent || [])
+      setTrendingTopicsSource(topicsSrc || [])
       if (!hasCached) setLoading(false)
     })
   }, [])
@@ -139,6 +147,7 @@ export default function Feed({ initialArticles, initialCount }) {
       <FeedPage
         articles={articles}
         trendingArticles={trendingArticles}
+        trendingTopicsSource={trendingTopicsSource}
         outlets={allOutlets}
         loading={loading}
         navigate={navigate}
