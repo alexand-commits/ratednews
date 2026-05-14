@@ -102,9 +102,11 @@ export default function FeedPage({
   const [followingLoading, setFollowingLoading]   = useState(false)
 
   // DB search state
-  const [dbResults, setDbResults]   = useState(null)   // null = search not active
-  const [dbLoading, setDbLoading]   = useState(false)
-  const [activeTopic, setActiveTopic] = useState(initialTopic) // trending topic filter
+  const [dbResults, setDbResults]       = useState(null)   // null = search not active
+  const [dbLoading, setDbLoading]       = useState(false)
+  const [activeTopic, setActiveTopic]   = useState(initialTopic) // trending topic filter
+  const [topicArticles, setTopicArticles] = useState([])    // live query results for active topic
+  const [topicLoading, setTopicLoading]   = useState(false)
   const searchTimer                 = useRef(null)
   const searchInputRef              = useRef(null)
 
@@ -119,6 +121,26 @@ export default function FeedPage({
       window.history.replaceState({ ...window.history.state }, '', window.location.pathname + newSearch)
     }
   }, [activeTopic, feedTab])
+
+  // Live query when a trending topic is selected — searches the full 24h window
+  // so topics like "Strait of Hormuz" that spiked earlier in the day still show articles.
+  useEffect(() => {
+    if (!activeTopic) { setTopicArticles([]); return }
+    setTopicLoading(true)
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    // Escape LIKE metacharacters and PostgREST syntax chars
+    const escaped = activeTopic.replace(/[%_\\]/g, '\\$&').replace(/[,()\.:]/g, ' ').trim()
+    db.from('articles')
+      .select('id, title, published_at, outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+      .ilike('title', `%${escaped}%`)
+      .gte('published_at', cutoff)
+      .order('published_at', { ascending: false })
+      .limit(30)
+      .then(({ data }) => {
+        setTopicArticles(data || [])
+        setTopicLoading(false)
+      })
+  }, [activeTopic])
 
   // Search history (localStorage-persisted)
   const [searchHistory, setSearchHistory] = useState(() => {
@@ -654,11 +676,7 @@ export default function FeedPage({
   const baseList = isSearchActive
     ? (minScore > 0 ? (dbResults || []).filter(a => (a.accuracy_score || 0) >= minScore) : dbResults)
     : interleaved
-  const displayList = activeTopic
-    ? trendingArticles.filter(a =>
-        (a.title || '').toLowerCase().includes(activeTopic.toLowerCase())
-      )
-    : baseList
+  const displayList = activeTopic ? topicArticles : baseList
 
   // cluster_peers is now pre-computed server-side by scripts/cluster.mjs and
   // stored directly on each article row. No client-side clustering needed.
@@ -1083,6 +1101,18 @@ export default function FeedPage({
                 <div className="empty-state">
                   <h3>No results for "{search}"</h3>
                   <p>Try different keywords or clear the search to browse all stories.</p>
+                </div>
+              ) : topicLoading ? (
+                <div className="empty-state">
+                  <p style={{ color: 'var(--text3)' }}>Loading articles on {activeTopic}…</p>
+                </div>
+              ) : displayList.length === 0 && activeTopic ? (
+                <div className="empty-state">
+                  <h3>No articles on "{activeTopic}" in the last 24h</h3>
+                  <p>This topic may have trended earlier. Check back after the next update.</p>
+                  <button className="btn-outline" style={{ marginTop: 12, fontSize: 13 }} onClick={() => setActiveTopic(null)}>
+                    Back to all stories
+                  </button>
                 </div>
               ) : displayList.length === 0 ? (
                 <div className="empty-state">
