@@ -35,8 +35,10 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
+      # Only score when ingest actually inserted new articles
       - name: Score articles
         id: score
+        if: steps.ingest.outputs.inserted != '0'
         run: node scripts/score.mjs
         continue-on-error: true
         env:
@@ -53,9 +55,9 @@ jobs:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
-      # Cluster articles covering the same story across outlets.
-      # Runs every ingest cycle so cluster_peers stays fresh as new articles arrive.
+      # Only re-cluster when new articles were ingested this run
       - name: Cluster articles
+        if: steps.ingest.outputs.inserted != '0'
         run: node scripts/cluster.mjs
         continue-on-error: true
         env:

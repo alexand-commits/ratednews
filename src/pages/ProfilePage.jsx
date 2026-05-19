@@ -18,6 +18,25 @@ function calcDaysActive(ratings, comments) {
   return days.size
 }
 
+function calcStreak(views) {
+  if (!views.length) return 0
+  const days = new Set(views.map(v => (v.viewed_at || '').slice(0, 10)))
+  const today = new Date()
+  const fmt = d => d.toISOString().slice(0, 10)
+  let cursor = new Date(today)
+  // If today has no views yet, allow streak to start from yesterday
+  if (!days.has(fmt(cursor))) {
+    cursor.setDate(cursor.getDate() - 1)
+    if (!days.has(fmt(cursor))) return 0
+  }
+  let streak = 0
+  while (days.has(fmt(cursor))) {
+    streak++
+    cursor.setDate(cursor.getDate() - 1)
+  }
+  return streak
+}
+
 // ── Activity chart — last 30 days ─────────────────────────────────────────────
 function ActivityChart({ ratings, outletRatings, comments }) {
   const days = 30
@@ -198,6 +217,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
   const [articleRatings, setArticleRatings] = useState([])
   const [outletRatings, setOutletRatings]   = useState([])
   const [comments, setComments]             = useState([])
+  const [votedComments, setVotedComments]   = useState([])
   const [savedItems, setSavedItems]         = useState([])
   const [articleViews, setArticleViews]     = useState([])
   const [loading, setLoading]               = useState(true)
@@ -211,6 +231,11 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
   const [deleteInput, setDeleteInput]             = useState('')
   const [deleting, setDeleting]                   = useState(false)
   const [showOnboarding, setShowOnboarding]       = useState(false)
+  const [isPublic,       setIsPublic]             = useState(false)
+  const [togglingPublic, setTogglingPublic]       = useState(false)
+  const [linkCopied,     setLinkCopied]           = useState(false)
+  const [voteFilter,     setVoteFilter]           = useState('up')
+  const [commentSort,    setCommentSort]          = useState('recent')
 
   const followedOutlets = allOutlets.filter(o => followedOutletIds.has(o.id))
 
@@ -237,7 +262,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
 
     Promise.all([
-      db.from('profiles').select('username').eq('user_id', user.id).maybeSingle(),
+      db.from('profiles').select('username, public_profile, username_changed_at').eq('user_id', user.id).maybeSingle(),
       db.from('ratings')
         .select('*, articles(id, title, category, bias_direction, outlets(name))')
         .eq('user_id', user.id)
@@ -250,6 +275,10 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
         .select('*, articles(id, title), outlets(id, name)')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
+      db.from('comment_votes')
+        .select('dir, created_at, comments(id, body, created_at, upvotes, downvotes, articles(id, title), outlets(id, name))')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
       db.from('saved_articles')
         .select('*, articles(id, title, published_at, category, ai_summary, outlets(name, country))')
         .eq('user_id', user.id)
@@ -259,11 +288,13 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
         .eq('user_id', user.id)
         .gte('viewed_at', ninetyDaysAgo)
         .order('viewed_at', { ascending: false }),
-    ]).then(async ([{ data: prof }, { data: ar }, { data: or }, { data: co }, { data: sv }, { data: av }]) => {
+    ]).then(async ([{ data: prof }, { data: ar }, { data: or }, { data: co }, { data: cv }, { data: sv }, { data: av }]) => {
       setProfile(prof)
+      setIsPublic(prof?.public_profile || false)
       setArticleRatings(ar || [])
       setOutletRatings(or || [])
       setComments(co || [])
+      setVotedComments(cv || [])
       setArticleViews(av || [])
 
       // If the embedded join returned rows but article data is null (FK not wired
@@ -294,9 +325,17 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
     if (val.length < 3) { setNameError('At least 3 characters'); return }
     if (val.length > 20) { setNameError('Max 20 characters'); return }
     if (!/^[a-zA-Z0-9_]+$/.test(val)) { setNameError('Letters, numbers and underscores only'); return }
+    // 30-day cooldown — only applies after the first time it's been set
+    if (profile?.username && profile?.username_changed_at) {
+      const daysSince = (Date.now() - new Date(profile.username_changed_at).getTime()) / (1000 * 60 * 60 * 24)
+      if (daysSince < 30) {
+        const daysLeft = Math.ceil(30 - daysSince)
+        setNameError(`You can change your username again in ${daysLeft} day${daysLeft !== 1 ? 's' : ''}`)
+        return
+      }
+    }
     setNameSaving(true)
     setNameError('')
-    // Uniqueness check
     const { data: existing } = await db
       .from('profiles')
       .select('user_id')
@@ -304,12 +343,46 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
       .neq('user_id', user.id)
       .maybeSingle()
     if (existing) { setNameError('Username already taken'); setNameSaving(false); return }
-    const { error } = await db.from('profiles').upsert({ user_id: user.id, username: val }, { onConflict: 'user_id' })
+    const now = new Date().toISOString()
+    // Try update first (existing row), fall back to insert for brand-new profiles
+    let { error } = await db.from('profiles')
+      .update({ username: val, username_changed_at: now })
+      .eq('user_id', user.id)
+    if (error) {
+      ;({ error } = await db.from('profiles')
+        .insert({ user_id: user.id, username: val, username_changed_at: now }))
+    }
     if (error) { setNameError('Could not save — try again'); setNameSaving(false); return }
-    setProfile(p => ({ ...p, username: val }))
+    setProfile(p => ({ ...p, username: val, username_changed_at: now }))
     setEditingName(false)
     setNameSaving(false)
     showToast('Username updated!')
+  }
+
+  async function togglePublicProfile() {
+    setTogglingPublic(true)
+    const next = !isPublic
+    // Use update() for existing rows — upsert can fail if other required fields are missing
+    const { error } = await db.from('profiles')
+      .update({ public_profile: next })
+      .eq('user_id', user.id)
+    if (error) {
+      showToast('Could not update — try again')
+      console.error('togglePublicProfile error:', error)
+    } else {
+      setIsPublic(next)
+      showToast(next ? 'Profile is now public' : 'Profile set to private')
+    }
+    setTogglingPublic(false)
+  }
+
+  function copyProfileLink() {
+    const handle = profile?.username || user.id
+    const url = `https://www.ratednews.com/profile/${handle}`
+    navigator.clipboard.writeText(url).then(() => {
+      setLinkCopied(true)
+      setTimeout(() => setLinkCopied(false), 2000)
+    })
   }
 
   async function deleteAccount() {
@@ -341,6 +414,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
 
   const allStars = [...articleRatings, ...outletRatings].map(r => r.overall_stars || 0).filter(Boolean)
   const avgStars = allStars.length ? (allStars.reduce((a, b) => a + b, 0) / allStars.length).toFixed(1) : null
+  const streak   = calcStreak(articleViews)
 
   // Media diet — prefer view history (last 90 days), fall back to ratings
   const dietSource = articleViews.length > 0 ? articleViews : articleRatings
@@ -376,117 +450,40 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
           <div style={{
             background: 'var(--surface)',
             borderRadius: 'var(--radius)',
-            padding: '18px 20px',
+            padding: '12px 16px',
             marginBottom: 16,
-            position: 'relative',
-            borderLeft: '3px solid var(--coral)',
             border: '0.5px solid var(--border)',
             borderLeftWidth: 3,
             borderLeftColor: 'var(--coral)',
           }}>
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 14 }}>
-              <div>
-                <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>
-                  Welcome to RatedNews 👋
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>
-                  Here's what you can do — your profile builds up as you use the site.
-                </div>
-              </div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Welcome to RatedNews 👋</div>
               <button
                 onClick={dismissOnboarding}
                 aria-label="Dismiss"
-                style={{
-                  flexShrink: 0,
-                  width: 26, height: 26,
-                  borderRadius: '50%',
-                  border: '1px solid var(--border)',
-                  background: 'var(--bg)',
-                  color: 'var(--text3)',
-                  fontSize: 13,
-                  cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  lineHeight: 1,
-                }}
+                style={{ flexShrink: 0, width: 22, height: 22, borderRadius: '50%', border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text3)', fontSize: 11, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >✕</button>
             </div>
-
-            {/* Feature tiles */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, marginBottom: 16 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
               {[
-                {
-                  emoji: '⭐',
-                  title: 'Rate articles',
-                  desc: 'Score accuracy, bias and headline quality on any article',
-                  action: 'Browse articles →',
-                  onClick: () => navigate('feed'),
-                },
-                {
-                  emoji: '🔖',
-                  title: 'Save for later',
-                  desc: 'Bookmark articles to read later from your Saved tab',
-                  action: null,
-                },
-                {
-                  emoji: '📰',
-                  title: 'Follow outlets',
-                  desc: 'Track the outlets you trust and watch their scores',
-                  action: 'Browse outlets →',
-                  onClick: () => navigate('outlets'),
-                },
-                {
-                  emoji: '🧠',
-                  title: 'Bias fingerprint',
-                  desc: 'See which way you lean based on what you actually read',
-                  action: null,
-                },
-              ].map(({ emoji, title, desc, action, onClick }) => (
-                <div key={title} style={{
-                  background: 'var(--surface)',
-                  border: '0.5px solid var(--border)',
-                  borderRadius: 10,
-                  padding: '12px 14px',
-                }}>
-                  <div style={{ fontSize: 20, marginBottom: 6 }}>{emoji}</div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>{title}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text2)', lineHeight: 1.5, marginBottom: action ? 8 : 0 }}>{desc}</div>
+                { emoji: '⭐', title: 'Rate articles', action: 'Browse →', onClick: () => navigate('feed') },
+                { emoji: '🔖', title: 'Save articles for later', action: null },
+                { emoji: '📰', title: 'Follow outlets you trust', action: 'Browse →', onClick: () => navigate('outlets') },
+                { emoji: '🧠', title: 'Build your bias fingerprint', action: null },
+              ].map(({ emoji, title, action, onClick }) => (
+                <div key={title} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 14, width: 20, textAlign: 'center', flexShrink: 0 }}>{emoji}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text2)', flex: 1 }}>{title}</span>
                   {action && (
-                    <button
-                      onClick={onClick}
-                      style={{
-                        fontSize: 11,
-                        color: 'var(--coral)',
-                        background: 'none',
-                        border: 'none',
-                        padding: 0,
-                        cursor: 'pointer',
-                        fontWeight: 600,
-                        fontFamily: 'inherit',
-                      }}
-                    >{action}</button>
+                    <button onClick={onClick} style={{ fontSize: 11, color: 'var(--coral)', background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontWeight: 600, fontFamily: 'inherit', flexShrink: 0 }}>{action}</button>
                   )}
                 </div>
               ))}
             </div>
-
-            {/* Dismiss */}
             <button
               onClick={dismissOnboarding}
-              style={{
-                fontSize: 12,
-                padding: '7px 20px',
-                borderRadius: 20,
-                border: '1.5px solid var(--coral)',
-                background: 'var(--coral)',
-                color: '#fff',
-                cursor: 'pointer',
-                fontFamily: 'var(--font-dm-sans), sans-serif',
-                fontWeight: 600,
-              }}
-            >
-              Got it
-            </button>
+              style={{ fontSize: 11, padding: '5px 16px', borderRadius: 20, border: '1.5px solid var(--coral)', background: 'var(--coral)', color: '#fff', cursor: 'pointer', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 600 }}
+            >Got it</button>
           </div>
         )}
 
@@ -528,9 +525,13 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                 </div>
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                  <div style={{ fontSize: 16, fontWeight: 600 }}>{displayName}</div>
+                  <div style={{ fontSize: 16, fontWeight: 600 }}>
+                    {profile?.username
+                      ? <span><span style={{ color: 'var(--text3)', fontWeight: 400 }}>@</span>{profile.username}</span>
+                      : displayName}
+                  </div>
                   <button
-                    onClick={() => { setNameInput(displayName); setEditingName(true); setNameError('') }}
+                    onClick={() => { setNameInput(profile?.username || ''); setEditingName(true); setNameError('') }}
                     title="Edit username"
                     style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, border: '1px solid var(--border)', background: 'none', color: 'var(--text3)', cursor: 'pointer', lineHeight: 1.4 }}
                   >
@@ -547,6 +548,21 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
             </div>
           </div>
 
+          {/* Username nudge — shown when no username set and not currently editing */}
+          {!profile?.username && !editingName && !loading && (
+            <div
+              onClick={() => { setNameInput(''); setEditingName(true); setNameError('') }}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'var(--bg)', border: '1px dashed var(--coral)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, cursor: 'pointer' }}
+            >
+              <span style={{ fontSize: 16 }}>✨</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>Set a username</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)' }}>Unlock your shareable profile &amp; public URL</div>
+              </div>
+              <span style={{ fontSize: 12, color: 'var(--coral)', fontWeight: 600, flexShrink: 0 }}>Set →</span>
+            </div>
+          )}
+
           {/* Stats grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 10, marginBottom: 16 }}>
             {[
@@ -556,6 +572,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
               { value: savedItems.length,       label: 'Saved'          },
               { value: comments.length,         label: 'Comments'       },
               ...(avgStars ? [{ value: `${avgStars}★`, label: 'Avg rating', color: 'var(--amber)' }] : []),
+              ...(streak > 1 ? [{ value: `🔥 ${streak}`, label: 'day streak', color: 'var(--coral)' }] : []),
             ].map(({ value, label, color }) => (
               <div key={label} style={{ background: 'var(--bg)', borderRadius: 8, padding: '10px 8px', textAlign: 'center' }}>
                 <div style={{ fontSize: 18, fontWeight: 700, color: color || 'var(--text)' }}>{value}</div>
@@ -563,15 +580,6 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
               </div>
             ))}
           </div>
-
-          {/* Quick summary line */}
-          {totalContrib > 0 && (
-            <div style={{ fontSize: 12, color: 'var(--text2)', padding: '10px 0', borderTop: '0.5px solid var(--border)', borderBottom: '0.5px solid var(--border)', marginBottom: 14, lineHeight: 1.6 }}>
-              <strong>{totalContrib}</strong> total contribution{totalContrib !== 1 ? 's' : ''}
-              {avgStars && <> · rated <strong>{avgStars}★</strong> on average</>}
-              {followedOutletIds.size > 0 && <> · following <strong>{followedOutletIds.size}</strong> outlet{followedOutletIds.size !== 1 ? 's' : ''}</>}
-            </div>
-          )}
 
           {/* Trust progress */}
           {trust.next ? (
@@ -587,6 +595,28 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
           ) : (
             <div style={{ fontSize: 12, color: trust.color, fontWeight: 600 }}>🏅 Maximum trust level reached!</div>
           )}
+
+          {/* Public profile toggle — merged into hero card */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 14, paddingTop: 12, borderTop: '0.5px solid var(--border)' }}>
+            <div style={{ fontSize: 12, color: 'var(--text3)' }}>
+              {isPublic ? '🌐 Public profile' : '🔒 Private profile'}
+              {isPublic && <span style={{ marginLeft: 8, color: 'var(--text3)' }}>· shareable</span>}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+              {isPublic && (
+                <button onClick={copyProfileLink} style={{ fontSize: 11, padding: '4px 12px', borderRadius: 20, border: '1px solid var(--coral)', background: 'none', color: 'var(--coral)', cursor: 'pointer', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                  {linkCopied ? '✓ Copied!' : 'Copy link'}
+                </button>
+              )}
+              <button
+                onClick={togglePublicProfile}
+                disabled={togglingPublic}
+                style={{ fontSize: 11, padding: '4px 12px', borderRadius: 20, border: 'none', background: isPublic ? 'var(--border2)' : 'var(--coral)', color: isPublic ? 'var(--text2)' : '#fff', cursor: togglingPublic ? 'not-allowed' : 'pointer', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 600, opacity: togglingPublic ? 0.6 : 1, whiteSpace: 'nowrap' }}
+              >
+                {togglingPublic ? '…' : isPublic ? 'Make private' : 'Make public'}
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Insights — only show when there's data */}
@@ -640,6 +670,9 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
           </div>
           <div className={`tab${tab === 'comments' ? ' active' : ''}`} onClick={() => setTab('comments')}>
             Comments {comments.length > 0 && <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({comments.length})</span>}
+          </div>
+          <div className={`tab${tab === 'votes' ? ' active' : ''}`} onClick={() => setTab('votes')}>
+            Votes {votedComments.length > 0 && <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({votedComments.length})</span>}
           </div>
           <div className={`tab${tab === 'following' ? ' active' : ''}`} onClick={() => setTab('following')}>
             Following {followedOutlets.length > 0 && <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({followedOutlets.length})</span>}
@@ -759,6 +792,60 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
               })
             )}
           </div>
+        ) : tab === 'votes' ? (
+          /* Votes tab */
+          (() => {
+            const filtered = votedComments.filter(v => v.dir === (voteFilter === 'up' ? 1 : -1))
+            return (
+              <div>
+                {/* Filter toggle */}
+                <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                  {[['up', '▲ Upvoted'], ['down', '▼ Downvoted']].map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setVoteFilter(key)}
+                      style={{ fontSize: 12, padding: '5px 14px', borderRadius: 20, border: `1px solid ${voteFilter === key ? (key === 'up' ? 'var(--green)' : 'var(--red)') : 'var(--border)'}`, background: voteFilter === key ? (key === 'up' ? 'var(--green)' : 'var(--red)') : 'none', color: voteFilter === key ? '#fff' : 'var(--text2)', cursor: 'pointer', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 600 }}
+                    >{label} ({votedComments.filter(v => v.dir === (key === 'up' ? 1 : -1)).length})</button>
+                  ))}
+                </div>
+                <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+                  {filtered.length === 0 ? (
+                    <div className="empty-state">
+                      <h3>No {voteFilter === 'up' ? 'upvoted' : 'downvoted'} comments yet</h3>
+                      <p>Comments you {voteFilter === 'up' ? 'upvote' : 'downvote'} will appear here.</p>
+                      <button className="btn-outline" style={{ marginTop: 12, fontSize: 13 }} onClick={() => navigate('feed')}>Browse articles</button>
+                    </div>
+                  ) : (
+                    filtered.map((v, i) => {
+                      const c = v.comments
+                      if (!c) return null
+                      const articleTitle = c.articles?.title || c.outlets?.name || 'Article'
+                      const articleId    = c.articles?.id
+                      const isUp         = v.dir === 1
+                      return (
+                        <div
+                          key={`${v.dir}-${c.id}`}
+                          style={{ padding: '14px 18px', borderBottom: i < filtered.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: articleId ? 'pointer' : 'default' }}
+                          className={articleId ? 'row-hover' : ''}
+                          onClick={() => articleId && navigate('article', { articleId, title: c.articles?.title })}
+                        >
+                          <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>
+                            <span style={{ color: isUp ? 'var(--green)' : 'var(--red)', fontWeight: 600, marginRight: 6 }}>{isUp ? '▲' : '▼'}</span>
+                            On: <span style={{ color: 'var(--text2)' }}>{articleTitle}</span> · {timeAgo(v.created_at || c.created_at)}
+                          </div>
+                          <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 6, color: 'var(--text)' }}>{c.body}</div>
+                          <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text3)' }}>
+                            <span>▲ {c.upvotes || 0}</span>
+                            <span>▼ {c.downvotes || 0}</span>
+                          </div>
+                        </div>
+                      )
+                    })
+                  )}
+                </div>
+              </div>
+            )
+          })()
         ) : tab === 'following' ? (
           /* Following tab */
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -813,31 +900,51 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
             )}
           </div>
         ) : (
-          <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-            {comments.length === 0 ? (
-              <div className="empty-state">
-                <h3>No comments yet</h3>
-                <p>Join the discussion on any article.</p>
-                <button className="btn-outline" style={{ marginTop: 12, fontSize: 13 }} onClick={() => navigate('feed')}>Browse articles</button>
+          <div>
+          {comments.length === 0 ? (
+            <div className="empty-state">
+              <h3>No comments yet</h3>
+              <p>Join the discussion on any article.</p>
+              <button className="btn-outline" style={{ marginTop: 12, fontSize: 13 }} onClick={() => navigate('feed')}>Browse articles</button>
+            </div>
+          ) : (
+            <>
+              {/* Sort toggle */}
+              <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+                {[['recent', 'Recent'], ['top', 'Top']].map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => setCommentSort(key)}
+                    style={{ fontSize: 12, padding: '5px 14px', borderRadius: 20, border: `1px solid ${commentSort === key ? 'var(--coral)' : 'var(--border)'}`, background: commentSort === key ? 'var(--coral)' : 'none', color: commentSort === key ? '#fff' : 'var(--text2)', cursor: 'pointer', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 600 }}
+                  >{label}</button>
+                ))}
               </div>
-            ) : (
-              comments.map((c, i) => (
-                <div
-                  key={c.id}
-                  style={{ padding: '14px 18px', borderBottom: i < comments.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }} className="row-hover"
-                  onClick={() => c.articles?.id && navigate('article', { articleId: c.articles.id, title: c.articles.title })}
-                >
-                  <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>
-                    On: <span style={{ color: 'var(--text2)' }}>{c.articles?.title || 'Article'}</span> · {timeAgo(c.created_at)}
-                  </div>
-                  <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 6 }}>{c.body}</div>
-                  <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text3)' }}>
-                    <span>▲ {c.upvotes || 0}</span>
-                    <span>▼ {c.downvotes || 0}</span>
-                  </div>
-                </div>
-              ))
-            )}
+              <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+                {[...comments]
+                  .sort((a, b) => commentSort === 'top'
+                    ? ((b.upvotes || 0) - (b.downvotes || 0)) - ((a.upvotes || 0) - (a.downvotes || 0))
+                    : 0 /* already ordered by created_at desc from DB */
+                  )
+                  .map((c, i, arr) => (
+                    <div
+                      key={c.id}
+                      style={{ padding: '14px 18px', borderBottom: i < arr.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }} className="row-hover"
+                      onClick={() => c.articles?.id && navigate('article', { articleId: c.articles.id, title: c.articles.title })}
+                    >
+                      <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>
+                        On: <span style={{ color: 'var(--text2)' }}>{c.articles?.title || 'Article'}</span> · {timeAgo(c.created_at)}
+                      </div>
+                      <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 6 }}>{c.body}</div>
+                      <div style={{ display: 'flex', gap: 12, fontSize: 11, color: 'var(--text3)' }}>
+                        <span>▲ {c.upvotes || 0}</span>
+                        <span>▼ {c.downvotes || 0}</span>
+                      </div>
+                    </div>
+                  ))
+                }
+              </div>
+            </>
+          )}
           </div>
         )}
 
