@@ -291,6 +291,13 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     misleading: { bg: 'var(--amber-light)', color: 'var(--amber)', label: '⚠ Misleading headline' },
     clickbait:  { bg: 'var(--red-light)',   color: 'var(--red)',   label: '✗ Clickbait headline'  },
   }
+  const ARTICLE_TYPE_BADGES = {
+    opinion:   { bg: '#ede9fe', color: '#6d28d9', label: 'Opinion'  },
+    analysis:  { bg: '#dbeafe', color: '#1d4ed8', label: 'Analysis' },
+    live_blog: { bg: '#dcfce7', color: '#15803d', label: '● Live'   },
+    pr:        { bg: '#f3f4f6', color: '#6b7280', label: 'PR'       },
+  }
+  const typeBadge = article.article_type ? ARTICLE_TYPE_BADGES[article.article_type] : null
   const BIAS_INFO = {
     left:   { label: '← Left',   color: 'var(--blue, #3b82f6)', bar: 20 },
     centre: { label: '◉ Centre', color: 'var(--text2)',         bar: 50 },
@@ -514,6 +521,14 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               <div style={{ fontSize: 11, color: 'var(--text2)' }}>{outlet.country || ''} · {timeAgo(article.published_at)}</div>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              {typeBadge && (
+                <span style={{
+                  fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
+                  background: typeBadge.bg, color: typeBadge.color,
+                }}>
+                  {typeBadge.label}
+                </span>
+              )}
               {aiScored && !(acc < 50 && (outlet.accuracy_score || 0) >= 65) && (
                 <span className={accBadgeClass(acc)}>✦ {acc}</span>
               )}

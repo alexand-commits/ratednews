@@ -9,6 +9,13 @@ const HEADLINE_BADGES = {
   clickbait:  { bg: '#fde8e8', color: 'var(--red)', label: '✗ Clickbait headline' },
 }
 
+const ARTICLE_TYPE_BADGES = {
+  opinion:   { bg: '#ede9fe', color: '#6d28d9', label: 'Opinion'  },
+  analysis:  { bg: '#dbeafe', color: '#1d4ed8', label: 'Analysis' },
+  live_blog: { bg: '#dcfce7', color: '#15803d', label: '● Live'   },
+  pr:        { bg: '#f3f4f6', color: '#6b7280', label: 'PR'       },
+}
+
 const BIAS_LABELS = {
   left:   { label: '← Left',   cls: 'score-badge score-badge-bias-left'   },
   centre: { label: '◉ Centre', cls: 'score-badge score-badge-bias-centre' },
@@ -42,6 +49,7 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
   const scored    = acc > 0
   const slug      = articleSlug(article.title, article.id)
 
+  const typeBadge  = article.article_type ? ARTICLE_TYPE_BADGES[article.article_type] : null
   const hasAngles = relatedArticles.length > 0
   // All articles in this cluster (primary + related), deduped by outlet
   const allAngles = hasAngles
@@ -113,6 +121,16 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
       <div className="score-row">
         {scored ? (
           <>
+            {/* Article type — only shown for non-news types */}
+            {typeBadge && (
+              <span style={{
+                fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20, flexShrink: 0,
+                background: typeBadge.bg, color: typeBadge.color,
+              }}>
+                {typeBadge.label}
+              </span>
+            )}
+
             {/* Quality score — always shown when scored */}
             <span className={accBadgeClass(acc)}>✦ {acc}</span>
 
