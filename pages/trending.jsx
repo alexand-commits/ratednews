@@ -131,8 +131,10 @@ export async function getStaticProps() {
       const accuracy  = a.accuracy_score || 50
       // Cross-outlet coverage is the primary signal — stories covered by many
       // outlets score highest. Views + comments boost when traffic picks up.
-      const trendScore = coverage * 15 + views * 2 + comments * 20
-                       + (accuracy / 100) * 5 + Math.max(0, 12 - hoursAgo)
+      // Gravity decay: score / (age + 2)^1.8 — multi-outlet coverage is the
+      // primary signal; age naturally pushes stories down over time.
+      const numerator  = coverage * 15 + views * 2 + comments * 20 + (accuracy / 100) * 5 + 1
+      const trendScore = numerator / Math.pow(Math.max(0.1, hoursAgo) + 2, 1.8)
       return { ...a, _trendScore: trendScore, _coverage: coverage }
     })
 

@@ -325,10 +325,16 @@ export default function FeedPage({
       .sort((a, b) => {
         if (sort === 'trending') {
           const trendScore = a => {
-            const hoursAgo = (Date.now() - new Date(a.published_at)) / 3600000
-            return (a.cluster_peers || 0) * 15
-                 + ((a.accuracy_score || 50) / 100) * 5
-                 + Math.max(0, 12 - hoursAgo)
+            // cluster_peers is a JSONB array — use .length for the outlet coverage count
+            const coverage  = a.cluster_peers?.length || 0
+            const comments  = a.comments?.[0]?.count || 0
+            const quality   = (a.accuracy_score || 50) / 100
+            // Gravity decay: score / (age + 2)^1.8
+            // Stories need cross-outlet coverage or engagement to hold their rank;
+            // age pushes them down even if covered — keeps the list feeling fresh.
+            const hoursAgo  = Math.max(0.1, (Date.now() - new Date(a.published_at)) / 3600000)
+            const numerator = coverage * 12 + comments * 5 + quality * 3 + 1
+            return numerator / Math.pow(hoursAgo + 2, 1.8)
           }
           return trendScore(b) - trendScore(a)
         }

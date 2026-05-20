@@ -14,7 +14,7 @@ const BATCH = 50
 const ARTICLE_SELECT = [
   'id', 'title', 'published_at', 'outlet_id',
   'accuracy_score', 'bias_score', 'bias_direction', 'headline_vote',
-  'category', 'geographic_scope', 'article_region',
+  'category', 'article_type', 'geographic_scope', 'article_region',
   'ai_summary', 'summary', 'url', 'image_url',
   'total_ratings', 'community_score', 'cluster_peers',
   'outlets(name, country, bias_direction, logo_url, accuracy_score)',
