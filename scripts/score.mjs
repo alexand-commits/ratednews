@@ -74,6 +74,11 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
   forward-looking language ("set to", "expected to", "preparing to", "poised to", "due to announce",
   "likely to", "tipped to"). This is standard sports reporting convention, not a credibility problem.
   Score these 70–85 if the factual content is internally consistent between title and summary.
+  IMPORTANT — sport victory, celebration and reaction articles: if an article reports on trophy
+  ceremonies, title celebrations, victory parades, medal ceremonies, or winner reactions and quotes,
+  treat the underlying result as a confirmed fact — even if the summary uses phrases like "implying",
+  "suggesting", or "appears to have won". Celebrations and victory reactions are only published after
+  results are confirmed. Score these 75–90 and do NOT flag the headline as misleading.
 
 - "bias_direction": string, one of: "left", "centre", "right".
   The political lean of the article's framing and perspective.
@@ -100,6 +105,10 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
   ("set to", "expected to", "preparing to", "poised to", "due to", "tipped to") that is echoed or
   supported by the summary is NOT misleading — it is standard preview writing. Only mark "misleading"
   if the headline makes a specific factual claim the summary directly contradicts.
+  IMPORTANT — sport victory, celebration and reaction articles: headlines reporting trophy lifts,
+  title celebrations, victory parades, or winner quotes ("I told you all", "We did it") are fair
+  even if the summary hedges with "implying" or "suggesting". The result is confirmed — celebrations
+  don't happen before victories. Do NOT mark these as misleading or clickbait.
   IMPORTANT — tribute, memorial and human interest content: articles about deaths, memorials,
   tributes, retirements, community stories and human interest pieces naturally use emotional,
   reverential or narrative language. This is appropriate writing style, not inaccuracy or bias.

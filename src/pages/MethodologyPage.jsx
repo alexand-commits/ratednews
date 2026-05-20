@@ -40,6 +40,10 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
   Only mark "misleading" if the headline states or strongly implies a fact that the summary contradicts
   (e.g. headline says player scored a hat-trick but summary says he scored once). Sensational but
   accurate sports language should be "fair", not "misleading".
+  IMPORTANT — sport victory, celebration and reaction articles: headlines reporting trophy lifts,
+  title celebrations, victory parades, or winner quotes ("I told you all", "We did it") are fair
+  even if the summary hedges with "implying" or "suggesting". The result is confirmed — celebrations
+  don't happen before victories. Do NOT mark these as misleading or clickbait.
   IMPORTANT — tribute, memorial and human interest content: articles about deaths, memorials,
   tributes, retirements, community stories and human interest pieces naturally use emotional,
   reverential or narrative language. This is appropriate writing style, not inaccuracy or bias.
