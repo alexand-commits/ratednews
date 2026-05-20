@@ -85,8 +85,9 @@ async function run() {
     let all = [], from = 0
     while (true) {
       const { data, error } = await supabase
-        .from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, published_at')
+        .from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, published_at, article_type')
         .not('accuracy_score', 'is', null)
+        .or('article_type.is.null,article_type.not.in.(opinion,pr)')
         .gte('published_at', since)
         .range(from, from + PAGE - 1)
       if (error) return { data: null, error }
@@ -104,8 +105,9 @@ async function run() {
     let all = [], from = 0
     while (true) {
       const { data, error } = await supabase
-        .from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, published_at')
+        .from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, published_at, article_type')
         .not('accuracy_score', 'is', null)
+        .or('article_type.is.null,article_type.not.in.(opinion,pr)')
         .in('outlet_id', outletIds)
         .range(from, from + PAGE - 1)
       if (error) break

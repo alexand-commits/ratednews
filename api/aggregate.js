@@ -50,7 +50,7 @@ module.exports = async function handler(req, res) {
     { data: outlets,  error: outErr },
     { data: ratings,  error: ratErr },
   ] = await Promise.all([
-    supabase.from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction').not('accuracy_score', 'is', null).gte('published_at', since90d),
+    supabase.from('articles').select('outlet_id, accuracy_score, bias_score, bias_direction, article_type').not('accuracy_score', 'is', null).or('article_type.is.null,article_type.not.in.(opinion,pr)').gte('published_at', since90d),
     supabase.from('outlets').select('id, name'),
     supabase.from('outlet_ratings').select('outlet_id, overall_stars'),
   ])

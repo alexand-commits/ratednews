@@ -49,13 +49,46 @@ const MAX_ARTICLE_AGE_HOURS = 36  // skip unscored articles older than this — 
 const FRESH_WINDOW_HOURS = 2  // articles younger than this are scored in the priority pass
 
 // ── System prompt (cached — never changes between articles) ─────────────────
-const CATEGORIES = ['Politics', 'Business', 'Sport', 'Tech', 'Science', 'Health', 'Environment', 'Entertainment', 'Crime', 'Travel', 'Education', 'Conflict', 'World']
+const CATEGORIES     = ['Politics', 'Business', 'Sport', 'Tech', 'Science', 'Health', 'Environment', 'Entertainment', 'Crime', 'Travel', 'Education', 'Conflict', 'World']
+const ARTICLE_TYPES  = ['news', 'opinion', 'analysis', 'live_blog', 'pr']
 
 const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article you receive, return a JSON object with these exact fields:
 
+- "article_type": string, one of: "news", "opinion", "analysis", "live_blog", "pr".
+  Classify the article first — this affects how other fields are scored.
+  "news"     = standard news reporting (use when uncertain).
+  "opinion"  = labelled opinion, editorial, column, or personal commentary. Signals: title contains
+               [Opinion], [Editorial], [Column], [Comment], or prefixed with "Opinion:", "Comment:";
+               first-person argument framing ("Why we must", "The case for", "I believe").
+  "analysis" = interpretive piece providing context or expert perspective. Signals: title contains
+               [Analysis], "Analysis:", "explained", "in depth", "what it means", "why it matters".
+  "live_blog"= developing or live coverage. Signals: title contains "live", "as it happened",
+               "rolling updates", "– live", "latest".
+  "pr"       = press release or promotional content. Signals: corporate "today announced" framing,
+               no independent news hook, purely self-promotional language.
+
 - "accuracy_score": integer 0–100. How factually reliable does this article appear based on its title and summary?
-  100 = highly factual, well-sourced journalism. 0 = clearly false or fabricated.
-  Use 70–85 as baseline for mainstream outlets with no obvious issues.
+  Adjust scoring approach based on article_type:
+  — "opinion": focus only on whether factual claims made are internally consistent. Do NOT penalise
+    for opinionated or partisan framing — that is the purpose of the format. Score 65–80 if facts
+    check out internally regardless of how strongly argued.
+  — "live_blog": hedging language ("reportedly", "developing", "unconfirmed", "sources say") is
+    expected and appropriate for live coverage. Score 60–78 and do not penalise for uncertainty language.
+  — "pr": promotional content is inherently self-serving and lacks independent verification. Score 45–62.
+  — "news" and "analysis": apply the banding below.
+
+  Score banding for "news" and "analysis":
+  85–100 Strong sourcing — named sources, specific verifiable data, clear attribution, direct quotes from
+         identifiable figures. Headline and summary are tightly consistent.
+  70–84  Solid reporting — factually presented, internally consistent between headline and summary, no red flags.
+  55–69  Some concerns — vague sourcing ("sources say", "insiders claim"), speculative framing, or
+         minor tension between headline and summary.
+  35–54  Notable issues — significant unsupported assertions, or headline meaningfully overstates the summary.
+  0–34   Serious concerns — fabricated-looking claims, clear factual contradictions, or obvious misinformation.
+
+  When the summary is absent or very short (under 15 words): score within 65–72 to avoid false precision
+  on minimal information — do not assign extreme scores from a sparse signal.
+
   IMPORTANT — sport match reports: goals, scores, results, and player actions are verifiable facts.
   Do NOT penalise accuracy for dramatic or colourful match-report language ("fires", "nets", "slots home",
   "brilliant", "stunner") — these are standard sports-writing conventions, not inaccuracies.
@@ -83,6 +116,8 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
 - "bias_direction": string, one of: "left", "centre", "right".
   The political lean of the article's framing and perspective.
   "left" = progressive or liberal framing. "right" = conservative framing. "centre" = balanced or no clear lean.
+  For "opinion": assess the political lean of the argument being made.
+  For "pr": default to "centre" unless the content has a clear political angle.
 
 - "bias_score": integer 0–100. Partisan intensity — how opinionated or one-sided is the writing style,
   regardless of which direction it leans?
@@ -91,11 +126,15 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
   100 = highly partisan, strongly one-sided language, clear agenda being pushed.
   Important: a calm left-leaning article can score 10. A neutral-topic opinion piece can score 80.
   Direction and intensity are independent.
+  For "opinion": high bias_score is expected and correct — do not artificially lower it. A clearly
+  argued opinion piece should reflect its genuine partisan intensity.
 
 - "headline_vote": string, one of: "fair", "misleading", "clickbait".
   "fair" = headline accurately reflects the content.
   "misleading" = headline implies something not supported by the summary.
   "clickbait" = headline uses emotional bait, exaggeration, or withholds key info to drive clicks.
+  For "opinion": provocative or argumentative headlines are expected convention — only flag as
+  "misleading" if the headline claims a factual outcome the piece does not support.
   IMPORTANT — sport headlines: colourful verbs ("fires", "nets", "slots home", "inspires") and
   player-focused framing ("Rashford fires Barca to title") are normal sports-writing conventions.
   Only mark "misleading" if the headline states or strongly implies a fact that the summary contradicts
@@ -151,7 +190,6 @@ Respond with ONLY the JSON object — no markdown, no explanation, no code fence
 // ── Score a single article ───────────────────────────────────────────────────
 async function scoreArticle(article) {
   const userContent = `Title: ${article.title}
-Outlet: ${article.outlet_name || 'Unknown'}
 Summary: ${article.summary || '(no summary available)'}`
 
   const response = await anthropic.messages.create({
@@ -183,7 +221,7 @@ Summary: ${article.summary || '(no summary available)'}`
   }
 
   // Validate required fields
-  const { accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary } = parsed
+  const { article_type, accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary } = parsed
   const VALID_REGIONS = ['UK', 'US', 'Europe', 'MiddleEast', 'Africa', 'AsiaPac', 'Americas', 'International']
   if (
     typeof accuracy_score !== 'number' ||
@@ -197,7 +235,10 @@ Summary: ${article.summary || '(no summary available)'}`
     throw new Error(`Unexpected response shape: ${raw.slice(0, 200)}`)
   }
 
-  return { accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary: ai_summary || null }
+  // article_type is validated loosely — fall back to 'news' if the model returns something unexpected
+  const validatedType = ARTICLE_TYPES.includes(article_type) ? article_type : 'news'
+
+  return { article_type: validatedType, accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary: ai_summary || null }
 }
 
 // ── Score a batch of articles from a query ───────────────────────────────────
@@ -224,6 +265,7 @@ async function scoreBatch(articles, skippedIds, totalThin) {
       const { error: updateError } = await supabase
         .from('articles')
         .update({
+          article_type:      scores.article_type,
           accuracy_score:    scores.accuracy_score,
           bias_score:        scores.bias_score,
           bias_direction:    scores.bias_direction,
