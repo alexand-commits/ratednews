@@ -169,8 +169,8 @@ export default function ExplorePage({ navigate, outlets = [] }) {
 
         {/* Page heading */}
         <div style={{ marginBottom: 20 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--text1)', margin: 0, marginBottom: 4 }}>
-            Explore
+          <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text)', margin: 0, marginBottom: 4, fontFamily: 'var(--font-playfair), serif' }}>
+            🔍 Explore
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>
             Search every story across all outlets

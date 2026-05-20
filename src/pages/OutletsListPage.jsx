@@ -230,7 +230,7 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
             <div>
               <h1 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
-                News Outlets
+                📡 News Outlets
               </h1>
               <p style={{ fontSize: 13, color: 'var(--text2)' }}>
                 {filtered.length} of {outlets.length} outlets · rated by AI analysis and community
