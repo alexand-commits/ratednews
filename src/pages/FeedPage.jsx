@@ -1009,7 +1009,7 @@ export default function FeedPage({
                 }
               </div>
               {!isSearchActive && (
-                <div style={{ display: 'flex', gap: 6 }}>
+                <div className="feed-search-desktop-only" style={{ display: 'flex', gap: 6 }}>
                   {SORTS.map(s => (
                     <button
                       key={s.value}
