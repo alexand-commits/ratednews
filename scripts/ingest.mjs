@@ -267,6 +267,10 @@ const JUNK_PATTERNS = [
   // ── Daily cartoon / illustration entries ─────────────────────────────────────
   // The New Yorker publishes a "Daily Cartoon: [Day], [Date]" entry every day
   /^Daily Cartoon:/i,
+  // SMH / Fairfax weekly cartoon round-up: "The best cartoons of the week", "Best of cartoons"
+  /\bbest (of )?cartoons?\b/i,
+  // Generic "cartoons of the week/year" round-ups
+  /\bcartoons? of the (week|month|year|day)\b/i,
 
   // ── Puzzles, games & daily digest fillers ─────────────────────────────────────
   // Slate Pears Game, SoundBites, NYT Connections etc.
@@ -738,50 +742,11 @@ const OUTLET_MAX_TITLE_LENGTH = {
   'Evening Standard': 110,  // London lifestyle/food/entertainment pieces tend to run long
 }
 
-// ── Per-outlet per-run article caps ──────────────────────────────────────────
-// Limits how many articles we take from a single outlet per ingest run.
-// High-volume tabloids with poor signal/noise ratios burn API scoring budget;
-// cap them so quality outlets aren't crowded out.
-const OUTLET_MAX_PER_RUN = {
-  'Daily Mail':    8,   // was ingesting 15–20/run at 62% junk; cap saves ~7 AI calls/run
-  'The Sun':       3,   // high junk rate + high volume (~194/day) — tightened to 3 for even 24h spread
-  'The Telegraph': 10,  // 46.7% junk rate — cap to reduce scoring waste
-  'Fox News':       6,   // tightened from 10 — cap wasn't biting at avg 3.1/run, politics skews misleading/right
-  'Breitbart':     6,   // 41.3% junk + worst accuracy score (28.3% low) — tight cap
-  'New York Post': 4,   // ~299/day natural rate — cap at 4/run for even 24h spread (~192/day)
-  'The Hindu':     3,   // burst publish pattern — cap at 3/run for even 24h spread (~144/day)
-  'The Mirror':    4,   // UK tabloid, same profile as The Sun — cap for scoring budget
-  'Newsweek':            4,   // mix of real news and SEO/listicle filler — cap to reduce waste
-  'Evening Standard':    3,   // London-local lifestyle filler bleeds in — aggressive cap to keep hard news only
-  'The Independent':     7,   // quality content but spikes to 12/run (248/day) — cap at 7 to cut bursts
-  'Channel NewsAsia':    5,   // good Asia-Pac news, occasional 9/run spike + wire dupes — cap at 5
-  'Washington Examiner': 4,   // right-leaning opinion heavy, spikes to 8/run — cap at 4
-  'iNews':               4,   // good UK news/analysis, burst pattern only (max 9/run vs avg 0.8)
-  'The Federalist':      2,   // extreme partisan opinion, scores 15–45/100, almost all misleading/right
-  'France 24':           4,   // solid international news, burst pattern (max 8/run vs avg 1.5)
-  'TechCrunch':          5,   // quality tech news, burst pattern (max 8/run vs avg 0.6)
-  'Metro':               3,   // UK tabloid tendencies, clickbait/45-scored articles creeping in — soft cap
-  // ── Second sweep (high-volume uncapped outlets) ──────────────────────────────
-  'New York Times':      8,   // high quality but spikes to 6/run, high daily volume
-  'The Hill':            5,   // political news, mix of left/right opinion, spikes to 5/run
-  'CNN':                 5,   // quality news, burst pattern, duplicate same-story coverage
-  'NBC News':            5,   // quality news, same-story duplicates within runs
-  'The Daily Wire':      2,   // right-wing opinion, same profile as The Federalist
-  'Sports Illustrated':  4,   // mix of quality sports and clickbait listicles
-  'ESPN':                4,   // solid sports news, occasional odds/betting framing
-  'HuffPost':            3,   // left-leaning, opinion-heavy headlines
-  'Business Insider':    4,   // ~half non-news lifestyle/personal essay content
-  // ── Third sweep ──────────────────────────────────────────────────────────────
-  'MSNBC':               4,   // left-leaning mirror of Fox News — 35–45/100 articles, misleading/left
-  'CNBC':                4,   // real financial news mixed with stock-tip content
-  'Bloomberg':           6,   // quality financial journalism, burst to 5/run
-  'CBS News':            5,   // quality US news, SEO/Q&A filler sneaking in
-  'Slate':               2,   // advice-column letters (Dear Prudence) mixed in with real content
-  // ── Fourth sweep ─────────────────────────────────────────────────────────────
-  'National Review':     2,   // right-wing opinion, same profile as The Federalist — 45/100 articles
-  'New Statesman':       3,   // arts reviews + culture opinion mixed with news, spikes to 5/run
-  'New Scientist':       3,   // quality science journalism, occasional 4/run burst
-}
+// ── Per-run article cap ───────────────────────────────────────────────────────
+// Maximum articles ingested from any single outlet per run.
+// Dial this up or down to control feed diversity and API scoring costs.
+// At 45-min cadence: 1/run = up to ~32 articles/day per outlet.
+const ARTICLES_PER_OUTLET_PER_RUN = 1
 
 function isTitleTooLong(title, outletName) {
   const limit = OUTLET_MAX_TITLE_LENGTH[outletName]
@@ -802,7 +767,7 @@ async function ingestOutlet(outlet) {
     return { inserted: 0, skipped: 0, errors: 1 }
   }
 
-  const runCap = OUTLET_MAX_PER_RUN[outlet.name] ?? 25
+  const runCap = ARTICLES_PER_OUTLET_PER_RUN
   const items = feed.items.slice(0, runCap)
   let inserted = 0, skipped = 0, errors = 0
 

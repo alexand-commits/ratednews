@@ -44,8 +44,7 @@ const BATCH_SIZE      = 20
 const CONCURRENCY     = 15    // parallel Haiku calls per batch — well within 4000 RPM limit
 const MAX_PER_RUN     = 400   // total cap per run (fresh + backlog combined)
 const FRESH_CAP       = 200   // max articles from the last 2h scored first — raised to match ~100-110/run ingest volume
-const MIN_TITLE_LEN   = 15    // skip malformed / very short titles
-const MIN_CONTENT_LEN = 30    // skip articles with neither a real title nor summary
+const MIN_TITLE_LEN   = 15    // articles shorter than this get a placeholder score, not API-scored
 const MAX_ARTICLE_AGE_HOURS = 36  // skip unscored articles older than this — they'll never appear in feed
 const FRESH_WINDOW_HOURS = 2  // articles younger than this are scored in the priority pass
 
@@ -246,18 +245,33 @@ Summary: ${article.summary || '(no summary available)'}`
 async function scoreBatch(articles, skippedIds, totalThin) {
   let scored = 0, failed = 0
 
-  // Pre-filter thin content synchronously before any API calls
+  // Pre-filter thin content synchronously before any API calls.
+  // Articles with a title long enough to score are sent to the API even without a summary —
+  // the model handles "(no summary available)" gracefully.
+  // Articles with a title too short to be meaningful are stamped with a neutral placeholder
+  // score so they leave the pending pool permanently instead of cycling every run.
   const scoreable = []
+  const thinStamps = []
   for (const article of articles) {
-    const titleLen   = (article.title || '').trim().length
-    const summaryLen = (article.summary || '').trim().length
-    if (titleLen < MIN_TITLE_LEN || titleLen + summaryLen < MIN_CONTENT_LEN) {
-      console.log(`  ⏭  Thin content skipped: "${(article.title || '').slice(0, 50)}"`)
-      skippedIds.add(article.id)
+    const titleLen = (article.title || '').trim().length
+    if (titleLen < MIN_TITLE_LEN) {
+      console.log(`  ⏭  Title too short — stamping placeholder: "${(article.title || '').slice(0, 50)}"`)
+      thinStamps.push(article.id)
       totalThin.count++
     } else {
       scoreable.push(article)
     }
+  }
+
+  // Stamp truly unscoreable articles so they never re-enter the pending pool
+  if (thinStamps.length) {
+    await supabase.from('articles').update({
+      accuracy_score: 50, bias_score: 50, bias_direction: 'centre',
+      headline_vote: 'fair', category: 'World', geographic_scope: 'national',
+      article_region: 'International', article_type: 'news',
+      ai_summary: null,
+    }).in('id', thinStamps)
+    thinStamps.forEach(id => skippedIds.add(id))
   }
 
   // Process in parallel chunks — Haiku handles 4000 RPM, CONCURRENCY=15 is well within limits

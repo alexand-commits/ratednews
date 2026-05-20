@@ -132,6 +132,7 @@ export default function FeedPage({
     const escaped = activeTopic.replace(/[%_\\]/g, '\\$&').replace(/[,()\.:]/g, ' ').trim()
     db.from('articles')
       .select('id, title, published_at, outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, category, article_type, geographic_scope, article_region, ai_summary, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, country, bias_direction, logo_url, accuracy_score, overall_score), comments(count)')
+      .not('accuracy_score', 'is', null)
       .ilike('title', `%${escaped}%`)
       .gte('published_at', cutoff)
       .order('published_at', { ascending: false })
@@ -206,6 +207,7 @@ export default function FeedPage({
       const { count } = await db
         .from('articles')
         .select('*', { count: 'exact', head: true })
+        .not('accuracy_score', 'is', null)
         .gt('published_at', latestPublishedAtRef.current)
       if (count > 0) setNewArticleCount(count)
     }
@@ -244,6 +246,7 @@ export default function FeedPage({
       const { data } = await db
         .from('articles')
         .select('id, title, published_at, outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, category, article_type, geographic_scope, article_region, ai_summary, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, country, bias_direction, logo_url, accuracy_score, overall_score), comments(count)')
+        .not('accuracy_score', 'is', null)
         .or(`title.ilike.%${escaped}%,ai_summary.ilike.%${escaped}%,summary.ilike.%${escaped}%`)
         .order('published_at', { ascending: false })
         .limit(50)
@@ -282,6 +285,7 @@ export default function FeedPage({
     const ids = [...followedOutletIds]
     db.from('articles')
       .select('id, title, published_at, outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, category, article_type, geographic_scope, article_region, ai_summary, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, logo_url, country, bias_direction, accuracy_score), comments(count)')
+      .not('accuracy_score', 'is', null)
       .in('outlet_id', ids)
       .order('published_at', { ascending: false })
       .limit(100)

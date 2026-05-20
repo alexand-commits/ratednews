@@ -45,16 +45,18 @@ export default function Feed({ initialArticles, initialCount }) {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
     Promise.all([
-      // Main paginated feed
+      // Main paginated feed — only scored articles
       db.from('articles')
         .select(ARTICLE_SELECT)
+        .not('accuracy_score', 'is', null)
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
-      db.from('articles').select('*', { count: 'exact', head: true }),
+      db.from('articles').select('*', { count: 'exact', head: true }).not('accuracy_score', 'is', null),
       // Full-data 24h articles for card rendering when a trending topic is active.
       // 150 rows with all display columns — enough to fill any topic's article list.
       db.from('articles')
         .select(ARTICLE_SELECT)
+        .not('accuracy_score', 'is', null)
         .gte('published_at', cutoff)
         .order('published_at', { ascending: false })
         .limit(150),
@@ -63,6 +65,7 @@ export default function Feed({ initialArticles, initialCount }) {
       // A higher ceiling means topics that spiked earlier in the day still surface.
       db.from('articles')
         .select('title, outlet_id')
+        .not('accuracy_score', 'is', null)
         .gte('published_at', cutoff)
         .order('published_at', { ascending: false })
         .limit(1000),
@@ -82,6 +85,7 @@ export default function Feed({ initialArticles, initialCount }) {
     setLoadingMore(true)
     const { data } = await db.from('articles')
       .select(ARTICLE_SELECT)
+      .not('accuracy_score', 'is', null)
       .order('published_at', { ascending: false })
       .range(offset, offset + BATCH - 1)
     if (data?.length) {
@@ -98,9 +102,10 @@ export default function Feed({ initialArticles, initialCount }) {
     const [{ data }, { count }] = await Promise.all([
       db.from('articles')
         .select(ARTICLE_SELECT)
+        .not('accuracy_score', 'is', null)
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
-      db.from('articles').select('*', { count: 'exact', head: true }),
+      db.from('articles').select('*', { count: 'exact', head: true }).not('accuracy_score', 'is', null),
     ])
     setArticles(data || [])
     setTotalCount(count || 0)
@@ -182,9 +187,10 @@ export async function getStaticProps() {
     const [{ data: articles }, { count }] = await Promise.all([
       supabase.from('articles')
         .select(SSR_SELECT)
+        .not('accuracy_score', 'is', null)
         .order('published_at', { ascending: false })
         .range(0, BATCH - 1),
-      supabase.from('articles').select('*', { count: 'exact', head: true }),
+      supabase.from('articles').select('*', { count: 'exact', head: true }).not('accuracy_score', 'is', null),
     ])
     return {
       props: { initialArticles: articles || [], initialCount: count || 0 },
