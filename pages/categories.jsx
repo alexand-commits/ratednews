@@ -9,7 +9,7 @@ export default function Categories() {
     <>
       <Head>
         <title>Rated News by Topic — Politics, Business, Tech & More — RatedNews</title>
-        <meta name="description" content="Browse rated news stories by topic — Politics, Business, Tech, Health, Sport, Environment and more. Every article scored for bias and credibility across 100+ outlets." />
+        <meta name="description" content="Browse rated news stories by topic — Politics, Business, Tech, Health, Sport, Environment and more. Every article scored for bias and credibility across 112 outlets." />
         <link rel="canonical" href="https://www.ratednews.com/categories" />
         <meta property="og:title"       content="Rated News by Topic — Politics, Business, Tech & More" />
         <meta property="og:description" content="Browse rated news stories by topic — Politics, Business, Tech, Health, Sport, Environment and more. Every article scored for bias and credibility." />

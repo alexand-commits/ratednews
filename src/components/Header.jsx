@@ -58,7 +58,6 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
         <a onClick={() => navigate('trending')}>Trending</a>
         <a onClick={() => navigate('sports')}>Sports</a>
         <a onClick={() => navigate('outlets')}>Outlets</a>
-        <a onClick={() => navigate('rankings')}>Rankings</a>
         <a onClick={() => navigate('about')}>How it works</a>
       </nav>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -160,6 +159,19 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
                 >
                   <span style={{ fontSize: 14 }}>👤</span> Profile
                 </button>
+                <button
+                  onClick={() => { setMenuOpen(false); navigate('about') }}
+                  style={{
+                    width: '100%', padding: '9px 16px', background: 'none', border: 'none',
+                    cursor: 'pointer', fontSize: 13, color: 'var(--text)', textAlign: 'left',
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    borderBottom: '0.5px solid var(--border)',
+                  }}
+                  onMouseOver={e => e.currentTarget.style.background = 'var(--bg)'}
+                  onMouseOut={e => e.currentTarget.style.background = 'none'}
+                >
+                  <span style={{ fontSize: 14 }}>ℹ️</span> How it works
+                </button>
 
                 {/* Theme toggle */}
                 <button
@@ -194,7 +206,16 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
             )}
           </div>
         ) : (
-          <button className="nav-pill" onClick={onLoginClick}>Sign in</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <button
+              onClick={() => navigate('about')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text2)', padding: '4px 2px' }}
+              className="mobile-only"
+            >
+              How it works
+            </button>
+            <button className="nav-pill" onClick={onLoginClick}>Sign in</button>
+          </div>
         )}
         <div className="tagline">Trust the source, not just the story</div>
       </div>

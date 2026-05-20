@@ -204,7 +204,11 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   const [bg, fg] = outletColor(outlet.name)
   const score = outlet.overall_score || 0
   const biasPos = Math.max(0, Math.min(100, 50 + ((outlet.bias_score || 50) - 50)))
-  const similar = allOutlets.filter(o => o.id !== outletId && o.country === outlet?.country).slice(0, 4)
+  const similar = allOutlets.filter(o => o.id !== outletId && o.country === outlet?.country && !o.parent_outlet_id).slice(0, 4)
+
+  // Parent / child outlet relationships
+  const parentOutlet  = outlet.parent_outlet_id ? allOutlets.find(o => o.id === outlet.parent_outlet_id) : null
+  const childOutlets  = allOutlets.filter(o => o.parent_outlet_id === outletId)
   const websiteUrl = outlet.website_url || (() => {
     if (!outlet.rss_url) return null
     try {
@@ -351,6 +355,15 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
             <div className="outlet-meta-chips">
               <span className="meta-chip"><span>🌍</span>{outlet.country || 'Unknown'}</span>
               <span className="meta-chip">{outlet.type || 'News outlet'}</span>
+              {parentOutlet && (
+                <button
+                  onClick={() => navigate('outlet', { outletId: parentOutlet.id })}
+                  className="meta-chip"
+                  style={{ background: 'rgba(216,90,48,0.08)', border: '1px solid rgba(216,90,48,0.25)', color: 'var(--coral)', fontWeight: 600, cursor: 'pointer' }}
+                >
+                  ↑ Part of {parentOutlet.name}
+                </button>
+              )}
               {websiteUrl && (
                 <a
                   href={websiteUrl} target="_blank" rel="noopener noreferrer"
@@ -371,7 +384,10 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
           <div className="outlet-hero-score-block">
             <div className="outlet-hero-score-text">
               <div className="big-score" style={{ color: score >= 75 ? 'var(--green)' : score >= 60 ? 'var(--amber)' : score > 0 ? 'var(--red)' : 'var(--text3)' }}>{score > 0 ? score : '—'}</div>
-              <div className="big-score-label">Overall trust score</div>
+              <div className="big-score-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                Quality score
+                <InfoTip text={`Based on consistent AI analysis across ${aiCount > 0 ? aiCount : 'recent'} articles. Reflects patterns over time, not individual verdicts.`} />
+              </div>
               <div style={{
                 display: 'inline-block',
                 fontSize: 11,
@@ -382,7 +398,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                 background: score >= 75 ? 'var(--green-light)' : score >= 60 ? 'var(--amber-light)' : score > 0 ? 'var(--red-light)' : 'var(--bg2)',
                 color: score >= 75 ? 'var(--green-dark)' : score >= 60 ? 'var(--amber)' : score > 0 ? 'var(--red)' : 'var(--text3)',
               }}>
-                {score >= 90 ? '● High credibility' : score >= 75 ? '● Good credibility' : score >= 60 ? '● Mixed credibility' : score > 0 ? '● Low credibility' : 'Not yet rated'}
+                {score >= 90 ? '● High quality' : score >= 75 ? '● Good quality' : score >= 60 ? '● Mixed quality' : score > 0 ? '● Low quality' : 'Not yet rated'}
               </div>
               {rankOverall > 0 && (
                 <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text3)' }}>
@@ -434,6 +450,35 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
           </div>
         )}
 
+        {/* Section outlets — shown on parent outlet pages (e.g. BBC Sport under BBC News) */}
+        {childOutlets.length > 0 && (
+          <div style={{ marginBottom: 16, padding: '12px 14px', background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>Sections</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {childOutlets.map(child => (
+                <button
+                  key={child.id}
+                  onClick={() => navigate('outlet', { outletId: child.id })}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '7px 14px', borderRadius: 'var(--radius-sm)',
+                    border: '0.5px solid var(--border)', background: 'var(--bg)',
+                    cursor: 'pointer', textAlign: 'left',
+                  }}
+                >
+                  <OutletLogo name={child.name} size={22} borderRadius={5} />
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{child.name}</div>
+                    {child.overall_score > 0 && (
+                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>Score {child.overall_score}</div>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="tabs">
           {[['overview', 'Overview'], ['feed-tab', 'News feed'], ['community', `Community${totalRatings > 0 ? ` (${totalRatings})` : ''}`], ['discussion', `Discussion${comments.length > 0 ? ` (${comments.length})` : ''}`]].map(([id, label]) => (
             <div key={id} className={`tab${activeTab === id ? ' active' : ''}`} onClick={() => setActiveTab(id)}>
@@ -445,28 +490,35 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
         {activeTab === 'overview' && (
           <div className="grid">
             <div>
-              <div className="section-label">AI score breakdown {aiCount > 0 && <span style={{ fontWeight: 400, color: 'var(--text3)' }}>(based on last 25 articles)</span>}</div>
-              <div className="widget" style={{ marginBottom: 14 }}>
-                {avgAccuracy !== null ? (
+              <div className="section-label">AI analysis {aiCount > 0 && <span style={{ fontWeight: 400, color: 'var(--text3)' }}>· last {aiCount} articles</span>}</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+                {score > 0 ? (
                   <>
-                    <ScoreBar label="Avg credibility" value={avgAccuracy} tip="Average credibility score across this outlet's recent articles, as assessed by AI." />
-                    {fairRate !== null && <ScoreBar label="Fair headline rate" value={fairRate} tip="Percentage of articles where the headline accurately reflects the content — not misleading or clickbait." />}
-                    {avgBiasScore !== null && (
-                      <div className="score-bar-row">
-                        <span className="sbl" style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                          Partisan intensity <InfoTip text="How opinionated or one-sided this outlet's writing style tends to be — regardless of political direction. Low = objective reporting. High = strongly partisan language." />
-                        </span>
-                        <div className="sb-bg">
-                          <div className="sb-fill" style={{ width: `${avgBiasScore}%`, background: scoreColor(100 - avgBiasScore) }}></div>
+                    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px 14px', flex: 1, minWidth: 80 }}>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 3 }}>
+                        Quality <InfoTip text="Average AI quality score across this outlet's recent articles — based on headline clarity, sourcing signals, and writing tone. 0–100, higher is better." />
+                      </div>
+                      <div style={{ fontSize: 18, fontWeight: 700, color: scoreColor(score) }}>{score}</div>
+                    </div>
+                    {fairRate !== null && (
+                      <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px 14px', flex: 1, minWidth: 80 }}>
+                        <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 3 }}>
+                          Fair headlines <InfoTip text="Percentage of this outlet's headlines tagged as fair — not misleading or clickbait. Based on consistent AI analysis across recent articles." />
                         </div>
-                        <span className="sbv" style={{ color: scoreColor(100 - avgBiasScore) }}>{avgBiasScore}</span>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: scoreColor(fairRate) }}>{fairRate}%</div>
+                      </div>
+                    )}
+                    {avgBiasScore !== null && (
+                      <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px 14px', flex: 1, minWidth: 80 }}>
+                        <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 3 }}>
+                          Partisan <InfoTip text="How opinionated or one-sided this outlet's writing style tends to be. Low = objective. High = strongly partisan." />
+                        </div>
+                        <div style={{ fontSize: 18, fontWeight: 700, color: scoreColor(100 - avgBiasScore) }}>{avgBiasScore}</div>
                       </div>
                     )}
                   </>
                 ) : (
-                  <div style={{ fontSize: 12, color: 'var(--text3)', padding: '8px 0' }}>
-                    AI scores will appear once articles have been analysed.
-                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text3)' }}>AI scores will appear once articles have been analysed.</div>
                 )}
               </div>
 
@@ -622,22 +674,20 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
               {similar.length > 0 && (
                 <div className="widget">
                   <div className="widget-title">Similar outlets</div>
-                  {similar.map(o => {
-                    return (
-                      <div key={o.id} className="similar-row" onClick={() => navigate('outlet', { outletId: o.id })}>
-                        <OutletLogo name={o.name} size={30} borderRadius={7} />
-                        <span style={{ flex: 1, fontSize: 13 }}>{o.name}</span>
-                        <span style={{ fontSize: 13, fontWeight: 500, color: scoreColor(o.overall_score || 0) }}>{o.overall_score || 0}</span>
-                      </div>
-                    )
-                  })}
+                  {similar.map(o => (
+                    <div key={o.id} className="similar-row" onClick={() => navigate('outlet', { outletId: o.id })}>
+                      <OutletLogo name={o.name} size={30} borderRadius={7} />
+                      <span style={{ flex: 1, fontSize: 13 }}>{o.name}</span>
+                      <span style={{ fontSize: 13, fontWeight: 500, color: scoreColor(o.overall_score || 0) }}>{o.overall_score || 0}</span>
+                    </div>
+                  ))}
                 </div>
               )}
 
               {/* Highest scored articles */}
               {bestArticles.length > 0 && (
                 <div className="widget">
-                  <div className="widget-title">Highest scored articles</div>
+                  <div className="widget-title">Highest quality articles</div>
                   {bestArticles.map(a => (
                     <Link key={a.id} href={`/article/${articleSlug(a.title, a.id)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 0', borderBottom: '0.5px solid var(--border)', cursor: 'pointer' }} className="border-hover">

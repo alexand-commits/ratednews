@@ -113,7 +113,7 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
       <div className="score-row">
         {scored ? (
           <>
-            {/* Credibility score — always shown when scored */}
+            {/* Quality score — always shown when scored */}
             <span className={accBadgeClass(acc)}>✦ {acc}</span>
 
             {/* Bias — only shown when scored, prevents unscored articles showing ✓ Factual */}
@@ -142,12 +142,6 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           {article.category && (
             <span className="score-mini" style={{ color: 'var(--text3)' }}>{article.category}</span>
-          )}
-          {commentCount > 0 && (
-            <span className="score-mini" style={{ color: 'var(--text3)' }}>💬 {commentCount}</span>
-          )}
-          {commentCount >= 3 && (
-            <span className="trending-chip">🔥 Hot</span>
           )}
         </div>
       </div>

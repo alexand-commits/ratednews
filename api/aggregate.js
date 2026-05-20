@@ -5,8 +5,10 @@ const { createClient } = require('@supabase/supabase-js')
 
 const SUPABASE_URL     = process.env.VITE_SUPABASE_URL
 const SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+const CRON_SECRET      = process.env.CRON_SECRET
 const MIN_ARTICLES     = 3
-const EDITORIAL        = 50
+const COMMUNITY_THRESHOLD = 20   // ratings needed before community influences the score
+const COMMUNITY_WEIGHT    = 0.20 // weight given to community once threshold is met
 
 function majorityDirection(counts) {
   const { left = 0, centre = 0, right = 0 } = counts
@@ -19,10 +21,8 @@ function majorityDirection(counts) {
 }
 
 function computeOverall({ accuracyScore, communityScore, voteCount }) {
-  if (voteCount === 0)  return Math.round(accuracyScore * 0.70 + EDITORIAL * 0.30)
-  if (voteCount < 5)   return Math.round(accuracyScore * 0.50 + EDITORIAL * 0.30 + communityScore * 0.20)
-  if (voteCount < 20)  return Math.round(accuracyScore * 0.40 + EDITORIAL * 0.25 + communityScore * 0.35)
-  return Math.round(accuracyScore * 0.35 + EDITORIAL * 0.25 + communityScore * 0.40)
+  if (voteCount < COMMUNITY_THRESHOLD) return accuracyScore
+  return Math.round(accuracyScore * (1 - COMMUNITY_WEIGHT) + communityScore * COMMUNITY_WEIGHT)
 }
 
 function starsToScore(avgStars) {
@@ -32,6 +32,11 @@ function starsToScore(avgStars) {
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET' && req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  // Auth: only allow cron runner with CRON_SECRET
+  if (req.headers.authorization !== `Bearer ${CRON_SECRET}`) {
+    return res.status(401).json({ error: 'Unauthorized' })
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)

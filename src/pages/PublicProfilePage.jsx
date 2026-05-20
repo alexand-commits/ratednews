@@ -143,7 +143,7 @@ function MediaDiet({ ratings }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function PublicProfilePage({ userId, navigate, goBack, showToast }) {
+export default function PublicProfilePage({ userId, isPublic, navigate, goBack, showToast }) {
   const [profile, setProfile]         = useState(null)
   const [articleRatings, setArticleRatings] = useState([])
   const [comments, setComments]       = useState([])
@@ -191,14 +191,14 @@ export default function PublicProfilePage({ userId, navigate, goBack, showToast 
     )
   }
 
-  if (notFound) {
+  if (notFound || !isPublic) {
     return (
       <div className="page-content">
         <div className="container" style={{ maxWidth: 700 }}>
           <button className="back-btn" onClick={goBack}>← Back</button>
           <div className="empty-state">
-            <h3>Profile not found</h3>
-            <p>This user hasn't set up a public profile yet.</p>
+            <h3>{notFound ? 'Profile not found' : '🔒 Private profile'}</h3>
+            <p>{notFound ? "This user doesn't exist." : "This user hasn't made their profile public yet."}</p>
           </div>
         </div>
       </div>
@@ -240,7 +240,9 @@ export default function PublicProfilePage({ userId, navigate, goBack, showToast 
               {initials}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>{displayName}</div>
+              <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
+                {profile.username ? <span><span style={{ color: 'var(--text3)', fontWeight: 400 }}>@</span>{profile.username}</span> : displayName}
+              </div>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                 <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 9px', borderRadius: 20, background: 'var(--bg)', border: `1.5px solid ${trust.color}`, color: trust.color, whiteSpace: 'nowrap' }}>
                   {trust.emoji} {trust.label}

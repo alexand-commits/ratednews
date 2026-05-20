@@ -9,10 +9,10 @@ export default function About() {
     <>
       <Head>
         <title>How It Works — RatedNews</title>
-        <meta name="description" content="Learn how RatedNews uses AI to score news articles for credibility, bias direction, and headline fairness across 100+ outlets — updated every hour." />
+        <meta name="description" content="Learn how RatedNews uses AI to score news articles for credibility, bias direction, and headline fairness across 112 outlets — updated every hour." />
         <link rel="canonical" href="https://www.ratednews.com/about" />
         <meta property="og:title"       content="How RatedNews Works — AI-Powered News Credibility Ratings" />
-        <meta property="og:description" content="Learn how RatedNews uses AI to score news articles for credibility, bias direction, and headline fairness across 100+ outlets — updated every hour." />
+        <meta property="og:description" content="Learn how RatedNews uses AI to score news articles for credibility, bias direction, and headline fairness across 112 outlets — updated every hour." />
         <meta property="og:url"         content="https://www.ratednews.com/about" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
@@ -21,7 +21,7 @@ export default function About() {
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="How RatedNews Works" />
-        <meta name="twitter:description" content="AI-powered credibility and bias ratings for 100+ news outlets, updated every hour." />
+        <meta name="twitter:description" content="AI-powered credibility and bias ratings for 112 news outlets, updated every hour." />
         <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
         <script
           type="application/ld+json"
@@ -32,7 +32,7 @@ export default function About() {
               {
                 '@type': 'Question',
                 name: 'What is RatedNews?',
-                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews is an AI-powered news rating platform that scores every article for credibility, political bias direction, and headline fairness across 100+ UK, US and international news outlets.' },
+                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews is an AI-powered news rating platform that scores every article for credibility, political bias direction, and headline fairness across 112 UK, US and international news outlets.' },
               },
               {
                 '@type': 'Question',
@@ -47,7 +47,7 @@ export default function About() {
               {
                 '@type': 'Question',
                 name: 'Which news outlets does RatedNews cover?',
-                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews covers 100+ major news outlets including BBC, CNN, Fox News, The Guardian, The New York Times, Wall Street Journal, Daily Mail, Reuters, AP, and many more UK, US, and international sources.' },
+                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews covers 112 major news outlets including BBC, CNN, Fox News, The Guardian, The New York Times, Wall Street Journal, Daily Mail, Reuters, AP, and many more UK, US, and international sources.' },
               },
               {
                 '@type': 'Question',

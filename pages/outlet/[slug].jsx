@@ -7,7 +7,7 @@ import { toSlug } from '../../src/utils/navigate'
 function outletOgUrl(o) {
   const base = 'https://www.ratednews.com/api/og?type=outlet'
   const p = new URLSearchParams({ outlet: o.name || '' })
-  if (o.overall_score)     p.set('score',      o.overall_score)
+  if (o.overall_score ?? o.accuracy_score) p.set('score', o.overall_score ?? o.accuracy_score)
   if (o.bias_direction)    p.set('bias',        o.bias_direction)
   if (o.fair_rate != null) p.set('fair',        Math.round(o.fair_rate))
   if (o.misleading_rate != null) p.set('misleading', Math.round(o.misleading_rate))
@@ -38,7 +38,7 @@ export default function OutletDetail({ outlet }) {
         />
         <link rel="canonical" href={`https://www.ratednews.com/outlet/${canonicalSlug}`} />
         <meta property="og:title"       content={`${outlet.name} — Bias & Credibility Rating`} />
-        <meta property="og:description" content={`${outlet.name} has a credibility score of ${outlet.overall_score ?? '–'}/100 on RatedNews. See the full breakdown.`} />
+        <meta property="og:description" content={`${outlet.name} has a credibility score of ${outlet.overall_score ?? outlet.accuracy_score ?? '–'}/100 on RatedNews. See the full breakdown.`} />
         <meta property="og:url"         content={`https://www.ratednews.com/outlet/${canonicalSlug}`} />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content={outletOgUrl(outlet)} />
@@ -47,7 +47,7 @@ export default function OutletDetail({ outlet }) {
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"        content="summary_large_image" />
         <meta name="twitter:title"       content={`${outlet.name} — Bias & Credibility Rating | RatedNews`} />
-        <meta name="twitter:description" content={`${outlet.name} scores ${outlet.overall_score ?? '–'}/100 for credibility on RatedNews. AI-powered analysis updated hourly.`} />
+        <meta name="twitter:description" content={`${outlet.name} scores ${outlet.overall_score ?? outlet.accuracy_score ?? '–'}/100 for credibility on RatedNews. AI-powered analysis updated hourly.`} />
         <meta name="twitter:image"       content={outletOgUrl(outlet)} />
 
         {/* Organisation structured data — helps Google understand the page
@@ -62,9 +62,9 @@ export default function OutletDetail({ outlet }) {
             url:         `https://www.ratednews.com/outlet/${canonicalSlug}`,
             ...(outlet.country === 'UK' && { areaServed: 'GB' }),
             ...(outlet.country === 'US' && { areaServed: 'US' }),
-            aggregateRating: outlet.overall_score ? {
+            aggregateRating: (outlet.overall_score ?? outlet.accuracy_score) ? {
               '@type':      'AggregateRating',
-              ratingValue:  outlet.overall_score,
+              ratingValue:  outlet.overall_score ?? outlet.accuracy_score,
               bestRating:   100,
               worstRating:  0,
               ratingCount:  outlet.total_articles || 1,
@@ -76,10 +76,10 @@ export default function OutletDetail({ outlet }) {
                 name:    'Political bias',
                 value:   outlet.bias_direction,
               },
-              outlet.overall_score && {
+              (outlet.overall_score ?? outlet.accuracy_score) && {
                 '@type': 'PropertyValue',
-                name:    'Credibility score',
-                value:   `${outlet.overall_score}/100`,
+                name:    'Quality score',
+                value:   `${outlet.overall_score ?? outlet.accuracy_score}/100`,
               },
             ].filter(Boolean),
           }).replace(/<\//g, '<\\/')}}

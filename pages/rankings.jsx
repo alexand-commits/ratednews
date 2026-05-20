@@ -10,6 +10,7 @@ export default function Rankings() {
   const { navigate, goBack, allOutlets, outletsLoading, showToast, user, refreshOutlets } = useAppContext()
 
   const scoredOutlets = (allOutlets || [])
+    .filter(o => !o.parent_outlet_id)
     .filter(o => (o.accuracy_score || 0) > 0)
     .sort((a, b) => (b.accuracy_score || 0) - (a.accuracy_score || 0))
 
@@ -30,11 +31,11 @@ export default function Rankings() {
   return (
     <>
       <Head>
-        <title>News Outlet Bias & Credibility Rankings — RatedNews</title>
-        <meta name="description" content="Which news outlets are most credible and least biased? RatedNews ranks 100+ UK, US and international outlets by credibility score, political bias, and headline fairness — updated hourly." />
+        <title>News Outlet Quality & Bias Rankings — RatedNews</title>
+        <meta name="description" content="Which news outlets have the highest quality reporting? RatedNews ranks 100+ UK, US and international outlets by AI quality score, political bias, and headline fairness — updated every 30 minutes." />
         <link rel="canonical" href="https://www.ratednews.com/rankings" />
-        <meta property="og:title"       content="News Outlet Bias & Credibility Rankings — RatedNews" />
-        <meta property="og:description" content="Which news outlets are most credible and least biased? RatedNews ranks 100+ outlets by credibility score, political bias, and headline fairness — updated hourly." />
+        <meta property="og:title"       content="News Outlet Quality & Bias Rankings — RatedNews" />
+        <meta property="og:description" content="Which news outlets score highest for quality? RatedNews ranks 112 outlets by AI quality score, political bias, and headline fairness." />
         <meta property="og:url"         content="https://www.ratednews.com/rankings" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
@@ -42,8 +43,8 @@ export default function Rankings() {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
-        <meta name="twitter:title"      content="News Outlet Bias & Credibility Rankings — RatedNews" />
-        <meta name="twitter:description" content="Ranked by credibility score, political bias, and headline fairness across 100+ outlets." />
+        <meta name="twitter:title"      content="News Outlet Quality & Bias Rankings — RatedNews" />
+        <meta name="twitter:description" content="Ranked by AI quality score, political bias, and headline fairness across 112 outlets." />
         <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
         {itemListLd && (
           <script

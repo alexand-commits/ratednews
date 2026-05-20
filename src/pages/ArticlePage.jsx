@@ -415,8 +415,9 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     const replyList = replies[c.id] || []
     const isExpanded = replies[c.id] !== undefined
     const isReplying = replyingTo === c.id
-    const username = c.user_id ? (userProfiles[c.user_id] || 'Community member') : 'Community member'
-    const initials = getInitials(username)
+    const username    = c.user_id ? (userProfiles[c.user_id] || 'Community member') : 'Community member'
+    const hasHandle   = c.user_id && userProfiles[c.user_id]
+    const initials    = getInitials(username)
 
     return (
       <div className={isReply ? 'reply' : 'comment'}>
@@ -426,8 +427,8 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
           </div>
           <span
             className="c-user"
-            style={{ cursor: c.user_id ? 'pointer' : 'default' }}
-            onClick={() => c.user_id && navigate('publicProfile', { userId: c.user_id })}
+            style={{ cursor: hasHandle ? 'pointer' : 'default' }}
+            onClick={() => hasHandle && navigate('publicProfile', { userId: c.user_id })}
           >
             {username}
           </span>
@@ -535,7 +536,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
           <div className="article-headline-full">{article.title || ''}</div>
 
           <div className="article-score-strip">
-            <div className="asc"><strong style={{ color: scoreColor(acc) }}>{acc || '—'}</strong><span>Credibility</span></div>
+            <div className="asc"><strong style={{ color: scoreColor(acc) }}>{acc || '—'}</strong><span>Quality</span></div>
             {com > 0 && <div className="asc"><strong style={{ color: 'var(--amber)' }}>{(com / 20).toFixed(1)}★</strong><span>Community</span></div>}
             <div className="asc"><strong>{article.total_ratings || 0}</strong><span>Ratings</span></div>
             <div className="asc"><strong style={{ color: 'var(--text2)' }}>{comments.length}</strong><span>Comments</span></div>
@@ -551,7 +552,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 <div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
                     <span style={{ color: 'var(--text2)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 3 }}>
-                      Credibility <InfoTip text="How credible this article's reporting appears based on its headline and summary. 100 = well-sourced, trustworthy journalism." />
+                      Quality <InfoTip text="How well-sourced and measured this article's reporting appears based on its headline and summary. 100 = trustworthy, well-sourced journalism." />
                     </span>
                     <span style={{ fontWeight: 700, color: scoreColor(acc) }}>{acc}/100</span>
                   </div>
@@ -713,7 +714,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               const shareUrl = `https://www.ratednews.com/article/${articleSlug(article.title, article.id)}`
               const biasMap = { left: '← Left', centre: '◉ Centre', right: '→ Right' }
               const scoreParts = [
-                acc ? `🎯 ${acc}/100 credibility` : null,
+                acc ? `🎯 ${acc}/100 quality` : null,
                 article.bias_direction ? biasMap[article.bias_direction] : null,
                 article.headline_vote && article.headline_vote !== 'fair' ? `📰 ${article.headline_vote}` : null,
               ].filter(Boolean).join(' · ')
@@ -809,7 +810,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
             <div className="compose-av">{user ? getInitials(user.email) : '?'}</div>
             <input
               className="compose-input"
-              placeholder={user ? 'Add to the discussion...' : 'Sign in to join the discussion...'}
+              placeholder={user ? 'Add to the discussion...' : 'Sign in to comment...'}
               value={commentInput}
               onChange={e => setCommentInput(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && postComment()}

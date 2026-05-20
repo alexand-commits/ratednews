@@ -9,14 +9,14 @@ const OUTLET_TABS = [
   {
     id: 'credibility', label: 'Trust', key: 'overall_score',
     desc: 'Overall trust score',
-    tip: 'Combined credibility score based on AI accuracy analysis, headline fairness and community ratings. Higher = more trustworthy.',
+    tip: 'Combined score based on AI analysis of headline quality, fairness and community ratings. Higher = more trustworthy.',
     chipLabel: 'avg trust score', unit: '',
   },
   {
-    id: 'accuracy', label: 'Most Accurate', key: 'accuracy_score',
-    desc: 'AI credibility score',
-    tip: 'AI-assessed credibility of each article. Outlets are ranked by their average credibility score across recent articles.',
-    chipLabel: 'avg credibility', unit: '',
+    id: 'accuracy', label: 'Quality', key: 'accuracy_score',
+    desc: 'AI quality score',
+    tip: 'AI-assessed quality of each article\'s headline and presentation. Outlets are ranked by their average quality score across recent articles.',
+    chipLabel: 'avg quality score', unit: '',
   },
   {
     id: 'community', label: 'Community', key: 'community_score',
@@ -27,7 +27,7 @@ const OUTLET_TABS = [
   {
     id: 'headlines', label: 'Headlines', key: 'fair_rate',
     desc: 'Headline fairness rate',
-    tip: 'Percentage of headlines rated fair by AI — not misleading or clickbait. Higher = more honest headline writing.',
+    tip: 'Percentage of headlines tagged fair — not misleading or clickbait. Based on consistent AI analysis across all articles.',
     chipLabel: 'avg fair headline rate', unit: '%',
   },
 ]
@@ -270,6 +270,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
 
   const activeTab = OUTLET_TABS.find(t => t.id === tab)
   const sorted = outlets
+    .filter(o => !o.parent_outlet_id)  // exclude child/section outlets (e.g. BBC Sport under BBC News)
     .filter(o => region === 'all' || (o.country || 'International') === region)
     .slice()
     .sort((a, b) => (b[activeTab.key] || 0) - (a[activeTab.key] || 0))
@@ -290,7 +291,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
             Rankings
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text2)' }}>
-            Outlet trust scores and top community contributors.
+            Outlet quality scores and top community contributors.
           </p>
         </div>
 
@@ -357,7 +358,6 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                   </>
                 )}
               </div>
-
             </div>
 
             {/* Biggest Movers */}
@@ -370,7 +370,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
               return (
                 <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px', marginBottom: 20 }}>
                   <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 12 }}>
-                    Score movers · 7-day credibility change
+                    Score movers · 7-day quality change
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                     {/* Risers */}
@@ -590,7 +590,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                   )}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'center', marginTop: 16 }}>
-                  Credibility scores are AI-generated. Community scores reflect user ratings.
+                  Quality scores are AI-generated based on consistent analysis across all outlets. Scores reflect patterns across recent articles, not individual verdicts.
                 </div>
               </>
             )}
@@ -626,10 +626,10 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                         display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px',
                         borderBottom: i < leaders.length - 1 ? '0.5px solid var(--border)' : 'none',
                         background: isYou ? 'var(--bg2)' : 'var(--surface)',
-                        cursor: 'pointer', transition: 'background 0.15s',
+                        cursor: l.username !== 'Anonymous' ? 'pointer' : 'default', transition: 'background 0.15s',
                       }}
-                      className="row-hover"
-                      onClick={() => navigate('publicProfile', { userId: l.userId })}
+                      className={l.username !== 'Anonymous' ? 'row-hover' : ''}
+                      onClick={() => l.username !== 'Anonymous' && navigate('publicProfile', { userId: l.userId })}
                     >
                       {/* Rank */}
                       <span style={{ fontSize: isTop3 ? 15 : 13, fontWeight: isTop3 ? 700 : 400, color: i === 0 ? '#b8860b' : i === 1 ? '#888' : i === 2 ? '#a0522d' : 'var(--text3)', width: 26, flexShrink: 0, textAlign: 'center' }}>

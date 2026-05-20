@@ -79,18 +79,70 @@ const SYSTEM_PROMPT = `You are a neutral media analyst. For each news article yo
 
 Respond with ONLY the JSON object — no markdown, no explanation, no code fences.`
 
-const WEIGHTING_ROWS = [
-  { votes: '0 ratings',   ai: 70, editorial: 30, community: 0 },
-  { votes: '1–4 ratings', ai: 50, editorial: 30, community: 20 },
-  { votes: '5–19 ratings',ai: 40, editorial: 25, community: 35 },
-  { votes: '20+ ratings', ai: 35, editorial: 25, community: 40 },
+const QUADRANT_EXAMPLES = [
+  {
+    quadrant: 'Credible · Leans right',
+    credibility: 78,
+    bias: 'Right',
+    intensity: 25,
+    headline: 'fair',
+    outlet: 'Breitbart',
+    title: 'Motion Picture Academy Rules AI Actors & Writers Not Eligible for Oscars',
+    summary: 'The Academy of Motion Picture Arts and Sciences announced that artificial intelligence-generated actors and writers are ineligible for Oscar awards, establishing a policy to restrict AI use in award consideration.',
+    credColor: '#639922',
+    biasColor: '#ef4444',
+    note: 'A right-leaning outlet reporting a factual industry announcement. The headline accurately reflects the content, the writing is direct with low partisan intensity — credibility and bias are independent.',
+  },
+  {
+    quadrant: 'Not credible · Leans right',
+    credibility: 15,
+    bias: 'Right',
+    intensity: 92,
+    headline: 'misleading',
+    outlet: 'Breitbart',
+    title: "Charlize Theron Won't Support Her Black Trans Child as an Adult: 'Start Getting Ready' to Work at Starbucks",
+    summary: 'The article claims actress Charlize Theron stated she will not financially support her Black trans child as an adult and told her children to prepare for work at Starbucks.',
+    credColor: '#ef4444',
+    biasColor: '#ef4444',
+    note: 'High partisan intensity, misleading headline, and claims that read as unsupported. Low credibility score reflects the framing and sourcing signals — not a verified fact check.',
+  },
+  {
+    quadrant: 'Credible · Leans left',
+    credibility: 78,
+    bias: 'Left',
+    intensity: 25,
+    headline: 'fair',
+    outlet: 'MSNBC',
+    title: 'Supreme Court maintains mail access to abortion pill mifepristone for now',
+    summary: 'The US Supreme Court has maintained temporary access to the abortion pill mifepristone via mail, with Justice Alito extending orders preserving the status quo pending full court review.',
+    credColor: '#639922',
+    biasColor: '#3b82f6',
+    note: 'A left-leaning outlet reporting a factual legal development accurately. Framing reflects a progressive perspective but the reporting is internally consistent and the headline is fair.',
+  },
+  {
+    quadrant: 'Not credible · Leans left',
+    credibility: 15,
+    bias: 'Left',
+    intensity: 75,
+    headline: 'misleading',
+    outlet: 'The Mirror',
+    title: "Donald Trump says 'Project Freedom is paused' as Strait of Hormuz US blockade goes on",
+    summary: "The article reports on Donald Trump's statement that 'Project Freedom is paused' amid ongoing tensions in the Strait of Hormuz, which has escalated following US strikes on Iranian targets.",
+    credColor: '#ef4444',
+    biasColor: '#3b82f6',
+    note: 'Misleading framing on an unverified claim. High partisan intensity combined with a headline that implies more certainty than the summary supports — flags as low credibility despite a left-centre outlet.',
+  },
 ]
+
 
 const CHANGELOG = [
   {
     date: 'May 2026',
     entries: [
-      'All scored articles now always display their credibility badge — an earlier outlet reputation gate that suppressed low scores for high-reputation outlets was removed in favour of full transparency.',
+      'Outlets and Rankings pages combined into a single ranked list. Quality, Community, and Headlines tabs replace the previous Trust tab — scores are now displayed consistently across the outlets list and outlet detail pages.',
+      'Parent-child outlet relationships introduced. Sections such as BBC Sport now appear under their parent outlet (BBC News) rather than as standalone entries in rankings and the top outlets list.',
+      'Ingest cap reduced to 1 article per outlet per run. The most recent article from each outlet is always ingested first — older articles in the same window carry over to the next run, keeping scores current without inflating volume.',
+      'All scored articles now always display their quality badge — an earlier outlet reputation gate that suppressed low scores for high-reputation outlets was removed in favour of full transparency.',
       'Scoring prompt updated: added sports match report carve-out. Colourful match-report language ("fires", "nets", "stunner") is now correctly treated as convention, not inaccuracy. Transfer knowledge cut-off caveat added — article claims about player club affiliations are trusted over training data.',
       'Scoring prompt updated: added tribute and memorial carve-out. Emotional or reverential language in articles about deaths, retirements, and community stories is no longer penalised for accuracy or inflated for bias.',
       'Headline verdict badges renamed for clarity — "⚠ Misleading headline" and "✗ Clickbait headline" now appear in-card only when a verdict other than "fair" is returned.',
@@ -164,8 +216,8 @@ export default function MethodologyPage({ goBack }) {
             RatedNews scores two things: <strong>individual articles</strong> and <strong>outlets</strong>.
           </p>
           <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 14 }}>
-            <strong>Articles</strong> are scored as they are ingested — every 30 minutes, across 100+ syndicated feeds.
-            Each article receives a credibility score, bias direction, partisan intensity, headline verdict, category,
+            <strong>Articles</strong> are scored as they are ingested — every 30 minutes, across 112 outlets.
+            Each article receives a quality score, bias direction, partisan intensity, headline verdict, category,
             geographic scope, and region tag. These are generated in a single AI call per article.
           </p>
           <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.75 }}>
@@ -237,44 +289,55 @@ export default function MethodologyPage({ goBack }) {
           </p>
         </Section>
 
+        {/* Scoring examples */}
+        <Section title="Scoring in practice">
+          <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 20 }}>
+            Quality and bias are independent dimensions. A right-leaning outlet can report accurately.
+            A centrist outlet can publish a misleading headline. These are real scored articles from our index
+            illustrating all four combinations.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14 }}>
+            {QUADRANT_EXAMPLES.map(ex => (
+              <div key={ex.quadrant} style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 10, padding: 16 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text3)', marginBottom: 10 }}>
+                  {ex.quadrant}
+                </div>
+                <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: ex.credColor + '22', color: ex.credColor, fontWeight: 600, border: `1px solid ${ex.credColor}44` }}>
+                    Quality {ex.credibility}/100
+                  </span>
+                  <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: ex.biasColor + '22', color: ex.biasColor, fontWeight: 600, border: `1px solid ${ex.biasColor}44` }}>
+                    {ex.bias} · {ex.intensity}/100 intensity
+                  </span>
+                  <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 99, background: 'var(--surface)', color: 'var(--text3)', border: '0.5px solid var(--border)' }}>
+                    {ex.headline} headline
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--coral)', fontWeight: 600, marginBottom: 4 }}>{ex.outlet}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.4, marginBottom: 8 }}>{ex.title}</div>
+                <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6, marginBottom: 10 }}>{ex.summary}</div>
+                <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, borderTop: '0.5px solid var(--border)', paddingTop: 10, fontStyle: 'italic' }}>
+                  {ex.note}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Section>
+
         {/* Outlet score weighting */}
         <Section title="How outlet scores are calculated">
           <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 16 }}>
-            An outlet's overall score blends three signals. The balance shifts as community ratings accumulate —
-            early on the AI leads, but a well-rated outlet's community voice eventually carries the most weight.
+            An outlet's score starts as the average AI quality score across all of its articles published in the last 30 days.
+            Each article is scored independently — the outlet score reflects sustained patterns across recent output, not individual verdicts.
           </p>
-
-          {/* Weighting table */}
-          <div style={{ overflowX: 'auto', marginBottom: 16 }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-              <thead>
-                <tr style={{ borderBottom: '0.5px solid var(--border)' }}>
-                  {['Community ratings', 'AI score', 'Editorial baseline', 'Community score'].map(h => (
-                    <th key={h} style={{ textAlign: 'left', padding: '8px 12px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {WEIGHTING_ROWS.map((row, i) => (
-                  <tr key={i} style={{ borderBottom: '0.5px solid var(--border)', background: i % 2 === 0 ? 'transparent' : 'var(--bg)' }}>
-                    <td style={{ padding: '9px 12px', fontWeight: 600 }}>{row.votes}</td>
-                    <td style={{ padding: '9px 12px', color: 'var(--text2)' }}>{row.ai}%</td>
-                    <td style={{ padding: '9px 12px', color: 'var(--text2)' }}>{row.editorial}%</td>
-                    <td style={{ padding: '9px 12px', color: row.community > 0 ? 'var(--text1)' : 'var(--text3)' }}>{row.community > 0 ? `${row.community}%` : '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 10 }}>
-            The <strong>editorial baseline</strong> is fixed at 50 (neutral) until we introduce manual editorial review.
-            It acts as a stabilising anchor — preventing a handful of extreme article scores from producing a wildly
-            unrepresentative outlet score.
-          </p>
+          <Callout color="var(--blue)">
+            <strong>Two-tier formula:</strong> For outlets with fewer than 20 community ratings, the score is 100% AI-derived.
+            Once 20 or more reader ratings are recorded, community input is blended in at 20% weight —
+            so the displayed score becomes 80% AI + 20% community. This threshold prevents a handful of early votes
+            from distorting the ranking before a meaningful sample exists.
+          </Callout>
           <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.75 }}>
-            The <strong>community score</strong> converts star ratings (1–5 stars) to a 0–100 scale.
-            Community ratings only appear on an outlet's score once at least one rating exists.
+            Scores are recalculated every hour as new articles are ingested and scored. An outlet with few recent articles will have a less stable score than one with a large volume — article counts are shown on each outlet page so you can judge the sample size yourself.
           </p>
         </Section>
 
@@ -287,11 +350,11 @@ export default function MethodologyPage({ goBack }) {
           {[
             {
               title: 'Scores are based on syndicated content only',
-              body: 'Credibility and bias scores are derived from the headline and syndicated summary — the content publishers explicitly provide for distribution. We don\'t fetch or process full article HTML. A misleading article with a factual-sounding headline can score well. A nuanced long-read might score differently in full. Treat scores as signals, not verdicts.',
+              body: 'Quality and bias scores are derived from the headline and syndicated summary — the content publishers explicitly provide for distribution. We don\'t fetch or process full article HTML. A misleading article with a factual-sounding headline can score well. A nuanced long-read might score differently in full. Treat scores as signals, not verdicts.',
             },
             {
-              title: 'Credibility scores are probabilistic, not verified',
-              body: '"Credibility score: 82" does not mean 82% of the claims in the article are true. It means the writing pattern matches what well-sourced, trustworthy journalism tends to look like. We are pattern-matching on language, not fact-checking claims. No automated system can do that reliably at this scale.',
+              title: 'Quality scores are probabilistic, not verified',
+              body: '"Quality score: 82" does not mean 82% of the claims in the article are true. It means the writing pattern matches what well-sourced, trustworthy journalism tends to look like. We are pattern-matching on language, not fact-checking claims. No automated system can do that reliably at this scale.',
             },
             {
               title: 'Small sample sizes produce unstable outlet scores',

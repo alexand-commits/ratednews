@@ -60,6 +60,12 @@ export function createNavigate(router, outlets = []) {
       case 'about':
         router.push('/about')
         break
+      case 'social-agent':
+        router.push('/social-agent')
+        break
+      case 'admin-articles':
+        router.push('/admin/articles')
+        break
       default:
         router.push('/')
     }

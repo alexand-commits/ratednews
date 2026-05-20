@@ -233,6 +233,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
   const [showOnboarding, setShowOnboarding]       = useState(false)
   const [isPublic,       setIsPublic]             = useState(false)
   const [togglingPublic, setTogglingPublic]       = useState(false)
+  const [showProfileInfo, setShowProfileInfo]     = useState(false)
   const [linkCopied,     setLinkCopied]           = useState(false)
   const [voteFilter,     setVoteFilter]           = useState('up')
   const [commentSort,    setCommentSort]          = useState('recent')
@@ -569,7 +570,6 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
               { value: articleViews.length,     label: 'Articles read'  },
               { value: articleRatings.length,   label: 'Rated'          },
               { value: followedOutletIds.size,  label: 'Following'      },
-              { value: savedItems.length,       label: 'Saved'          },
               { value: comments.length,         label: 'Comments'       },
               ...(avgStars ? [{ value: `${avgStars}★`, label: 'Avg rating', color: 'var(--amber)' }] : []),
               ...(streak > 1 ? [{ value: `🔥 ${streak}`, label: 'day streak', color: 'var(--coral)' }] : []),
@@ -597,10 +597,18 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
           )}
 
           {/* Public profile toggle — merged into hero card */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, marginTop: 14, paddingTop: 12, borderTop: '0.5px solid var(--border)' }}>
-            <div style={{ fontSize: 12, color: 'var(--text3)' }}>
-              {isPublic ? '🌐 Public profile' : '🔒 Private profile'}
-              {isPublic && <span style={{ marginLeft: 8, color: 'var(--text3)' }}>· shareable</span>}
+          <div style={{ marginTop: 14, paddingTop: 12, borderTop: '0.5px solid var(--border)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 12, color: 'var(--text3)' }}>
+                {isPublic ? '🌐 Public profile' : '🔒 Private profile'}
+                {isPublic && <span style={{ marginLeft: 8, color: 'var(--text3)' }}>· shareable</span>}
+              </span>
+              <button
+                onClick={() => setShowProfileInfo(p => !p)}
+                style={{ width: 16, height: 16, borderRadius: '50%', border: '1px solid var(--border)', background: 'none', color: 'var(--text3)', fontSize: 10, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontFamily: 'inherit', padding: 0 }}
+                aria-label="What is a public profile?"
+              >ⓘ</button>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               {isPublic && (
@@ -616,6 +624,15 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                 {togglingPublic ? '…' : isPublic ? 'Make private' : 'Make public'}
               </button>
             </div>
+            </div>
+            {showProfileInfo && (
+              <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 10, fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>
+                <strong style={{ color: 'var(--text)', display: 'block', marginBottom: 4 }}>🌐 Public — </strong>
+                Your bias fingerprint, reading stats, and ratings are visible to anyone with your profile link. Great for sharing your media diet.
+                <strong style={{ color: 'var(--text)', display: 'block', marginTop: 8, marginBottom: 4 }}>🔒 Private — </strong>
+                Only you can see your profile. Your data stays personal and won't appear in search engines.
+              </div>
+            )}
           </div>
         </div>
 
@@ -945,6 +962,31 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
               </div>
             </>
           )}
+          </div>
+        )}
+
+        {/* Admin tools — owner only */}
+        {user?.email === 'alexandchow@gmail.com' && (
+          <div style={{ marginTop: 24, paddingTop: 16, borderTop: '0.5px solid var(--border)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>Admin</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => navigate('social-agent')}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '8px 14px', borderRadius: 10, border: '0.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                <span style={{ fontSize: 15 }}>✦</span>
+                Social Agent
+                <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 2 }}>→</span>
+              </button>
+              <button
+                onClick={() => navigate('admin-articles')}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, padding: '8px 14px', borderRadius: 10, border: '0.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', fontFamily: 'inherit' }}
+              >
+                <span style={{ fontSize: 15 }}>🗂</span>
+                Article Review
+                <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 2 }}>→</span>
+              </button>
+            </div>
           </div>
         )}
 

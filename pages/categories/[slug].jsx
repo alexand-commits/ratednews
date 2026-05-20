@@ -46,7 +46,7 @@ export const CATEGORY_META = [
   {
     value: 'Health', slug: 'health', emoji: '🏥',
     title: 'Health & Medical News Rated for Credibility',
-    description: 'Health and medical news rated for credibility — clinical research, vaccines, public health and healthcare policy, compared across 100+ outlets.',
+    description: 'Health and medical news rated for credibility — clinical research, vaccines, public health and healthcare policy, compared across 112 outlets.',
   },
   {
     value: 'Environment', slug: 'environment', emoji: '🌱',

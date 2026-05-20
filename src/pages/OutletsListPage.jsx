@@ -195,6 +195,7 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
   const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
 
   const filtered = outlets
+    .filter(o => !o.parent_outlet_id)  // only top-level outlets; children shown under their parent
     .filter(o => region === 'all' || getRegion(o) === region)
     .filter(o => bias === 'all' || o.bias_direction === bias)
     .filter(o =>
@@ -328,6 +329,7 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
               const score    = o.overall_score  || 0
               const accuracy = o.accuracy_score || 0
               const ratings  = o.total_ratings  || 0
+              const children = outlets.filter(c => c.parent_outlet_id === o.id)
 
               return (
                 <div
@@ -386,9 +388,9 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
                     </div>
                   </div>
 
-                  {/* Accuracy bar */}
+                  {/* Quality bar */}
                   <div className="score-bar-row" style={{ margin: 0 }}>
-                    <span className="sbl" style={{ width: 70, fontSize: 11 }}>Credibility</span>
+                    <span className="sbl" style={{ width: 70, fontSize: 11 }}>Quality</span>
                     <div className="sb-bg">
                       <div className="sb-fill" style={{ width: `${accuracy}%`, background: scoreColor(accuracy) }} />
                     </div>
@@ -405,6 +407,28 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
                       <span className="sbv" style={{ fontSize: 11, color: 'var(--amber)' }}>
                         {(o.community_score / 20).toFixed(1)}★
                       </span>
+                    </div>
+                  )}
+
+                  {/* Section feeds — child outlets grouped under this parent */}
+                  {children.length > 0 && (
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingTop: 2 }}>
+                      <span style={{ fontSize: 10, color: 'var(--text3)', alignSelf: 'center' }}>Sections:</span>
+                      {children.map(child => (
+                        <button
+                          key={child.id}
+                          onClick={e => { e.stopPropagation(); navigate('outlet', { outletId: child.id }) }}
+                          style={{
+                            fontSize: 10, fontWeight: 600,
+                            padding: '2px 10px', borderRadius: 20,
+                            border: '1px solid var(--border)',
+                            background: 'var(--bg)', color: 'var(--text2)',
+                            cursor: 'pointer',
+                          }}
+                        >
+                          {child.name}
+                        </button>
+                      ))}
                     </div>
                   )}
                 </div>

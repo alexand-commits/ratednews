@@ -131,7 +131,7 @@ export default function FeedPage({
     // Escape LIKE metacharacters and PostgREST syntax chars
     const escaped = activeTopic.replace(/[%_\\]/g, '\\$&').replace(/[,()\.:]/g, ' ').trim()
     db.from('articles')
-      .select('id, title, published_at, outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+      .select('id, title, published_at, outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, country, bias_direction, logo_url, accuracy_score, overall_score), comments(count)')
       .ilike('title', `%${escaped}%`)
       .gte('published_at', cutoff)
       .order('published_at', { ascending: false })
@@ -243,7 +243,7 @@ export default function FeedPage({
       if (!escaped) { setDbResults([]); setDbLoading(false); return }
       const { data } = await db
         .from('articles')
-        .select('id, title, published_at, outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+        .select('id, title, published_at, outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, country, bias_direction, logo_url, accuracy_score, overall_score), comments(count)')
         .or(`title.ilike.%${escaped}%,ai_summary.ilike.%${escaped}%,summary.ilike.%${escaped}%`)
         .order('published_at', { ascending: false })
         .limit(50)
@@ -323,7 +323,15 @@ export default function FeedPage({
       .filter(a => minScore === 0 || (a.accuracy_score || 0) >= minScore)
       .slice()
       .sort((a, b) => {
-        if (sort === 'trending')  return (b.comments?.[0]?.count || 0) - (a.comments?.[0]?.count || 0)
+        if (sort === 'trending') {
+          const trendScore = a => {
+            const hoursAgo = (Date.now() - new Date(a.published_at)) / 3600000
+            return (a.cluster_peers || 0) * 15
+                 + ((a.accuracy_score || 50) / 100) * 5
+                 + Math.max(0, 12 - hoursAgo)
+          }
+          return trendScore(b) - trendScore(a)
+        }
         if (sort === 'top-rated') return (b.accuracy_score || 0) - (a.accuracy_score || 0)
         // Push future-dated articles to the bottom — treat them as epoch (oldest)
         const now = Date.now()
@@ -755,7 +763,7 @@ export default function FeedPage({
                 <div style={{ marginBottom: 6 }}>
                   <span className="score-badge score-badge-green" style={{ fontSize: 13, fontWeight: 700 }}>✦ 82</span>
                 </div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Credibility</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Quality</div>
                 <div style={{ fontSize: 11, color: 'var(--text3)' }}>0–100 factual reliability score. 70+ is solid journalism.</div>
               </div>
               <div style={{

@@ -89,7 +89,8 @@ function extractSummary(item) {
 
 // ── Junk filter ────────────────────────────────────────────────────────────────
 // Returns true for non-news content that should be dropped before insert/scoring.
-// Catches crosswords, podcasts, recipes, quizzes, sponsored posts, live blogs etc.
+// Catches crosswords, podcasts, recipes, quizzes, sponsored posts, live blogs,
+// weekly digests, affiliate/deal content etc.
 
 const JUNK_TITLE_RE    = /\b(crossword|wordsearch|word.?search|word.?game|sudoku)\b|\bpuzzle\b/i
 const PODCAST_TITLE_RE = /\bpodcast\b|\blistens?\s*:|^listen\s*:|\b(ep|episode)\s*\.?\s*\d+\b|\baudio\s+(story|tour|guide)\b/i
@@ -98,11 +99,17 @@ const LIFESTYLE_TITLE_RE = /\b(recipe|horoscope|star.?sign|your.?week|meal.?plan
 const PROMO_TITLE_RE   = /\b(sponsored|advertisement|advertorial|paid.?post|subscribe|sign.?up|newsletter|giveaway|competition|win a|enter now|terms and conditions)\b/i
 // Live score/match update pages — "Bayern vs PSG LIVE:", "LIVE: match updates"
 const LIVE_BLOG_RE     = /^LIVE\s*:/i|\bLIVE\b.{0,40}\b(score|updates?|stream|blog|latest)\b/i
+// Weekly digests, briefings, roundups — "Review of the week", "Morning briefing", "This week in..."
+const DIGEST_TITLE_RE  = /\b(review of the week|week in review|weekly roundup|this week in|the week'?s best|week'?s top|morning briefing|evening briefing|daily digest|daily briefing|what (we'?re|to) (read|watch|know)|what happened (this week|today)|around the web|must.?reads?|your (daily|weekly|morning|evening)|editor'?s picks?|top stories? of the (day|week))\b/i
+// Affiliate / deal / self-promotion — "best X to buy", deal posts, promo codes
+const AFFILIATE_TITLE_RE = /\b(best .{0,40} to buy|best .{0,40} deals?|deals? of the (day|week)|coupon|promo code|discount code|#ad\b|affiliate|buy now|shop now|on sale now|limited.?time offer|use code [a-z0-9]+)\b/i
+// Curation / editorial collections — "best of cartoons", "photos of the week", "mini report"
+const CURATION_TITLE_RE  = /\b(best of (cartoons?|photos?|pictures?|images?|comics?)|editorial cartoons?|cartoons? of the (day|week)|photos? of the (day|week)|mini (report|brief|roundup)|friday (mini|brief)|morning (must.?reads?|bullets?)|afternoon (wrap|update))\b/i
 
-const JUNK_URL_RE      = /\/(crossword|puzzle|games?|podcast|podcasts|audio|video|videos|sponsored|newsletter|quiz|quizzes|recipe|recipes|horoscope|horoscopes|terms|live-blog|liveblog)\b/i
+const JUNK_URL_RE      = /\/(crossword|puzzle|games?|podcast|podcasts|audio|video|videos|sponsored|newsletter|quiz|quizzes|recipe|recipes|horoscope|horoscopes|terms|live-blog|liveblog|deals?|roundup|roundups|affiliate|briefing|digest)\b/i
 
-// Titles over 200 chars are almost always live blog aggregates, not articles
-const MAX_TITLE_LENGTH = 200
+// Titles over 120 chars are almost always live blog aggregates or digest headlines, not articles
+const MAX_TITLE_LENGTH = 120
 
 function isJunk(item) {
   const title = item.title || ''
@@ -114,6 +121,9 @@ function isJunk(item) {
   if (LIFESTYLE_TITLE_RE.test(title))    return true
   if (PROMO_TITLE_RE.test(title))        return true
   if (LIVE_BLOG_RE.test(title))          return true
+  if (DIGEST_TITLE_RE.test(title))       return true
+  if (AFFILIATE_TITLE_RE.test(title))    return true
+  if (CURATION_TITLE_RE.test(title))     return true
   if (JUNK_URL_RE.test(url))             return true
   return false
 }
@@ -129,7 +139,7 @@ async function ingestOutlet(supabase, outlet) {
     return { inserted: 0, skipped: 0, errors: 1 }
   }
 
-  const items = feed.items.slice(0, 10)
+  const items = feed.items.slice(0, 1)
   let inserted = 0, skipped = 0, errors = 0
 
   const urls = items.map(i => i.link || i.guid).filter(Boolean)

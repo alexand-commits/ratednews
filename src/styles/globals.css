@@ -100,6 +100,8 @@ body { background: var(--bg); color: var(--text); min-height: 100dvh; overflow-x
   .nav { display: none; }
   .tagline { display: none; }
 }
+.mobile-only { display: none; }
+@media (max-width: 768px) { .mobile-only { display: inline-flex !important; } }
 
 /* STATS BAR */
 .stats-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: nowrap; }
@@ -357,16 +359,15 @@ body { background: var(--bg); color: var(--text); min-height: 100dvh; overflow-x
     padding-bottom: env(safe-area-inset-bottom, 0px);
     /* Large downward box-shadow fills any gap between nav and physical screen edge —
        more reliable than ::after which can be clipped by overflow */
-    box-shadow: 0 -1px 0 0 var(--border), 0 100px 0 100px var(--surface);
+    /* Extend background into the gap that appears when iOS Safari toolbar hides.
+       Box-shadow fill must be large enough to cover the full toolbar height (~83px) */
+    box-shadow: 0 -1px 0 0 var(--border), 0 200px 0 200px var(--surface);
     /* Frosted glass — matches header style */
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    /* Force GPU compositing — prevents iOS Safari fixed-position jumping.
-       will-change: transform intentionally omitted — it creates a compositor
-       layer that doesn't track the visual viewport when browser chrome
-       animates in/out, causing the nav to briefly float at the wrong position */
-    transform: translate3d(0, 0, 0);
-    -webkit-transform: translate3d(0, 0, 0);
+    /* NOTE: transform intentionally removed — translate3d/will-change both create
+       a compositor layer that stops tracking the visual viewport during iOS Safari
+       toolbar transitions, causing the nav to float with a gap below it. */
   }
   .bottom-nav-item {
     flex: 1;

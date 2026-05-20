@@ -107,7 +107,7 @@ export default function AuthModal({ onClose, showToast }) {
               <input
                 type="email"
                 className="compose-input"
-                style={{ width: '100%', padding: '10px 14px' }}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border2)' }}
                 placeholder="you@example.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -175,7 +175,7 @@ export default function AuthModal({ onClose, showToast }) {
               <input
                 type="email"
                 className="compose-input"
-                style={{ width: '100%', padding: '10px 14px' }}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border2)' }}
                 placeholder="you@example.com"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
@@ -198,7 +198,7 @@ export default function AuthModal({ onClose, showToast }) {
               <input
                 type="password"
                 className="compose-input"
-                style={{ width: '100%', padding: '10px 14px' }}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid var(--border2)' }}
                 placeholder={tab === 'signup' ? 'At least 8 characters' : '••••••••'}
                 value={password}
                 onChange={e => setPassword(e.target.value)}
