@@ -82,6 +82,24 @@ export default function ExplorePage({ navigate, outlets = [] }) {
   const searchTimer = useRef(null)
   const inputRef    = useRef(null)
 
+  // Rotating placeholder
+  const SEARCH_EXAMPLES = [
+    'Search any topic, person or event…',
+    "Try 'AI regulation'…",
+    "Try 'UK inflation'…",
+    "Try 'Ukraine'…",
+    "Try 'climate change'…",
+    "Try 'Donald Trump'…",
+    "Try 'interest rates'…",
+    "Try 'healthcare'…",
+  ]
+  const [placeholderIdx, setPlaceholderIdx] = useState(0)
+  useEffect(() => {
+    if (search) return
+    const id = setInterval(() => setPlaceholderIdx(i => (i + 1) % SEARCH_EXAMPLES.length), 3000)
+    return () => clearInterval(id)
+  }, [search])
+
   // Fetch 24h articles for trending topic computation
   useEffect(() => {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
@@ -165,7 +183,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
           <input
             ref={inputRef}
             type="text"
-            placeholder="Search any topic, person or event…"
+            placeholder={SEARCH_EXAMPLES[placeholderIdx]}
             value={search}
             onChange={e => setSearch(e.target.value)}
             onFocus={() => setSearchFocused(true)}
