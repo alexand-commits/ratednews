@@ -318,7 +318,7 @@ export default function OutletsRankingsPage({
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
             <h1 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 26, fontWeight: 700, marginBottom: 4 }}>
-              Outlets
+              📡 Outlets
             </h1>
             <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, maxWidth: 480 }}>
               {parentCount} outlets ranked by <strong style={{ color: 'var(--text)' }}>AI quality score</strong>, <strong style={{ color: 'var(--text)' }}>political bias</strong>, and <strong style={{ color: 'var(--text)' }}>headline fairness</strong> — blended with community ratings over time.{' '}
