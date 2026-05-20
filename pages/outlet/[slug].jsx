@@ -31,14 +31,14 @@ export default function OutletDetail({ outlet }) {
   return (
     <>
       <Head>
-        <title>{outlet.name} Bias Rating & Credibility Score — RatedNews</title>
+        <title>{outlet.name} Bias Rating & Quality Score — RatedNews</title>
         <meta
           name="description"
-          content={`See ${outlet.name}'s AI-powered bias rating, credibility score, and headline fairness breakdown on RatedNews. Scores updated hourly from real published articles.`}
+          content={`See ${outlet.name}'s AI-powered bias rating, quality score, and headline fairness breakdown on RatedNews. Scores updated hourly from real published articles.`}
         />
         <link rel="canonical" href={`https://www.ratednews.com/outlet/${canonicalSlug}`} />
-        <meta property="og:title"       content={`${outlet.name} — Bias & Credibility Rating`} />
-        <meta property="og:description" content={`${outlet.name} has a credibility score of ${outlet.overall_score ?? outlet.accuracy_score ?? '–'}/100 on RatedNews. See the full breakdown.`} />
+        <meta property="og:title"       content={`${outlet.name} — Bias & Quality Rating`} />
+        <meta property="og:description" content={`${outlet.name} has a quality score of ${outlet.overall_score ?? outlet.accuracy_score ?? '–'}/100 on RatedNews. See the full breakdown.`} />
         <meta property="og:url"         content={`https://www.ratednews.com/outlet/${canonicalSlug}`} />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content={outletOgUrl(outlet)} />
@@ -46,8 +46,8 @@ export default function OutletDetail({ outlet }) {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"        content="summary_large_image" />
-        <meta name="twitter:title"       content={`${outlet.name} — Bias & Credibility Rating | RatedNews`} />
-        <meta name="twitter:description" content={`${outlet.name} scores ${outlet.overall_score ?? outlet.accuracy_score ?? '–'}/100 for credibility on RatedNews. AI-powered analysis updated hourly.`} />
+        <meta name="twitter:title"       content={`${outlet.name} — Bias & Quality Rating | RatedNews`} />
+        <meta name="twitter:description" content={`${outlet.name} scores ${outlet.overall_score ?? outlet.accuracy_score ?? '–'}/100 for quality on RatedNews. AI-powered analysis updated hourly.`} />
         <meta name="twitter:image"       content={outletOgUrl(outlet)} />
 
         {/* Organisation structured data — helps Google understand the page
@@ -58,7 +58,7 @@ export default function OutletDetail({ outlet }) {
             '@context': 'https://schema.org',
             '@type':    'NewsMediaOrganization',
             name:        outlet.name,
-            description: outlet.description || `${outlet.name} is a news outlet tracked and rated by RatedNews for credibility, political bias, and headline fairness.`,
+            description: outlet.description || `${outlet.name} is a news outlet tracked and rated by RatedNews for quality, political bias, and headline fairness.`,
             url:         `https://www.ratednews.com/outlet/${canonicalSlug}`,
             ...(outlet.country === 'UK' && { areaServed: 'GB' }),
             ...(outlet.country === 'US' && { areaServed: 'US' }),
@@ -68,7 +68,7 @@ export default function OutletDetail({ outlet }) {
               bestRating:   100,
               worstRating:  0,
               ratingCount:  outlet.total_articles || 1,
-              reviewAspect: 'Credibility and impartiality',
+              reviewAspect: 'Quality and impartiality',
             } : undefined,
             additionalProperty: [
               outlet.bias_direction && {

@@ -26,7 +26,7 @@ export default function Sports({ articles, generatedAt }) {
   const itemListLd = articles && articles.length > 0 ? {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
-    name: 'Sports News — Credibility & Bias Rated | RatedNews',
+    name: 'Sports News — Quality & Bias Rated | RatedNews',
     url: 'https://www.ratednews.com/sports',
     numberOfItems: Math.min(articles.length, 10),
     itemListElement: articles.slice(0, 10).map((a, i) => ({
@@ -40,11 +40,11 @@ export default function Sports({ articles, generatedAt }) {
   return (
     <>
       <Head>
-        <title>Sports News — Credibility &amp; Bias Rated | RatedNews</title>
-        <meta name="description" content="Football, F1, rugby, tennis, cricket and golf — every story rated for credibility and political bias. Cut through the spin in sports journalism." />
+        <title>Sports News — Quality &amp; Bias Rated | RatedNews</title>
+        <meta name="description" content="Football, F1, rugby, tennis, cricket and golf — every story rated for quality and political bias. Cut through the spin in sports journalism." />
         <link rel="canonical" href="https://www.ratednews.com/sports" />
-        <meta property="og:title"       content="Sports News — Credibility & Bias Rated | RatedNews" />
-        <meta property="og:description" content="Football, F1, rugby, tennis, cricket and golf — every story rated for credibility and political bias." />
+        <meta property="og:title"       content="Sports News — Quality & Bias Rated | RatedNews" />
+        <meta property="og:description" content="Football, F1, rugby, tennis, cricket and golf — every story rated for quality and political bias." />
         <meta property="og:url"         content="https://www.ratednews.com/sports" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
@@ -52,8 +52,8 @@ export default function Sports({ articles, generatedAt }) {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
-        <meta name="twitter:title"      content="Sports News — Credibility & Bias Rated | RatedNews" />
-        <meta name="twitter:description" content="Football, F1, rugby, tennis, cricket and golf — every story rated for credibility and political bias." />
+        <meta name="twitter:title"      content="Sports News — Quality & Bias Rated | RatedNews" />
+        <meta name="twitter:description" content="Football, F1, rugby, tennis, cricket and golf — every story rated for quality and political bias." />
         <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
         {itemListLd && (
           <script

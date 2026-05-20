@@ -91,7 +91,7 @@ const QUADRANT_EXAMPLES = [
     summary: 'The Academy of Motion Picture Arts and Sciences announced that artificial intelligence-generated actors and writers are ineligible for Oscar awards, establishing a policy to restrict AI use in award consideration.',
     credColor: '#639922',
     biasColor: '#ef4444',
-    note: 'A right-leaning outlet reporting a factual industry announcement. The headline accurately reflects the content, the writing is direct with low partisan intensity — credibility and bias are independent.',
+    note: 'A right-leaning outlet reporting a factual industry announcement. The headline accurately reflects the content, the writing is direct with low partisan intensity — quality and bias are independent.',
   },
   {
     quadrant: 'Not credible · Leans right',
@@ -104,7 +104,7 @@ const QUADRANT_EXAMPLES = [
     summary: 'The article claims actress Charlize Theron stated she will not financially support her Black trans child as an adult and told her children to prepare for work at Starbucks.',
     credColor: '#ef4444',
     biasColor: '#ef4444',
-    note: 'High partisan intensity, misleading headline, and claims that read as unsupported. Low credibility score reflects the framing and sourcing signals — not a verified fact check.',
+    note: 'High partisan intensity, misleading headline, and claims that read as unsupported. Low quality score reflects the framing and sourcing signals — not a verified fact check.',
   },
   {
     quadrant: 'Credible · Leans left',
@@ -130,7 +130,7 @@ const QUADRANT_EXAMPLES = [
     summary: "The article reports on Donald Trump's statement that 'Project Freedom is paused' amid ongoing tensions in the Strait of Hormuz, which has escalated following US strikes on Iranian targets.",
     credColor: '#ef4444',
     biasColor: '#3b82f6',
-    note: 'Misleading framing on an unverified claim. High partisan intensity combined with a headline that implies more certainty than the summary supports — flags as low credibility despite a left-centre outlet.',
+    note: 'Misleading framing on an unverified claim. High partisan intensity combined with a headline that implies more certainty than the summary supports — flags as low quality score despite a left-centre outlet.',
   },
 ]
 

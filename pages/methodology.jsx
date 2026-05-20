@@ -9,7 +9,7 @@ export default function Methodology() {
     <>
       <Head>
         <title>Methodology — How RatedNews Scores the News</title>
-        <meta name="description" content="How RatedNews uses AI to score news articles for credibility, bias, and headline fairness. Includes the full scoring prompt, weighting formula, known limitations, and changelog." />
+        <meta name="description" content="How RatedNews uses AI to score news articles for quality, bias, and headline fairness. Includes the full scoring prompt, weighting formula, known limitations, and changelog." />
         <link rel="canonical" href="https://www.ratednews.com/methodology" />
         <meta property="og:title"       content="Methodology — How RatedNews Scores the News" />
         <meta property="og:description" content="Full transparency on how RatedNews AI scoring works — including the exact prompt, weighting formula, and limitations." />
@@ -39,7 +39,7 @@ export default function Methodology() {
             about: [
               { '@type': 'Thing', name: 'News bias detection' },
               { '@type': 'Thing', name: 'AI journalism analysis' },
-              { '@type': 'Thing', name: 'Media credibility scoring' },
+              { '@type': 'Thing', name: 'Media quality scoring' },
             ],
           }) }}
         />

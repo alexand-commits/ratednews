@@ -9,10 +9,10 @@ export default function About() {
     <>
       <Head>
         <title>How It Works — RatedNews</title>
-        <meta name="description" content="Learn how RatedNews uses AI to score news articles for credibility, bias direction, and headline fairness across 112 outlets — updated every hour." />
+        <meta name="description" content="Learn how RatedNews uses AI to score news articles for quality, bias direction, and headline fairness across 112 outlets — updated every hour." />
         <link rel="canonical" href="https://www.ratednews.com/about" />
-        <meta property="og:title"       content="How RatedNews Works — AI-Powered News Credibility Ratings" />
-        <meta property="og:description" content="Learn how RatedNews uses AI to score news articles for credibility, bias direction, and headline fairness across 112 outlets — updated every hour." />
+        <meta property="og:title"       content="How RatedNews Works — AI-Powered News Quality Ratings" />
+        <meta property="og:description" content="Learn how RatedNews uses AI to score news articles for quality, bias direction, and headline fairness across 112 outlets — updated every hour." />
         <meta property="og:url"         content="https://www.ratednews.com/about" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
@@ -21,7 +21,7 @@ export default function About() {
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="How RatedNews Works" />
-        <meta name="twitter:description" content="AI-powered credibility and bias ratings for 112 news outlets, updated every hour." />
+        <meta name="twitter:description" content="AI-powered quality and bias ratings for 112 news outlets, updated every hour." />
         <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
         <script
           type="application/ld+json"
@@ -32,12 +32,12 @@ export default function About() {
               {
                 '@type': 'Question',
                 name: 'What is RatedNews?',
-                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews is an AI-powered news rating platform that scores every article for credibility, political bias direction, and headline fairness across 112 UK, US and international news outlets.' },
+                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews is an AI-powered news rating platform that scores every article for quality, political bias direction, and headline fairness across 112 UK, US and international news outlets.' },
               },
               {
                 '@type': 'Question',
                 name: 'How does RatedNews score articles?',
-                acceptedAnswer: { '@type': 'Answer', text: 'Each article is analysed by an AI model that scores three dimensions: credibility (0–100), bias direction (left/centre/right), and headline fairness. Scores are weighted — credibility counts for 60%, bias for 25%, and headline fairness for 15%.' },
+                acceptedAnswer: { '@type': 'Answer', text: 'Each article is analysed by Claude AI across three dimensions: quality (0–100), bias direction (left/centre/right), and headline fairness (fair/misleading/clickbait). Outlet scores are the 30-day rolling average of their articles\' quality scores, blended with community ratings at 20% weight once 20+ ratings are recorded.' },
               },
               {
                 '@type': 'Question',
@@ -52,7 +52,7 @@ export default function About() {
               {
                 '@type': 'Question',
                 name: 'Can I rate articles myself?',
-                acceptedAnswer: { '@type': 'Answer', text: 'Yes. Registered users can submit their own credibility and bias ratings on any article, and leave comments. Community ratings are displayed alongside AI scores.' },
+                acceptedAnswer: { '@type': 'Answer', text: 'Yes. Registered users can rate outlets with 1–5 stars and vote on article quality, bias, and headline fairness. Community ratings are displayed alongside AI scores and are blended into outlet scores once a meaningful sample exists.' },
               },
             ],
           }) }}
