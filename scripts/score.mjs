@@ -41,8 +41,9 @@ const supabase  = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 const anthropic = new Anthropic({ apiKey: ANTHROPIC_API_KEY })
 
 const BATCH_SIZE      = 20
-const MAX_PER_RUN     = 150   // total cap per run (fresh + backlog combined)
-const FRESH_CAP       = 60    // max articles from the last 2h scored first (keeps live feed current)
+const CONCURRENCY     = 15    // parallel Haiku calls per batch — well within 4000 RPM limit
+const MAX_PER_RUN     = 400   // total cap per run (fresh + backlog combined)
+const FRESH_CAP       = 200   // max articles from the last 2h scored first — raised to match ~100-110/run ingest volume
 const MIN_TITLE_LEN   = 15    // skip malformed / very short titles
 const MIN_CONTENT_LEN = 30    // skip articles with neither a real title nor summary
 const MAX_ARTICLE_AGE_HOURS = 36  // skip unscored articles older than this — they'll never appear in feed
@@ -245,53 +246,60 @@ Summary: ${article.summary || '(no summary available)'}`
 async function scoreBatch(articles, skippedIds, totalThin) {
   let scored = 0, failed = 0
 
+  // Pre-filter thin content synchronously before any API calls
+  const scoreable = []
   for (const article of articles) {
-    const outletName = article.outlets?.name || 'Unknown'
-
     const titleLen   = (article.title || '').trim().length
     const summaryLen = (article.summary || '').trim().length
     if (titleLen < MIN_TITLE_LEN || titleLen + summaryLen < MIN_CONTENT_LEN) {
       console.log(`  ⏭  Thin content skipped: "${(article.title || '').slice(0, 50)}"`)
       skippedIds.add(article.id)
       totalThin.count++
-      continue
+    } else {
+      scoreable.push(article)
     }
+  }
 
-    process.stdout.write(`  Scoring: "${article.title.slice(0, 60)}..." `)
+  // Process in parallel chunks — Haiku handles 4000 RPM, CONCURRENCY=15 is well within limits
+  for (let i = 0; i < scoreable.length; i += CONCURRENCY) {
+    const chunk = scoreable.slice(i, i + CONCURRENCY)
+    const results = await Promise.all(chunk.map(async article => {
+      const outletName = article.outlets?.name || 'Unknown'
+      try {
+        const scores = await scoreArticle({ ...article, outlet_name: outletName })
+        const { error: updateError } = await supabase
+          .from('articles')
+          .update({
+            article_type:      scores.article_type,
+            accuracy_score:    scores.accuracy_score,
+            bias_score:        scores.bias_score,
+            bias_direction:    scores.bias_direction,
+            headline_vote:     scores.headline_vote,
+            category:          scores.category,
+            geographic_scope:  scores.geographic_scope,
+            article_region:    scores.article_region,
+            ai_summary:        scores.ai_summary,
+          })
+          .eq('id', article.id)
 
-    try {
-      const scores = await scoreArticle({ ...article, outlet_name: outletName })
-
-      const { error: updateError } = await supabase
-        .from('articles')
-        .update({
-          article_type:      scores.article_type,
-          accuracy_score:    scores.accuracy_score,
-          bias_score:        scores.bias_score,
-          bias_direction:    scores.bias_direction,
-          headline_vote:     scores.headline_vote,
-          category:          scores.category,
-          geographic_scope:  scores.geographic_scope,
-          article_region:    scores.article_region,
-          ai_summary:        scores.ai_summary,
-        })
-        .eq('id', article.id)
-
-      if (updateError) {
-        console.log(`❌ DB error: ${updateError.message}`)
+        if (updateError) {
+          console.log(`  ❌ DB error for "${article.title?.slice(0, 40)}": ${updateError.message}`)
+          skippedIds.add(article.id)
+          return 'failed'
+        }
+        console.log(`  ✅ "${article.title?.slice(0, 40)}" acc=${scores.accuracy_score} bias=${scores.bias_direction} hl=${scores.headline_vote}`)
+        return 'scored'
+      } catch (err) {
+        console.log(`  ❌ "${article.title?.slice(0, 40)}": ${err.message}`)
         skippedIds.add(article.id)
-        failed++
-      } else {
-        console.log(`✅ acc=${scores.accuracy_score} bias=${scores.bias_direction}(${scores.bias_score}) hl=${scores.headline_vote}`)
-        scored++
+        return 'failed'
       }
-    } catch (err) {
-      console.log(`❌ ${err.message}`)
-      skippedIds.add(article.id)
-      failed++
-    }
+    }))
 
-    await new Promise(r => setTimeout(r, 200))
+    for (const r of results) {
+      if (r === 'scored') scored++
+      else failed++
+    }
   }
 
   return { scored, failed }
@@ -331,7 +339,7 @@ async function main() {
   while (remaining > 0 && totalScored + totalFailed < MAX_PER_RUN) {
     const articles = await fetchUnscored({
       newerThan: freshCutoff,
-      limit:     Math.min(BATCH_SIZE, remaining),
+      limit:     Math.min(CONCURRENCY * 2, remaining),  // fetch 2 concurrent chunks at a time
       skippedIds,
       ascending: false,   // newest-ingested first
     })
