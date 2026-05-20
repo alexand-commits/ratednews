@@ -18,9 +18,13 @@ export function createNavigate(router, outlets = []) {
         const params = new URLSearchParams()
         if (opts.category && opts.category !== 'all') params.set('category', opts.category)
         if (opts.region   && opts.region   !== 'all') params.set('region',   opts.region)
+        if (opts.topic)                               params.set('topic',    opts.topic)
         router.push(params.toString() ? `/?${params}` : '/')
         break
       }
+      case 'explore':
+        router.push('/explore')
+        break
       case 'article': {
         const slug = articleSlug(opts.title || '', opts.articleId)
         router.push(`/article/${slug}`)

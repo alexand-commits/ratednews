@@ -5,6 +5,7 @@ const TABS = [
   { page: 'feed',     path: '/',         icon: '🏠', label: 'Feed'     },
   { page: 'trending', path: '/trending', icon: '🔥', label: 'Trending' },
   { page: 'sports',   path: '/sports',   icon: '⚽', label: 'Sports'   },
+  { page: 'explore',  path: '/explore',  icon: '🔍', label: 'Explore'  },
   { page: 'outlets',  path: '/outlets',  icon: '📡', label: 'Outlets'  },
 ]
 

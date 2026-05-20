@@ -109,6 +109,10 @@ img, video, iframe, embed, object { max-width: 100%; }
 .mobile-only { display: none; }
 @media (max-width: 768px) { .mobile-only { display: inline-flex !important; } }
 
+/* Feed search hidden on mobile — search lives in the Explore tab */
+.feed-search-desktop-only { display: block; }
+@media (max-width: 768px) { .feed-search-desktop-only { display: none; } }
+
 /* STATS BAR */
 .stats-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: nowrap; }
 .stat-chip { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 10px 16px; flex: 1; min-width: 0; }

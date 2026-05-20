@@ -869,59 +869,61 @@ export default function FeedPage({
           </div>
         )}
 
-        {/* Search */}
-        <div className="search-bar">
-          <span className="search-icon">🔍</span>
-          <input
-            ref={searchInputRef}
-            type="text"
-            placeholder={SEARCH_EXAMPLES[placeholderIdx]}
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
-          />
-          {search && (
-            <button
-              onClick={() => setSearch('')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--text3)', padding: '0 4px', lineHeight: 1 }}
-            >
-              ✕
-            </button>
+        {/* Search — desktop only; mobile users use the Explore tab */}
+        <div className="feed-search-desktop-only">
+          <div className="search-bar">
+            <span className="search-icon">🔍</span>
+            <input
+              ref={searchInputRef}
+              type="text"
+              placeholder={SEARCH_EXAMPLES[placeholderIdx]}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setTimeout(() => setSearchFocused(false), 150)}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: 'var(--text3)', padding: '0 4px', lineHeight: 1 }}
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* Search history — shown when focused with no active query */}
+          {searchFocused && !search && searchHistory.length > 0 && (
+            <div style={{ marginTop: 4, marginBottom: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent searches</span>
+                <button
+                  onMouseDown={e => { e.preventDefault(); clearHistory() }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--text3)', padding: 0 }}
+                >Clear</button>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {searchHistory.map(term => (
+                  <button
+                    key={term}
+                    className="pill"
+                    onMouseDown={e => { e.preventDefault(); setSearch(term) }}
+                    style={{ fontSize: 12 }}
+                  >
+                    🕒 {term}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Hint text — shown when not searching and no history dropdown */}
+          {!search && !(searchFocused && searchHistory.length > 0) && (
+            <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: -8, marginBottom: 10, paddingLeft: 2 }}>
+              Searches every story across all outlets — not just headlines
+            </p>
           )}
         </div>
-
-        {/* Search history — shown when focused with no active query */}
-        {searchFocused && !search && searchHistory.length > 0 && (
-          <div style={{ marginTop: 4, marginBottom: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Recent searches</span>
-              <button
-                onMouseDown={e => { e.preventDefault(); clearHistory() }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, color: 'var(--text3)', padding: 0 }}
-              >Clear</button>
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {searchHistory.map(term => (
-                <button
-                  key={term}
-                  className="pill"
-                  onMouseDown={e => { e.preventDefault(); setSearch(term) }}
-                  style={{ fontSize: 12 }}
-                >
-                  🕒 {term}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Hint text — shown when not searching and no history dropdown */}
-        {!search && !(searchFocused && searchHistory.length > 0) && (
-          <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: -8, marginBottom: 10, paddingLeft: 2 }}>
-            Searches every story across all outlets — not just headlines
-          </p>
-        )}
 
         {/* Topic insight cards */}
         {topicInsights.length > 0 && (
