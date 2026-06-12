@@ -1,38 +1,5 @@
 import React from 'react'
 
-const CHANGELOG = [
-  {
-    date: 'June 2026',
-    entries: [
-      'AI scoring pipeline removed. RatedNews now uses community ratings exclusively — no AI analysis of articles or outlets.',
-      'Rankings page updated to Community and Most Rated tabs, replacing AI-based Trust, Quality, and Headlines tabs.',
-      'Outlet pages updated: AI analysis section, headline verdicts panel, and quality score display replaced with community rating as the primary metric.',
-      'Article pages updated: AI Analysis panel removed. Score strip now shows community rating and rating count only.',
-      'Feed cards updated: AI quality, bias, and headline badges replaced with community star rating when available.',
-    ]
-  },
-  {
-    date: 'May 2026',
-    entries: [
-      'Outlets and Rankings pages combined into a single ranked list. Quality, Community, and Headlines tabs replace the previous Trust tab.',
-      'Parent-child outlet relationships introduced. Sections such as BBC Sport now appear under their parent outlet (BBC News).',
-      'Ingest cap reduced to 1 article per outlet per run.',
-      'Scoring prompt updated: added sports match report carve-out and tribute/memorial carve-out.',
-      'Outlet pages redesigned: added ranking position, category coverage breakdown, and highest-scored articles widget.',
-      'Added article_region field — articles tagged with the geographic region they are about.',
-      'Launched "Score movers" on Rankings page — tracked 7-day accuracy changes per outlet.',
-    ]
-  },
-  {
-    date: 'April 2026',
-    entries: [
-      'Initial launch. AI scoring pipeline live with accuracy, bias, headline, category, and geographic scope fields.',
-      'Outlet scores calculated as rolling 30-day averages, blended with community ratings using tiered weighting.',
-      'Regional filters added across Feed, Rankings, and Outlets pages.',
-    ]
-  },
-]
-
 function Section({ title, children }) {
   return (
     <div style={{ marginBottom: 40 }}>
@@ -166,28 +133,7 @@ export default function MethodologyPage({ goBack }) {
           ))}
         </Section>
 
-        <Section title="Changelog">
-          <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 20 }}>
-            Every significant change to how RatedNews works is logged here.
-          </p>
-          {CHANGELOG.map(({ date, entries }) => (
-            <div key={date} style={{ marginBottom: 24 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 10 }}>
-                {date}
-              </div>
-              <div style={{ borderLeft: '2px solid var(--border)', paddingLeft: 16 }}>
-                {entries.map((e, i) => (
-                  <div key={i} style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.7, marginBottom: 8, display: 'flex', gap: 8 }}>
-                    <span style={{ color: 'var(--text3)', flexShrink: 0 }}>—</span>
-                    <span>{e}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </Section>
-
-        <div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 24, marginBottom: 40 }}>
+<div style={{ borderTop: '0.5px solid var(--border)', paddingTop: 24, marginBottom: 40 }}>
           <p style={{ fontSize: 13, color: 'var(--text3)', lineHeight: 1.7 }}>
             Questions about the methodology or spotted something wrong?{' '}
             <a href="mailto:info@ratednews.com" style={{ color: 'var(--coral)', textDecoration: 'none' }}>

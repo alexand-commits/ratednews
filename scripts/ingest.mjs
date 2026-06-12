@@ -11,6 +11,8 @@
 
 import { createClient } from '@supabase/supabase-js'
 import Parser from 'rss-parser'
+import { Readability } from '@mozilla/readability'
+import { JSDOM, VirtualConsole } from 'jsdom'
 import 'dotenv/config'
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL
@@ -744,13 +746,66 @@ const OUTLET_MAX_TITLE_LENGTH = {
 
 // ── Per-run article cap ───────────────────────────────────────────────────────
 // Maximum articles ingested from any single outlet per run.
-// Dial this up or down to control feed diversity and API scoring costs.
-// At 45-min cadence: 1/run = up to ~32 articles/day per outlet.
-const ARTICLES_PER_OUTLET_PER_RUN = 1
+// At 30-min cadence: 3/run = up to ~144 articles/day per outlet.
+const ARTICLES_PER_OUTLET_PER_RUN = 3
 
 function isTitleTooLong(title, outletName) {
   const limit = OUTLET_MAX_TITLE_LENGTH[outletName]
   return limit != null && title.length > limit
+}
+
+// ── Full-article enrichment ───────────────────────────────────────────────────
+// For outlets whose RSS feeds provide no/thin summaries, fetch the article URL
+// and extract clean body text using Mozilla Readability. Falls back to null
+// silently on any failure (paywall, timeout, bot block) — never blocks ingest.
+const MIN_RSS_SUMMARY = 60   // chars — below this we attempt enrichment
+const ENRICH_TIMEOUT  = 8000 // ms — give up quickly rather than slow the run down
+const ENRICH_MAX_LEN  = 800  // chars — cap extracted content to a useful summary length
+
+async function enrichSummary(url, rssSummary) {
+  // Only attempt if the RSS summary is genuinely thin
+  if ((rssSummary || '').trim().length >= MIN_RSS_SUMMARY) return rssSummary
+
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), ENRICH_TIMEOUT)
+
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        // Identify ourselves honestly — avoids most bot blocks without spoofing
+        'User-Agent': 'RatedNews/1.0 (https://ratednews.com; content enrichment for article scoring)',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-US,en;q=0.9',
+      },
+    })
+    clearTimeout(timer)
+
+    if (!res.ok) return rssSummary
+
+    const html = await res.text()
+    const vc   = new VirtualConsole() // suppress CSS parse warnings — harmless but noisy
+    const dom  = new JSDOM(html, { url, virtualConsole: vc })
+    const reader = new Readability(dom.window.document)
+    const article = reader.parse()
+
+    if (!article?.textContent) return rssSummary
+
+    // Clean and truncate extracted text
+    const clean = article.textContent
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, ENRICH_MAX_LEN)
+
+    // Only use if we got meaningfully more than the RSS summary
+    if (clean.length > (rssSummary || '').length + 40) {
+      return clean
+    }
+    return rssSummary
+  } catch {
+    // Timeout, network error, paywall, etc — fail silently
+    return rssSummary
+  }
 }
 
 async function ingestOutlet(outlet) {
@@ -793,11 +848,17 @@ async function ingestOutlet(outlet) {
     if (isTitleTooLong(title, outlet.name))  { skipped++; continue }
     if (existingUrls.has(url) || existingTitles.has(title)) { skipped++; continue }
 
+    const rssSummary = extractSummary(item)
+    const summary    = await enrichSummary(url, rssSummary)
+    if (summary !== rssSummary) {
+      console.log(`    🔍 Enriched summary for: "${title.slice(0, 50)}"`)
+    }
+
     const { error } = await supabase.from('articles').insert({
       outlet_id:    outlet.id,
       title,
       url,
-      summary:      extractSummary(item),
+      summary,
       published_at: (() => { const p = item.pubDate ? new Date(item.pubDate) : null; return (p && !isNaN(p) && p <= new Date()) ? p.toISOString() : new Date().toISOString() })(),
       image_url:    extractImageUrl(item),
     })

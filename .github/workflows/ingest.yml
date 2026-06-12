@@ -1,8 +1,9 @@
 name: RSS Ingestion
 
 on:
-  workflow_dispatch:        # Primary trigger — cron.org fires this every 30 mins
-    branches: [main]        # Only run on main — never on staging
+  schedule:
+    - cron: '*/30 * * * *'  # Every 30 mins — GitHub's native scheduler, no external service needed
+  workflow_dispatch:         # Keep for manual runs / testing
 
 jobs:
   ingest:
@@ -30,26 +31,6 @@ jobs:
       - name: Ingest RSS feeds
         id: ingest
         run: node scripts/ingest.mjs
-        continue-on-error: true
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-
-      # Only score when ingest actually inserted new articles
-      - name: Score articles
-        id: score
-        if: steps.ingest.outputs.inserted != '0'
-        run: node scripts/score.mjs
-        continue-on-error: true
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-
-      # Only aggregate when articles were actually scored this run
-      - name: Aggregate outlet scores
-        if: steps.score.outputs.scored != '0'
-        run: node scripts/aggregate-outlets.mjs
         continue-on-error: true
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
