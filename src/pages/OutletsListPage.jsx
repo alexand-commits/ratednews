@@ -34,8 +34,7 @@ const BIAS_FILTERS = [
 ]
 
 const SORTS = [
-  { value: 'overall_score',   label: 'Trust score' },
-  { value: 'accuracy_score',  label: 'Most accurate' },
+  { value: 'community_score', label: 'Community score' },
   { value: 'total_ratings',   label: 'Most rated' },
 ]
 
@@ -190,7 +189,7 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
   const [search,  setSearch]  = useState('')
   const [region,  setRegion]  = useState('all')
   const [bias,    setBias]    = useState('all')
-  const [sort,    setSort]    = useState('overall_score')
+  const [sort,    setSort]    = useState('community_score')
   const [showSuggest, setShowSuggest] = useState(false)
   const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
 
@@ -233,7 +232,7 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
                 📡 News Outlets
               </h1>
               <p style={{ fontSize: 13, color: 'var(--text2)' }}>
-                {filtered.length} of {outlets.length} outlets · rated by AI analysis and community
+                {filtered.length} of {outlets.length} outlets · rated by readers
               </p>
             </div>
             <button
@@ -326,8 +325,7 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 10 }}>
             {filtered.map(o => {
-              const score    = o.overall_score  || 0
-              const accuracy = o.accuracy_score || 0
+              const comScore = o.community_score || 0
               const ratings  = o.total_ratings  || 0
               const children = outlets.filter(c => c.parent_outlet_id === o.id)
 
@@ -363,10 +361,10 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
                       <div style={{
                         fontSize: 15, fontWeight: 700, lineHeight: 1,
-                        background: score >= 75 ? 'var(--green-light)' : score >= 60 ? '#fff3cd' : score > 0 ? '#fde8e8' : 'var(--bg2)',
-                        color: score >= 75 ? 'var(--green-dark)' : score >= 60 ? '#856404' : score > 0 ? 'var(--red)' : 'var(--text3)',
+                        background: comScore > 0 ? 'var(--amber-light, #fff3cd)' : 'var(--bg2)',
+                        color: comScore > 0 ? 'var(--amber)' : 'var(--text3)',
                         padding: '4px 10px', borderRadius: 20,
-                      }}>{score > 0 ? score : '—'}</div>
+                      }}>{comScore > 0 ? `${(comScore / 20).toFixed(1)}★` : '—'}</div>
                       <button
                         onClick={e => {
                           e.stopPropagation()
@@ -386,15 +384,6 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
                         {followedOutletIds.has(o.id) ? '✓ Following' : '+ Follow'}
                       </button>
                     </div>
-                  </div>
-
-                  {/* Quality bar */}
-                  <div className="score-bar-row" style={{ margin: 0 }}>
-                    <span className="sbl" style={{ width: 70, fontSize: 11 }}>Quality</span>
-                    <div className="sb-bg">
-                      <div className="sb-fill" style={{ width: `${accuracy}%`, background: scoreColor(accuracy) }} />
-                    </div>
-                    <span className="sbv" style={{ fontSize: 11 }}>{accuracy}</span>
                   </div>
 
                   {/* Community score bar — only if rated */}

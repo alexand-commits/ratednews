@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { db } from '../lib/supabase'
-import { articleSlug, outletColor, scoreColor, scoreDot, timeAgo } from '../utils/helpers'
+import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import RatingModal from '../components/RatingModal'
-import InfoTip from '../components/InfoTip'
 
 // Extract meaningful initials from a username or email — avoids numbers/symbols
 function getInitials(str) {
@@ -229,26 +228,21 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   useEffect(() => {
     if (!article) return
     setRelatedArticles([])
-    const { outlet_id, category, id, bias_score } = article
-    const isFactualArticle = (article.accuracy_score || 0) > 0 && (bias_score || 0) < 25
+    const { outlet_id, category, id } = article
 
-    // Always fetch more from the same outlet
     const outletPromise = db.from('articles')
       .select('*, outlets(name, logo_url, country, bias_direction)')
       .eq('outlet_id', outlet_id)
       .neq('id', id)
-      .gt('accuracy_score', 0)
       .order('published_at', { ascending: false })
       .limit(4)
 
-    // Only fetch same-category for non-factual articles
-    const categoryPromise = (!isFactualArticle && category)
+    const categoryPromise = category
       ? db.from('articles')
           .select('*, outlets(name, logo_url, country, bias_direction)')
           .eq('category', category)
           .neq('outlet_id', outlet_id)
           .neq('id', id)
-          .gt('accuracy_score', 0)
           .order('published_at', { ascending: false })
           .limit(4)
       : Promise.resolve({ data: [] })
@@ -277,41 +271,11 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
   const outlet = article.outlets || {}
   const [bg, fg] = outletColor(outlet.name || 'X')
-  const acc = article.accuracy_score || 0
-  const bias = article.bias_score || 0
   const com = article.community_score || 0
-  const isFactual = acc > 0 && bias < 25
 
   // Related articles — fetched client-side in the useEffect above
   const moreFromOutlet = relatedArticles.outlet || []
   const sameCategory   = relatedArticles.category || []
-
-  const HEADLINE_STYLES = {
-    fair:       { bg: 'var(--green-light)', color: 'var(--green-dark)', label: '✓ Fair headline'  },
-    misleading: { bg: 'var(--amber-light)', color: 'var(--amber)', label: '⚠ Misleading headline' },
-    clickbait:  { bg: 'var(--red-light)',   color: 'var(--red)',   label: '✗ Clickbait headline'  },
-  }
-  const ARTICLE_TYPE_BADGES = {
-    opinion:   { bg: '#ede9fe', color: '#6d28d9', label: 'Opinion'  },
-    analysis:  { bg: '#dbeafe', color: '#1d4ed8', label: 'Analysis' },
-    live_blog: { bg: '#dcfce7', color: '#15803d', label: '● Live'   },
-    pr:        { bg: '#f3f4f6', color: '#6b7280', label: 'PR'       },
-  }
-  const typeBadge = article.article_type ? ARTICLE_TYPE_BADGES[article.article_type] : null
-  const BIAS_INFO = {
-    left:   { label: '← Left',   color: 'var(--blue, #3b82f6)', bar: 20 },
-    centre: { label: '◉ Centre', color: 'var(--text2)',         bar: 50 },
-    right:  { label: '→ Right',  color: 'var(--red)',           bar: 80 },
-  }
-  const hlStyle  = article.headline_vote ? HEADLINE_STYLES[article.headline_vote] : null
-  const biasInfo = article.bias_direction ? BIAS_INFO[article.bias_direction] : null
-  const aiScored = acc > 0
-
-  function accBadgeClass(score) {
-    if (score >= 70) return 'score-badge score-badge-green'
-    if (score >= 50) return 'score-badge score-badge-amber'
-    return 'score-badge score-badge-red'
-  }
 
   let hostname = 'source'
   try { hostname = article.url ? new URL(article.url).hostname : 'source' } catch (_) {}
@@ -521,24 +485,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               <div style={{ fontSize: 11, color: 'var(--text2)' }}>{outlet.country || ''} · {timeAgo(article.published_at)}</div>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              {typeBadge && (
-                <span style={{
-                  fontSize: 10, fontWeight: 600, padding: '2px 8px', borderRadius: 20,
-                  background: typeBadge.bg, color: typeBadge.color,
-                }}>
-                  {typeBadge.label}
-                </span>
-              )}
-              {aiScored && !(acc < 50 && (outlet.accuracy_score || 0) >= 65) && (
-                <span className={accBadgeClass(acc)}>✦ {acc}</span>
-              )}
-              {aiScored && (
-                isFactual
-                  ? <span className="score-badge score-badge-bias-centre">✓ Factual</span>
-                  : biasInfo && <span className={`score-badge score-badge-bias-${article.bias_direction}`}>
-                      {{ left: '← Left', centre: '◉ Centre', right: '→ Right' }[article.bias_direction]}
-                    </span>
-              )}
               <button
                 className={`save-btn${isSaved ? ' saved' : ''}`}
                 onClick={() => toggleSave(articleId)}
@@ -551,73 +497,11 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
           <div className="article-headline-full">{article.title || ''}</div>
 
           <div className="article-score-strip">
-            <div className="asc"><strong style={{ color: scoreColor(acc) }}>{acc || '—'}</strong><span>Quality</span></div>
             {com > 0 && <div className="asc"><strong style={{ color: 'var(--amber)' }}>{(com / 20).toFixed(1)}★</strong><span>Community</span></div>}
             <div className="asc"><strong>{article.total_ratings || 0}</strong><span>Ratings</span></div>
             <div className="asc"><strong style={{ color: 'var(--text2)' }}>{comments.length}</strong><span>Comments</span></div>
           </div>
 
-          {/* AI Analysis panel */}
-          {aiScored && (
-            <div style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px', marginBottom: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text3)', textTransform: 'uppercase' }}>AI Analysis</div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {/* Accuracy bar */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
-                    <span style={{ color: 'var(--text2)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 3 }}>
-                      Quality <InfoTip text="How well-sourced and measured this article's reporting appears based on its headline and summary. 100 = trustworthy, well-sourced journalism." />
-                    </span>
-                    <span style={{ fontWeight: 700, color: scoreColor(acc) }}>{acc}/100</span>
-                  </div>
-                  <div style={{ height: 5, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${acc}%`, background: scoreColor(acc), borderRadius: 3, transition: 'width 0.4s ease' }} />
-                  </div>
-                </div>
-
-                {/* Partisan intensity bar */}
-                <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 4 }}>
-                    <span style={{ color: 'var(--text2)', fontWeight: 500, display: 'flex', alignItems: 'center', gap: 3 }}>
-                      Partisan intensity <InfoTip text="How opinionated or one-sided the writing style is — regardless of direction. 0 = objective reporting, 100 = strongly partisan. A calm left-leaning article can score low; a centrist opinion piece can score high." />
-                    </span>
-                    <span style={{ fontWeight: 700, color: scoreColor(100 - bias) }}>{bias}/100</span>
-                  </div>
-                  <div style={{ height: 5, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${bias}%`, background: scoreColor(100 - bias), borderRadius: 3, transition: 'width 0.4s ease' }} />
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text3)', marginTop: 2 }}>
-                    <span>Objective</span><span>Partisan</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Political lean + headline verdict */}
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                {isFactual ? (
-                  <span style={{ fontSize: 11, color: 'var(--text3)', fontStyle: 'italic' }}>
-                    Low partisan intensity — consistent with factual reporting
-                  </span>
-                ) : biasInfo && (
-                  <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: 'var(--bg2, var(--surface))', border: '0.5px solid var(--border)', color: biasInfo.color, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    {biasInfo.label} <InfoTip text="The political direction of this article's framing — left, centre, or right. This is separate from how intensely partisan it is." />
-                  </span>
-                )}
-                {hlStyle && (
-                  <span style={{ fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20, background: hlStyle.bg, color: hlStyle.color, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                    {hlStyle.label} <InfoTip text="Whether the headline fairly represents the article. 'Misleading' means the headline implies something not backed by the content. 'Clickbait' uses exaggeration or withholds info to drive clicks." />
-                  </span>
-                )}
-              </div>
-
-              {article.ai_summary && (
-                <p style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5, margin: 0, fontStyle: 'italic' }}>
-                  {article.ai_summary}
-                </p>
-              )}
-            </div>
-          )}
 
           {myRating && (
             <div style={{ background: 'var(--green-light)', border: '0.5px solid var(--green)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -645,7 +529,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                   const BIAS_DOTS = { left: '#4a90d9', centre: '#5cb85c', right: '#d9534f' }
                   const biasColor = BIAS_DOTS[o.bias_direction]
                   const BIAS_LABEL = { left: 'Left', centre: 'Centre', right: 'Right' }
-                  const oAcc = a.accuracy_score || 0
                   return (
                     <div
                       key={a.id}
@@ -670,14 +553,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                           {BIAS_LABEL[o.bias_direction]}
                         </span>
                       )}
-                      {oAcc > 0 && (
-                        <span style={{
-                          fontSize: 11, fontWeight: 600, flexShrink: 0,
-                          color: oAcc >= 70 ? 'var(--green)' : oAcc >= 50 ? 'var(--amber)' : 'var(--red)',
-                        }}>
-                          ✦{oAcc}
-                        </span>
-                      )}
                       <span style={{ fontSize: 12, color: 'var(--text3)', flexShrink: 0 }}>→</span>
                     </div>
                   )
@@ -698,7 +573,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 <span style={{ opacity: 0.85 }}>{hostname}</span>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {acc > 0 && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.85)' }}>Score: {acc}</span>}
                 <span className="rn-browser-badge">Opens in app</span>
               </div>
             </div>
@@ -727,15 +601,8 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
             </button>
             <button className="btn-outline" onClick={async () => {
               const shareUrl = `https://www.ratednews.com/article/${articleSlug(article.title, article.id)}`
-              const biasMap = { left: '← Left', centre: '◉ Centre', right: '→ Right' }
-              const scoreParts = [
-                acc ? `🎯 ${acc}/100 quality` : null,
-                article.bias_direction ? biasMap[article.bias_direction] : null,
-                article.headline_vote && article.headline_vote !== 'fair' ? `📰 ${article.headline_vote}` : null,
-              ].filter(Boolean).join(' · ')
-              const shareText = scoreParts ? `${scoreParts}\n\n${article.title}` : article.title
               if (navigator.share) {
-                try { await navigator.share({ title: article.title, text: shareText, url: shareUrl }) } catch (_) {}
+                try { await navigator.share({ title: article.title, text: article.title, url: shareUrl }) } catch (_) {}
               } else {
                 navigator.clipboard.writeText(shareUrl).then(() => showToast('Link copied!')).catch(() => showToast('Could not copy'))
               }
@@ -762,8 +629,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                       <Link href={`/article/${articleSlug(a.title, a.id)}`} style={{ fontSize: 13, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>{a.title}</Link>
                       <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span>{timeAgo(a.published_at)}</span>
-                        {a.accuracy_score > 0 && <span className={accBadgeClass(a.accuracy_score)} style={{ fontSize: 10, padding: '1px 5px' }}>✦ {a.accuracy_score}</span>}
-                        {a.bias_direction && <span className={`score-badge score-badge-bias-${a.bias_direction}`} style={{ fontSize: 10, padding: '1px 5px' }}>{{ left: '← Left', centre: '◉ Centre', right: '→ Right' }[a.bias_direction]}</span>}
                       </div>
                     </div>
                   </div>
@@ -793,8 +658,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                       <Link href={`/article/${articleSlug(a.title, a.id)}`} style={{ fontSize: 13, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>{a.title}</Link>
                       <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                         <span>{a.outlets?.name} · {timeAgo(a.published_at)}</span>
-                        {a.accuracy_score > 0 && <span className={accBadgeClass(a.accuracy_score)} style={{ fontSize: 10, padding: '1px 5px' }}>✦ {a.accuracy_score}</span>}
-                        {a.bias_direction && <span className={`score-badge score-badge-bias-${a.bias_direction}`} style={{ fontSize: 10, padding: '1px 5px' }}>{{ left: '← Left', centre: '◉ Centre', right: '→ Right' }[a.bias_direction]}</span>}
                       </div>
                     </div>
                   </div>

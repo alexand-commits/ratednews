@@ -2,10 +2,9 @@ import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { db } from '../lib/supabase'
-import { articleSlug, outletColor, scoreColor, scoreDot, timeAgo } from '../utils/helpers'
+import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import OutletRatingModal from '../components/OutletRatingModal'
-import InfoTip from '../components/InfoTip'
 
 function getInitials(str) {
   if (!str) return '?'
@@ -19,52 +18,18 @@ function getInitials(str) {
   return words.slice(0, 2).map(w => w.replace(/[^a-zA-Z]/g, '')[0] || '').join('').toUpperCase() || '?'
 }
 
-// ── Article badge helpers (mirrors NewsCard.jsx) ─────────────────────────────
-const HEADLINE_BADGES = {
-  misleading: { bg: 'var(--amber-light)', color: 'var(--amber)', label: '⚠ Misleading' },
-  clickbait:  { bg: 'var(--red-light)',   color: 'var(--red)',   label: '✗ Clickbait' },
-}
-const BIAS_LABELS = {
-  left:   { label: '← Left',   cls: 'score-badge score-badge-bias-left'   },
-  centre: { label: '◉ Centre', cls: 'score-badge score-badge-bias-centre' },
-  right:  { label: '→ Right',  cls: 'score-badge score-badge-bias-right'  },
-}
-function accBadgeClass(score) {
-  if (score >= 70) return 'score-badge score-badge-green'
-  if (score >= 50) return 'score-badge score-badge-amber'
-  return 'score-badge score-badge-red'
-}
-
 function ArticleCard({ a, onClick }) {
   const [imgFailed, setImgFailed] = useState(false)
-  const acc      = a.accuracy_score || 0
-  const scored   = acc > 0
-  const hlBadge  = a.headline_vote ? HEADLINE_BADGES[a.headline_vote] : null
-  const biasLbl  = a.bias_direction ? BIAS_LABELS[a.bias_direction] : null
   const hasImage = a.image_url && !imgFailed
   return (
     <div className="news-card" onClick={e => { if (e.target.closest('a')) return; onClick?.(e) }}>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-        {/* Text */}
         <div style={{ flex: 1, minWidth: 0 }}>
           <Link href={`/article/${articleSlug(a.title, a.id)}`} className="news-headline" style={{ textDecoration: 'none', color: 'inherit' }}>
             {a.title || ''}
           </Link>
-          {hlBadge && (
-            <span style={{
-              display: 'inline-block', fontSize: 10, fontWeight: 600,
-              padding: '2px 8px', borderRadius: 20, marginBottom: 6,
-              background: hlBadge.bg, color: hlBadge.color, alignSelf: 'flex-start',
-            }}>
-              {hlBadge.label}
-            </span>
-          )}
-          {a.ai_summary
-            ? <div className="news-summary">{a.ai_summary}</div>
-            : a.summary && <div className="news-summary">{a.summary}</div>
-          }
+          {a.summary && <div className="news-summary">{a.summary}</div>}
         </div>
-        {/* Thumbnail */}
         {hasImage && (
           <div style={{
             position: 'relative', width: 80, height: 80, flexShrink: 0,
@@ -83,16 +48,6 @@ function ArticleCard({ a, onClick }) {
         )}
       </div>
       <div className="score-row">
-        {scored ? (
-          <>
-            <span className={accBadgeClass(acc)}>✦ {acc}</span>
-            {biasLbl && <span className={biasLbl.cls}>{biasLbl.label}</span>}
-          </>
-        ) : (
-          <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg2)', padding: '2px 8px', borderRadius: 20 }}>
-            ⏳ Pending analysis
-          </span>
-        )}
         <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>{timeAgo(a.published_at)}</span>
       </div>
     </div>
@@ -141,14 +96,6 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
       .limit(25)
       .then(({ data }) => { setArticles(data || []); setArticlesLoading(false) })
 
-    // Best & worst scored articles (all-time, not just latest 25)
-    db.from('articles')
-      .select('id, title, accuracy_score, published_at')
-      .eq('outlet_id', outletId)
-      .gt('accuracy_score', 0)
-      .order('accuracy_score', { ascending: false })
-      .limit(3)
-      .then(({ data }) => setBestArticles(data || []))
 
     // Community ratings — then fetch usernames so avatars show initials not UUID
     db.from('outlet_ratings')
@@ -202,8 +149,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   if (!outlet) return null
 
   const [bg, fg] = outletColor(outlet.name)
-  const score = outlet.overall_score || 0
-  const biasPos = Math.max(0, Math.min(100, 50 + ((outlet.bias_score || 50) - 50)))
+  const comScore = outlet.community_score || 0
   const similar = allOutlets.filter(o => o.id !== outletId && o.country === outlet?.country && !o.parent_outlet_id).slice(0, 4)
 
   // Parent / child outlet relationships
@@ -213,40 +159,16 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
     if (!outlet.rss_url) return null
     try {
       const u = new URL(outlet.rss_url)
-      // Known feed-domain → website mappings (feed host doesn't match the real site)
       const FEED_HOST_MAP = {
         'feeds.bbci.co.uk': 'https://www.bbc.co.uk',
         'feeds.skynews.com': 'https://news.sky.com',
-        'feeds.feedburner.com': null, // feedburner can't be reverse-mapped
+        'feeds.feedburner.com': null,
       }
       if (FEED_HOST_MAP[u.hostname] !== undefined) return FEED_HOST_MAP[u.hostname]
-      // Strip common feed subdomains to get the root site
       const host = u.hostname.replace(/^(feeds?|rss|feed)\./i, '')
       return `${u.protocol}//${host}`
     } catch { return null }
   })()
-
-
-  // AI aggregate scores derived from fetched articles
-  const scoredArticles = articles.filter(a => a.accuracy_score > 0)
-  const aiCount = scoredArticles.length
-  const avgAccuracy = aiCount
-    ? Math.round(scoredArticles.reduce((s, a) => s + a.accuracy_score, 0) / aiCount)
-    : null
-  const avgBiasScore = aiCount
-    ? Math.round(scoredArticles.reduce((s, a) => s + (a.bias_score || 50), 0) / aiCount)
-    : null
-  const biasBreakdown = {
-    left:   scoredArticles.filter(a => a.bias_direction === 'left').length,
-    centre: scoredArticles.filter(a => a.bias_direction === 'centre').length,
-    right:  scoredArticles.filter(a => a.bias_direction === 'right').length,
-  }
-  const headlineBreakdown = {
-    fair:       scoredArticles.filter(a => a.headline_vote === 'fair').length,
-    misleading: scoredArticles.filter(a => a.headline_vote === 'misleading').length,
-    clickbait:  scoredArticles.filter(a => a.headline_vote === 'clickbait').length,
-  }
-  const fairRate  = aiCount ? Math.round((headlineBreakdown.fair / aiCount) * 100) : null
 
   // Category coverage — derived from fetched articles
   const categoryMap = {}
@@ -254,24 +176,11 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   const sortedCategories = Object.entries(categoryMap).sort(([, a], [, b]) => b - a).slice(0, 6)
   const totalCategorised = sortedCategories.reduce((s, [, c]) => s + c, 0)
 
-  // Ranking position — overall and within outlet's country
-  const rankedAll     = [...allOutlets].filter(o => (o.accuracy_score || 0) > 0).sort((a, b) => (b.accuracy_score || 0) - (a.accuracy_score || 0))
-  const rankOverall   = rankedAll.findIndex(o => o.id === outletId) + 1
-  const countryPeers  = rankedAll.filter(o => o.country === outlet?.country)
-  const rankCountry   = countryPeers.findIndex(o => o.id === outletId) + 1
-
-  const dominantBias = aiCount
-    ? (biasBreakdown.left > biasBreakdown.right && biasBreakdown.left > biasBreakdown.centre ? '← Left'
-     : biasBreakdown.right > biasBreakdown.left && biasBreakdown.right > biasBreakdown.centre ? '→ Right'
-     : '◉ Centre')
-    : (outlet.bias_direction || null)
-
-  // Needle position: weighted average of direction counts (left=0, centre=50, right=100)
-  // Falls back to outlet.bias_direction when no articles are scored yet
-  const dirTotal = biasBreakdown.left + biasBreakdown.centre + biasBreakdown.right
-  const needlePos = dirTotal > 0
-    ? Math.round((biasBreakdown.left * 0 + biasBreakdown.centre * 50 + biasBreakdown.right * 100) / dirTotal)
-    : outlet.bias_direction === 'left' ? 15 : outlet.bias_direction === 'right' ? 85 : 50
+  // Political bias needle — uses outlet-level data (historically set)
+  const dominantBias = outlet.bias_direction
+    ? ({ left: '← Left', centre: '◉ Centre', right: '→ Right' }[outlet.bias_direction] || null)
+    : null
+  const needlePos = outlet.bias_direction === 'left' ? 15 : outlet.bias_direction === 'right' ? 85 : 50
 
   // Community stats
   const totalRatings = outletRatings.length
@@ -377,37 +286,18 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
             </div>
             <div className="outlet-desc">{outlet.description || ''}</div>
             <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-              <span className="meta-chip"><span>🤖</span>AI analysed</span>
               <span className="meta-chip"><span>✓</span>Editorially verified</span>
             </div>
           </div>
           <div className="outlet-hero-score-block">
             <div className="outlet-hero-score-text">
-              <div className="big-score" style={{ color: score >= 75 ? 'var(--green)' : score >= 60 ? 'var(--amber)' : score > 0 ? 'var(--red)' : 'var(--text3)' }}>{score > 0 ? score : '—'}</div>
-              <div className="big-score-label" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                Quality score
-                <InfoTip text={`Based on consistent AI analysis across ${aiCount > 0 ? aiCount : 'recent'} articles. Reflects patterns over time, not individual verdicts.`} />
+              <div className="big-score" style={{ color: comScore > 0 ? 'var(--amber)' : 'var(--text3)' }}>
+                {comScore > 0 ? `${(comScore / 20).toFixed(1)}★` : '—'}
               </div>
-              <div style={{
-                display: 'inline-block',
-                fontSize: 11,
-                fontWeight: 600,
-                padding: '3px 10px',
-                borderRadius: 20,
-                marginTop: 6,
-                background: score >= 75 ? 'var(--green-light)' : score >= 60 ? 'var(--amber-light)' : score > 0 ? 'var(--red-light)' : 'var(--bg2)',
-                color: score >= 75 ? 'var(--green-dark)' : score >= 60 ? 'var(--amber)' : score > 0 ? 'var(--red)' : 'var(--text3)',
-              }}>
-                {score >= 90 ? '● High quality' : score >= 75 ? '● Good quality' : score >= 60 ? '● Mixed quality' : score > 0 ? '● Low quality' : 'Not yet rated'}
+              <div className="big-score-label">Community rating</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>
+                {outlet.total_ratings > 0 ? `${outlet.total_ratings} ${outlet.total_ratings === 1 ? 'rating' : 'ratings'}` : 'No ratings yet'}
               </div>
-              {rankOverall > 0 && (
-                <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text3)' }}>
-                  {rankCountry > 0 && outlet?.country
-                    ? <>Ranked <strong style={{ color: 'var(--text2)' }}>#{rankCountry}</strong> of {countryPeers.length} {outlet.country} outlets · <strong style={{ color: 'var(--text2)' }}>#{rankOverall}</strong> overall</>
-                    : <>Ranked <strong style={{ color: 'var(--text2)' }}>#{rankOverall}</strong> of {rankedAll.length} outlets</>
-                  }
-                </div>
-              )}
             </div>
             <div className="outlet-hero-score-divider" />
             <div className="outlet-hero-actions">
@@ -469,8 +359,8 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                   <OutletLogo name={child.name} size={22} borderRadius={5} />
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{child.name}</div>
-                    {child.overall_score > 0 && (
-                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>Score {child.overall_score}</div>
+                    {child.community_score > 0 && (
+                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>{(child.community_score / 20).toFixed(1)}★</div>
                     )}
                   </div>
                 </button>
@@ -490,38 +380,6 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
         {activeTab === 'overview' && (
           <div className="grid">
             <div>
-              <div className="section-label">AI analysis {aiCount > 0 && <span style={{ fontWeight: 400, color: 'var(--text3)' }}>· last {aiCount} articles</span>}</div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
-                {score > 0 ? (
-                  <>
-                    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px 14px', flex: 1, minWidth: 80 }}>
-                      <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 3 }}>
-                        Quality <InfoTip text="Average AI quality score across this outlet's recent articles — based on headline clarity, sourcing signals, and writing tone. 0–100, higher is better." />
-                      </div>
-                      <div style={{ fontSize: 18, fontWeight: 700, color: scoreColor(score) }}>{score}</div>
-                    </div>
-                    {fairRate !== null && (
-                      <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px 14px', flex: 1, minWidth: 80 }}>
-                        <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 3 }}>
-                          Fair headlines <InfoTip text="Percentage of this outlet's headlines tagged as fair — not misleading or clickbait. Based on consistent AI analysis across recent articles." />
-                        </div>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: scoreColor(fairRate) }}>{fairRate}%</div>
-                      </div>
-                    )}
-                    {avgBiasScore !== null && (
-                      <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '8px 14px', flex: 1, minWidth: 80 }}>
-                        <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 3 }}>
-                          Partisan <InfoTip text="How opinionated or one-sided this outlet's writing style tends to be. Low = objective. High = strongly partisan." />
-                        </div>
-                        <div style={{ fontSize: 18, fontWeight: 700, color: scoreColor(100 - avgBiasScore) }}>{avgBiasScore}</div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div style={{ fontSize: 12, color: 'var(--text3)' }}>AI scores will appear once articles have been analysed.</div>
-                )}
-              </div>
-
               <div className="section-label">Political bias</div>
               <div className="widget" style={{ marginBottom: 14 }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text2)', marginBottom: 4 }}>
@@ -539,42 +397,8 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                 <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 10 }}>
                   Overall lean: <strong style={{ color: 'var(--text)' }}>{dominantBias || 'Unknown'}</strong>
                 </div>
-                {aiCount > 0 && (
-                  <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
-                    {[
-                      { key: 'left',   label: '← Left',   color: 'var(--blue, #3b82f6)' },
-                      { key: 'centre', label: '◉ Centre', color: 'var(--text3)'          },
-                      { key: 'right',  label: '→ Right',  color: 'var(--red)'            },
-                    ].map(({ key, label, color }) => biasBreakdown[key] > 0 && (
-                      <span key={key} style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: 'var(--bg)', border: '0.5px solid var(--border)', color }}>
-                        {label} · {biasBreakdown[key]}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
 
-              {/* Headline verdict breakdown */}
-              {aiCount > 0 && (
-                <>
-                  <div className="section-label">Headline verdicts</div>
-                  <div className="widget" style={{ marginBottom: 14 }}>
-                    {[
-                      { key: 'fair',       label: '✓ Fair',       bg: 'var(--green-light)', color: 'var(--green-dark)' },
-                      { key: 'misleading', label: '⚠ Misleading', bg: 'var(--amber-light)', color: 'var(--amber)' },
-                      { key: 'clickbait',  label: '✗ Clickbait',  bg: 'var(--red-light)',   color: 'var(--red)'  },
-                    ].map(({ key, label, bg, color }) => (
-                      <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                        <span style={{ fontSize: 11, fontWeight: 600, padding: '2px 8px', borderRadius: 20, background: bg, color, minWidth: 90, textAlign: 'center' }}>{label}</span>
-                        <div style={{ flex: 1, height: 6, background: 'var(--border)', borderRadius: 3, overflow: 'hidden' }}>
-                          <div style={{ height: '100%', width: `${aiCount ? (headlineBreakdown[key] / aiCount) * 100 : 0}%`, background: color === 'var(--green-dark)' ? 'var(--green)' : color, borderRadius: 3 }} />
-                        </div>
-                        <span style={{ fontSize: 11, color: 'var(--text3)', minWidth: 30, textAlign: 'right' }}>{headlineBreakdown[key]}</span>
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
 
               {/* Category coverage */}
               {sortedCategories.length > 0 && (
@@ -674,31 +498,18 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
               {similar.length > 0 && (
                 <div className="widget">
                   <div className="widget-title">Similar outlets</div>
-                  {similar.map(o => (
-                    <div key={o.id} className="similar-row" onClick={() => navigate('outlet', { outletId: o.id })}>
-                      <OutletLogo name={o.name} size={30} borderRadius={7} />
-                      <span style={{ flex: 1, fontSize: 13 }}>{o.name}</span>
-                      <span style={{ fontSize: 13, fontWeight: 500, color: scoreColor(o.overall_score || 0) }}>{o.overall_score || 0}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Highest scored articles */}
-              {bestArticles.length > 0 && (
-                <div className="widget">
-                  <div className="widget-title">Highest quality articles</div>
-                  {bestArticles.map(a => (
-                    <Link key={a.id} href={`/article/${articleSlug(a.title, a.id)}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '7px 0', borderBottom: '0.5px solid var(--border)', cursor: 'pointer' }} className="border-hover">
-                        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--green-dark)', background: 'var(--green-light)', borderRadius: 20, padding: '1px 7px', flexShrink: 0, marginTop: 1 }}>✦ {a.accuracy_score}</span>
-                        <span style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{a.title}</span>
+                  {similar.map(o => {
+                    const oComScore = o.community_score || 0
+                    return (
+                      <div key={o.id} className="similar-row" onClick={() => navigate('outlet', { outletId: o.id })}>
+                        <OutletLogo name={o.name} size={30} borderRadius={7} />
+                        <span style={{ flex: 1, fontSize: 13 }}>{o.name}</span>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: oComScore > 0 ? 'var(--amber)' : 'var(--text3)' }}>
+                          {oComScore > 0 ? `${(oComScore / 20).toFixed(1)}★` : '—'}
+                        </span>
                       </div>
-                    </Link>
-                  ))}
-                  <a href="/methodology" style={{ display: 'block', marginTop: 10, fontSize: 11, color: 'var(--text3)', textDecoration: 'none', textAlign: 'right' }}>
-                    How scores work →
-                  </a>
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -757,7 +568,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                   <h3>No community ratings yet</h3>
                   <p>Be the first to rate {outlet.name}.</p>
                   <p style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>
-                    Community ratings shape the outlet's trust score alongside AI analysis — the more people rate, the more weight they carry.
+                    Community ratings are how outlets get scored on RatedNews. The more people rate, the more reliable the score.
                   </p>
                   <button className="btn-primary" style={{ marginTop: 12 }} onClick={handleRateClick}>
                     ★ Rate this outlet

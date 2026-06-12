@@ -7,28 +7,16 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
 const OUTLET_TABS = [
   {
-    id: 'credibility', label: 'Trust', key: 'overall_score',
-    desc: 'Overall trust score',
-    tip: 'Combined score based on AI analysis of headline quality, fairness and community ratings. Higher = more trustworthy.',
-    chipLabel: 'avg trust score', unit: '',
-  },
-  {
-    id: 'accuracy', label: 'Quality', key: 'accuracy_score',
-    desc: 'AI quality score',
-    tip: 'AI-assessed quality of each article\'s headline and presentation. Outlets are ranked by their average quality score across recent articles.',
-    chipLabel: 'avg quality score', unit: '',
-  },
-  {
     id: 'community', label: 'Community', key: 'community_score',
     desc: 'Avg community star rating',
-    tip: 'Average star rating given by RatedNews users (out of 100). Reflects reader trust and experience, independent of AI analysis.',
+    tip: 'Average star rating given by RatedNews readers (out of 100). Reflects reader trust and experience.',
     chipLabel: 'avg community score', unit: '',
   },
   {
-    id: 'headlines', label: 'Headlines', key: 'fair_rate',
-    desc: 'Headline fairness rate',
-    tip: 'Percentage of headlines tagged fair — not misleading or clickbait. Based on consistent AI analysis across all articles.',
-    chipLabel: 'avg fair headline rate', unit: '%',
+    id: 'most_rated', label: 'Most rated', key: 'total_ratings',
+    desc: 'Total community ratings',
+    tip: 'Outlets ranked by how many community ratings they have received. More ratings = more community engagement.',
+    chipLabel: 'total ratings', unit: '',
   },
 ]
 
@@ -58,8 +46,6 @@ function getTrustLevel(total) {
 }
 
 const STAT_ROWS = [
-  { key: 'overall_score',   label: 'Trust',      max: 100, format: v => v },
-  { key: 'accuracy_score',  label: 'Accuracy',   max: 100, format: v => v },
   { key: 'community_score', label: 'Community',  max: 100, format: v => v > 0 ? `${(v / 20).toFixed(1)}★` : '—' },
   { key: 'total_ratings',   label: 'Ratings',    max: null, format: v => v },
 ]
@@ -180,7 +166,7 @@ function ComparePanel({ a, b, navigate, onClear }) {
 
 export default function RankingsPage({ outlets, outletsLoading, navigate, goBack, user, onRefresh }) {
   const [section, setSection]         = useState('outlets')
-  const [tab, setTab]                 = useState('credibility')
+  const [tab, setTab]                 = useState('community')
   const [region, setRegion]           = useState('all')
   const [compareMode, setCompareMode] = useState(false)
   const [compareIds, setCompareIds]   = useState([])
@@ -360,47 +346,6 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
               </div>
             </div>
 
-            {/* Biggest Movers */}
-            {(() => {
-              const withDelta = outlets.filter(o => o.accuracy_delta_7d !== null && o.accuracy_delta_7d !== undefined)
-              if (withDelta.length < 2) return null
-              const risers  = [...withDelta].sort((a, b) => b.accuracy_delta_7d - a.accuracy_delta_7d).slice(0, 3).filter(o => o.accuracy_delta_7d > 0)
-              const fallers = [...withDelta].sort((a, b) => a.accuracy_delta_7d - b.accuracy_delta_7d).slice(0, 3).filter(o => o.accuracy_delta_7d < 0)
-              if (!risers.length && !fallers.length) return null
-              return (
-                <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px', marginBottom: 20 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 12 }}>
-                    Score movers · 7-day quality change
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                    {/* Risers */}
-                    <div>
-                      {risers.map(o => (
-                        <div key={o.id} onClick={() => navigate('outlet', { outletId: o.id })}
-                          style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9, cursor: 'pointer' }}>
-                          <OutletLogo name={o.name} size={22} borderRadius={5} />
-                          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: '#22c55e', flexShrink: 0 }}>+{o.accuracy_delta_7d}</span>
-                        </div>
-                      ))}
-                      {!risers.length && <div style={{ fontSize: 12, color: 'var(--text3)' }}>No risers yet</div>}
-                    </div>
-                    {/* Fallers */}
-                    <div>
-                      {fallers.map(o => (
-                        <div key={o.id} onClick={() => navigate('outlet', { outletId: o.id })}
-                          style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9, cursor: 'pointer' }}>
-                          <OutletLogo name={o.name} size={22} borderRadius={5} />
-                          <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', flexShrink: 0 }}>{o.accuracy_delta_7d}</span>
-                        </div>
-                      ))}
-                      {!fallers.length && <div style={{ fontSize: 12, color: 'var(--text3)' }}>No fallers yet</div>}
-                    </div>
-                  </div>
-                </div>
-              )
-            })()}
 
             {/* Sub-tabs */}
             <div className="tabs" style={{ marginBottom: 16 }}>
@@ -464,62 +409,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
               return a && b ? <ComparePanel a={a} b={b} navigate={navigate} onClear={clearCompare} /> : null
             })()}
 
-            {/* Headlines tab — clickbait leaderboard */}
-            {tab === 'headlines' ? (() => {
-              const withHeadlines = outlets
-                .filter(o => region === 'all' || (o.country || 'International') === region)
-                .filter(o => o.fair_rate != null)
-              const fairest    = [...withHeadlines].sort((a, b) => (b.fair_rate || 0) - (a.fair_rate || 0)).slice(0, 8)
-              const clickbaity = [...withHeadlines].sort((a, b) => (b.clickbait_rate || 0) - (a.clickbait_rate || 0)).slice(0, 8)
-              if (!withHeadlines.length) return <div className="empty-state"><p>Headline data not yet available.</p></div>
-              return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {/* Fairest headlines */}
-                  <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-                    <div style={{ padding: '12px 18px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14 }}>✓</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)' }}>Fairest headlines</span>
-                    </div>
-                    {fairest.map((o, i) => (
-                      <div key={o.id} onClick={() => navigate('outlet', { outletId: o.id })}
-                        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px', borderBottom: i < fairest.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }}
-                        className="row-hover"
-                      >
-                        <span style={{ fontSize: 12, color: 'var(--text3)', width: 20, flexShrink: 0, textAlign: 'center' }}>{i + 1}</span>
-                        <OutletLogo name={o.name} size={30} borderRadius={7} />
-                        <span style={{ flex: 1, fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
-                        <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)' }}>{o.fair_rate}% fair</div>
-                          {o.clickbait_rate > 0 && <div style={{ fontSize: 10, color: 'var(--text3)' }}>{o.clickbait_rate}% clickbait</div>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Most clickbait */}
-                  <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-                    <div style={{ padding: '12px 18px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14 }}>⚠</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)' }}>Most clickbait</span>
-                    </div>
-                    {clickbaity.map((o, i) => (
-                      <div key={o.id} onClick={() => navigate('outlet', { outletId: o.id })}
-                        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px', borderBottom: i < clickbaity.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }}
-                        className="row-hover"
-                      >
-                        <span style={{ fontSize: 12, color: 'var(--text3)', width: 20, flexShrink: 0, textAlign: 'center' }}>{i + 1}</span>
-                        <OutletLogo name={o.name} size={30} borderRadius={7} />
-                        <span style={{ flex: 1, fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
-                        <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--red)' }}>{o.clickbait_rate}% clickbait</div>
-                          <div style={{ fontSize: 10, color: 'var(--text3)' }}>{o.misleading_rate}% misleading</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            })() : (
+            {(
               <>
                 {/* Standard outlet list */}
                 <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
@@ -543,7 +433,8 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                   ) : (
                     sorted.map((o, i) => {
                       const score      = o[activeTab.key] || 0
-                      const barWidth   = Math.round((score / 100) * 100)
+                      const maxScore   = tab === 'most_rated' ? Math.max(...sorted.map(x => x.total_ratings || 0), 1) : 100
+                      const barWidth   = Math.round((score / maxScore) * 100)
                       const isTop3     = i < 3
                       const isSelected = compareIds.includes(o.id)
                       return (
@@ -581,7 +472,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                               <div className="rank-bar-fill" style={{ width: `${barWidth}%`, background: scoreColor(score) }} />
                             </div>
                             <div style={{ fontSize: 11, textAlign: 'right', marginTop: 3, color: scoreColor(score), fontWeight: 600 }}>
-                              {tab === 'community' && o.community_score > 0 ? `${(o.community_score / 20).toFixed(1)}★` : score}
+                              {tab === 'community' ? (o.community_score > 0 ? `${(o.community_score / 20).toFixed(1)}★` : '—') : score || '—'}
                             </div>
                           </div>
                         </div>
@@ -590,7 +481,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                   )}
                 </div>
                 <div style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'center', marginTop: 16 }}>
-                  Quality scores are AI-generated based on consistent analysis across all outlets. Scores reflect patterns across recent articles, not individual verdicts.
+                  Scores reflect community ratings from RatedNews readers. More ratings = more reliable scores.
                 </div>
               </>
             )}

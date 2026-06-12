@@ -1,10 +1,7 @@
 /**
- * Vercel Cron Job — AI Scoring
- * Runs on schedule defined in vercel.json (10 mins after ingest)
- * Called by Vercel with Authorization: Bearer <CRON_SECRET>
+ * AI Scoring — disabled. RatedNews now uses community ratings only.
  */
 
-const Anthropic = require('@anthropic-ai/sdk')
 const { createClient } = require('@supabase/supabase-js')
 
 const BATCH_SIZE = 50
@@ -140,65 +137,7 @@ Summary: ${article.summary || '(no summary available)'}`
 }
 
 module.exports = async function handler(req, res) {
-  // Verify this request came from Vercel's cron scheduler
-  const authHeader = req.headers.authorization
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return res.status(401).json({ error: 'Unauthorized' })
-  }
-
-  const supabase  = createClient(
-    process.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  )
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-  const { data: articles, error } = await supabase
-    .from('articles')
-    .select('id, title, summary, outlets(name)')
-    .is('accuracy_score', null)
-    .order('published_at', { ascending: false })
-    .limit(BATCH_SIZE)
-
-  if (error) {
-    return res.status(500).json({ error: error.message })
-  }
-
-  if (!articles || articles.length === 0) {
-    return res.status(200).json({ ok: true, scored: 0, message: 'No unscored articles' })
-  }
-
-  let scored = 0, failed = 0
-
-  // Process in parallel batches of 5 — Haiku handles concurrency fine
-  const CONCURRENCY = 5
-  for (let i = 0; i < articles.length; i += CONCURRENCY) {
-    const batch = articles.slice(i, i + CONCURRENCY)
-    await Promise.all(batch.map(async article => {
-      try {
-        const scores = await scoreArticle(anthropic, article)
-
-        const { error: updateError } = await supabase
-          .from('articles')
-          .update({
-            article_type:    scores.article_type,
-            accuracy_score:  scores.accuracy_score,
-            bias_score:      scores.bias_score,
-            bias_direction:  scores.bias_direction,
-            headline_vote:   scores.headline_vote,
-            category:        scores.category,
-            ai_summary:      scores.ai_summary,
-          })
-          .eq('id', article.id)
-
-        if (updateError) { failed++; return }
-        scored++
-      } catch {
-        failed++
-      }
-    }))
-  }
-
-  return res.status(200).json({ ok: true, scored, failed })
+  return res.status(410).json({ ok: false, message: 'AI scoring is disabled — RatedNews now uses community ratings only.' })
 }
 
-module.exports.config = { maxDuration: 300 }
+module.exports.config = { maxDuration: 60 }
