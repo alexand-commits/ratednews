@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { scoreColor } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
-import InfoTip from '../components/InfoTip'
 import { db } from '../lib/supabase'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
@@ -9,19 +8,12 @@ import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
 const SCORE_TABS = [
   {
-    id: 'accuracy', label: 'Quality', key: 'overall_score',
-    tip: "AI-assessed quality blended with community ratings once 20+ reader ratings are recorded. Ranked by average across recent articles.",
-    unit: '',
+    id: 'community',  label: 'Community',  key: 'community_score',
+    desc: 'Avg reader star rating (out of 100)',
   },
   {
-    id: 'community', label: 'Community', key: 'community_score',
-    tip: 'Average star rating given by RatedNews users (out of 100). Reflects reader trust, independent of AI analysis.',
-    unit: '',
-  },
-  {
-    id: 'headlines', label: 'Headlines', key: 'fair_rate',
-    tip: 'Percentage of headlines tagged fair — not misleading or clickbait.',
-    unit: '%',
+    id: 'most_rated', label: 'Most rated', key: 'total_ratings',
+    desc: 'Total community ratings received',
   },
 ]
 
@@ -35,16 +27,6 @@ const REGIONS = [
   { value: 'AsiaPac',       label: 'Asia Pacific'  },
   { value: 'Americas',      label: 'Americas'      },
 ]
-
-const BIAS_FILTERS = [
-  { value: 'all',    label: 'All'      },
-  { value: 'left',   label: '← Left'   },
-  { value: 'centre', label: '◉ Centre' },
-  { value: 'right',  label: '→ Right'  },
-]
-
-const BIAS_COLORS = { left: 'var(--blue, #3b82f6)', centre: 'var(--text3)', right: 'var(--red)' }
-const BIAS_LABELS = { left: '← Left', centre: '◉ Centre', right: '→ Right' }
 
 const COVERAGE_REGIONS = [
   { value: 'US',            label: 'US'            },
@@ -69,10 +51,8 @@ function getTrustLevel(t) {
 }
 
 const STAT_ROWS = [
-  { key: 'overall_score',   label: 'Trust',     max: 100, format: v => v },
-  { key: 'accuracy_score',  label: 'Quality',   max: 100, format: v => v },
-  { key: 'community_score', label: 'Community', max: 100, format: v => v > 0 ? `${(v / 20).toFixed(1)}★` : '—' },
-  { key: 'total_ratings',   label: 'Ratings',   max: null, format: v => v },
+  { key: 'community_score', label: 'Community', max: 100,  format: v => v > 0 ? `${(v / 20).toFixed(1)}★` : '—' },
+  { key: 'total_ratings',   label: 'Ratings',   max: null, format: v => v || 0 },
 ]
 
 // ── Suggest modal ─────────────────────────────────────────────────────────────
@@ -176,7 +156,7 @@ function ComparePanel({ a, b, navigate, onClear }) {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: aWins ? scoreColor(va) : 'var(--text2)' }}>{format(va) || '—'}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: aWins ? scoreColor(va) : 'var(--text2)' }}>{format(va)}</span>
                     {aWins && <span style={{ fontSize: 9, color: scoreColor(va), fontWeight: 700 }}>▲</span>}
                   </div>
                   <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
@@ -185,7 +165,7 @@ function ComparePanel({ a, b, navigate, onClear }) {
                 </div>
                 <div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, flexDirection: 'row-reverse' }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: bWins ? scoreColor(vb) : 'var(--text2)' }}>{format(vb) || '—'}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: bWins ? scoreColor(vb) : 'var(--text2)' }}>{format(vb)}</span>
                     {bWins && <span style={{ fontSize: 9, color: scoreColor(vb), fontWeight: 700 }}>▲</span>}
                   </div>
                   <div style={{ height: 4, background: 'var(--border)', borderRadius: 2, overflow: 'hidden' }}>
@@ -196,13 +176,6 @@ function ComparePanel({ a, b, navigate, onClear }) {
             </div>
           )
         })}
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 5 }}>Bias</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: BIAS_COLORS[a.bias_direction] || 'var(--text3)' }}>{BIAS_LABELS[a.bias_direction] || '—'}</div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: BIAS_COLORS[b.bias_direction] || 'var(--text3)', textAlign: 'right' }}>{BIAS_LABELS[b.bias_direction] || '—'}</div>
-          </div>
-        </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 14 }}>
         <button onClick={() => navigate('outlet', { outletId: a.id })} style={{ fontSize: 12, fontWeight: 600, padding: '8px 0', background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', color: 'var(--text2)' }}>View {a.name} →</button>
@@ -219,9 +192,8 @@ export default function OutletsRankingsPage({
   onRefresh, followedOutletIds = new Set(), toggleFollow,
 }) {
   const [section,     setSection]     = useState('outlets')
-  const [tab,         setTab]         = useState('accuracy')
+  const [tab,         setTab]         = useState('community')
   const [region,      setRegion]      = useState('all')
-  const [bias,        setBias]        = useState('all')
   const [search,      setSearch]      = useState('')
   const [compareMode, setCompareMode] = useState(false)
   const [compareIds,  setCompareIds]  = useState([])
@@ -293,7 +265,6 @@ export default function OutletsRankingsPage({
   const sorted = outlets
     .filter(o => !o.parent_outlet_id)
     .filter(o => region === 'all' || (o.country || 'International') === region)
-    .filter(o => bias === 'all' || o.bias_direction === bias)
     .filter(o =>
       !search ||
       o.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -302,9 +273,9 @@ export default function OutletsRankingsPage({
     .slice()
     .sort((a, b) => (b[activeTab.key] || 0) - (a[activeTab.key] || 0))
 
-  const ratedSorted = sorted.filter(o => o[activeTab.key] > 0)
-  const avgScore  = ratedSorted.length ? Math.round(ratedSorted.reduce((s, o) => s + o[activeTab.key], 0) / ratedSorted.length) : 0
-  const topOutlet = ratedSorted[0]
+  const ratedSorted = sorted.filter(o => (o[activeTab.key] || 0) > 0)
+  const topOutlet   = ratedSorted[0]
+  const maxScore    = tab === 'most_rated' ? Math.max(...ratedSorted.map(o => o.total_ratings || 0), 1) : 100
 
   const parentCount = outlets.filter(o => !o.parent_outlet_id).length
 
@@ -321,8 +292,8 @@ export default function OutletsRankingsPage({
               📡 Outlets
             </h1>
             <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, maxWidth: 480 }}>
-              {parentCount} outlets ranked by <strong style={{ color: 'var(--text)' }}>AI quality score</strong>, <strong style={{ color: 'var(--text)' }}>political bias</strong>, and <strong style={{ color: 'var(--text)' }}>headline fairness</strong> — blended with community ratings over time.{' '}
-              <a onClick={() => navigate('about')} style={{ color: 'var(--coral)', cursor: 'pointer', textDecoration: 'none', fontWeight: 500 }}>How scores are built →</a>
+              {parentCount} outlets ranked by community ratings.{' '}
+              <a onClick={() => navigate('about')} style={{ color: 'var(--coral)', cursor: 'pointer', textDecoration: 'none', fontWeight: 500 }}>How scores work →</a>
             </p>
           </div>
           <button
@@ -344,7 +315,7 @@ export default function OutletsRankingsPage({
         {/* ── OUTLETS SECTION ─────────────────────────────────────────────── */}
         {section === 'outlets' && (
           <>
-            {/* Summary chips */}
+            {/* Summary chip */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
               <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 80 }}>
                 <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Top outlet</div>
@@ -352,70 +323,41 @@ export default function OutletsRankingsPage({
                   <>
                     <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25, margin: '6px 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🥇 {topOutlet.name}</div>
                     <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-                      {tab === 'community' ? `${((topOutlet.community_score || 0) / 20).toFixed(1)}★ community` : `${topOutlet[activeTab.key] || 0} ${activeTab.label.toLowerCase()} score`}
+                      {tab === 'community'
+                        ? `${((topOutlet.community_score || 0) / 20).toFixed(1)}★ community`
+                        : `${topOutlet.total_ratings || 0} ratings`}
                     </div>
                   </>
                 ) : (
                   <>
                     <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text3)', margin: '6px 0 4px' }}>—</div>
-                    <div style={{ fontSize: 12, color: 'var(--text3)' }}>No data yet</div>
+                    <div style={{ fontSize: 12, color: 'var(--text3)' }}>No ratings yet</div>
                   </>
                 )}
               </div>
               <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140 }}>
-                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Average</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: ratedSorted.length ? scoreColor(avgScore) : 'var(--text3)' }}>
-                  {ratedSorted.length ? (tab === 'community' ? `${(avgScore / 20).toFixed(1)}★` : avgScore) : '—'}
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                  {tab === 'community' ? 'Avg score' : 'Total ratings'}
+                </div>
+                <div style={{ fontSize: 22, fontWeight: 700, color: ratedSorted.length ? 'var(--amber)' : 'var(--text3)' }}>
+                  {ratedSorted.length
+                    ? tab === 'community'
+                      ? `${(ratedSorted.reduce((s, o) => s + (o.community_score || 0), 0) / ratedSorted.length / 20).toFixed(1)}★`
+                      : ratedSorted.reduce((s, o) => s + (o.total_ratings || 0), 0).toLocaleString()
+                    : '—'}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-                  {ratedSorted.length ? `across ${ratedSorted.length} rated outlets` : 'No scores yet'}
+                  {ratedSorted.length ? `across ${ratedSorted.length} outlets` : 'No ratings yet'}
                 </div>
               </div>
             </div>
-
-            {/* Movers strip */}
-            {(() => {
-              const withDelta = outlets.filter(o => o.accuracy_delta_7d !== null && o.accuracy_delta_7d !== undefined)
-              if (withDelta.length < 2) return null
-              const risers  = [...withDelta].sort((a, b) => b.accuracy_delta_7d - a.accuracy_delta_7d).slice(0, 3).filter(o => o.accuracy_delta_7d > 0)
-              const fallers = [...withDelta].sort((a, b) => a.accuracy_delta_7d - b.accuracy_delta_7d).slice(0, 3).filter(o => o.accuracy_delta_7d < 0)
-              if (!risers.length && !fallers.length) return null
-              return (
-                <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px', marginBottom: 20 }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 12 }}>Score movers · 7-day quality change</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                    <div>
-                      {risers.map(o => (
-                        <div key={o.id} onClick={() => navigate('outlet', { outletId: o.id })} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9, cursor: 'pointer' }}>
-                          <OutletLogo name={o.name} size={22} borderRadius={5} />
-                          <span style={{ fontSize: 12, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: '#22c55e', flexShrink: 0 }}>+{o.accuracy_delta_7d}</span>
-                        </div>
-                      ))}
-                      {!risers.length && <div style={{ fontSize: 12, color: 'var(--text3)' }}>No risers yet</div>}
-                    </div>
-                    <div>
-                      {fallers.map(o => (
-                        <div key={o.id} onClick={() => navigate('outlet', { outletId: o.id })} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9, cursor: 'pointer' }}>
-                          <OutletLogo name={o.name} size={22} borderRadius={5} />
-                          <span style={{ fontSize: 12, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
-                          <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--red)', flexShrink: 0 }}>{o.accuracy_delta_7d}</span>
-                        </div>
-                      ))}
-                      {!fallers.length && <div style={{ fontSize: 12, color: 'var(--text3)' }}>No fallers yet</div>}
-                    </div>
-                  </div>
-                </div>
-              )
-            })()}
 
             {/* Score tabs + compare toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
               <div className="tabs" style={{ flex: 1, marginBottom: 0 }}>
                 {SCORE_TABS.map(t => (
-                  <div key={t.id} className={`tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <div key={t.id} className={`tab${tab === t.id ? ' active' : ''}`} onClick={() => setTab(t.id)}>
                     {t.label}
-                    <InfoTip text={t.tip} />
                   </div>
                 ))}
               </div>
@@ -434,18 +376,10 @@ export default function OutletsRankingsPage({
             </div>
 
             {/* Region filter */}
-            <div className="filter-bar" style={{ marginBottom: 10 }}>
+            <div className="filter-bar" style={{ marginBottom: 16 }}>
               <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Region</span>
               {REGIONS.map(r => (
                 <button key={r.value} className={`pill${region === r.value ? ' active' : ''}`} onClick={() => setRegion(r.value)}>{r.label}</button>
-              ))}
-            </div>
-
-            {/* Bias filter */}
-            <div className="filter-bar" style={{ marginBottom: 16 }}>
-              <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Bias</span>
-              {BIAS_FILTERS.map(b => (
-                <button key={b.value} className={`pill${bias === b.value ? ' active' : ''}`} onClick={() => setBias(b.value)}>{b.label}</button>
               ))}
             </div>
 
@@ -463,167 +397,99 @@ export default function OutletsRankingsPage({
               return a && b ? <ComparePanel a={a} b={b} navigate={navigate} onClear={clearCompare} /> : null
             })()}
 
-            {/* Headlines tab */}
-            {tab === 'headlines' ? (() => {
-              const withH = outlets
-                .filter(o => !o.parent_outlet_id)
-                .filter(o => region === 'all' || (o.country || 'International') === region)
-                .filter(o => o.fair_rate != null)
-              const fairest    = [...withH].sort((a, b) => (b.fair_rate || 0) - (a.fair_rate || 0)).slice(0, 8)
-              const clickbaity = [...withH].sort((a, b) => (b.clickbait_rate || 0) - (a.clickbait_rate || 0)).slice(0, 8)
-              if (!withH.length) return <div className="empty-state"><p>Headline data not yet available.</p></div>
-              return (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  {/* Fairest headlines */}
-                  <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-                    <div style={{ padding: '12px 18px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14 }}>✓</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)' }}>Fairest headlines</span>
+            {/* Ranked list */}
+            <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+              {outletsLoading ? (
+                [0,1,2,3,4,5,6,7].map(i => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderBottom: i < 7 ? '0.5px solid var(--border)' : 'none' }}>
+                    <div className="skeleton-shimmer" style={{ width: 26, height: 14, borderRadius: 4, flexShrink: 0, background: 'var(--border)' }} />
+                    <div className="skeleton-shimmer" style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: 'var(--border)' }} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="skeleton-line skeleton-shimmer" style={{ width: '55%', height: 13, marginBottom: 6 }} />
+                      <div className="skeleton-line skeleton-shimmer" style={{ width: '30%', height: 10 }} />
                     </div>
-                    {fairest.map((o, i) => (
-                      <div key={o.id} onClick={() => navigate('outlet', { outletId: o.id })}
-                        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px', borderBottom: i < fairest.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }}
-                        className="row-hover"
-                      >
-                        <span style={{ fontSize: 12, color: 'var(--text3)', width: 20, flexShrink: 0, textAlign: 'center' }}>{i + 1}</span>
-                        <OutletLogo name={o.name} size={30} borderRadius={7} />
-                        <span style={{ flex: 1, fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
-                        <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)' }}>{o.fair_rate}% fair</div>
-                          {o.clickbait_rate > 0 && <div style={{ fontSize: 10, color: 'var(--text3)' }}>{o.clickbait_rate}% clickbait</div>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {/* Most clickbait */}
-                  <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-                    <div style={{ padding: '12px 18px', borderBottom: '0.5px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontSize: 14 }}>⚠</span>
-                      <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)' }}>Most clickbait</span>
+                    <div style={{ width: 100, flexShrink: 0 }}>
+                      <div className="skeleton-shimmer" style={{ height: 6, borderRadius: 3, background: 'var(--border)' }} />
                     </div>
-                    {clickbaity.map((o, i) => (
-                      <div key={o.id} onClick={() => navigate('outlet', { outletId: o.id })}
-                        style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 18px', borderBottom: i < clickbaity.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }}
-                        className="row-hover"
-                      >
-                        <span style={{ fontSize: 12, color: 'var(--text3)', width: 20, flexShrink: 0, textAlign: 'center' }}>{i + 1}</span>
-                        <OutletLogo name={o.name} size={30} borderRadius={7} />
-                        <span style={{ flex: 1, fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
-                        <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--red)' }}>{o.clickbait_rate}% clickbait</div>
-                          <div style={{ fontSize: 10, color: 'var(--text3)' }}>{o.misleading_rate}% misleading</div>
-                        </div>
-                      </div>
-                    ))}
                   </div>
-                </div>
-              )
-            })() : (
-              /* Standard ranked list */
-              <>
-                <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-                  {outletsLoading ? (
-                    [0,1,2,3,4,5,6,7].map(i => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderBottom: i < 7 ? '0.5px solid var(--border)' : 'none' }}>
-                        <div className="skeleton-shimmer" style={{ width: 26, height: 14, borderRadius: 4, flexShrink: 0, background: 'var(--border)' }} />
-                        <div className="skeleton-shimmer" style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: 'var(--border)' }} />
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div className="skeleton-line skeleton-shimmer" style={{ width: '55%', height: 13, marginBottom: 6 }} />
-                          <div className="skeleton-line skeleton-shimmer" style={{ width: '30%', height: 10 }} />
-                        </div>
-                        <div style={{ width: 100, flexShrink: 0 }}>
-                          <div className="skeleton-shimmer" style={{ height: 6, borderRadius: 3, background: 'var(--border)' }} />
-                        </div>
-                      </div>
-                    ))
-                  ) : sorted.length === 0 ? (
-                    <div className="empty-state"><p>No outlets match your filters.</p></div>
-                  ) : (
-                    sorted.map((o, i) => {
-                      const score      = o[activeTab.key] || 0
-                      const isTop3     = i < 3 && !search && region === 'all' && bias === 'all'
-                      const isSelected = compareIds.includes(o.id)
-                      const children   = outlets.filter(c => c.parent_outlet_id === o.id)
+                ))
+              ) : sorted.length === 0 ? (
+                <div className="empty-state"><p>No outlets match your filters.</p></div>
+              ) : (
+                sorted.map((o, i) => {
+                  const score      = o[activeTab.key] || 0
+                  const barWidth   = Math.round((score / maxScore) * 100)
+                  const isTop3     = i < 3 && !search && region === 'all'
+                  const isSelected = compareIds.includes(o.id)
+                  const children   = outlets.filter(c => c.parent_outlet_id === o.id)
 
-                      return (
-                        <div key={o.id}
-                          style={{
-                            borderBottom: i < sorted.length - 1 ? '0.5px solid var(--border)' : 'none',
-                            cursor: 'pointer', transition: 'background 0.15s',
-                            background: isSelected ? 'rgba(216,90,48,0.06)' : isTop3 && i === 0 ? 'rgba(184,134,11,0.06)' : isTop3 && i === 1 ? 'rgba(160,160,160,0.05)' : isTop3 && i === 2 ? 'rgba(160,82,45,0.05)' : '',
-                          }}
-                          className="row-hover"
-                          onClick={() => compareMode ? toggleCompare(o.id) : navigate('outlet', { outletId: o.id })}
-                        >
-                          {/* Main row */}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 18px' }}>
-                            {/* Rank / compare */}
-                            {compareMode ? (
-                              <div style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, border: `2px solid ${isSelected ? 'var(--coral)' : 'var(--border)'}`, background: isSelected ? 'var(--coral)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                {isSelected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
-                              </div>
-                            ) : (
-                              <span style={{ fontSize: isTop3 ? 15 : 12, fontWeight: isTop3 ? 700 : 400, color: i === 0 ? '#b8860b' : i === 1 ? '#888' : i === 2 ? '#a0522d' : 'var(--text3)', width: 26, flexShrink: 0, textAlign: 'center' }}>
-                                {isTop3 && i === 0 ? '🥇' : isTop3 && i === 1 ? '🥈' : isTop3 && i === 2 ? '🥉' : i + 1}
-                              </span>
-                            )}
-
-                            <OutletLogo name={o.name} size={36} borderRadius={9} />
-
-                            {/* Name + meta */}
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                              <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 2 }}>{o.name}</div>
-                              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.country || 'International'}</span>
-                                {o.bias_direction && <span style={{ fontSize: 11, color: BIAS_COLORS[o.bias_direction] }}>{BIAS_LABELS[o.bias_direction]}</span>}
-                                {o.total_ratings > 0 && <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.total_ratings} {o.total_ratings === 1 ? 'rating' : 'ratings'}</span>}
-                              </div>
-                            </div>
-
-                            {/* Score bar */}
-                            <div style={{ width: 90, flexShrink: 0 }}>
-                              <div className="rank-bar-bg">
-                                <div className="rank-bar-fill" style={{ width: `${Math.round((score / 100) * 100)}%`, background: scoreColor(score) }} />
-                              </div>
-                              <div style={{ fontSize: 11, textAlign: 'right', marginTop: 3, color: scoreColor(score), fontWeight: 600 }}>
-                                {tab === 'community' && o.community_score > 0 ? `${(o.community_score / 20).toFixed(1)}★` : score || '—'}
-                              </div>
-                            </div>
-
-                            {/* Follow button */}
-                            <button
-                              onClick={e => { e.stopPropagation(); if (!user) { onLoginClick(); return } toggleFollow(o.id) }}
-                              style={{ fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20, border: followedOutletIds.has(o.id) ? '1px solid var(--border)' : '1px solid var(--coral)', background: followedOutletIds.has(o.id) ? 'var(--bg)' : 'rgba(216,90,48,0.08)', color: followedOutletIds.has(o.id) ? 'var(--text3)' : 'var(--coral)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
-                            >
-                              {followedOutletIds.has(o.id) ? '✓' : '+'}
-                            </button>
+                  return (
+                    <div key={o.id}
+                      style={{
+                        borderBottom: i < sorted.length - 1 ? '0.5px solid var(--border)' : 'none',
+                        cursor: 'pointer', transition: 'background 0.15s',
+                        background: isSelected ? 'rgba(216,90,48,0.06)' : isTop3 && i === 0 ? 'rgba(184,134,11,0.06)' : isTop3 && i === 1 ? 'rgba(160,160,160,0.05)' : isTop3 && i === 2 ? 'rgba(160,82,45,0.05)' : '',
+                      }}
+                      className="row-hover"
+                      onClick={() => compareMode ? toggleCompare(o.id) : navigate('outlet', { outletId: o.id })}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 18px' }}>
+                        {compareMode ? (
+                          <div style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, border: `2px solid ${isSelected ? 'var(--coral)' : 'var(--border)'}`, background: isSelected ? 'var(--coral)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {isSelected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
                           </div>
+                        ) : (
+                          <span style={{ fontSize: isTop3 ? 15 : 12, fontWeight: isTop3 ? 700 : 400, color: i === 0 ? '#b8860b' : i === 1 ? '#888' : i === 2 ? '#a0522d' : 'var(--text3)', width: 26, flexShrink: 0, textAlign: 'center' }}>
+                            {isTop3 && i === 0 ? '🥇' : isTop3 && i === 1 ? '🥈' : isTop3 && i === 2 ? '🥉' : i + 1}
+                          </span>
+                        )}
 
-                          {/* Section chips */}
-                          {children.length > 0 && (
-                            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 18px 10px 62px' }}>
-                              <span style={{ fontSize: 10, color: 'var(--text3)', alignSelf: 'center' }}>Sections:</span>
-                              {children.map(child => (
-                                <button
-                                  key={child.id}
-                                  onClick={e => { e.stopPropagation(); navigate('outlet', { outletId: child.id }) }}
-                                  style={{ fontSize: 10, fontWeight: 600, padding: '2px 10px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text2)', cursor: 'pointer' }}
-                                >
-                                  {child.name}
-                                </button>
-                              ))}
-                            </div>
-                          )}
+                        <OutletLogo name={o.name} size={36} borderRadius={9} />
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 2 }}>{o.name}</div>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.country || 'International'}</span>
+                            {o.total_ratings > 0 && <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.total_ratings} {o.total_ratings === 1 ? 'rating' : 'ratings'}</span>}
+                          </div>
                         </div>
-                      )
-                    })
-                  )}
-                </div>
-                <div style={{ fontSize: 11, color: 'var(--text3)', textAlign: 'center', marginTop: 16 }}>
-                  Quality scores are AI-generated based on consistent analysis across all outlets. Scores reflect patterns across recent articles, not individual verdicts.
-                </div>
-              </>
-            )}
+
+                        <div style={{ width: 90, flexShrink: 0 }}>
+                          <div className="rank-bar-bg">
+                            <div className="rank-bar-fill" style={{ width: `${barWidth}%`, background: tab === 'community' ? scoreColor(score) : 'var(--coral)' }} />
+                          </div>
+                          <div style={{ fontSize: 11, textAlign: 'right', marginTop: 3, color: tab === 'community' ? scoreColor(score) : 'var(--text2)', fontWeight: 600 }}>
+                            {tab === 'community' && score > 0 ? `${(score / 20).toFixed(1)}★` : score || '—'}
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={e => { e.stopPropagation(); if (!user) { onLoginClick(); return } toggleFollow(o.id) }}
+                          style={{ fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20, border: followedOutletIds.has(o.id) ? '1px solid var(--border)' : '1px solid var(--coral)', background: followedOutletIds.has(o.id) ? 'var(--bg)' : 'rgba(216,90,48,0.08)', color: followedOutletIds.has(o.id) ? 'var(--text3)' : 'var(--coral)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+                        >
+                          {followedOutletIds.has(o.id) ? '✓' : '+'}
+                        </button>
+                      </div>
+
+                      {children.length > 0 && (
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 18px 10px 62px' }}>
+                          <span style={{ fontSize: 10, color: 'var(--text3)', alignSelf: 'center' }}>Sections:</span>
+                          {children.map(child => (
+                            <button
+                              key={child.id}
+                              onClick={e => { e.stopPropagation(); navigate('outlet', { outletId: child.id }) }}
+                              style={{ fontSize: 10, fontWeight: 600, padding: '2px 10px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text2)', cursor: 'pointer' }}
+                            >
+                              {child.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })
+              )}
+            </div>
 
             {/* Suggest CTA */}
             <div style={{ marginTop: 28, textAlign: 'center', padding: '20px', border: '1px dashed var(--border)', borderRadius: 12 }}>
