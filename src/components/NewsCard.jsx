@@ -4,12 +4,6 @@ import Image from 'next/image'
 import { articleSlug, outletColor, scoreDot, timeAgo } from '../utils/helpers'
 import { toSlug } from '../utils/navigate'
 
-// Compact dot colours for the multi-outlet angles list
-const BIAS_DOTS = {
-  left:   { color: '#4a90d9', label: 'Left'   },
-  centre: { color: '#5cb85c', label: 'Centre' },
-  right:  { color: '#d9534f', label: 'Right'  },
-}
 
 export default function NewsCard({ article, index, onClick, navigate, relatedArticles = [] }) {
   const [imgFailed, setImgFailed] = useState(false)
@@ -122,19 +116,7 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
             <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>
               Also covered by {relatedArticles.length} other outlet{relatedArticles.length !== 1 ? 's' : ''}
             </span>
-            {/* Bias dot preview */}
-            <span style={{ display: 'flex', gap: 3, marginLeft: 2 }}>
-              {allAngles.map(a => {
-                const dot = BIAS_DOTS[a.outlets?.bias_direction]
-                return dot ? (
-                  <span key={a.id} style={{
-                    width: 7, height: 7, borderRadius: '50%',
-                    background: dot.color, display: 'inline-block', flexShrink: 0,
-                  }} title={dot.label} />
-                ) : null
-              })}
-            </span>
-            <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>→</span>
+<span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>→</span>
           </div>
         </Link>
       )}

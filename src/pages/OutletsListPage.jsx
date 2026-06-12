@@ -1,19 +1,7 @@
 import React, { useState } from 'react'
-import { scoreColor } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import { db } from '../lib/supabase'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
-
-const BIAS_COLORS = {
-  left:   'var(--blue, #3b82f6)',
-  centre: 'var(--text3)',
-  right:  'var(--red)',
-}
-const BIAS_LABELS = {
-  left:   '← Left',
-  centre: '◉ Centre',
-  right:  '→ Right',
-}
 
 const REGIONS = [
   { value: 'all',          label: 'All'          },
@@ -24,13 +12,6 @@ const REGIONS = [
   { value: 'Africa',       label: 'Africa'       },
   { value: 'AsiaPac',      label: 'Asia Pacific' },
   { value: 'Americas',     label: 'Americas'     },
-]
-
-const BIAS_FILTERS = [
-  { value: 'all',    label: 'All' },
-  { value: 'left',   label: '← Left' },
-  { value: 'centre', label: '◉ Centre' },
-  { value: 'right',  label: '→ Right' },
 ]
 
 const SORTS = [
@@ -188,7 +169,6 @@ function SuggestModal({ onClose, user, onLoginClick, showToast }) {
 export default function OutletsListPage({ outlets, outletsLoading, navigate, goBack, showToast, user, onLoginClick, onRefresh, followedOutletIds = new Set(), toggleFollow }) {
   const [search,  setSearch]  = useState('')
   const [region,  setRegion]  = useState('all')
-  const [bias,    setBias]    = useState('all')
   const [sort,    setSort]    = useState('community_score')
   const [showSuggest, setShowSuggest] = useState(false)
   const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
@@ -196,7 +176,6 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
   const filtered = outlets
     .filter(o => !o.parent_outlet_id)  // only top-level outlets; children shown under their parent
     .filter(o => region === 'all' || getRegion(o) === region)
-    .filter(o => bias === 'all' || o.bias_direction === bias)
     .filter(o =>
       !search ||
       o.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -283,16 +262,6 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
           ))}
         </div>
 
-        {/* Bias filter */}
-        <div className="filter-bar" style={{ marginBottom: 10 }}>
-          <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Bias</span>
-          {BIAS_FILTERS.map(b => (
-            <button key={b.value} className={`pill${bias === b.value ? ' active' : ''}`} onClick={() => setBias(b.value)}>
-              {b.label}
-            </button>
-          ))}
-        </div>
-
         {/* Sort */}
         <div className="filter-bar" style={{ marginBottom: 14 }}>
           <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Sort</span>
@@ -348,11 +317,6 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
                       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 2 }}>{o.name}</div>
                       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                         <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.country || 'International'}</span>
-                        {o.bias_direction && (
-                          <span style={{ fontSize: 11, fontWeight: 600, color: BIAS_COLORS[o.bias_direction] }}>
-                            {BIAS_LABELS[o.bias_direction]}
-                          </span>
-                        )}
                         {ratings > 0 && (
                           <span style={{ fontSize: 11, color: 'var(--text3)' }}>· {ratings} {ratings === 1 ? 'rating' : 'ratings'}</span>
                         )}

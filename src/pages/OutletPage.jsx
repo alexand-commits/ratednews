@@ -176,12 +176,6 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   const sortedCategories = Object.entries(categoryMap).sort(([, a], [, b]) => b - a).slice(0, 6)
   const totalCategorised = sortedCategories.reduce((s, [, c]) => s + c, 0)
 
-  // Political bias needle — uses outlet-level data (historically set)
-  const dominantBias = outlet.bias_direction
-    ? ({ left: '← Left', centre: '◉ Centre', right: '→ Right' }[outlet.bias_direction] || null)
-    : null
-  const needlePos = outlet.bias_direction === 'left' ? 15 : outlet.bias_direction === 'right' ? 85 : 50
-
   // Community stats
   const totalRatings = outletRatings.length
   const avgStars = totalRatings
@@ -380,26 +374,6 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
         {activeTab === 'overview' && (
           <div className="grid">
             <div>
-              <div className="section-label">Political bias</div>
-              <div className="widget" style={{ marginBottom: 14 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text2)', marginBottom: 4 }}>
-                  <span>Lean left</span><span>Centre</span><span>Lean right</span>
-                </div>
-                <div className="bias-track">
-                  <div className="bias-needle" style={{
-                    left: `${needlePos}%`,
-                    borderColor: needlePos < 38 ? 'var(--blue, #3b82f6)' : needlePos > 62 ? 'var(--red)' : 'var(--text3)',
-                  }}></div>
-                </div>
-                <div className="bias-labels">
-                  <span>Far left</span><span>Left</span><span>Centre</span><span>Right</span><span>Far right</span>
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 10 }}>
-                  Overall lean: <strong style={{ color: 'var(--text)' }}>{dominantBias || 'Unknown'}</strong>
-                </div>
-              </div>
-
-
               {/* Category coverage */}
               {sortedCategories.length > 0 && (
                 <>

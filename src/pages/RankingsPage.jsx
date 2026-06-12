@@ -31,9 +31,6 @@ const COVERAGE_REGIONS = [
   { value: 'International', label: 'International'},
 ]
 
-const BIAS_COLORS = { left: 'var(--blue, #3b82f6)', centre: 'var(--text3)', right: 'var(--red)' }
-const BIAS_LABELS = { left: '← Left', centre: '◉ Centre', right: '→ Right' }
-
 const TRUST_LEVELS = [
   { min: 50, label: 'Expert',           emoji: '🏅', color: '#D85A30' },
   { min: 20, label: 'Trusted Reviewer', emoji: '⭐', color: '#639922' },
@@ -129,20 +126,6 @@ function ComparePanel({ a, b, navigate, onClear }) {
           )
         })}
 
-        {/* Bias row */}
-        <div>
-          <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 5 }}>
-            Bias
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
-            <div style={{ fontSize: 12, fontWeight: 600, color: BIAS_COLORS[a.bias_direction] || 'var(--text3)' }}>
-              {BIAS_LABELS[a.bias_direction] || '—'}
-            </div>
-            <div style={{ fontSize: 12, fontWeight: 600, color: BIAS_COLORS[b.bias_direction] || 'var(--text3)', textAlign: 'right' }}>
-              {BIAS_LABELS[b.bias_direction] || '—'}
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* View outlet links */}
@@ -463,7 +446,6 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                             <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 2 }}>{o.name}</div>
                             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                               <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.country || ''}</span>
-                              {o.bias_direction && <span style={{ fontSize: 11, color: BIAS_COLORS[o.bias_direction] || 'var(--text3)' }}>{BIAS_LABELS[o.bias_direction]}</span>}
                               {o.total_ratings > 0 && <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.total_ratings} {o.total_ratings === 1 ? 'rating' : 'ratings'}</span>}
                             </div>
                           </div>
