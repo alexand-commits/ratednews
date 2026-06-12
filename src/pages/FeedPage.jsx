@@ -84,6 +84,7 @@ export default function FeedPage({
   totalArticleCount, user, followedOutletIds = new Set(),
   onLoginClick, loadMoreArticles, hasMoreArticles, loadingMore,
   savedArticleIds = new Set(), toggleSave, onRefresh,
+  fetchError = false,
 }) {
   // trendingTopicsSource: 300 minimal rows (title+outlet_id) for topic computation.
   // Falls back to trendingArticles so categories page still works without the prop.
@@ -759,10 +760,10 @@ export default function FeedPage({
             >✕</button>
 
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>
-              Trust the source, not just the story
+              News from 50+ outlets, rated by readers
             </div>
             <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
-              Every article is rated by AI across three dimensions:
+              Community scores come from reader ratings — no AI.
             </div>
 
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
@@ -770,27 +771,25 @@ export default function FeedPage({
                 flex: '1 1 120px', padding: '10px 12px',
                 background: 'var(--bg2)', borderRadius: 8,
               }}>
-                <div style={{ marginBottom: 6 }}>
-                  <span className="score-badge score-badge-green" style={{ fontSize: 13, fontWeight: 700 }}>✦ 82</span>
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Quality</div>
-                <div style={{ fontSize: 11, color: 'var(--text3)' }}>0–100 factual reliability score. 70+ is solid journalism.</div>
+                <div style={{ fontSize: 16, marginBottom: 4 }}>⭐</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Rate articles</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)' }}>1–5 stars plus accuracy, bias, and headline fairness.</div>
               </div>
               <div style={{
                 flex: '1 1 120px', padding: '10px 12px',
                 background: 'var(--bg2)', borderRadius: 8,
               }}>
-                <div style={{ fontSize: 16, marginBottom: 4 }}>⇄</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Bias</div>
-                <div style={{ fontSize: 11, color: 'var(--text3)' }}>Political lean (Left / Centre / Right) and how partisan the writing is.</div>
+                <div style={{ fontSize: 16, marginBottom: 4 }}>📰</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Compare angles</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)' }}>See how different outlets cover the same story.</div>
               </div>
               <div style={{
                 flex: '1 1 120px', padding: '10px 12px',
                 background: 'var(--bg2)', borderRadius: 8,
               }}>
-                <div style={{ fontSize: 16, marginBottom: 4 }}>🏷</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Headline</div>
-                <div style={{ fontSize: 11, color: 'var(--text3)' }}>Fair, Misleading, or Clickbait — does the headline match the story?</div>
+                <div style={{ fontSize: 16, marginBottom: 4 }}>🏆</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Outlet rankings</div>
+                <div style={{ fontSize: 11, color: 'var(--text3)' }}>Community-ranked outlets based on reader trust.</div>
               </div>
             </div>
 
@@ -1043,8 +1042,7 @@ export default function FeedPage({
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{outlet.name}</div>
                       <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 1 }}>
-                        {outlet.overall_score != null ? `Score ${outlet.overall_score}/100` : 'Outlet'}
-                        {outlet.bias_direction && outlet.bias_direction !== 'centre' ? ` · ${outlet.bias_direction}-leaning` : ''}
+                        {outlet.country || 'Outlet'}
                       </div>
                     </div>
                     <span style={{ fontSize: 13, color: 'var(--text3)' }}>→</span>
@@ -1076,7 +1074,32 @@ export default function FeedPage({
             )}
 
             <div className="feed">
-              {loading || (isSearchActive && dbLoading) ? (
+              {fetchError ? (
+                <div style={{
+                  textAlign: 'center', padding: '40px 20px',
+                  background: 'var(--surface)', border: '0.5px solid var(--border)',
+                  borderRadius: 'var(--radius)', marginBottom: 12,
+                }}>
+                  <div style={{ fontSize: 28, marginBottom: 12 }}>📡</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 6 }}>
+                    Having trouble loading stories
+                  </div>
+                  <div style={{ fontSize: 13, color: 'var(--text3)', lineHeight: 1.6, marginBottom: 20, maxWidth: 320, margin: '0 auto 20px' }}>
+                    We're having difficulty connecting to our data source. This is usually brief — try refreshing in a moment.
+                  </div>
+                  <button
+                    onClick={() => window.location.reload()}
+                    style={{
+                      fontSize: 13, fontWeight: 600,
+                      padding: '8px 20px',
+                      background: 'var(--coral)', color: '#fff',
+                      border: 'none', borderRadius: 20, cursor: 'pointer',
+                    }}
+                  >
+                    Refresh
+                  </button>
+                </div>
+              ) : loading || (isSearchActive && dbLoading) ? (
                 [0, 1, 2].map(i => (
                   <div key={i} className="skeleton-news-card">
                     {/* Outlet row */}

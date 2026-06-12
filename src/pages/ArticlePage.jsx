@@ -526,9 +526,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 {sameStoryArticles.map(a => {
                   const o = a.outlets || {}
                   const [oBg] = outletColor(o.name || 'X')
-                  const BIAS_DOTS = { left: '#4a90d9', centre: '#5cb85c', right: '#d9534f' }
-                  const biasColor = BIAS_DOTS[o.bias_direction]
-                  const BIAS_LABEL = { left: 'Left', centre: 'Centre', right: 'Right' }
                   return (
                     <div
                       key={a.id}
@@ -548,11 +545,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                       <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {o.name || 'Unknown'}
                       </span>
-                      {biasColor && (
-                        <span style={{ fontSize: 11, fontWeight: 600, color: biasColor, flexShrink: 0 }}>
-                          {BIAS_LABEL[o.bias_direction]}
-                        </span>
-                      )}
                       <span style={{ fontSize: 12, color: 'var(--text3)', flexShrink: 0 }}>→</span>
                     </div>
                   )

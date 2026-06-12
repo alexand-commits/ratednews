@@ -4,33 +4,6 @@ import Image from 'next/image'
 import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
-const BIAS_LABELS = {
-  left:   { label: '← Left',   cls: 'score-badge score-badge-bias-left'   },
-  centre: { label: '◉ Centre', cls: 'score-badge score-badge-bias-centre' },
-  right:  { label: '→ Right',  cls: 'score-badge score-badge-bias-right'  },
-}
-
-function accBadgeClass(score) {
-  if (score >= 70) return 'score-badge score-badge-green'
-  if (score >= 50) return 'score-badge score-badge-amber'
-  return 'score-badge score-badge-red'
-}
-
-function ScoreBadges({ article }) {
-  const acc = article.accuracy_score || 0
-  const bias = article.bias_direction
-  const scored = acc > 0
-  const biasLabel = bias ? BIAS_LABELS[bias] : null
-
-  if (!scored) return null
-  return (
-    <>
-      <span className={accBadgeClass(acc)}>✦ {acc}</span>
-      {biasLabel && <span className={biasLabel.cls}>{biasLabel.label}</span>}
-    </>
-  )
-}
-
 function RankedRow({ a, rank, isLast, navigate }) {
   const [imgFailed, setImgFailed] = useState(false)
   const outlet = a.outlets || {}
@@ -83,7 +56,7 @@ function RankedRow({ a, rank, isLast, navigate }) {
             {a.title}
           </div>
         </Link>
-        {(a.ai_summary || a.summary) && (
+        {(a.summary) && (
           <div style={{
             fontSize: 12, color: 'var(--text2)', lineHeight: 1.55,
             marginBottom: 6,
@@ -92,12 +65,11 @@ function RankedRow({ a, rank, isLast, navigate }) {
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           }}>
-            {a.ai_summary || a.summary}
+            {a.summary}
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-          <ScoreBadges article={a} />
-          {comments > 0 && (
+                    {comments > 0 && (
             <span style={{
               fontSize: 10, color: 'var(--text3)',
               background: 'var(--bg)', border: '0.5px solid var(--border)',
@@ -161,7 +133,7 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
   const heroOutlet = hero.outlets || {}
   const [heroBg] = outletColor(heroOutlet.name || 'X')
   const heroSlug = articleSlug(hero.title, hero.id)
-  const heroComments = hero.comments?.[0]?.count || 0
+
 
   return (
     <div className="page-content" {...pullHandlers}>
@@ -233,7 +205,7 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
           </h2>
         </Link>
 
-        {hero.ai_summary && (
+        {hero.summary && (
           <p style={{
             margin: '0 0 12px',
             fontSize: 13,
@@ -244,21 +216,10 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden',
           }}>
-            {hero.ai_summary}
+            {hero.summary}
           </p>
         )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-          <ScoreBadges article={hero} />
-          <span style={{
-            fontSize: 11, fontWeight: 600,
-            background: 'var(--bg)', color: 'var(--text2)',
-            border: '0.5px solid var(--border)',
-            borderRadius: 20, padding: '2px 8px',
-          }}>
-            💬 {heroComments} discussing
-          </span>
-        </div>
       </div>
 
       {/* Ranked list */}
