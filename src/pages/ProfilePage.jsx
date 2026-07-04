@@ -349,9 +349,10 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
   const trust        = getTrustLevel(totalContrib)
   const daysActive   = calcDaysActive([...articleRatings, ...outletRatings], comments)
 
-  const allStars = [...articleRatings, ...outletRatings].map(r => r.overall_stars || 0).filter(Boolean)
-  const avgStars = allStars.length ? (allStars.reduce((a, b) => a + b, 0) / allStars.length).toFixed(1) : null
-  const streak   = calcStreak(articleViews)
+  const trustStars = outletRatings.map(r => r.overall_stars || 0).filter(Boolean)
+  const avgTrust   = trustStars.length ? (trustStars.reduce((a, b) => a + b, 0) / trustStars.length).toFixed(1) : null
+  const trusts     = outletRatings.filter(r => (r.overall_stars || 0) >= 4)
+  const distrusts  = outletRatings.filter(r => (r.overall_stars || 0) > 0 && (r.overall_stars || 0) <= 2)
 
   // Media diet — prefer view history (last 90 days), fall back to ratings
   const dietSource = articleViews.length > 0 ? articleViews : articleRatings
@@ -503,12 +504,10 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
           {/* Stats grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(80px, 1fr))', gap: 10, marginBottom: 16 }}>
             {[
-              { value: articleViews.length,     label: 'Articles read'  },
-              { value: articleRatings.length,   label: 'Rated'          },
-              { value: followedOutletIds.size,  label: 'Following'      },
-              { value: comments.length,         label: 'Comments'       },
-              ...(avgStars ? [{ value: `${avgStars}`, label: 'Avg rating', color: 'var(--green-dark)' }] : []),
-              ...(streak > 1 ? [{ value: `🔥 ${streak}`, label: 'day streak', color: 'var(--coral)' }] : []),
+              { value: outletRatings.length,    label: 'Outlets rated' },
+              ...(avgTrust ? [{ value: `${avgTrust}`, label: 'Avg trust', color: 'var(--green-dark)' }] : []),
+              { value: followedOutletIds.size,  label: 'Following'     },
+              { value: comments.length,         label: 'Comments'      },
             ].map(({ value, label, color }) => (
               <div key={label} style={{ background: 'var(--bg)', borderRadius: 8, padding: '10px 8px', textAlign: 'center' }}>
                 <div style={{ fontSize: 18, fontWeight: 700, color: color || 'var(--text)' }}>{value}</div>
@@ -564,7 +563,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
             {showProfileInfo && (
               <div style={{ marginTop: 10, padding: '10px 12px', background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 10, fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>
                 <strong style={{ color: 'var(--text)', display: 'block', marginBottom: 4 }}>🌐 Public — </strong>
-                Your bias fingerprint, reading stats, and ratings are visible to anyone with your profile link. Great for sharing your media diet.
+                The sources you trust and distrust, who you follow, and your activity are visible to anyone with your profile link. Great for sharing your take on the media.
                 <strong style={{ color: 'var(--text)', display: 'block', marginTop: 8, marginBottom: 4 }}>🔒 Private — </strong>
                 Only you can see your profile. Your data stays personal and won't appear in search engines.
               </div>
@@ -577,36 +576,45 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
           <>
             <ActivityChart ratings={articleRatings} outletRatings={outletRatings} comments={comments} />
 
-            {/* Topics + Media diet — side by side */}
-            {(articleViews.length > 0 || articleRatings.length > 0) && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
-                <TopicBreakdown ratings={articleRatings} views={articleViews} noMargin />
-                {mediaDiet.length > 0 && (
-                  <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text3)' }}>Media diet</div>
-                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>last 90 days</div>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {mediaDiet.map(([name, count]) => {
-                        const pct = Math.round((count / dietTotal) * 100)
-                        return (
-                          <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <OutletLogo name={name} size={22} borderRadius={5} />
-                            <span style={{ fontSize: 12, fontWeight: 500, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
-                            <div style={{ width: 48, height: 5, background: 'var(--border)', borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
-                              <div style={{ height: '100%', width: `${pct}%`, background: 'var(--coral)', borderRadius: 3, transition: 'width 0.5s ease' }} />
-                            </div>
-                            <span style={{ fontSize: 11, color: 'var(--text3)', width: 24, textAlign: 'right', flexShrink: 0 }}>{pct}%</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 10, paddingTop: 8, borderTop: '0.5px solid var(--border)' }}>
-                      Based on {dietTotal} article{dietTotal !== 1 ? 's' : ''} read
+            {/* Sources you trust / distrust — the identity centrepiece */}
+            {outletRatings.length > 0 && (
+              <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 14 }}>Sources you rate</div>
+                {[
+                  { title: 'You trust most', items: trusts,    tint: 'rgba(99,153,34,0.35)' },
+                  { title: 'You trust least', items: distrusts, tint: 'rgba(226,75,74,0.30)' },
+                ].map(({ title, items, tint }) => items.length > 0 && (
+                  <div key={title} style={{ marginBottom: 14 }}>
+                    <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text3)', marginBottom: 8 }}>{title}</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {items.map(r => (
+                        <div key={r.outlet_id || r.id} onClick={() => navigate('outlet', { outletId: r.outlet_id || r.outlets?.id })} className="border-hover"
+                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: 'var(--bg)', border: `0.5px solid ${tint}`, borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
+                          <OutletLogo name={r.outlets?.name || 'X'} size={26} borderRadius={6} />
+                          <span style={{ flex: 1, fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.outlets?.name || 'Unknown'}</span>
+                          <RatingDots value={r.overall_stars || 0} size={8} showValue={false} />
+                        </div>
+                      ))}
                     </div>
                   </div>
+                ))}
+                {trusts.length === 0 && distrusts.length === 0 && (
+                  <div style={{ fontSize: 13, color: 'var(--text3)' }}>Your ratings sit in the middle so far — rate a few sources 4–5★ or 1–2★ to see your trust profile.</div>
                 )}
+              </div>
+            )}
+
+            {/* Following */}
+            {followedOutlets.length > 0 && (
+              <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 16 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 12 }}>Following ({followedOutlets.length})</div>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  {followedOutlets.map(o => (
+                    <div key={o.id} onClick={() => navigate('outlet', { outletId: o.id })} title={o.name} style={{ cursor: 'pointer' }}>
+                      <OutletLogo name={o.name} size={34} borderRadius={8} />
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </>
@@ -615,7 +623,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
         {/* Tabs */}
         <div className="tabs" style={{ marginBottom: 16 }}>
           <div className={`tab${tab === 'ratings' ? ' active' : ''}`} onClick={() => setTab('ratings')}>
-            Ratings {totalRatings > 0 && <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({totalRatings})</span>}
+            Ratings {outletRatings.length > 0 && <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({outletRatings.length})</span>}
           </div>
           <div className={`tab${tab === 'saved' ? ' active' : ''}`} onClick={() => setTab('saved')}>
             Saved {savedItems.length > 0 && <span style={{ color: 'var(--text3)', fontWeight: 400 }}>({savedItems.length})</span>}
@@ -637,60 +645,32 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
           </div>
         ) : tab === 'ratings' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {totalRatings === 0 ? (
+            {outletRatings.length === 0 ? (
               <div className="empty-state">
-                <h3>No ratings yet</h3>
-                <p>Rate articles and outlets to build your profile.</p>
-                <button className="btn-outline" style={{ marginTop: 12, fontSize: 13 }} onClick={() => navigate('feed')}>Browse articles</button>
+                <h3>No trust ratings yet</h3>
+                <p>Rate the outlets you trust to build your profile.</p>
+                <button className="btn-outline" style={{ marginTop: 12, fontSize: 13 }} onClick={() => navigate('outlets')}>Browse outlets</button>
               </div>
             ) : (
-              <>
-                {articleRatings.length > 0 && (
-                  <>
-                    <div className="section-label" style={{ marginBottom: 4 }}>Article ratings</div>
-                    {articleRatings.map(r => (
-                      <div
-                        key={r.id}
-                        style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', cursor: 'pointer' }} className="border-hover"
-                        onClick={() => r.articles?.id && navigate('article', { articleId: r.articles.id, title: r.articles.title })}
-                      >
-                        <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>
-                          {r.articles?.outlets?.name || 'Unknown outlet'} · {timeAgo(r.created_at)}
-                        </div>
-                        <div style={{ fontSize: 14, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: 8 }}>
-                          {r.articles?.title || 'Article'}
-                        </div>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                          <StarRow stars={r.overall_stars || 0} />
-                          <RatingBadges accuracy={r.accuracy_vote} bias={r.bias_vote} headline={r.headline_vote} />
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
-                {outletRatings.length > 0 && (
-                  <>
-                    <div className="section-label" style={{ marginBottom: 4, marginTop: 8 }}>Outlet ratings</div>
-                    {outletRatings.map(r => (
-                      <div
-                        key={r.id}
-                        style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', cursor: 'pointer' }} className="border-hover"
-                        onClick={() => r.outlets?.id && navigate('outlet', { outletId: r.outlets.id })}
-                      >
-                        <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>Outlet · {timeAgo(r.created_at)}</div>
-                        <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 8 }}>{r.outlets?.name || 'Unknown outlet'}</div>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                          <StarRow stars={r.overall_stars || 0} />
-                          <RatingBadges accuracy={r.accuracy_vote} bias={r.bias_vote} />
-                        </div>
-                        {r.review_text && (
-                          <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 8, lineHeight: 1.5, fontStyle: 'italic' }}>"{r.review_text}"</div>
-                        )}
-                      </div>
-                    ))}
-                  </>
-                )}
-              </>
+              outletRatings.map(r => (
+                <div
+                  key={r.id}
+                  style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', cursor: 'pointer' }} className="border-hover"
+                  onClick={() => (r.outlet_id || r.outlets?.id) && navigate('outlet', { outletId: r.outlet_id || r.outlets.id })}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <OutletLogo name={r.outlets?.name || 'X'} size={30} borderRadius={7} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 14, fontWeight: 500 }}>{r.outlets?.name || 'Unknown outlet'}</div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>Rated {timeAgo(r.created_at)}</div>
+                    </div>
+                    <RatingDots value={r.overall_stars || 0} size={9} showValue={false} />
+                  </div>
+                  {r.review_text && (
+                    <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 8, lineHeight: 1.5, fontStyle: 'italic' }}>"{r.review_text}"</div>
+                  )}
+                </div>
+              ))
             )}
           </div>
         ) : tab === 'saved' ? (
