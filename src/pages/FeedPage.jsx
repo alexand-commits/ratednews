@@ -54,7 +54,6 @@ function getArticleCategory(article) {
 const SORTS = [
   { value: 'trending',  label: 'Top stories' },
   { value: 'latest',    label: 'Latest'      },
-  { value: 'top-rated', label: 'Top rated'   },
 ]
 
 const REGIONS = [
@@ -342,7 +341,6 @@ export default function FeedPage({
           }
           return trendScore(b) - trendScore(a)
         }
-        if (sort === 'top-rated') return (b.community_score || 0) - (a.community_score || 0)
         // Push future-dated articles to the bottom — treat them as epoch (oldest)
         const now = Date.now()
         const ta = new Date(a.published_at).getTime()
@@ -354,7 +352,7 @@ export default function FeedPage({
   )
 
   // Round-robin interleave by outlet so the feed isn't 25 BBCs then 25 CNNs.
-  // Only applied on the 'latest' sort — trending/top-rated have their own logic.
+  // Only applied on the 'latest' sort — 'Top stories' has its own ranking.
   const interleaved = useMemo(() => {
     if (sort !== 'latest') return filtered
     const byOutlet = {}
