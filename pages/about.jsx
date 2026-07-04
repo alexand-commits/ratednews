@@ -9,10 +9,10 @@ export default function About() {
     <>
       <Head>
         <title>How It Works — RatedNews</title>
-        <meta name="description" content="How RatedNews works: a community-rated news aggregator pulling top stories from 150+ outlets, where readers rate every article and outlet for accuracy, bias and quality." />
+        <meta name="description" content="How RatedNews works: a community-rated news aggregator pulling top stories from 150+ outlets, where readers rate the news outlets they trust for accuracy, bias and quality." />
         <link rel="canonical" href="https://www.ratednews.com/about" />
         <meta property="og:title"       content="How RatedNews Works — Community-Rated News" />
-        <meta property="og:description" content="A community-rated news aggregator pulling top stories from 150+ outlets, where readers rate every article and outlet for accuracy, bias and quality." />
+        <meta property="og:description" content="A community-rated news aggregator pulling top stories from 150+ outlets, where readers rate the news outlets they trust for accuracy, bias and quality." />
         <meta property="og:url"         content="https://www.ratednews.com/about" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/api/og?type=brand" />
@@ -32,7 +32,7 @@ export default function About() {
               {
                 '@type': 'Question',
                 name: 'What is RatedNews?',
-                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews is a community-rated news aggregator that pulls top stories from 150+ UK, US and international news outlets and lets readers rate every article and outlet for accuracy, bias and quality.' },
+                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews is a community-rated news aggregator that pulls top stories from 150+ UK, US and international news outlets and lets readers rate the news outlets they trust for accuracy, bias and quality.' },
               },
               {
                 '@type': 'Question',
@@ -51,8 +51,8 @@ export default function About() {
               },
               {
                 '@type': 'Question',
-                name: 'Can I rate articles and outlets myself?',
-                acceptedAnswer: { '@type': 'Answer', text: 'Yes. Registered users can rate outlets with 1–5 stars and rate individual articles on accuracy, bias and headline fairness. These community ratings are what drive every score on the site.' },
+                name: 'Can I rate the outlets myself?',
+                acceptedAnswer: { '@type': 'Answer', text: 'Yes. Registered users rate news outlets with a 1–5 trust rating. These community ratings are what drive every score on the site — no AI, no algorithms.' },
               },
             ],
           }) }}

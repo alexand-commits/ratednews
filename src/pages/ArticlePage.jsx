@@ -3,8 +3,6 @@ import Link from 'next/link'
 import { db } from '../lib/supabase'
 import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
-import RatingModal from '../components/RatingModal'
-import RatingDots from '../components/RatingDots'
 import OutletTrustRate from '../components/OutletTrustRate'
 
 // Extract meaningful initials from a username or email — avoids numbers/symbols
@@ -27,9 +25,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   const [commentInput, setCommentInput] = useState('')
   const [commentSort, setCommentSort] = useState('top')
   const [votedComments, setVotedComments] = useState({})
-  const [showRatingModal, setShowRatingModal] = useState(false)
-  const [alreadyRated, setAlreadyRated] = useState(false)
-  const [myRating, setMyRating] = useState(null)
   const [myOutletTrust, setMyOutletTrust] = useState(0) // user's existing trust rating for this article's outlet
   const [replyingTo, setReplyingTo] = useState(null) // comment id being replied to
   const [replyInputs, setReplyInputs] = useState({}) // { [commentId]: text }
@@ -44,31 +39,12 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   useEffect(() => {
     if (!articleId) return
 
-    setAlreadyRated(false)
-    setMyRating(null)
     setComments([])
     setReplies({})
     setReplyingTo(null)
     setVotedComments({})
 
-    // Logged out — check localStorage immediately (no network needed)
-    if (!user) {
-      const stored = localStorage.getItem(`rated_${articleId}`)
-      if (stored) {
-        setAlreadyRated(true)
-        try { setMyRating(JSON.parse(stored)) } catch (_) {}
-      }
-    }
-
-    // Fire ratings + comments + votes in parallel — no sequential waiting
-    const ratingsPromise = user
-      ? db.from('ratings')
-          .select('overall_stars, accuracy_vote, bias_vote, headline_vote')
-          .eq('article_id', articleId)
-          .eq('user_id', user.id)
-          .maybeSingle()
-      : Promise.resolve({ data: null })
-
+    // Fire comments + votes in parallel — no sequential waiting
     const commentsPromise = db.from('comments')
       .select('*')
       .eq('article_id', articleId)
@@ -79,28 +55,8 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
       ? db.from('comment_votes').select('comment_id, dir').eq('user_id', user.id)
       : Promise.resolve({ data: [] })
 
-    Promise.all([ratingsPromise, commentsPromise, votesPromise]).then(
-      ([{ data: ratingData }, { data: commentData }, { data: votesData }]) => {
-        // Apply ratings — DB first, fall back to localStorage for users who
-        // rated while logged out and haven't re-rated since signing in
-        if (ratingData) {
-          setAlreadyRated(true)
-          setMyRating({
-            overallStars: ratingData.overall_stars,
-            accuracyVote: ratingData.accuracy_vote,
-            biasVote:     ratingData.bias_vote,
-            headlineVote: ratingData.headline_vote,
-          })
-        } else if (user) {
-          // Logged-in user with no DB rating — check localStorage in case they
-          // rated as a guest. Show their cached rating so the button doesn't reset.
-          const stored = localStorage.getItem(`rated_${articleId}`)
-          if (stored) {
-            setAlreadyRated(true)
-            try { setMyRating(JSON.parse(stored)) } catch (_) {}
-          }
-        }
-
+    Promise.all([commentsPromise, votesPromise]).then(
+      ([{ data: commentData }, { data: votesData }]) => {
         // Apply comments
         const loaded = commentData || []
         setComments(loaded)
@@ -282,7 +238,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
   const outlet = article.outlets || {}
   const [bg, fg] = outletColor(outlet.name || 'X')
-  const com = article.community_score || 0
 
   // Related articles — fetched client-side in the useEffect above
   const moreFromOutlet = relatedArticles.outlet || []
@@ -507,12 +462,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
           <div className="article-headline-full">{article.title || ''}</div>
 
-          <div className="article-score-strip">
-            {com > 0 && <div className="asc"><strong style={{ color: 'var(--green-dark)' }}>{(com / 20).toFixed(1)}</strong><span>Community</span></div>}
-            <div className="asc"><strong>{article.total_ratings || 0}</strong><span>Ratings</span></div>
-            <div className="asc"><strong style={{ color: 'var(--text2)' }}>{comments.length}</strong><span>Comments</span></div>
-          </div>
-
           {/* Contextual trust prompt — convert the reading moment into an outlet rating */}
           <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
@@ -530,16 +479,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
             </div>
           </div>
 
-
-          {myRating && (
-            <div style={{ background: 'var(--green-light)', border: '0.5px solid var(--green)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--green-dark)' }}>✓ Your rating</span>
-              <RatingDots value={myRating.overallStars} size={9} showValue={false} />
-              {myRating.accuracyVote && <span style={{ fontSize: 11, background: 'var(--surface)', padding: '2px 8px', borderRadius: 20, color: 'var(--text2)' }}>{myRating.accuracyVote.replace('_', ' ')}</span>}
-              {myRating.biasVote && <span style={{ fontSize: 11, background: 'var(--surface)', padding: '2px 8px', borderRadius: 20, color: 'var(--text2)' }}>{myRating.biasVote.replace('_', ' ')}</span>}
-              {myRating.headlineVote && <span style={{ fontSize: 11, background: 'var(--surface)', padding: '2px 8px', borderRadius: 20, color: 'var(--text2)' }}>{myRating.headlineVote}</span>}
-            </div>
-          )}
 
           {/* Same story across outlets */}
           {sameStoryArticles.length > 0 && (
@@ -608,16 +547,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
           <div className="article-actions">
             <button className="btn-primary" onClick={() => article.url && window.open(article.url, '_blank')}>
               Read full article on {outlet.name || 'source'} ↗
-            </button>
-            <button
-              className="btn-outline"
-              onClick={() => {
-                if (!user) { onLoginClick(); return }
-                if (alreadyRated) { showToast('You\'ve already rated this article'); return }
-                setShowRatingModal(true)
-              }}
-            >
-              {alreadyRated ? '● Already rated' : '● Rate this article'}
             </button>
             <button className="btn-outline" onClick={async () => {
               const shareUrl = `https://www.ratednews.com/article/${articleSlug(article.title, article.id)}`
@@ -732,23 +661,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
         </div>
       </div>
     </div>
-
-    {showRatingModal && (
-      <RatingModal
-        article={article}
-        outlet={outlet}
-        onClose={() => setShowRatingModal(false)}
-        onRated={(rating) => {
-          setAlreadyRated(true)
-          setMyRating(rating)
-          refreshArticle?.(articleId)
-          // Only persist to localStorage when logged out
-          if (!user) localStorage.setItem(`rated_${articleId}`, JSON.stringify(rating))
-        }}
-        showToast={showToast}
-        user={user}
-      />
-    )}
     </>
   )
 }

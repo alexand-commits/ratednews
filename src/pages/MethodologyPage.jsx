@@ -57,29 +57,11 @@ export default function MethodologyPage({ goBack }) {
           </p>
         </Section>
 
-        <Section title="How article ratings work">
-          <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 16 }}>
-            Any signed-in reader can rate an article once. Each rating captures four dimensions:
-          </p>
-          {[
-            { label: 'Overall quality', desc: '1–5 stars. Your overall assessment of the article.' },
-            { label: 'Accuracy', desc: 'Accurate / Mostly accurate / Inaccurate. How well the article represents the facts as you understand them.' },
-            { label: 'Political bias', desc: 'Far left / Left / Centre / Right / Far right. The political framing of the article.' },
-            { label: 'Headline quality', desc: 'Fair / Misleading / Clickbait. Whether the headline fairly represents the content.' },
-          ].map(({ label, desc }) => (
-            <div key={label} style={{ display: 'flex', gap: 14, marginBottom: 14, paddingBottom: 14, borderBottom: '0.5px solid var(--border)' }}>
-              <div style={{ fontSize: 13, fontWeight: 700, minWidth: 130, color: 'var(--text)' }}>{label}</div>
-              <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>{desc}</div>
-            </div>
-          ))}
-          <Callout color="var(--amber)">
-            Article ratings are reader perceptions, not verified facts. "Accurate" means the reader found it credible based on what they know — not that a fact-checker has verified every claim. Treat scores as community signals, not verdicts.
-          </Callout>
-        </Section>
-
         <Section title="How outlet ratings work">
           <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 16 }}>
-            Outlets can be rated independently of individual articles. Outlet ratings capture:
+            Trust on RatedNews is rated at the <strong style={{ color: 'var(--text)' }}>outlet</strong> level — the news source, not the individual article.
+            A source's score is where the community's collective judgement is most meaningful, and it's the number that reaches a reliable
+            sample fastest. Any signed-in reader can rate an outlet with a single tap, and change it any time. Outlet ratings capture:
           </p>
           {[
             { label: 'Overall stars', desc: '1–5 stars. Your overall view of the outlet as a news source.' },

@@ -25,7 +25,7 @@ export default function AboutPage({ navigate, goBack }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
               { icon: '📡', step: '1. Ingestion', desc: 'Articles are pulled from RSS feeds across 50+ news outlets spanning the US, UK and international press.' },
-              { icon: '👥', step: '2. Community rating', desc: 'Readers can rate articles with 1–5 stars and give their view on accuracy, bias, and headline fairness. Outlets can also be rated directly.' },
+              { icon: '👥', step: '2. Community rating', desc: 'Readers rate the news outlets they trust with a 1–5 rating. Every score on the site comes from these community ratings.' },
               { icon: '📊', step: '3. Outlet scoring', desc: 'Outlet scores are the average star rating across all reader ratings, expressed out of 100. The rating count is always shown so you can judge the sample size.' },
             ].map(s => (
               <div key={s.step} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
