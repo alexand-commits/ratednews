@@ -5,6 +5,7 @@ import { db } from '../lib/supabase'
 import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import RatingDots from '../components/RatingDots'
+import OutletTrustRate from '../components/OutletTrustRate'
 import OutletRatingModal from '../components/OutletRatingModal'
 
 function getInitials(str) {
@@ -204,6 +205,16 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
     if (updatedRatings) setOutletRatings(updatedRatings)
   }
 
+  // One-tap trust rating handler — refreshes the score without opening the modal
+  async function handleTrustRated(starVal) {
+    setAlreadyRated(true)
+    setMyRating(m => ({ ...(m || {}), overall_stars: starVal, overallStars: starVal }))
+    const { data: updatedOutlet } = await db.from('outlets').select('*').eq('id', outletId).single()
+    if (updatedOutlet) setLiveOutlet(updatedOutlet)
+    const { data: updatedRatings } = await db.from('outlet_ratings').select('*').eq('outlet_id', outletId).order('created_at', { ascending: false })
+    if (updatedRatings) setOutletRatings(updatedRatings)
+  }
+
   async function postComment() {
     if (!user) { onLoginClick(); return }
     const body = commentInput.trim()
@@ -298,31 +309,37 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
               </div>
             </div>
             <div className="outlet-hero-score-divider" />
-            <div className="outlet-hero-actions">
-              <button
-                onClick={() => { if (!user) { onLoginClick(); return } toggleFollow(outletId) }}
-                className="outlet-action-btn"
-                style={{
-                  border: followedOutletIds.has(outletId) ? '1.5px solid var(--border)' : '1.5px solid var(--coral)',
-                  background: followedOutletIds.has(outletId) ? 'var(--bg)' : 'var(--coral)',
-                  color: followedOutletIds.has(outletId) ? 'var(--text2)' : '#fff',
-                }}
-              >
-                {followedOutletIds.has(outletId) ? '✓ Following' : '+ Follow'}
-              </button>
-              <button
-                onClick={handleRateClick}
-                className="outlet-action-btn"
-                disabled={alreadyRated}
-                style={{
-                  border: '1.5px solid var(--border2)',
-                  background: alreadyRated ? 'var(--bg)' : 'var(--surface)',
-                  color: alreadyRated ? 'var(--text3)' : 'var(--text)',
-                  cursor: alreadyRated ? 'default' : 'pointer',
-                }}
-              >
-                {alreadyRated ? '● Rated' : '● Rate outlet'}
-              </button>
+            <div className="outlet-hero-actions" style={{ gap: 14 }}>
+              {/* One-tap trust — the core, frictionless rating */}
+              <OutletTrustRate
+                outlet={{ id: outletId }}
+                user={user}
+                onLoginClick={onLoginClick}
+                showToast={showToast}
+                initialStars={myRating?.overall_stars || myRating?.overallStars || 0}
+                onRated={handleTrustRated}
+                label="Do you trust this source?"
+                size={26}
+              />
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button
+                  onClick={() => { if (!user) { onLoginClick(); return } toggleFollow(outletId) }}
+                  className="outlet-action-btn"
+                  style={{
+                    border: followedOutletIds.has(outletId) ? '1.5px solid var(--border)' : '1.5px solid var(--coral)',
+                    background: followedOutletIds.has(outletId) ? 'var(--bg)' : 'var(--coral)',
+                    color: followedOutletIds.has(outletId) ? 'var(--text2)' : '#fff',
+                  }}
+                >
+                  {followedOutletIds.has(outletId) ? '✓ Following' : '+ Follow'}
+                </button>
+                <button
+                  onClick={handleRateClick}
+                  style={{ fontSize: 12, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, fontFamily: 'inherit', padding: 0, whiteSpace: 'nowrap' }}
+                >
+                  + Add detail
+                </button>
+              </div>
             </div>
           </div>
         </div>

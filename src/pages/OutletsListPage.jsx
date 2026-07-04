@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import OutletLogo from '../components/OutletLogo'
+import { OutletTrustRateInline } from '../components/OutletTrustRate'
 import { db } from '../lib/supabase'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
@@ -171,7 +172,18 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
   const [region,  setRegion]  = useState('all')
   const [sort,    setSort]    = useState('community_score')
   const [showSuggest, setShowSuggest] = useState(false)
+  const [myRatings, setMyRatings] = useState({}) // { outlet_id: overall_stars }
   const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
+
+  // Load this user's outlet ratings once so cards can show their prior rating.
+  useEffect(() => {
+    if (!user) { setMyRatings({}); return }
+    db.from('outlet_ratings').select('outlet_id, overall_stars').eq('user_id', user.id).then(({ data }) => {
+      const m = {}
+      ;(data || []).forEach(r => { m[r.outlet_id] = r.overall_stars })
+      setMyRatings(m)
+    })
+  }, [user])
 
   const filtered = outlets
     .filter(o => !o.parent_outlet_id)  // only top-level outlets; children shown under their parent
@@ -362,6 +374,22 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
                       </span>
                     </div>
                   )}
+
+                  {/* One-tap trust rating */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingTop: 2 }} onClick={e => e.stopPropagation()}>
+                    <span style={{ fontSize: 11, color: myRatings[o.id] ? 'var(--green-dark)' : 'var(--text3)', fontWeight: 500, flexShrink: 0 }}>
+                      {myRatings[o.id] ? 'Your rating' : 'Trust?'}
+                    </span>
+                    <OutletTrustRateInline
+                      outlet={o}
+                      user={user}
+                      onLoginClick={onLoginClick}
+                      showToast={showToast}
+                      initialStars={myRatings[o.id] || 0}
+                      onRated={n => setMyRatings(m => ({ ...m, [o.id]: n }))}
+                      size={17}
+                    />
+                  </div>
 
                   {/* Section feeds — child outlets grouped under this parent */}
                   {children.length > 0 && (
