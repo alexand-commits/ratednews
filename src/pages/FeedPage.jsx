@@ -87,9 +87,6 @@ export default function FeedPage({
   const [sort, setSort]         = useState('latest')
   const [feedTab, setFeedTab]         = useState(initialTab) // 'all' | 'following'
   const [legalDoc, setLegalDoc]       = useState(null)  // 'privacy' | 'terms' | 'guidelines'
-  const [showWelcome, setShowWelcome] = useState(() => {
-    try { return !localStorage.getItem('rn_seenWelcome') } catch { return false }
-  })
   const [followingArticles, setFollowingArticles] = useState([])
   const [followingLoading, setFollowingLoading]   = useState(false)
 
@@ -718,89 +715,6 @@ export default function FeedPage({
             </div>
           )
         })()}
-
-        {/* First-visit explainer banner */}
-        {showWelcome && (
-          <div style={{
-            background: 'var(--surface)',
-            border: '0.5px solid var(--border)',
-            borderRadius: 'var(--radius-sm)',
-            padding: '14px 16px',
-            marginBottom: 14,
-            position: 'relative',
-          }}>
-            <button
-              onClick={() => {
-                setShowWelcome(false)
-                try { localStorage.setItem('rn_seenWelcome', '1') } catch {}
-              }}
-              style={{
-                position: 'absolute', top: 10, right: 12,
-                background: 'none', border: 'none', cursor: 'pointer',
-                fontSize: 16, color: 'var(--text3)', lineHeight: 1, padding: 4,
-              }}
-              aria-label="Dismiss"
-            >✕</button>
-
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>
-              News from 50+ outlets, rated by readers
-            </div>
-            <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
-              Community scores come from reader ratings — no AI.
-            </div>
-
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
-              <div style={{
-                flex: '1 1 120px', padding: '10px 12px',
-                background: 'var(--bg2)', borderRadius: 8,
-              }}>
-                <div style={{ fontSize: 16, marginBottom: 4 }}>⭐</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Rate articles</div>
-                <div style={{ fontSize: 11, color: 'var(--text3)' }}>1–5 stars plus accuracy, bias, and headline fairness.</div>
-              </div>
-              <div style={{
-                flex: '1 1 120px', padding: '10px 12px',
-                background: 'var(--bg2)', borderRadius: 8,
-              }}>
-                <div style={{ fontSize: 16, marginBottom: 4 }}>📰</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Compare angles</div>
-                <div style={{ fontSize: 11, color: 'var(--text3)' }}>See how different outlets cover the same story.</div>
-              </div>
-              <div style={{
-                flex: '1 1 120px', padding: '10px 12px',
-                background: 'var(--bg2)', borderRadius: 8,
-              }}>
-                <div style={{ fontSize: 16, marginBottom: 4 }}>🏆</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 2 }}>Outlet rankings</div>
-                <div style={{ fontSize: 11, color: 'var(--text3)' }}>Community-ranked outlets based on reader trust.</div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <a
-                href="/methodology"
-                style={{ fontSize: 12, color: 'var(--coral)', fontWeight: 600, textDecoration: 'none' }}
-              >
-                How it works →
-              </a>
-              <button
-                onClick={() => {
-                  setShowWelcome(false)
-                  try { localStorage.setItem('rn_seenWelcome', '1') } catch {}
-                }}
-                style={{
-                  marginLeft: 'auto',
-                  fontSize: 12, fontWeight: 600,
-                  padding: '6px 16px',
-                  background: 'var(--coral)', color: '#fff',
-                  border: 'none', borderRadius: 20, cursor: 'pointer',
-                }}
-              >
-                Got it
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Feed tabs — All / My Feed */}
         <div className="tabs" style={{ marginBottom: 14 }}>
