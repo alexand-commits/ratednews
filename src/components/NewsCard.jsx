@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { articleSlug, outletColor, scoreDot, timeAgo } from '../utils/helpers'
 import { toSlug } from '../utils/navigate'
 import RatingDots from './RatingDots'
+import OutletLogo from './OutletLogo'
 
 
 export default function NewsCard({ article, index, onClick, navigate, relatedArticles = [] }) {
@@ -100,7 +101,8 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
         </div>
       )}
 
-      {/* Multi-outlet chip — taps through to article page where full coverage lives */}
+      {/* Coverage strip — the differentiator: how many outlets are on this story.
+          Shows the covering outlets' logos + count, taps through to full coverage. */}
       {hasAngles && (
         <Link
           href={`/article/${slug}`}
@@ -110,15 +112,21 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
           <div style={{
             borderTop: '1px solid var(--divider)',
             marginTop: 8,
-            display: 'flex', alignItems: 'center', gap: 6,
-            minHeight: 44, padding: '10px 0 4px',
+            display: 'flex', alignItems: 'center', gap: 8,
+            minHeight: 40, padding: '9px 0 3px',
             cursor: 'pointer',
           }}>
-            <span style={{ fontSize: 13 }}>📰</span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>
-              Also covered by {relatedArticles.length} other outlet{relatedArticles.length !== 1 ? 's' : ''}
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              {allAngles.slice(0, 5).map((a, i) => (
+                <div key={a.outlet_id || i} style={{ marginLeft: i === 0 ? 0 : -6, zIndex: 5 - i, borderRadius: 6, boxShadow: '0 0 0 1.5px var(--surface)' }}>
+                  <OutletLogo name={a.outlets?.name || a.name || 'X'} size={20} borderRadius={5} />
+                </div>
+              ))}
+            </div>
+            <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--coral)' }}>
+              {allAngles.length} sources covering this
             </span>
-<span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>→</span>
+            <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text3)' }}>→</span>
           </div>
         </Link>
       )}

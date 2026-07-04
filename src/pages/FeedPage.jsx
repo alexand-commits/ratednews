@@ -124,7 +124,7 @@ export default function FeedPage({
     // Escape LIKE metacharacters and PostgREST syntax chars
     const escaped = activeTopic.replace(/[%_\\]/g, '\\$&').replace(/[,()\.:]/g, ' ').trim()
     db.from('articles')
-      .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, country, logo_url), comments(count)')
+      .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comments(count)')
       .ilike('title', `%${escaped}%`)
       .gte('published_at', cutoff)
       .order('published_at', { ascending: false })
@@ -236,7 +236,7 @@ export default function FeedPage({
       if (!escaped) { setDbResults([]); setDbLoading(false); return }
       const { data } = await db
         .from('articles')
-        .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, country, logo_url), comments(count)')
+        .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comments(count)')
         .or(`title.ilike.%${escaped}%,summary.ilike.%${escaped}%`)
         .order('published_at', { ascending: false })
         .limit(50)
@@ -274,7 +274,7 @@ export default function FeedPage({
     setFollowingLoading(true)
     const ids = [...followedOutletIds]
     db.from('articles')
-      .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, logo_url, country), comments(count)')
+      .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, logo_url, country), comments(count)')
       .in('outlet_id', ids)
       .order('published_at', { ascending: false })
       .limit(100)
@@ -679,10 +679,24 @@ export default function FeedPage({
   // Which list to display — DB results when search active, interleaved otherwise
   const isSearchActive = dbResults !== null
   const baseList = isSearchActive ? dbResults : interleaved
-  const displayList = activeTopic ? topicArticles : baseList
+  const rawList = activeTopic ? topicArticles : baseList
 
-  // cluster_peers is now pre-computed server-side by scripts/cluster.mjs and
-  // stored directly on each article row. No client-side clustering needed.
+  // Story-grouping: collapse clustered articles so each story shows once. When
+  // several loaded articles share a cluster_id (same story, different outlets),
+  // keep only the first — its card shows "N sources covering this". cluster_peers
+  // is pre-computed server-side by scripts/cluster.mjs.
+  const displayList = useMemo(() => {
+    const seen = new Set()
+    const out = []
+    for (const a of rawList) {
+      if (a.cluster_id) {
+        if (seen.has(a.cluster_id)) continue
+        seen.add(a.cluster_id)
+      }
+      out.push(a)
+    }
+    return out
+  }, [rawList])
 
   // Outlet search — match search term against outlet names
   const matchedOutlets = useMemo(() => {
@@ -708,7 +722,7 @@ export default function FeedPage({
               </div>
               <div className="stat-chip">
                 <strong>{totalArticleCount != null ? totalArticleCount.toLocaleString() : (articles.length ? articles.length.toLocaleString() : '—')}</strong>
-                <span>Articles rated</span>
+                <span>Articles indexed</span>
               </div>
               {latest && (
                 <div className="stat-chip">
@@ -869,17 +883,28 @@ export default function FeedPage({
           ))}
         </div>
 
-        {/* Region + Min score — combined on one scrollable row */}
-        <div className="filter-bar" style={{ marginBottom: 16 }}>
-          <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Region</span>
-          {REGIONS.map(r => (
-            <button
-              key={r.value}
-              className={`pill${region === r.value ? ' active' : ''}`}
-              onClick={() => setRegion(r.value)}
-            >{r.label}</button>
-          ))}
-        </div>
+        {/* Region + Sort — one always-visible scrollable row (sort works on mobile too) */}
+        {!isSearchActive && (
+          <div className="filter-bar" style={{ marginBottom: 16 }}>
+            <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Region</span>
+            {REGIONS.map(r => (
+              <button
+                key={r.value}
+                className={`pill${region === r.value ? ' active' : ''}`}
+                onClick={() => setRegion(r.value)}
+              >{r.label}</button>
+            ))}
+            <span style={{ width: 1, background: 'var(--border)', alignSelf: 'stretch', flexShrink: 0, margin: '4px 4px' }} />
+            <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Sort</span>
+            {SORTS.map(s => (
+              <button
+                key={s.value}
+                className={`pill${sort === s.value ? ' active' : ''}`}
+                onClick={() => setSort(s.value)}
+              >{s.label}</button>
+            ))}
+          </div>
+        )}
 
         <div className="grid">
           <div>
@@ -894,20 +919,9 @@ export default function FeedPage({
                         {category !== 'all' && <span>{category}</span>}
                         {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}>{category !== 'all' ? ' · ' : ''}{REGIONS.find(r => r.value === region)?.label}</span>}
                       </>
-                    : null
+                    : <span>{SORTS.find(s => s.value === sort)?.label || 'Latest'} stories</span>
                 }
               </div>
-              {!isSearchActive && (
-                <div className="feed-search-desktop-only feed-sort-pills">
-                  {SORTS.map(s => (
-                    <button
-                      key={s.value}
-                      className={`sort-pill${sort === s.value ? ' active' : ''}`}
-                      onClick={() => setSort(s.value)}
-                    >{s.label}</button>
-                  ))}
-                </div>
-              )}
             </div>
 
             {/* Outlet matches — pinned above article results when search active */}
