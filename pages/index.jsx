@@ -194,15 +194,25 @@ export async function getStaticProps() {
       process.env.VITE_SUPABASE_ANON_KEY,
     )
     const SSR_SELECT = ARTICLE_SELECT // same minimal columns at build time
-    const [{ data: articles }, { count }] = await Promise.all([
+    // Over-fetch, then collapse clustered stories to one row each so the
+    // server-rendered feed (first paint + SEO crawlers) shows each story once,
+    // matching the client. Done in Node — no schema change, no runtime risk.
+    const [{ data: raw }, { count }] = await Promise.all([
       supabase.from('articles')
         .select(SSR_SELECT)
         .order('published_at', { ascending: false })
-        .range(0, BATCH - 1),
+        .range(0, BATCH + 40 - 1),
       supabase.from('articles').select('*', { count: 'exact', head: true }),
     ])
+    const seen = new Set()
+    const articles = (raw || []).filter(a => {
+      if (!a.cluster_id) return true
+      if (seen.has(a.cluster_id)) return false
+      seen.add(a.cluster_id)
+      return true
+    }).slice(0, BATCH)
     return {
-      props: { initialArticles: articles || [], initialCount: count || 0 },
+      props: { initialArticles: articles, initialCount: count || 0 },
       revalidate: 900, // regenerate every 15 minutes — matches ingest cadence
     }
   } catch {
