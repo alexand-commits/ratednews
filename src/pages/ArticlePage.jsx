@@ -5,6 +5,7 @@ import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import RatingModal from '../components/RatingModal'
 import RatingDots from '../components/RatingDots'
+import OutletTrustRate from '../components/OutletTrustRate'
 
 // Extract meaningful initials from a username or email — avoids numbers/symbols
 function getInitials(str) {
@@ -29,6 +30,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [alreadyRated, setAlreadyRated] = useState(false)
   const [myRating, setMyRating] = useState(null)
+  const [myOutletTrust, setMyOutletTrust] = useState(0) // user's existing trust rating for this article's outlet
   const [replyingTo, setReplyingTo] = useState(null) // comment id being replied to
   const [replyInputs, setReplyInputs] = useState({}) // { [commentId]: text }
   const [replies, setReplies] = useState({}) // { [parentId]: [reply, ...] }
@@ -268,6 +270,14 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
       .then(({ data }) => { if (data) setFetchedArticle(data) })
   }, [articleId])
 
+  // Load the user's existing trust rating for this article's outlet
+  useEffect(() => {
+    const oid = article?.outlet_id
+    if (!user || !oid) { setMyOutletTrust(0); return }
+    db.from('outlet_ratings').select('overall_stars').eq('outlet_id', oid).eq('user_id', user.id).maybeSingle()
+      .then(({ data }) => setMyOutletTrust(data?.overall_stars || 0))
+  }, [user, article?.outlet_id])
+
   if (!article) return null
 
   const outlet = article.outlets || {}
@@ -501,6 +511,23 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
             {com > 0 && <div className="asc"><strong style={{ color: 'var(--green-dark)' }}>{(com / 20).toFixed(1)}</strong><span>Community</span></div>}
             <div className="asc"><strong>{article.total_ratings || 0}</strong><span>Ratings</span></div>
             <div className="asc"><strong style={{ color: 'var(--text2)' }}>{comments.length}</strong><span>Comments</span></div>
+          </div>
+
+          {/* Contextual trust prompt — convert the reading moment into an outlet rating */}
+          <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+              <OutletLogo name={outlet.name || 'X'} size={30} borderRadius={7} />
+              <OutletTrustRate
+                outlet={{ id: article.outlet_id }}
+                user={user}
+                onLoginClick={onLoginClick}
+                showToast={showToast}
+                initialStars={myOutletTrust}
+                onRated={n => setMyOutletTrust(n)}
+                label={`Do you trust ${outlet.name || 'this source'}?`}
+                size={24}
+              />
+            </div>
           </div>
 
 
