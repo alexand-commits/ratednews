@@ -58,7 +58,7 @@ const SPORT_KEYWORDS = {
 }
 
 export function detectSportType(article) {
-  const text = `${article.title || ''} ${article.ai_summary || ''}`.toLowerCase()
+  const text = `${article.title || ''} ${article.summary || ''}`.toLowerCase()
   for (const [sport, keywords] of Object.entries(SPORT_KEYWORDS)) {
     if (keywords.some(kw => text.includes(kw))) return sport
   }
@@ -165,6 +165,7 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
                 index={i}
                 onClick={() => navigate('article', { articleId: a.id, title: a.title })}
                 navigate={navigate}
+                relatedArticles={a.cluster_peers || []}
               />
             ))}
           </div>

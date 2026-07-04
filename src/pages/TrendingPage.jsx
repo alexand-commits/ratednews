@@ -69,7 +69,16 @@ function RankedRow({ a, rank, isLast, navigate }) {
           </div>
         )}
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
-                    {comments > 0 && (
+          {a.coverage > 0 && (
+            <span style={{
+              fontSize: 10, fontWeight: 600, color: 'var(--coral)',
+              background: 'rgba(216,90,48,0.08)', border: '0.5px solid rgba(216,90,48,0.25)',
+              borderRadius: 20, padding: '1px 8px',
+            }}>
+              📰 {a.coverage + 1} outlets
+            </span>
+          )}
+          {comments > 0 && (
             <span style={{
               fontSize: 10, color: 'var(--text3)',
               background: 'var(--bg)', border: '0.5px solid var(--border)',
@@ -183,6 +192,11 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
           <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>
             {heroOutlet.name || 'Unknown'}
           </span>
+          {hero.coverage > 0 && (
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--coral)', background: 'rgba(216,90,48,0.08)', border: '0.5px solid rgba(216,90,48,0.25)', borderRadius: 20, padding: '2px 10px' }}>
+              📰 {hero.coverage + 1} outlets covering
+            </span>
+          )}
           <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>
             {timeAgo(hero.published_at)}
           </span>
