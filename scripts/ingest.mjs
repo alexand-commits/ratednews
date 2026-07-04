@@ -131,6 +131,12 @@ const JUNK_PATTERNS = [
   /\bLIVE[!:]\s/,                        // "Celtic vs Rangers LIVE: …" / "Wardley vs Dubois LIVE! …"
   /\blive (blog|updates?|coverage|score)\b/i,
   /\bas it happened\b/i,
+  // Regional daily rolling blogs (Reach plc titles: Wales Online, Manchester
+  // Evening News, Liverpool Echo, Birmingham Live, Daily Record, etc.)
+  // e.g. "Wales breaking news plus weather and traffic updates (Saturday, July 4)"
+  /\bbreaking news (plus|and|&|,) (weather|traffic|travel)/i,
+  /\((mon|tues|wednes|thurs|fri|satur|sun)day[,)]/i,   // title tagged "(Weekday, …" = a dated daily blog
+  /\b(morning|evening|lunchtime) headlines\b/i,        // "Your morning headlines" digest posts
   // Factboxes & wires noise
   /\bfactbox:\b/i,
   /\bfact ?check:\b/i,                // keep actual fact-checks but factbox= wire filler

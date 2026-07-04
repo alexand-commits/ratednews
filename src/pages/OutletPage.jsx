@@ -291,8 +291,19 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
               )}
             </div>
             <div className="outlet-desc">{outlet.description || ''}</div>
-            <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
               <span className="meta-chip"><span>✓</span>Editorially verified</span>
+              <button
+                onClick={() => { if (!user) { onLoginClick(); return } toggleFollow(outletId) }}
+                style={{
+                  fontSize: 13, fontWeight: 600, padding: '7px 18px', borderRadius: 20, cursor: 'pointer', transition: 'all 0.15s',
+                  border: followedOutletIds.has(outletId) ? '1.5px solid var(--border)' : '1.5px solid var(--coral)',
+                  background: followedOutletIds.has(outletId) ? 'var(--bg)' : 'var(--coral)',
+                  color: followedOutletIds.has(outletId) ? 'var(--text2)' : '#fff',
+                }}
+              >
+                {followedOutletIds.has(outletId) ? '✓ Following' : '+ Follow'}
+              </button>
             </div>
           </div>
           <div className="outlet-hero-score-block">
@@ -309,8 +320,8 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
               </div>
             </div>
             <div className="outlet-hero-score-divider" />
-            <div className="outlet-hero-actions" style={{ gap: 14 }}>
-              {/* One-tap trust — the core, frictionless rating */}
+            {/* One-tap trust — the single, frictionless rating action */}
+            <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
               <OutletTrustRate
                 outlet={{ id: outletId }}
                 user={user}
@@ -319,41 +330,12 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                 initialStars={myRating?.overall_stars || myRating?.overallStars || 0}
                 onRated={handleTrustRated}
                 label="Do you trust this source?"
-                size={26}
+                size={22}
+                align="center"
               />
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <button
-                  onClick={() => { if (!user) { onLoginClick(); return } toggleFollow(outletId) }}
-                  className="outlet-action-btn"
-                  style={{
-                    border: followedOutletIds.has(outletId) ? '1.5px solid var(--border)' : '1.5px solid var(--coral)',
-                    background: followedOutletIds.has(outletId) ? 'var(--bg)' : 'var(--coral)',
-                    color: followedOutletIds.has(outletId) ? 'var(--text2)' : '#fff',
-                  }}
-                >
-                  {followedOutletIds.has(outletId) ? '✓ Following' : '+ Follow'}
-                </button>
-                <button
-                  onClick={handleRateClick}
-                  style={{ fontSize: 12, color: 'var(--text3)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, fontFamily: 'inherit', padding: 0, whiteSpace: 'nowrap' }}
-                >
-                  + Add detail
-                </button>
-              </div>
             </div>
           </div>
         </div>
-
-
-        {/* My rating banner */}
-        {myRating && (
-          <div style={{ background: 'var(--green-light)', border: '0.5px solid var(--green)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--green-dark)' }}>✓ Your rating</span>
-            <RatingDots value={myRating.overallStars || myRating.overall_stars || 0} size={9} showValue={false} />
-            {(myRating.accuracyVote || myRating.accuracy_vote) && <span style={{ fontSize: 11, background: 'var(--surface)', padding: '2px 8px', borderRadius: 20, color: 'var(--text2)' }}>{(myRating.accuracyVote || myRating.accuracy_vote).replace('_', ' ')}</span>}
-            {(myRating.biasVote || myRating.bias_vote) && <span style={{ fontSize: 11, background: 'var(--surface)', padding: '2px 8px', borderRadius: 20, color: 'var(--text2)' }}>{(myRating.biasVote || myRating.bias_vote).replace('_', ' ')}</span>}
-          </div>
-        )}
 
         {/* Section outlets — shown on parent outlet pages (e.g. BBC Sport under BBC News) */}
         {childOutlets.length > 0 && (
