@@ -724,29 +724,6 @@ export default function FeedPage({
 
       <div className="container">
 
-        {/* Stats bar */}
-        {(() => {
-          const latest = articles.length ? articles.slice().sort((a, b) => new Date(b.published_at) - new Date(a.published_at))[0] : null
-          return (
-            <div className="stats-bar">
-              <div className="stat-chip" style={{ cursor: 'pointer' }} onClick={() => navigate('outlets')}>
-                <strong>{outlets.length || '—'}</strong>
-                <span>Outlets tracked ↗</span>
-              </div>
-              <div className="stat-chip">
-                <strong>{totalArticleCount != null ? totalArticleCount.toLocaleString() : (articles.length ? articles.length.toLocaleString() : '—')}</strong>
-                <span>Articles indexed</span>
-              </div>
-              {latest && (
-                <div className="stat-chip">
-                  <strong>{timeAgo(latest.published_at)}</strong>
-                  <span>Last updated</span>
-                </div>
-              )}
-            </div>
-          )
-        })()}
-
         {/* Feed tabs — All / My Feed */}
         <div className="tabs" style={{ marginBottom: 14 }}>
           <div className={`tab${feedTab === 'all' ? ' active' : ''}`} onClick={() => setFeedTab('all')}>
