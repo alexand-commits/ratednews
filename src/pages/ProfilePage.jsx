@@ -404,10 +404,10 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
               {[
-                { emoji: '⭐', title: 'Rate articles', action: 'Browse →', onClick: () => navigate('feed') },
-                { emoji: '🔖', title: 'Save articles for later', action: null },
-                { emoji: '📰', title: 'Follow outlets you trust', action: 'Browse →', onClick: () => navigate('outlets') },
-                { emoji: '🧠', title: 'Build your bias fingerprint', action: null },
+                { emoji: '🟢', title: 'Rate the outlets you trust', action: 'Rate →', onClick: () => navigate('outlets') },
+                { emoji: '📰', title: 'Follow outlets to build your feed', action: 'Browse →', onClick: () => navigate('feed') },
+                { emoji: '🔖', title: 'Save stories to read later', action: null },
+                { emoji: '🏆', title: 'Build your trusted-sources profile', action: null },
               ].map(({ emoji, title, action, onClick }) => (
                 <div key={title} style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <span style={{ fontSize: 14, width: 20, textAlign: 'center', flexShrink: 0 }}>{emoji}</span>
