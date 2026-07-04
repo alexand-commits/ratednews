@@ -52,9 +52,9 @@ function getArticleCategory(article) {
 }
 
 const SORTS = [
-  { value: 'latest',    label: 'Latest'     },
-  { value: 'trending',  label: 'Trending'   },
-  { value: 'top-rated', label: 'Top Rated'  },
+  { value: 'trending',  label: 'Top stories' },
+  { value: 'latest',    label: 'Latest'      },
+  { value: 'top-rated', label: 'Top rated'   },
 ]
 
 const REGIONS = [
@@ -88,7 +88,7 @@ export default function FeedPage({
   const [category, setCategory] = useState(initialCategory)
   const [region, setRegion]     = useState(initialRegion)
   const [search, setSearch]     = useState('')
-  const [sort, setSort]         = useState('latest')
+  const [sort, setSort]         = useState('trending')
   const [feedTab, setFeedTab]         = useState(initialTab) // 'all' | 'following'
   const [density, setDensity]         = useState('comfortable') // 'comfortable' | 'compact'
   const [legalDoc, setLegalDoc]       = useState(null)  // 'privacy' | 'terms' | 'guidelines'
@@ -909,7 +909,7 @@ export default function FeedPage({
                         {category !== 'all' && <span>{category}</span>}
                         {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}>{category !== 'all' ? ' · ' : ''}{REGIONS.find(r => r.value === region)?.label}</span>}
                       </>
-                    : <span>{SORTS.find(s => s.value === sort)?.label || 'Latest'} stories</span>
+                    : <span>{sort === 'latest' ? 'Latest stories' : (SORTS.find(s => s.value === sort)?.label || 'Top stories')}</span>
                 }
               </div>
               {/* Density toggle */}
