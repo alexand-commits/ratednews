@@ -58,19 +58,8 @@ export default function RatingModal({ article, outlet, onClose, onRated, showToa
       return
     }
 
-    // Recompute community_score from all ratings for this article
-    const { data: allRatings } = await db
-      .from('ratings')
-      .select('overall_stars')
-      .eq('article_id', article.id)
-
-    if (allRatings?.length) {
-      const avg = allRatings.reduce((s, r) => s + (r.overall_stars || 0), 0) / allRatings.length
-      await db.from('articles').update({
-        community_score: Math.round(avg * 20),
-        total_ratings:   allRatings.length,
-      }).eq('id', article.id)
-    }
+    // community_score + total_ratings are recomputed server-side by the
+    // recompute_article_score trigger — see sql/02_recompute_scores_trigger.sql
 
     // Remember rating in localStorage so they can't re-rate and we can show it back
     localStorage.setItem(`rated_${article.id}`, JSON.stringify({ overallStars, accuracyVote, biasVote, headlineVote }))

@@ -48,19 +48,8 @@ export default function OutletRatingModal({ outlet, onClose, onRated, showToast,
       return
     }
 
-    // Recompute community_score from all ratings for this outlet
-    const { data: allRatings } = await db
-      .from('outlet_ratings')
-      .select('overall_stars')
-      .eq('outlet_id', outlet.id)
-
-    if (allRatings?.length) {
-      const avg = allRatings.reduce((s, r) => s + (r.overall_stars || 0), 0) / allRatings.length
-      await db.from('outlets').update({
-        community_score: Math.round(avg * 20),
-        total_ratings:   allRatings.length,
-      }).eq('id', outlet.id)
-    }
+    // community_score + total_ratings are recomputed server-side by the
+    // recompute_outlet_score trigger — see sql/02_recompute_scores_trigger.sql
 
     if (!user) {
       localStorage.setItem(`rated_outlet_${outlet.id}`, JSON.stringify({ overallStars, accuracyVote, biasVote }))
