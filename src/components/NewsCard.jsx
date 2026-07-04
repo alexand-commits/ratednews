@@ -81,21 +81,24 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
         )}
       </div>
 
-      <div className="score-row">
-        {com > 0 ? (
-          <RatingDots value={com / 20} size={7} valueSize={11} />
-        ) : ratings > 0 ? (
-          <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg2)', padding: '2px 8px', borderRadius: 20 }}>
-            {ratings} {ratings === 1 ? 'rating' : 'ratings'}
-          </span>
-        ) : null}
-
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+      {(article.category || com > 0 || ratings > 0) && (
+        <div className="score-row">
           {article.category && (
-            <span className="score-mini" style={{ color: 'var(--text3)' }}>{article.category}</span>
+            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', color: 'var(--text3)' }}>
+              {article.category}
+            </span>
           )}
+          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+            {com > 0 ? (
+              <RatingDots value={com / 20} size={7} valueSize={11} />
+            ) : ratings > 0 ? (
+              <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg2)', padding: '2px 8px', borderRadius: 20 }}>
+                {ratings} {ratings === 1 ? 'rating' : 'ratings'}
+              </span>
+            ) : null}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Multi-outlet chip — taps through to article page where full coverage lives */}
       {hasAngles && (
