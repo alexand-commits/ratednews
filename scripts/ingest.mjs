@@ -25,16 +25,34 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
-const parser = new Parser({
+const PARSER_FIELDS = {
+  item: [
+    ['media:content', 'mediaContent'],
+    ['media:thumbnail', 'mediaThumbnail'],
+    ['content:encoded', 'contentEncoded'],
+  ],
+}
+
+// Two parsers with different fingerprints. Some outlets 403 the default node UA
+// (Rio Times, Mainichi); others 403 a Chrome UA without a real browser TLS
+// fingerprint (Metro, New Statesman — Cloudflare). Try browser first, fall back.
+const parserBrowser = new Parser({
   timeout: 10000,
-  customFields: {
-    item: [
-      ['media:content', 'mediaContent'],
-      ['media:thumbnail', 'mediaThumbnail'],
-      ['content:encoded', 'contentEncoded'],
-    ],
+  headers: {
+    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+    'Accept': 'application/rss+xml, application/atom+xml, application/xml;q=0.9, text/xml;q=0.8, */*;q=0.7',
   },
+  customFields: PARSER_FIELDS,
 })
+const parserDefault = new Parser({ timeout: 10000, customFields: PARSER_FIELDS })
+
+async function fetchFeed(url) {
+  try {
+    return await parserBrowser.parseURL(url)
+  } catch {
+    return await parserDefault.parseURL(url)
+  }
+}
 
 function extractImageUrl(item) {
   if (item.enclosure?.url) return item.enclosure.url
@@ -43,6 +61,16 @@ function extractImageUrl(item) {
   const html = item.contentEncoded || item.content || ''
   const match = html.match(/<img[^>]+src=["']([^"']+)["']/i)
   return match?.[1] || null
+}
+
+// Some feeds emit non-string titles (numbers, or objects from CDATA quirks).
+// Coerce defensively — a bad title must never crash the run.
+function itemTitle(item) {
+  const t = item.title
+  if (typeof t === 'string') return t.trim()
+  if (typeof t === 'number') return String(t)
+  if (t && typeof t === 'object' && typeof t._ === 'string') return t._.trim()
+  return ''
 }
 
 function extractSummary(item) {
@@ -816,7 +844,7 @@ async function ingestOutlet(outlet) {
 
   let feed
   try {
-    feed = await parser.parseURL(outlet.rss_url)
+    feed = await fetchFeed(outlet.rss_url)
   } catch (err) {
     console.error(`  ❌ Failed to fetch feed: ${err.message}`)
     return { inserted: 0, skipped: 0, errors: 1 }
@@ -827,7 +855,7 @@ async function ingestOutlet(outlet) {
   let inserted = 0, skipped = 0, errors = 0
 
   const urls   = items.map(i => i.link || i.guid).filter(Boolean)
-  const titles = items.map(i => i.title?.trim()).filter(Boolean)
+  const titles = items.map(i => itemTitle(i)).filter(Boolean)
 
   const [{ data: existingByUrl }, { data: existingByTitle }] = await Promise.all([
     supabase.from('articles').select('url').in('url', urls),
@@ -839,7 +867,7 @@ async function ingestOutlet(outlet) {
 
   for (const item of items) {
     const url   = item.link || item.guid
-    const title = cleanTitle(item.title?.trim() ?? '', outlet.name)
+    const title = cleanTitle(itemTitle(item), outlet.name)
     if (!url || !title) continue
     if (isTooOld(item.pubDate, outlet.name)) { skipped++; continue }
     if (isTooShort(title))                   { skipped++; continue }
@@ -895,9 +923,14 @@ async function main() {
 
   for (const outlet of outlets) {
     console.log(`📡 ${outlet.name}`)
-    const { inserted, skipped, errors } = await ingestOutlet(outlet)
-    console.log(`   ✅ ${inserted} new  •  ${skipped} already exist  •  ${errors} errors`)
-    totalInserted += inserted
+    try {
+      const { inserted, skipped, errors } = await ingestOutlet(outlet)
+      console.log(`   ✅ ${inserted} new  •  ${skipped} already exist  •  ${errors} errors`)
+      totalInserted += inserted
+    } catch (err) {
+      // One malformed feed must never take down the rest of the run
+      console.error(`   ❌ Unexpected error — skipping outlet: ${err.message}`)
+    }
   }
 
   console.log(`\n===========================`)
