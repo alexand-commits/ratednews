@@ -53,7 +53,7 @@ export default function Feed({ initialArticles, initialCount }) {
     }, 12000)
 
     Promise.all([
-      // Main paginated feed — only scored articles
+      // Main paginated feed — newest articles across all outlets
       db.from('articles')
         .select(ARTICLE_SELECT)
         .order('published_at', { ascending: false })
@@ -126,10 +126,10 @@ export default function Feed({ initialArticles, initialCount }) {
     <>
       <Head>
         <title>RatedNews — Trust the source, not just the story</title>
-        <meta name="description" content="AI-powered bias and quality ratings for 112 news outlets including BBC, CNN, Fox News and The Guardian. Every article scored for quality, political bias, and headline fairness — updated hourly." />
+        <meta name="description" content="A community-rated news aggregator pulling top stories from 150+ outlets including BBC, CNN, Fox News and The Guardian. Readers rate every article and outlet for accuracy, bias and quality — updated continuously." />
         <link rel="canonical" href="https://www.ratednews.com/" />
         <meta property="og:title"       content="RatedNews — Trust the source, not just the story" />
-        <meta property="og:description" content="AI-powered bias and quality ratings for 112 news outlets. Updated hourly." />
+        <meta property="og:description" content="Community-rated news from 150+ outlets. Readers rate accuracy, bias and quality — updated continuously." />
         <meta property="og:url"         content="https://www.ratednews.com/" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
@@ -138,7 +138,7 @@ export default function Feed({ initialArticles, initialCount }) {
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="RatedNews — Trust the source, not just the story" />
-        <meta name="twitter:description" content="AI-powered bias and quality ratings for 112 news outlets. Every article scored for quality, political bias, and headline fairness — updated hourly." />
+        <meta name="twitter:description" content="Community-rated news from 150+ outlets. Readers rate accuracy, bias and quality — updated continuously." />
         <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
         <script
           type="application/ld+json"
@@ -203,7 +203,7 @@ export async function getStaticProps() {
     ])
     return {
       props: { initialArticles: articles || [], initialCount: count || 0 },
-      revalidate: 1800, // regenerate every 30 minutes — matches ingest cadence
+      revalidate: 900, // regenerate every 15 minutes — matches ingest cadence
     }
   } catch {
     return { props: { initialArticles: [], initialCount: 0 }, revalidate: 1800 }

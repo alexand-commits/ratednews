@@ -138,7 +138,7 @@ function ArticleCard({ title: raw, score, bias, outlet }) {
           {has && <Bar value={sc} color={scoreColor(sc)} height={5} />}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ color: TEXT4, fontSize: 14, fontFamily: SF }}>ratednews.com</span>
-            <span style={{ color: TEXT3, fontSize: 13, fontFamily: SF }}>AI-powered quality rating</span>
+            <span style={{ color: TEXT3, fontSize: 13, fontFamily: SF }}>Community-rated news</span>
           </div>
         </div>
       </div>

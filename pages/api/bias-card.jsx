@@ -155,7 +155,7 @@ export default async function handler(req) {
         {/* Footer */}
         <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: 13, color: TEXT3 }}>ratednews.com/profile/{username}</div>
-          <div style={{ fontSize: 13, color: TEXT3 }}>AI-powered news quality ratings</div>
+          <div style={{ fontSize: 13, color: TEXT3 }}>Community-rated news</div>
         </div>
 
       </div>,

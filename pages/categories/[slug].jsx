@@ -21,52 +21,52 @@ export const CATEGORY_META = [
   {
     value: 'Politics', slug: 'politics', emoji: '🏛',
     title: 'Political News Rated for Quality & Bias',
-    description: 'Political news from the UK, US and beyond — every story rated for quality and bias by AI and community reviewers. Compare how outlets cover the same political events.',
+    description: 'Political news from the UK, US and beyond — every story rated by the community for accuracy, bias and quality. Compare how outlets cover the same political events.',
   },
   {
     value: 'Business', slug: 'business', emoji: '📈',
     title: 'Business & Economy News Rated for Quality',
-    description: 'Business, markets and economic news rated for quality — company results, inflation, interest rates and more across 50+ outlets.',
+    description: 'Business, markets and economic news rated by the community — company results, inflation, interest rates and more across 50+ outlets.',
   },
   {
     value: 'Sport', slug: 'sport', emoji: '⚽',
     title: 'Sports News Rated for Quality & Fairness',
-    description: 'Sports news from around the world, rated for quality and editorial fairness. Football, cricket, tennis, rugby and more — scored by AI and community reviewers.',
+    description: 'Sports news from around the world, rated for quality and editorial fairness. Football, cricket, tennis, rugby and more — rated by the community.',
   },
   {
     value: 'Tech', slug: 'tech', emoji: '💻',
     title: 'Technology News Rated for Quality',
-    description: 'Technology news rated for quality — AI, cybersecurity, startups, social media and innovation, compared across the outlets that cover them.',
+    description: 'Technology news rated by the community — AI, cybersecurity, startups, social media and innovation, compared across the outlets that cover them.',
   },
   {
     value: 'Science', slug: 'science', emoji: '🔬',
     title: 'Science News Rated for Quality',
-    description: 'Science and research news rated for quality — space, biology, climate science and discoveries, scored by AI across multiple outlets.',
+    description: 'Science and research news rated by the community — space, biology, climate science and discoveries, rated by the community across outlets.',
   },
   {
     value: 'Health', slug: 'health', emoji: '🏥',
     title: 'Health & Medical News Rated for Quality',
-    description: 'Health and medical news rated for quality — clinical research, vaccines, public health and healthcare policy, compared across 112 outlets.',
+    description: 'Health and medical news rated by the community — clinical research, vaccines, public health and healthcare policy, compared across 150+ community-rated outlets.',
   },
   {
     value: 'Environment', slug: 'environment', emoji: '🌱',
     title: 'Climate & Environment News Rated for Quality',
-    description: 'Climate and environment news rated for quality — emissions, biodiversity, net zero policy and sustainability, compared across outlets with known bias ratings.',
+    description: 'Climate and environment news rated by the community — emissions, biodiversity, net zero policy and sustainability, compared across 150+ community-rated outlets.',
   },
   {
     value: 'Entertainment', slug: 'entertainment', emoji: '🎬',
     title: 'Entertainment News Rated for Fairness',
-    description: 'Entertainment news rated for quality and fairness — film, TV, music, celebrities and awards, scored across outlets so you can spot editorial spin.',
+    description: 'Entertainment news rated by the community for accuracy and fairness — film, TV, music, celebrities and awards, compared across outlets so you can spot editorial spin.',
   },
   {
     value: 'Crime', slug: 'crime', emoji: '🔍',
     title: 'Crime & Justice News Rated for Quality',
-    description: 'Crime and justice news rated for quality and fairness across UK and US outlets — court cases, policing and legal proceedings, compared side by side.',
+    description: 'Crime and justice news rated by the community across UK and US outlets — court cases, policing and legal proceedings, compared side by side.',
   },
   {
     value: 'Travel', slug: 'travel', emoji: '✈️',
     title: 'Travel News Rated for Quality',
-    description: 'Travel news and updates rated for quality — airline disruption, visa changes, destination news and tourism policy across multiple outlets.',
+    description: 'Travel news and updates rated by the community — airline disruption, visa changes, destination news and tourism policy across multiple outlets.',
   },
   {
     value: 'Education', slug: 'education', emoji: '🎓',
@@ -76,12 +76,12 @@ export const CATEGORY_META = [
   {
     value: 'Conflict', slug: 'conflict', emoji: '⚔️',
     title: 'Conflict News Rated for Quality',
-    description: 'War and conflict coverage rated for quality and fairness — Gaza, Ukraine, and global conflicts compared across outlets to reveal differing narratives.',
+    description: 'War and conflict coverage rated by the community for accuracy and fairness — Gaza, Ukraine, and global conflicts compared across outlets to reveal differing narratives.',
   },
   {
     value: 'World', slug: 'world', emoji: '🌍',
     title: 'World News Rated for Quality & Bias',
-    description: 'International news from around the world rated for quality and political bias — compare how different outlets frame the same global events.',
+    description: 'International news from around the world rated by the community for accuracy and bias — compare how different outlets frame the same global events.',
   },
 ]
 

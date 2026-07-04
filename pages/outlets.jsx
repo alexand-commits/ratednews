@@ -9,10 +9,10 @@ export default function Outlets() {
     <>
       <Head>
         <title>News Outlet Bias Ratings — BBC, CNN, Fox News & More — RatedNews</title>
-        <meta name="description" content="Browse bias ratings and quality scores for 112 major news outlets including BBC, CNN, Fox News, The Guardian and Wall Street Journal. See which outlets report fairly and which lean left or right." />
+        <meta name="description" content="Browse community ratings for 150+ major news outlets including BBC, CNN, Fox News, The Guardian and Wall Street Journal. See which outlets readers trust most for accuracy, bias and quality." />
         <link rel="canonical" href="https://www.ratednews.com/outlets" />
         <meta property="og:title"       content="News Outlet Bias Ratings — BBC, CNN, Fox News & More — RatedNews" />
-        <meta property="og:description" content="Browse bias ratings and quality scores for 112 major news outlets. See which outlets report fairly and which lean left or right." />
+        <meta property="og:description" content="Browse community ratings for 150+ major news outlets — see which readers trust most." />
         <meta property="og:url"         content="https://www.ratednews.com/outlets" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
@@ -21,7 +21,7 @@ export default function Outlets() {
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="News Outlet Bias Ratings — RatedNews" />
-        <meta name="twitter:description" content="Bias and quality scores for 112 major news outlets — updated hourly." />
+        <meta name="twitter:description" content="Community ratings for 150+ major news outlets — updated continuously." />
         <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
         <script
           type="application/ld+json"
@@ -29,7 +29,7 @@ export default function Outlets() {
             '@context': 'https://schema.org',
             '@type': 'CollectionPage',
             name: 'News Outlet Bias & Quality Ratings — RatedNews',
-            description: 'Browse bias ratings and quality scores for 112 major news outlets including BBC, CNN, Fox News, The Guardian and Wall Street Journal.',
+            description: 'Browse community ratings for 150+ major news outlets including BBC, CNN, Fox News, The Guardian and Wall Street Journal.',
             url: 'https://www.ratednews.com/outlets',
             publisher: {
               '@type': 'Organization',

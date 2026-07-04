@@ -31,14 +31,16 @@ export default function OutletDetail({ outlet }) {
   return (
     <>
       <Head>
-        <title>{outlet.name} Bias Rating & Quality Score — RatedNews</title>
+        <title>{outlet.name} Community Rating & Reviews — RatedNews</title>
         <meta
           name="description"
-          content={`See ${outlet.name}'s AI-powered bias rating, quality score, and headline fairness breakdown on RatedNews. Scores updated hourly from real published articles.`}
+          content={`See ${outlet.name}'s community rating and reader reviews on RatedNews. Readers rate the outlet for accuracy, bias and quality — plus its latest articles.`}
         />
         <link rel="canonical" href={`https://www.ratednews.com/outlet/${canonicalSlug}`} />
-        <meta property="og:title"       content={`${outlet.name} — Bias & Quality Rating`} />
-        <meta property="og:description" content={`${outlet.name} has a quality score of ${outlet.overall_score ?? outlet.accuracy_score ?? '–'}/100 on RatedNews. See the full breakdown.`} />
+        <meta property="og:title"       content={`${outlet.name} — Community Rating & Reviews`} />
+        <meta property="og:description" content={outlet.total_ratings > 0
+          ? `${outlet.name} has a community rating of ${(outlet.community_score / 20).toFixed(1)}/5 from ${outlet.total_ratings} reader ${outlet.total_ratings === 1 ? 'rating' : 'ratings'} on RatedNews.`
+          : `Rate ${outlet.name} on RatedNews and see its latest articles. Community ratings shape the rankings.`} />
         <meta property="og:url"         content={`https://www.ratednews.com/outlet/${canonicalSlug}`} />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content={outletOgUrl(outlet)} />
@@ -46,8 +48,10 @@ export default function OutletDetail({ outlet }) {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"        content="summary_large_image" />
-        <meta name="twitter:title"       content={`${outlet.name} — Bias & Quality Rating | RatedNews`} />
-        <meta name="twitter:description" content={`${outlet.name} scores ${outlet.overall_score ?? outlet.accuracy_score ?? '–'}/100 for quality on RatedNews. AI-powered analysis updated hourly.`} />
+        <meta name="twitter:title"       content={`${outlet.name} — Community Rating & Reviews | RatedNews`} />
+        <meta name="twitter:description" content={outlet.total_ratings > 0
+          ? `${outlet.name} scores ${(outlet.community_score / 20).toFixed(1)}/5 from ${outlet.total_ratings} reader ${outlet.total_ratings === 1 ? 'rating' : 'ratings'} on RatedNews.`
+          : `Rate ${outlet.name} on RatedNews — community ratings shape the rankings.`} />
         <meta name="twitter:image"       content={outletOgUrl(outlet)} />
 
         {/* Organisation structured data — helps Google understand the page
@@ -58,30 +62,19 @@ export default function OutletDetail({ outlet }) {
             '@context': 'https://schema.org',
             '@type':    'NewsMediaOrganization',
             name:        outlet.name,
-            description: outlet.description || `${outlet.name} is a news outlet tracked and rated by RatedNews for quality, political bias, and headline fairness.`,
+            description: outlet.description || `${outlet.name} is a news outlet aggregated and rated by the RatedNews community for accuracy, bias and quality.`,
             url:         `https://www.ratednews.com/outlet/${canonicalSlug}`,
             ...(outlet.country === 'UK' && { areaServed: 'GB' }),
             ...(outlet.country === 'US' && { areaServed: 'US' }),
-            aggregateRating: (outlet.overall_score ?? outlet.accuracy_score) ? {
+            // Only emit aggregateRating when real reader ratings exist — fabricated
+            // review markup (e.g. ratingCount: 1) risks a Google structured-data penalty.
+            aggregateRating: (outlet.total_ratings > 0 && outlet.community_score > 0) ? {
               '@type':      'AggregateRating',
-              ratingValue:  outlet.overall_score ?? outlet.accuracy_score,
-              bestRating:   100,
-              worstRating:  0,
-              ratingCount:  outlet.total_articles || 1,
-              reviewAspect: 'Quality and impartiality',
+              ratingValue:  (outlet.community_score / 20).toFixed(1),
+              bestRating:   5,
+              worstRating:  1,
+              ratingCount:  outlet.total_ratings,
             } : undefined,
-            additionalProperty: [
-              outlet.bias_direction && {
-                '@type': 'PropertyValue',
-                name:    'Political bias',
-                value:   outlet.bias_direction,
-              },
-              (outlet.overall_score ?? outlet.accuracy_score) && {
-                '@type': 'PropertyValue',
-                name:    'Quality score',
-                value:   `${outlet.overall_score ?? outlet.accuracy_score}/100`,
-              },
-            ].filter(Boolean),
           }).replace(/<\//g, '<\\/')}}
         />
       </Head>

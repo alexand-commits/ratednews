@@ -9,10 +9,10 @@ export default function About() {
     <>
       <Head>
         <title>How It Works — RatedNews</title>
-        <meta name="description" content="Learn how RatedNews uses AI to score news articles for quality, bias direction, and headline fairness across 112 outlets — updated every hour." />
+        <meta name="description" content="How RatedNews works: a community-rated news aggregator pulling top stories from 150+ outlets, where readers rate every article and outlet for accuracy, bias and quality." />
         <link rel="canonical" href="https://www.ratednews.com/about" />
-        <meta property="og:title"       content="How RatedNews Works — AI-Powered News Quality Ratings" />
-        <meta property="og:description" content="Learn how RatedNews uses AI to score news articles for quality, bias direction, and headline fairness across 112 outlets — updated every hour." />
+        <meta property="og:title"       content="How RatedNews Works — Community-Rated News" />
+        <meta property="og:description" content="A community-rated news aggregator pulling top stories from 150+ outlets, where readers rate every article and outlet for accuracy, bias and quality." />
         <meta property="og:url"         content="https://www.ratednews.com/about" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
@@ -21,7 +21,7 @@ export default function About() {
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="How RatedNews Works" />
-        <meta name="twitter:description" content="AI-powered quality and bias ratings for 112 news outlets, updated every hour." />
+        <meta name="twitter:description" content="Community-rated news from 150+ outlets — readers rate accuracy, bias and quality." />
         <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
         <script
           type="application/ld+json"
@@ -32,27 +32,27 @@ export default function About() {
               {
                 '@type': 'Question',
                 name: 'What is RatedNews?',
-                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews is an AI-powered news rating platform that scores every article for quality, political bias direction, and headline fairness across 112 UK, US and international news outlets.' },
+                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews is a community-rated news aggregator that pulls top stories from 150+ UK, US and international news outlets and lets readers rate every article and outlet for accuracy, bias and quality.' },
               },
               {
                 '@type': 'Question',
-                name: 'How does RatedNews score articles?',
-                acceptedAnswer: { '@type': 'Answer', text: 'Each article is analysed by Claude AI across three dimensions: quality (0–100), bias direction (left/centre/right), and headline fairness (fair/misleading/clickbait). Outlet scores are the 30-day rolling average of their articles\' quality scores, blended with community ratings at 20% weight once 20+ ratings are recorded.' },
+                name: 'How are outlets scored?',
+                acceptedAnswer: { '@type': 'Answer', text: 'Every score on RatedNews comes from the community. Readers give outlets a 1–5 star rating, and an outlet\'s community score is the average of those ratings expressed out of 100. The number of ratings is always shown so you can judge the sample size. There is no AI scoring.' },
               },
               {
                 '@type': 'Question',
-                name: 'How often are scores updated?',
-                acceptedAnswer: { '@type': 'Answer', text: 'New articles are ingested and scored every 30 minutes. Outlet-level scores are recalculated as an aggregate of recent article scores.' },
+                name: 'How often is the feed updated?',
+                acceptedAnswer: { '@type': 'Answer', text: 'New articles are pulled from outlet RSS feeds continuously, roughly every 15 minutes, so the feed stays current throughout the day.' },
               },
               {
                 '@type': 'Question',
                 name: 'Which news outlets does RatedNews cover?',
-                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews covers 112 major news outlets including BBC, CNN, Fox News, The Guardian, The New York Times, Wall Street Journal, Daily Mail, Reuters, AP, and many more UK, US, and international sources.' },
+                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews aggregates 150+ major news outlets including BBC, CNN, Fox News, The Guardian, The New York Times, Wall Street Journal, Daily Mail, Reuters, AP, and many more UK, US, and international sources.' },
               },
               {
                 '@type': 'Question',
-                name: 'Can I rate articles myself?',
-                acceptedAnswer: { '@type': 'Answer', text: 'Yes. Registered users can rate outlets with 1–5 stars and vote on article quality, bias, and headline fairness. Community ratings are displayed alongside AI scores and are blended into outlet scores once a meaningful sample exists.' },
+                name: 'Can I rate articles and outlets myself?',
+                acceptedAnswer: { '@type': 'Answer', text: 'Yes. Registered users can rate outlets with 1–5 stars and rate individual articles on accuracy, bias and headline fairness. These community ratings are what drive every score on the site.' },
               },
             ],
           }) }}

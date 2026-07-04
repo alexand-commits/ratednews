@@ -29,10 +29,10 @@ export default function Trending({ articles, generatedAt }) {
     <>
       <Head>
         <title>Trending News — Quality &amp; Bias Rated | RatedNews</title>
-        <meta name="description" content="The most discussed news stories right now, ranked by reader activity. Every article rated for quality and political bias." />
+        <meta name="description" content="The most discussed news stories right now, ranked by how many outlets are covering each story. Top news from 150+ community-rated outlets." />
         <link rel="canonical" href="https://www.ratednews.com/trending" />
         <meta property="og:title"       content="Trending News — Quality & Bias Rated | RatedNews" />
-        <meta property="og:description" content="The most discussed news stories right now, ranked by reader activity. Every article rated for quality and political bias." />
+        <meta property="og:description" content="The most discussed news stories right now, ranked by how many outlets are covering each story. Top news from 150+ community-rated outlets." />
         <meta property="og:url"         content="https://www.ratednews.com/trending" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
@@ -41,7 +41,7 @@ export default function Trending({ articles, generatedAt }) {
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="Trending News — Quality & Bias Rated | RatedNews" />
-        <meta name="twitter:description" content="The most discussed news stories right now, ranked by reader activity. Every article rated for quality and political bias." />
+        <meta name="twitter:description" content="The most discussed news stories right now, ranked by how many outlets are covering each story. Top news from 150+ community-rated outlets." />
         <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
         {itemListLd && (
           <script
@@ -163,7 +163,7 @@ export async function getStaticProps() {
         articles,
         generatedAt: new Date().toISOString(),
       },
-      revalidate: 1800, // refresh every 30 minutes — matches ingest cadence
+      revalidate: 900, // refresh every 15 minutes — matches ingest cadence
     }
   } catch (err) {
     console.error('trending getStaticProps error:', err)

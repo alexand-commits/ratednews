@@ -60,19 +60,20 @@ export default function ArticleDetail({ article: initialArticle }) {
   }
 
   const outletName = article.outlets?.name || 'RatedNews'
-  const summary    = article.ai_summary || article.summary || ''
-  const acc        = article.accuracy_score || 0
-  const biasDir    = article.outlets?.bias_direction || article.bias_direction || null
-  const biasLabel  = { left: 'left-leaning', centre: 'centrist', right: 'right-leaning' }[biasDir] || null
+  const summary    = article.summary || ''
+  const com        = article.community_score || 0
+  const totalRatings = article.total_ratings || 0
+  const rated      = totalRatings > 0 && com > 0
+  const comStars   = rated ? (com / 20).toFixed(1) : null
 
-  const scorePart = acc > 0 ? `Quality ${acc}/100${biasLabel ? ` · ${biasLabel}` : ''}. ` : ''
+  const scorePart = rated ? `Community rating ${comStars}/5 (${totalRatings} ${totalRatings === 1 ? 'rating' : 'ratings'}). ` : ''
   const metaDesc  = summary
     ? `${scorePart}${summary}`.slice(0, 155)
-    : `AI quality & bias analysis of "${article.title}" by ${outletName} on RatedNews.`
+    : `"${article.title}" from ${outletName}, on RatedNews. Rate it for accuracy, bias and quality.`
 
   const keywords = [
-    outletName, article.category, biasLabel,
-    'news analysis', 'bias rating', 'quality score', 'fact check',
+    outletName, article.category,
+    'news', 'community ratings', 'news aggregator',
   ].filter(Boolean).join(', ')
 
   const canonicalSlug = articleSlug(article.title, article.id)
@@ -80,7 +81,7 @@ export default function ArticleDetail({ article: initialArticle }) {
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type':    'Review',
-    name:       `${article.title} — Quality & Bias Analysis`,
+    name:       `${article.title} — Community Rating`,
     url:        `https://www.ratednews.com/article/${canonicalSlug}`,
     datePublished: article.published_at,
     author: {
@@ -94,13 +95,13 @@ export default function ArticleDetail({ article: initialArticle }) {
       url:     'https://www.ratednews.com',
       logo: { '@type': 'ImageObject', url: 'https://www.ratednews.com/og-image.png' },
     },
-    ...(acc > 0 && {
+    ...(rated && {
       reviewRating: {
         '@type':             'Rating',
-        ratingValue:         acc,
-        bestRating:          100,
-        worstRating:         0,
-        ratingExplanation:   'AI-assessed quality score based on journalistic accuracy, source reliability, and editorial standards.',
+        ratingValue:         comStars,
+        bestRating:          5,
+        worstRating:         1,
+        ratingExplanation:   'Average rating from RatedNews readers.',
       },
     }),
     ...(summary   && { reviewBody: summary }),
@@ -116,8 +117,8 @@ export default function ArticleDetail({ article: initialArticle }) {
     },
   }
 
-  const pageTitle = acc > 0
-    ? `${article.title} · Quality ${acc}/100 — RatedNews`
+  const pageTitle = rated
+    ? `${article.title} · ${comStars}/5 community — RatedNews`
     : `${article.title} — RatedNews`
 
   // Top-level NewsArticle schema — required for Google News carousel / Top Stories eligibility.
@@ -168,18 +169,22 @@ export default function ArticleDetail({ article: initialArticle }) {
         <meta property="og:description" content={metaDesc} />
         <meta property="og:url"         content={`https://www.ratednews.com/article/${canonicalSlug}`} />
         <meta property="og:type"        content="article" />
-        <meta property="og:image"       content={`https://www.ratednews.com/api/og?title=${encodeURIComponent(article.title)}${acc > 0 ? `&score=${acc}` : ''}${biasDir ? `&bias=${biasDir}` : ''}&outlet=${encodeURIComponent(outletName)}`} />
+        <meta property="og:image"       content={`https://www.ratednews.com/api/og?title=${encodeURIComponent(article.title)}${rated ? `&score=${com}` : ''}&outlet=${encodeURIComponent(outletName)}`} />
         <meta property="og:image:type"  content="image/png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content={pageTitle} />
         <meta name="twitter:description" content={metaDesc} />
-        <meta name="twitter:image"      content={`https://www.ratednews.com/api/og?title=${encodeURIComponent(article.title)}${acc > 0 ? `&score=${acc}` : ''}${biasDir ? `&bias=${biasDir}` : ''}&outlet=${encodeURIComponent(outletName)}`} />
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/<\//g, '<\\/') }}
-        />
+        <meta name="twitter:image"      content={`https://www.ratednews.com/api/og?title=${encodeURIComponent(article.title)}${rated ? `&score=${com}` : ''}&outlet=${encodeURIComponent(outletName)}`} />
+        {/* Only emit the Review schema when real reader ratings exist — a Review
+            without a reviewRating triggers Search Console warnings. */}
+        {rated && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/<\//g, '<\\/') }}
+          />
+        )}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(newsArticleLd).replace(/<\//g, '<\\/') }}
