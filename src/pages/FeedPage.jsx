@@ -77,7 +77,7 @@ export default function FeedPage({
   outlets, loading, navigate,
   initialCategory = 'all', initialRegion = 'all',
   initialTopic = null, initialTab = 'all',
-  totalArticleCount, user, followedOutletIds = new Set(),
+  totalArticleCount, user, followedOutletIds = new Set(), toggleFollow,
   onLoginClick, loadMoreArticles, hasMoreArticles, loadingMore,
   savedArticleIds = new Set(), toggleSave, onRefresh,
   fetchError = false,
@@ -1056,11 +1056,32 @@ export default function FeedPage({
                   Loading your feed…
                 </div>
               ) : displayList.length === 0 && feedTab === 'following' && followedOutletIds.size === 0 ? (
-                <div className="empty-state">
-                  <h3>You're not following anyone yet</h3>
-                  <p>Follow outlets you trust to build your personal feed.</p>
-                  <button className="btn-outline" style={{ marginTop: 12, fontSize: 13 }} onClick={() => navigate('outlets')}>
-                    Browse outlets →
+                <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px' }}>
+                  <h3 style={{ fontSize: 16, marginBottom: 4 }}>Build your feed</h3>
+                  <p style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 16 }}>Follow a few outlets and this tab becomes your personal front page. Tap to follow:</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 8 }}>
+                    {(outlets || []).filter(o => !o.parent_outlet_id).slice(0, 12).map(o => {
+                      const following = followedOutletIds.has(o.id)
+                      return (
+                        <button
+                          key={o.id}
+                          onClick={() => { if (!user) { onLoginClick(); return } toggleFollow?.(o.id) }}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8, textAlign: 'left',
+                            padding: '9px 11px', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                            background: following ? 'var(--green-light)' : 'var(--bg)',
+                            border: `0.5px solid ${following ? 'var(--green)' : 'var(--border)'}`,
+                          }}
+                        >
+                          <OutletLogo name={o.name} size={24} borderRadius={6} />
+                          <span style={{ fontSize: 12, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: following ? 'var(--green-dark)' : 'var(--coral)', flexShrink: 0 }}>{following ? '✓' : '+'}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                  <button className="btn-outline" style={{ marginTop: 14, fontSize: 13 }} onClick={() => navigate('outlets')}>
+                    See all outlets →
                   </button>
                 </div>
               ) : displayList.length === 0 && feedTab === 'following' && followedOutletIds.size > 0 ? (

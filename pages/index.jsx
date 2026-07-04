@@ -24,7 +24,7 @@ const ARTICLE_SELECT = [
 export default function Feed({ initialArticles, initialCount }) {
   const router  = useRouter()
   const { navigate, allOutlets, user, followedOutletIds, savedArticleIds,
-          toggleSave, showToast, openAuthModal } = useAppContext()
+          toggleSave, showToast, openAuthModal, toggleFollow } = useAppContext()
 
   const [articles,         setArticles]         = useState(initialArticles)
   const [totalCount,       setTotalCount]       = useState(initialCount)
@@ -173,6 +173,7 @@ export default function Feed({ initialArticles, initialCount }) {
         totalArticleCount={totalCount}
         user={user}
         followedOutletIds={followedOutletIds}
+        toggleFollow={toggleFollow}
         onLoginClick={openAuthModal}
         loadMoreArticles={loadMore}
         hasMoreArticles={hasMore}
