@@ -105,7 +105,6 @@ export default function ExplorePage({ navigate, outlets = [] }) {
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     db.from('articles')
       .select('title, outlet_id')
-      .not('accuracy_score', 'is', null)
       .gte('published_at', cutoff)
       .order('published_at', { ascending: false })
       .limit(500)
@@ -128,7 +127,6 @@ export default function ExplorePage({ navigate, outlets = [] }) {
       const { data } = await db
         .from('articles')
         .select('id, title, published_at, accuracy_score, bias_direction, category, ai_summary, url, outlets(name, logo_url, bias_direction)')
-        .not('accuracy_score', 'is', null)
         .or(`title.ilike.%${escaped}%,ai_summary.ilike.%${escaped}%`)
         .order('published_at', { ascending: false })
         .limit(30)

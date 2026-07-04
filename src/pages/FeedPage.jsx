@@ -64,14 +64,6 @@ const REGIONS = [
   { value: 'Americas',   label: 'Americas'     },
 ]
 
-const MIN_SCORES = [
-  { value: 0,  label: 'All scores' },
-  { value: 50, label: '50+'        },
-  { value: 60, label: '60+'        },
-  { value: 70, label: '70+'        },
-  { value: 80, label: '80+'        },
-]
-
 function getArticleRegion(article) {
   return article.article_region || article.outlets?.country || 'International'
 }
@@ -91,7 +83,6 @@ export default function FeedPage({
   const topicsSource = trendingTopicsSource || trendingArticles
   const [category, setCategory] = useState(initialCategory)
   const [region, setRegion]     = useState(initialRegion)
-  const [minScore, setMinScore] = useState(0)
   const [search, setSearch]     = useState('')
   const [sort, setSort]         = useState('latest')
   const [feedTab, setFeedTab]         = useState(initialTab) // 'all' | 'following'
@@ -133,7 +124,6 @@ export default function FeedPage({
     const escaped = activeTopic.replace(/[%_\\]/g, '\\$&').replace(/[,()\.:]/g, ' ').trim()
     db.from('articles')
       .select('id, title, published_at, outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, category, article_type, geographic_scope, article_region, ai_summary, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, country, bias_direction, logo_url, accuracy_score, overall_score), comments(count)')
-      .not('accuracy_score', 'is', null)
       .ilike('title', `%${escaped}%`)
       .gte('published_at', cutoff)
       .order('published_at', { ascending: false })
@@ -208,7 +198,6 @@ export default function FeedPage({
       const { count } = await db
         .from('articles')
         .select('*', { count: 'exact', head: true })
-        .not('accuracy_score', 'is', null)
         .gt('published_at', latestPublishedAtRef.current)
       if (count > 0) setNewArticleCount(count)
     }
@@ -247,7 +236,6 @@ export default function FeedPage({
       const { data } = await db
         .from('articles')
         .select('id, title, published_at, outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, category, article_type, geographic_scope, article_region, ai_summary, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, country, bias_direction, logo_url, accuracy_score, overall_score), comments(count)')
-        .not('accuracy_score', 'is', null)
         .or(`title.ilike.%${escaped}%,ai_summary.ilike.%${escaped}%,summary.ilike.%${escaped}%`)
         .order('published_at', { ascending: false })
         .limit(50)
@@ -286,7 +274,6 @@ export default function FeedPage({
     const ids = [...followedOutletIds]
     db.from('articles')
       .select('id, title, published_at, outlet_id, accuracy_score, bias_score, bias_direction, headline_vote, category, article_type, geographic_scope, article_region, ai_summary, summary, url, image_url, total_ratings, community_score, cluster_peers, outlets(name, logo_url, country, bias_direction, accuracy_score), comments(count)')
-      .not('accuracy_score', 'is', null)
       .in('outlet_id', ids)
       .order('published_at', { ascending: false })
       .limit(100)
@@ -325,7 +312,6 @@ export default function FeedPage({
       // When a specific region is selected the reader has opted in, so show
       // everything from that region including local stories.
       .filter(a => region !== 'all' || a.geographic_scope !== 'local')
-      .filter(a => minScore === 0 || (a.accuracy_score || 0) >= minScore)
       .slice()
       .sort((a, b) => {
         if (sort === 'trending') {
@@ -333,17 +319,16 @@ export default function FeedPage({
             // cluster_peers is a JSONB array — use .length for the outlet coverage count
             const coverage  = a.cluster_peers?.length || 0
             const comments  = a.comments?.[0]?.count || 0
-            const quality   = (a.accuracy_score || 50) / 100
             // Gravity decay: score / (age + 2)^1.8
             // Stories need cross-outlet coverage or engagement to hold their rank;
             // age pushes them down even if covered — keeps the list feeling fresh.
             const hoursAgo  = Math.max(0.1, (Date.now() - new Date(a.published_at)) / 3600000)
-            const numerator = coverage * 12 + comments * 5 + quality * 3 + 1
+            const numerator = coverage * 12 + comments * 5 + 1
             return numerator / Math.pow(hoursAgo + 2, 1.8)
           }
           return trendScore(b) - trendScore(a)
         }
-        if (sort === 'top-rated') return (b.accuracy_score || 0) - (a.accuracy_score || 0)
+        if (sort === 'top-rated') return (b.community_score || 0) - (a.community_score || 0)
         // Push future-dated articles to the bottom — treat them as epoch (oldest)
         const now = Date.now()
         const ta = new Date(a.published_at).getTime()
@@ -692,9 +677,7 @@ export default function FeedPage({
 
   // Which list to display — DB results when search active, interleaved otherwise
   const isSearchActive = dbResults !== null
-  const baseList = isSearchActive
-    ? (minScore > 0 ? (dbResults || []).filter(a => (a.accuracy_score || 0) >= minScore) : dbResults)
-    : interleaved
+  const baseList = isSearchActive ? dbResults : interleaved
   const displayList = activeTopic ? topicArticles : baseList
 
   // cluster_peers is now pre-computed server-side by scripts/cluster.mjs and
@@ -978,17 +961,6 @@ export default function FeedPage({
               onClick={() => setRegion(r.value)}
             >{r.label}</button>
           ))}
-          {!isSearchActive && <>
-            <span style={{ width: 1, background: 'var(--border)', alignSelf: 'stretch', flexShrink: 0, margin: '4px 2px' }} />
-            <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Score</span>
-            {MIN_SCORES.map(s => (
-              <button
-                key={s.value}
-                className={`pill${minScore === s.value ? ' active' : ''}`}
-                onClick={() => setMinScore(s.value)}
-              >{s.label}</button>
-            ))}
-          </>}
         </div>
 
         <div className="grid">
