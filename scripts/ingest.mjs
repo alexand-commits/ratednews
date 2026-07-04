@@ -13,6 +13,7 @@ import { createClient } from '@supabase/supabase-js'
 import Parser from 'rss-parser'
 import { Readability } from '@mozilla/readability'
 import { JSDOM, VirtualConsole } from 'jsdom'
+import { categorise } from './categorise.mjs'
 import 'dotenv/config'
 
 const SUPABASE_URL = process.env.VITE_SUPABASE_URL
@@ -887,6 +888,7 @@ async function ingestOutlet(outlet) {
       title,
       url,
       summary,
+      category:     categorise(title, summary),
       published_at: (() => { const p = item.pubDate ? new Date(item.pubDate) : null; return (p && !isNaN(p) && p <= new Date()) ? p.toISOString() : new Date().toISOString() })(),
       image_url:    extractImageUrl(item),
     })

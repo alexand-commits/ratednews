@@ -7,39 +7,43 @@ import { timeAgo } from '../utils/helpers'
 import { db } from '../lib/supabase'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
+// Category taxonomy — must match scripts/categorise.mjs (the server-side source
+// of truth that sets article.category at ingest).
 const CATEGORIES = [
   { value: 'all',            label: 'All'           },
   { value: 'Politics',       label: 'Politics'      },
+  { value: 'World',          label: 'World'         },
   { value: 'Business',       label: 'Business'      },
-  { value: 'Sport',          label: 'Sport'         },
   { value: 'Tech',           label: 'Tech'          },
   { value: 'Science',        label: 'Science'       },
   { value: 'Health',         label: 'Health'        },
   { value: 'Environment',    label: 'Environment'   },
+  { value: 'Sport',          label: 'Sport'         },
   { value: 'Entertainment',  label: 'Entertainment' },
+  { value: 'Culture',        label: 'Culture'       },
   { value: 'Crime',          label: 'Crime'         },
+  { value: 'Conflict',       label: 'Conflict'      },
   { value: 'Travel',         label: 'Travel'        },
   { value: 'Education',      label: 'Education'     },
-  { value: 'Conflict',       label: 'Conflict'      },
-  { value: 'World',          label: 'World'         },
 ]
 
-// Keyword fallback for articles not yet AI-categorised
+// Client-side fallback for the rare article with no server category — kept in
+// sync (label-for-label) with scripts/categorise.mjs. Order = first match wins.
 function guessCategory(article) {
   const text = ((article.title || '') + ' ' + (article.summary || '')).toLowerCase()
-  if (/\b(sport|football|soccer|cricket|tennis|rugby|basketball|golf|olympic|formula|f1|match|league|player|team|coach|tournament|cup|championship|wicket|transfer|premier)\b/.test(text)) return 'Sport'
-  if (/\b(election|government|parliament|minister|president|vote|policy|senate|congress|\bmp\b|political|party|labour|tory|conservative|democrat|republican|trump|chancellor)\b/.test(text)) return 'Politics'
-  if (/\b(economy|market|stock|trade|company|bank|investment|gdp|inflation|financial|shares|profit|revenue|startup|business|earnings|interest rate|budget|recession)\b/.test(text)) return 'Business'
-  if (/\b(\bai\b|artificial intelligence|technology|digital|cyber|\bapp\b|software|silicon|data breach|robot|computer|smartphone|social media|chatgpt|openai)\b/.test(text)) return 'Tech'
-  if (/\b(cancer|disease|hospital|doctor|patient|surgery|treatment|vaccine|nhs|mental health|drug|medicine|clinical)\b/.test(text)) return 'Health'
-  if (/\b(climate|environment|emission|carbon|pollution|wildlife|species|ocean|fossil fuel|renewable|net zero)\b/.test(text)) return 'Environment'
-  if (/\b(research|study|space|nasa|science|planet|asteroid|discovery|experiment|physics|biology)\b/.test(text)) return 'Science'
-  if (/\b(film|movie|music|celebrity|award|oscar|bafta|tv show|streaming|festival|album|actor|actress)\b/.test(text)) return 'Entertainment'
-  if (/\b(war|conflict|military|troops|missile|bomb|battle|invasion|ceasefire|soldier|drone|strike|frontline|combat|siege|nato|warfare|armed forces)\b/.test(text)) return 'War & Conflict'
-  if (/\b(crime|murder|arrest|police|court|sentence|prison|fraud|theft|shooting|trial)\b/.test(text)) return 'Crime'
-  if (/\b(travel|tourism|flight|hotel|visa|destination|holiday|airport|airline)\b/.test(text)) return 'Travel'
-  if (/\b(school|university|student|teacher|education|exam|degree|tuition|college|campus)\b/.test(text)) return 'Education'
-  if (/\b(art|culture|museum|gallery|theatre|theater|literature|book|exhibition|heritage|architecture|fashion|design|cuisine|tradition)\b/.test(text)) return 'Culture'
+  if (/\b(football|soccer|cricket|tennis|rugby|basketball|golf|olympic|formula ?1|\bf1\b|premier league|champions league|world cup|nba|nfl|athletics|boxing|\bufc\b|wicket|wimbledon)\b/.test(text)) return 'Sport'
+  if (/\b(war|military|troops|missile|air ?strike|bombing|invasion|ceasefire|soldier|drone strike|front ?line|combat|siege|nato|warfare|armed forces|hostage|militant)\b/.test(text)) return 'Conflict'
+  if (/\b(murder|homicide|arrest|police|court|sentenced|prison|jailed|fraud|theft|robbery|shooting|stabbing|trial|guilty|verdict|assault)\b/.test(text)) return 'Crime'
+  if (/\b(cancer|disease|hospital|doctor|patient|surgery|treatment|vaccine|nhs|mental health|medicine|clinical|virus|outbreak|obesity|diabetes)\b/.test(text)) return 'Health'
+  if (/\b(climate|emission|carbon|pollution|wildlife|biodiversity|ocean|fossil fuel|renewable|net zero|drought|flooding|wildfire|heat ?wave)\b/.test(text)) return 'Environment'
+  if (/\b(research|study|space|nasa|scientist|planet|asteroid|discovery|experiment|physics|biology|telescope|quantum|genome)\b/.test(text)) return 'Science'
+  if (/\b(artificial intelligence|\bai\b|technolog|cyber|software|silicon valley|data breach|robot|smartphone|social media|chatgpt|openai|semiconductor|crypto|bitcoin|startup|\bapp\b)\b/.test(text)) return 'Tech'
+  if (/\b(econom|market|stock|shares|trade|company|bank|investment|gdp|inflation|financ|profit|revenue|earnings|interest rate|budget|recession|\bceo\b|merger|tariff)\b/.test(text)) return 'Business'
+  if (/\b(film|movie|music|celebrity|award|oscar|bafta|grammy|tv show|streaming|festival|album|actor|actress|box office|netflix|hollywood|singer)\b/.test(text)) return 'Entertainment'
+  if (/\b(\bart\b|culture|museum|gallery|theatre|theater|literature|book|exhibition|heritage|architecture|fashion|design|cuisine|tradition)\b/.test(text)) return 'Culture'
+  if (/\b(travel|tourism|flight|hotel|visa|destination|holiday|airport|airline|cruise|passport)\b/.test(text)) return 'Travel'
+  if (/\b(school|university|student|teacher|education|exam|degree|tuition|college|campus|ofsted)\b/.test(text)) return 'Education'
+  if (/\b(election|government|parliament|minister|president|senate|congress|\bmp\b|policy|party|labour|tory|conservative|democrat|republican|trump|chancellor|prime minister|vote|referendum)\b/.test(text)) return 'Politics'
   return 'World'
 }
 
