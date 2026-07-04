@@ -68,14 +68,15 @@ async function main() {
 
   const cutoff = new Date(Date.now() - CLUSTER_WINDOW_HOURS * 60 * 60 * 1000).toISOString()
 
-  // Fetch all scored articles in the window with outlet info
+  // Fetch all articles in the window with outlet info.
+  // (No accuracy_score filter — AI scoring was removed; clustering is title-word
+  //  overlap only, so it works on every ingested article.)
   const { data: articles, error } = await supabase
     .from('articles')
-    .select('id, title, outlet_id, outlets(name, bias_direction, accuracy_score)')
+    .select('id, title, outlet_id, outlets(name, logo_url)')
     .gte('published_at', cutoff)
-    .not('accuracy_score', 'is', null)
     .order('published_at', { ascending: false })
-    .limit(3000)
+    .limit(5000)
 
   if (error) {
     console.error('Failed to fetch articles:', error.message)
@@ -137,9 +138,8 @@ async function main() {
           id:        m.id,
           outlet_id: m.outlet_id,
           outlets: {
-            name:            m.outlets?.name            ?? null,
-            bias_direction:  m.outlets?.bias_direction  ?? null,
-            accuracy_score:  m.outlets?.accuracy_score  ?? null,
+            name:     m.outlets?.name     ?? null,
+            logo_url: m.outlets?.logo_url ?? null,
           },
         }))
 
