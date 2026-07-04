@@ -2,8 +2,14 @@ name: RSS Ingestion
 
 on:
   schedule:
-    - cron: '*/30 * * * *'  # Every 30 mins — GitHub's native scheduler, no external service needed
+    - cron: '*/15 * * * *'  # Every 15 mins — free on public repos (unlimited Actions minutes)
   workflow_dispatch:         # Keep for manual runs / testing
+
+# Never let two ingest runs overlap — a slow run won't collide with the next tick.
+# Lets us safely tighten the cadence without duplicate work.
+concurrency:
+  group: rss-ingestion
+  cancel-in-progress: false
 
 jobs:
   ingest:
