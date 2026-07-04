@@ -6,7 +6,7 @@
 
 const CATEGORY_SLUGS = [
   'politics','business','sport','tech','science','health',
-  'environment','entertainment','crime','travel','education',
+  'environment','entertainment','culture','crime','travel','education',
   'conflict','world',
 ]
 
@@ -59,29 +59,48 @@ export async function getServerSideProps({ res }) {
   const since90d = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
 
   const [{ data: outlets }, { data: articles }] = await Promise.all([
-    supabase.from('outlets').select('name, updated_at'),
+    // NB: outlets has no updated_at column — selecting it errored the whole
+    // query and silently dropped every outlet page from the sitemap.
+    supabase.from('outlets').select('name').is('parent_outlet_id', null),
     supabase.from('articles')
-      .select('id, title, published_at')
+      .select('id, title, published_at, cluster_id')
       .gte('published_at', since90d)
       .order('published_at', { ascending: false })
-      .limit(1000),
+      .limit(1500),
   ])
 
   const outletPages = (outlets || []).map(o => ({
     url:        `https://www.ratednews.com/outlet/${toSlug(o.name)}`,
-    priority:   '0.8',
-    changefreq: 'hourly',
-    lastmod:    o.updated_at?.slice(0, 10),
+    priority:   '0.9',
+    changefreq: 'daily',
   }))
 
+  // Story pages — the unique, evergreen aggregation content (every outlet
+  // covering one story). One URL per cluster, keyed on the most-recent
+  // member's slug. These are the highest-value pages to get indexed.
+  const seenClusters = new Set()
+  const storyPages = []
+  for (const a of (articles || [])) {
+    if (!a.cluster_id || seenClusters.has(a.cluster_id)) continue
+    seenClusters.add(a.cluster_id)
+    storyPages.push({
+      url:        `https://www.ratednews.com/story/${toArticleSlug(a.title, a.id)}`,
+      priority:   '0.8',
+      changefreq: 'daily',
+      lastmod:    a.published_at?.slice(0, 10),
+    })
+  }
+
+  // Article pages — kept for Google News freshness (they carry NewsArticle
+  // schema), but they're thin stubs so they sit below stories/outlets.
   const articlePages = (articles || []).map(a => ({
     url:        `https://www.ratednews.com/article/${toArticleSlug(a.title, a.id)}`,
-    priority:   '0.6',
+    priority:   '0.5',
     changefreq: 'weekly',
     lastmod:    a.published_at?.slice(0, 10),
   }))
 
-  const sitemap = buildSitemap([...STATIC_PAGES, ...outletPages, ...articlePages])
+  const sitemap = buildSitemap([...STATIC_PAGES, ...outletPages, ...storyPages, ...articlePages])
 
   res.setHeader('Content-Type', 'application/xml')
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=7200')

@@ -59,6 +59,11 @@ export const CATEGORY_META = [
     description: 'Entertainment news rated by the community for accuracy and fairness — film, TV, music, celebrities and awards, compared across outlets so you can spot editorial spin.',
   },
   {
+    value: 'Culture', slug: 'culture', emoji: '🎭',
+    title: 'Culture & Arts News Rated for Quality',
+    description: 'Arts and culture news rated by the community — books, film, art, theatre, fashion and heritage, compared across 150+ community-rated outlets.',
+  },
+  {
     value: 'Crime', slug: 'crime', emoji: '🔍',
     title: 'Crime & Justice News Rated for Quality',
     description: 'Crime and justice news rated by the community across UK and US outlets — court cases, policing and legal proceedings, compared side by side.',
