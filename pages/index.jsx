@@ -53,11 +53,13 @@ export default function Feed({ initialArticles, initialCount }) {
     }, 12000)
 
     Promise.all([
-      // Main paginated feed — newest articles across all outlets
+      // Main feed — fetch the same recent pool the SSR ranks so the client's
+      // 'Top stories' sort reproduces the server order exactly (no reorder on
+      // hydration). FeedPage applies the trend sort + cluster dedup.
       db.from('articles')
         .select(ARTICLE_SELECT)
         .order('published_at', { ascending: false })
-        .range(0, BATCH - 1),
+        .range(0, BATCH + 40 - 1),
       db.from('articles').select('*', { count: 'exact', head: true }),
       // Full-data 24h articles for card rendering when a trending topic is active.
       // 150 rows with all display columns — enough to fill any topic's article list.
@@ -79,8 +81,8 @@ export default function Feed({ initialArticles, initialCount }) {
       setFetchError(false)
       setArticles(data || [])
       setTotalCount(count || 0)
-      setOffset(BATCH)
-      setHasMore((data || []).length === BATCH)
+      setOffset(BATCH + 40)
+      setHasMore((data || []).length === BATCH + 40)
       setTrendingArticles(recent || [])
       setTrendingTopicsSource(topicsSrc || [])
       if (!hasCached) setLoading(false)
@@ -113,13 +115,13 @@ export default function Feed({ initialArticles, initialCount }) {
       db.from('articles')
         .select(ARTICLE_SELECT)
         .order('published_at', { ascending: false })
-        .range(0, BATCH - 1),
+        .range(0, BATCH + 40 - 1),
       db.from('articles').select('*', { count: 'exact', head: true }),
     ])
     setArticles(data || [])
     setTotalCount(count || 0)
-    setOffset(BATCH)
-    setHasMore((data || []).length === BATCH)
+    setOffset(BATCH + 40)
+    setHasMore((data || []).length === BATCH + 40)
   }
 
   return (
@@ -195,9 +197,11 @@ export async function getStaticProps() {
       process.env.VITE_SUPABASE_ANON_KEY,
     )
     const SSR_SELECT = ARTICLE_SELECT // same minimal columns at build time
-    // Over-fetch, then collapse clustered stories to one row each so the
-    // server-rendered feed (first paint + SEO crawlers) shows each story once,
-    // matching the client. Done in Node — no schema change, no runtime risk.
+    // Over-fetch a recent pool, then rank it by the SAME "Top stories" trend
+    // score the client uses (cross-outlet coverage + comments + recency decay),
+    // collapse clusters to one row each, and take the top BATCH. This makes the
+    // server-rendered first paint already match the client's default sort — no
+    // flash of latest-order before hydration. Done in Node; no schema change.
     const [{ data: raw }, { count }] = await Promise.all([
       supabase.from('articles')
         .select(SSR_SELECT)
@@ -205,13 +209,25 @@ export async function getStaticProps() {
         .range(0, BATCH + 40 - 1),
       supabase.from('articles').select('*', { count: 'exact', head: true }),
     ])
+    // Keep this formula in sync with the 'trending' sort in src/pages/FeedPage.jsx
+    const now = Date.now()
+    const trendScore = a => {
+      const coverage = a.cluster_peers?.length || 0
+      const comments = a.comments?.[0]?.count || 0
+      const hoursAgo = Math.max(0.1, (now - new Date(a.published_at)) / 3600000)
+      return (coverage * 12 + comments * 5 + 1) / Math.pow(hoursAgo + 2, 1.8)
+    }
     const seen = new Set()
-    const articles = (raw || []).filter(a => {
-      if (!a.cluster_id) return true
-      if (seen.has(a.cluster_id)) return false
-      seen.add(a.cluster_id)
-      return true
-    }).slice(0, BATCH)
+    const articles = (raw || [])
+      .slice()
+      .sort((x, y) => trendScore(y) - trendScore(x))
+      .filter(a => {
+        if (!a.cluster_id) return true
+        if (seen.has(a.cluster_id)) return false
+        seen.add(a.cluster_id)
+        return true
+      })
+      .slice(0, BATCH)
     return {
       props: { initialArticles: articles, initialCount: count || 0 },
       revalidate: 900, // regenerate every 15 minutes — matches ingest cadence
