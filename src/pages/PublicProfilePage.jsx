@@ -13,62 +13,6 @@ function getTrustLevel(total) {
   return           { label: 'New Member',              emoji: '👋', color: '#9E9B95' }
 }
 
-// ── Bias fingerprint ──────────────────────────────────────────────────────────
-function BiasFingerprint({ ratings }) {
-  const counts = { left: 0, centre: 0, right: 0 }
-  ratings.forEach(r => {
-    const dir = r.articles?.bias_direction
-    if (dir && counts[dir] !== undefined) counts[dir]++
-  })
-  const total = counts.left + counts.centre + counts.right
-  if (total === 0) return null
-
-  const leftPct   = Math.round((counts.left   / total) * 100)
-  const centrePct = Math.round((counts.centre / total) * 100)
-  const rightPct  = Math.round((counts.right  / total) * 100)
-
-  let leanLabel = 'Balanced reader'
-  let leanColor = 'var(--text2)'
-  if (leftPct > 50)   { leanLabel = 'Reads mostly left-leaning sources';   leanColor = '#3b82f6' }
-  else if (rightPct > 50) { leanLabel = 'Reads mostly right-leaning sources'; leanColor = '#ef4444' }
-  else if (centrePct > 50) { leanLabel = 'Favours centrist sources';           leanColor = '#639922' }
-  else if (leftPct > rightPct + 15)  { leanLabel = 'Leans left in source choices';   leanColor = '#3b82f6' }
-  else if (rightPct > leftPct + 15)  { leanLabel = 'Leans right in source choices';  leanColor = '#ef4444' }
-
-  return (
-    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 20px', marginBottom: 16 }}>
-      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 12 }}>
-        Bias fingerprint
-      </div>
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ display: 'flex', height: 10, borderRadius: 5, overflow: 'hidden', marginBottom: 6 }}>
-          {leftPct > 0   && <div style={{ width: `${leftPct}%`,   background: '#3b82f6', transition: 'width 0.5s ease' }} />}
-          {centrePct > 0 && <div style={{ width: `${centrePct}%`, background: '#639922', transition: 'width 0.5s ease' }} />}
-          {rightPct > 0  && <div style={{ width: `${rightPct}%`,  background: '#ef4444', transition: 'width 0.5s ease' }} />}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 10, color: 'var(--text3)' }}>
-          <span>← Left</span><span>Centre</span><span>Right →</span>
-        </div>
-      </div>
-      <div style={{ display: 'flex', gap: 16, marginBottom: 10 }}>
-        {[
-          { label: 'Left',   pct: leftPct,   color: '#3b82f6', count: counts.left   },
-          { label: 'Centre', pct: centrePct, color: '#639922', count: counts.centre },
-          { label: 'Right',  pct: rightPct,  color: '#ef4444', count: counts.right  },
-        ].map(({ label, pct, color, count }) => (
-          <div key={label} style={{ textAlign: 'center', flex: 1 }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color }}>{pct}%</div>
-            <div style={{ fontSize: 10, color: 'var(--text3)' }}>{label} ({count})</div>
-          </div>
-        ))}
-      </div>
-      <div style={{ fontSize: 12, color: leanColor, fontWeight: 500, paddingTop: 8, borderTop: '0.5px solid var(--border)' }}>
-        {leanLabel}
-      </div>
-    </div>
-  )
-}
-
 // ── Topic breakdown ───────────────────────────────────────────────────────────
 const CATEGORY_EMOJIS = {
   Politics: '🏛', Business: '📈', Sport: '⚽', Tech: '💻',
@@ -270,7 +214,6 @@ export default function PublicProfilePage({ userId, isPublic, navigate, goBack, 
         </div>
 
         {/* Insights */}
-        <BiasFingerprint ratings={articleRatings} />
         <TopicBreakdown ratings={articleRatings} />
         <MediaDiet ratings={articleRatings} />
 
