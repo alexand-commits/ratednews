@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { db } from '../lib/supabase'
+import { RatingDotsInput } from './RatingDots'
 
 const ACCURACY_OPTIONS = [
   { value: 'accurate',        label: '✓ Accurate',       color: 'var(--green)' },
@@ -104,22 +105,11 @@ export default function OutletRatingModal({ outlet, onClose, onRated, showToast,
           </div>
         </div>
 
-        {/* Overall stars */}
+        {/* Overall rating */}
         <div className="rating-section">
           <div className="rating-section-label">Overall trust rating <span style={{ color: 'var(--red)', marginLeft: 2 }}>*</span></div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-            {[1, 2, 3, 4, 5].map(s => (
-              <span
-                key={s}
-                className="rating-star"
-                style={{ color: s <= (hoverStar || overallStars) ? 'var(--amber)' : 'var(--border2)' }}
-                onClick={() => setOverallStars(s)}
-                onMouseEnter={() => setHoverStar(s)}
-                onMouseLeave={() => setHoverStar(0)}
-              >
-                ★
-              </span>
-            ))}
+            <RatingDotsInput value={overallStars} hover={hoverStar} onChange={setOverallStars} onHover={setHoverStar} />
             {overallStars > 0 && (
               <span style={{ fontSize: 12, color: 'var(--text2)', marginLeft: 4 }}>
                 {['', 'Poor', 'Fair', 'Good', 'Great', 'Excellent'][overallStars]}

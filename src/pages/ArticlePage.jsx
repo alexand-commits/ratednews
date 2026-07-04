@@ -4,6 +4,7 @@ import { db } from '../lib/supabase'
 import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import RatingModal from '../components/RatingModal'
+import RatingDots from '../components/RatingDots'
 
 // Extract meaningful initials from a username or email — avoids numbers/symbols
 function getInitials(str) {
@@ -497,7 +498,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
           <div className="article-headline-full">{article.title || ''}</div>
 
           <div className="article-score-strip">
-            {com > 0 && <div className="asc"><strong style={{ color: 'var(--amber)' }}>{(com / 20).toFixed(1)}★</strong><span>Community</span></div>}
+            {com > 0 && <div className="asc"><strong style={{ color: 'var(--green-dark)' }}>{(com / 20).toFixed(1)}</strong><span>Community</span></div>}
             <div className="asc"><strong>{article.total_ratings || 0}</strong><span>Ratings</span></div>
             <div className="asc"><strong style={{ color: 'var(--text2)' }}>{comments.length}</strong><span>Comments</span></div>
           </div>
@@ -506,7 +507,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
           {myRating && (
             <div style={{ background: 'var(--green-light)', border: '0.5px solid var(--green)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--green-dark)' }}>✓ Your rating</span>
-              <span style={{ fontSize: 18, color: 'var(--amber)' }}>{'★'.repeat(myRating.overallStars)}{'☆'.repeat(5 - myRating.overallStars)}</span>
+              <RatingDots value={myRating.overallStars} size={9} showValue={false} />
               {myRating.accuracyVote && <span style={{ fontSize: 11, background: 'var(--surface)', padding: '2px 8px', borderRadius: 20, color: 'var(--text2)' }}>{myRating.accuracyVote.replace('_', ' ')}</span>}
               {myRating.biasVote && <span style={{ fontSize: 11, background: 'var(--surface)', padding: '2px 8px', borderRadius: 20, color: 'var(--text2)' }}>{myRating.biasVote.replace('_', ' ')}</span>}
               {myRating.headlineVote && <span style={{ fontSize: 11, background: 'var(--surface)', padding: '2px 8px', borderRadius: 20, color: 'var(--text2)' }}>{myRating.headlineVote}</span>}
@@ -589,7 +590,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 setShowRatingModal(true)
               }}
             >
-              {alreadyRated ? '★ Already rated' : '★ Rate this article'}
+              {alreadyRated ? '● Already rated' : '● Rate this article'}
             </button>
             <button className="btn-outline" onClick={async () => {
               const shareUrl = `https://www.ratednews.com/article/${articleSlug(article.title, article.id)}`

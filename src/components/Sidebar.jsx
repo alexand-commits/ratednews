@@ -1,5 +1,6 @@
 import React from 'react'
 import OutletLogo from './OutletLogo'
+import RatingDots from './RatingDots'
 
 export default function Sidebar({ outlets, navigate }) {
   const top5 = outlets
@@ -19,17 +20,14 @@ export default function Sidebar({ outlets, navigate }) {
         {top5.length === 0 ? (
           <div style={{ fontSize: 12, color: 'var(--text3)' }}>No community ratings yet — be the first to rate an outlet.</div>
         ) : (
-          top5.map((o, i) => {
-            const stars = (o.community_score / 20).toFixed(1)
-            return (
-              <div key={o.id} className="outlet-rank-row" onClick={() => navigate('outlet', { outletId: o.id })}>
-                <span className="rank-num">{i + 1}</span>
-                <OutletLogo name={o.name} size={30} borderRadius={7} />
-                <span className="outlet-rank-name">{o.name}</span>
-                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--amber)', flexShrink: 0 }}>{stars}★</span>
-              </div>
-            )
-          })
+          top5.map((o, i) => (
+            <div key={o.id} className="outlet-rank-row" onClick={() => navigate('outlet', { outletId: o.id })}>
+              <span className="rank-num">{i + 1}</span>
+              <OutletLogo name={o.name} size={30} borderRadius={7} />
+              <span className="outlet-rank-name">{o.name}</span>
+              <RatingDots value={o.community_score / 20} size={7} valueSize={12} />
+            </div>
+          ))
         )}
         <button
           className="btn-outline"

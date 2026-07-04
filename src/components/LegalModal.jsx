@@ -146,7 +146,7 @@ const GUIDELINES = {
 • Are their headlines fair and proportionate?
 • Do they clearly distinguish news from opinion?
 
-Rate the journalism, not the politics. A left-leaning outlet can be accurate. A right-leaning outlet can be credible. Partisan intensity is a separate score for a reason.`,
+Rate the journalism, not the politics. A left-leaning outlet can be accurate. A right-leaning outlet can produce quality journalism. Partisan intensity is a separate score for a reason.`,
     },
     {
       heading: 'What we will not tolerate',

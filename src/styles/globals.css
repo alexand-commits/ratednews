@@ -117,9 +117,9 @@ img, video, iframe, embed, object { max-width: 100%; }
 /* STATS BAR */
 .stats-bar { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: nowrap; }
 .stat-chip { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 10px 16px; flex: 1; min-width: 0; }
-.stat-chip strong { display: block; font-size: 20px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stat-chip strong { display: block; font-size: 17px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .stat-chip span { font-size: 11px; color: var(--text2); white-space: nowrap; }
-@media (max-width: 400px) { .stat-chip { padding: 10px 10px; } .stat-chip strong { font-size: 16px; } }
+@media (max-width: 400px) { .stat-chip { padding: 10px 10px; } .stat-chip strong { font-size: 14px; } }
 
 /* FILTERS */
 .filter-bar { display: flex; gap: 6px; margin-bottom: 20px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
@@ -268,7 +268,7 @@ img, video, iframe, embed, object { max-width: 100%; }
 .rating-bar-row { display: flex; align-items: center; gap: 8px; font-size: 12px; margin-bottom: 5px; }
 .rat-label { width: 32px; color: var(--text2); text-align: right; }
 .rat-bg { flex: 1; background: var(--bg2); border-radius: 3px; height: 6px; overflow: hidden; }
-.rat-fill { height: 6px; border-radius: 3px; background: var(--amber); }
+.rat-fill { height: 6px; border-radius: 3px; background: var(--green); }
 .rat-count { width: 32px; font-size: 11px; color: var(--text3); }
 
 /* SIMILAR OUTLETS */
@@ -368,17 +368,15 @@ img, video, iframe, embed, object { max-width: 100%; }
     isolation: isolate;
     /* Extend background into safe area (home indicator / Android gesture bar) */
     padding-bottom: env(safe-area-inset-bottom, 0px);
-    /* Large downward box-shadow fills any gap between nav and physical screen edge —
-       more reliable than ::after which can be clipped by overflow */
-    /* Extend background into the gap that appears when iOS Safari toolbar hides.
-       Box-shadow fill must be large enough to cover the full toolbar height (~83px) */
-    box-shadow: 0 -1px 0 0 var(--border), 0 200px 0 200px var(--surface);
-    /* Frosted glass — matches header style */
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    /* NOTE: transform intentionally removed — translate3d/will-change both create
-       a compositor layer that stops tracking the visual viewport during iOS Safari
-       toolbar transitions, causing the nav to float with a gap below it. */
+    /* Large downward box-shadow fills any gap between nav and physical screen edge
+       during iOS Safari / Android Chrome toolbar show/hide transitions.
+       500px covers the tallest browser chrome on any current device. */
+    box-shadow: 0 -1px 0 0 var(--border), 0 500px 0 500px var(--surface);
+    /* NOTE: backdrop-filter intentionally omitted — like transform and will-change,
+       it promotes the element to a GPU compositor layer. On iOS Safari and Android
+       Chrome this breaks position:fixed tracking during toolbar transitions, causing
+       the nav to float above the screen bottom with a visible gap. Solid background
+       is used instead. transform is also intentionally absent for the same reason. */
   }
   .bottom-nav-item {
     flex: 1;
@@ -412,6 +410,13 @@ img, video, iframe, embed, object { max-width: 100%; }
   .page-content { padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); min-height: 100svh; }
   /* Ensure anchor/scroll targets aren't hidden behind nav */
   html { scroll-padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)); }
+  /* Dark mode: use a more visible border and slightly darker nav background
+     so it's clearly separated from article cards (which use --surface) */
+  [data-theme="dark"] .bottom-nav {
+    background: #222120;
+    border-top: 1px solid var(--border2);
+    box-shadow: 0 -1px 0 0 var(--border2), 0 500px 0 500px #222120;
+  }
   /* Prevent iOS auto-zoom on input focus (font-size must be >= 16px) */
   input, textarea, select { font-size: max(16px, 1em); }
 }

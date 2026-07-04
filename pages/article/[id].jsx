@@ -25,7 +25,7 @@ export default function ArticleDetail({ article: initialArticle }) {
           savedArticleIds, toggleSave } = useAppContext()
 
   // ISR pages can be up to 1h stale — refresh score data client-side so the
-  // credibility card always reflects the latest accuracy_score, bias, etc.
+  // quality card always reflects the latest accuracy_score, bias, etc.
   const [article, setArticle] = useState(initialArticle)
   useEffect(() => {
     if (!initialArticle?.id) return

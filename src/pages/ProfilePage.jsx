@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { db } from '../lib/supabase'
 import { timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
+import RatingDots from '../components/RatingDots'
 
 // ── Trust level ───────────────────────────────────────────────────────────────
 function getTrustLevel(total) {
@@ -438,7 +439,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
   }
 
   function StarRow({ stars }) {
-    return <span style={{ fontSize: 16, color: 'var(--amber)' }}>{'★'.repeat(stars)}{'☆'.repeat(5 - stars)}</span>
+    return <RatingDots value={stars} size={8} showValue={false} />
   }
 
   return (
@@ -571,7 +572,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
               { value: articleRatings.length,   label: 'Rated'          },
               { value: followedOutletIds.size,  label: 'Following'      },
               { value: comments.length,         label: 'Comments'       },
-              ...(avgStars ? [{ value: `${avgStars}★`, label: 'Avg rating', color: 'var(--amber)' }] : []),
+              ...(avgStars ? [{ value: `${avgStars}`, label: 'Avg rating', color: 'var(--green-dark)' }] : []),
               ...(streak > 1 ? [{ value: `🔥 ${streak}`, label: 'day streak', color: 'var(--coral)' }] : []),
             ].map(({ value, label, color }) => (
               <div key={label} style={{ background: 'var(--bg)', borderRadius: 8, padding: '10px 8px', textAlign: 'center' }}>

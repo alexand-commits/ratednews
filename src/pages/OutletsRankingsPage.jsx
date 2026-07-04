@@ -51,7 +51,7 @@ function getTrustLevel(t) {
 }
 
 const STAT_ROWS = [
-  { key: 'community_score', label: 'Community', max: 100,  format: v => v > 0 ? `${(v / 20).toFixed(1)}★` : '—' },
+  { key: 'community_score', label: 'Community', max: 100,  format: v => v > 0 ? (v / 20).toFixed(1) : '—' },
   { key: 'total_ratings',   label: 'Ratings',   max: null, format: v => v || 0 },
 ]
 
@@ -324,7 +324,7 @@ export default function OutletsRankingsPage({
                     <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25, margin: '6px 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🥇 {topOutlet.name}</div>
                     <div style={{ fontSize: 12, color: 'var(--text2)' }}>
                       {tab === 'community'
-                        ? `${((topOutlet.community_score || 0) / 20).toFixed(1)}★ community`
+                        ? `${((topOutlet.community_score || 0) / 20).toFixed(1)} community`
                         : `${topOutlet.total_ratings || 0} ratings`}
                     </div>
                   </>
@@ -339,10 +339,10 @@ export default function OutletsRankingsPage({
                 <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                   {tab === 'community' ? 'Avg score' : 'Total ratings'}
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: ratedSorted.length ? 'var(--amber)' : 'var(--text3)' }}>
+                <div style={{ fontSize: 22, fontWeight: 700, color: ratedSorted.length ? (tab === 'community' ? 'var(--green-dark)' : 'var(--text)') : 'var(--text3)' }}>
                   {ratedSorted.length
                     ? tab === 'community'
-                      ? `${(ratedSorted.reduce((s, o) => s + (o.community_score || 0), 0) / ratedSorted.length / 20).toFixed(1)}★`
+                      ? (ratedSorted.reduce((s, o) => s + (o.community_score || 0), 0) / ratedSorted.length / 20).toFixed(1)
                       : ratedSorted.reduce((s, o) => s + (o.total_ratings || 0), 0).toLocaleString()
                     : '—'}
                 </div>
@@ -456,10 +456,10 @@ export default function OutletsRankingsPage({
 
                         <div style={{ width: 90, flexShrink: 0 }}>
                           <div className="rank-bar-bg">
-                            <div className="rank-bar-fill" style={{ width: `${barWidth}%`, background: tab === 'community' ? scoreColor(score) : 'var(--coral)' }} />
+                            <div className="rank-bar-fill" style={{ width: `${barWidth}%`, background: tab === 'community' ? 'var(--green)' : 'var(--coral)' }} />
                           </div>
-                          <div style={{ fontSize: 11, textAlign: 'right', marginTop: 3, color: tab === 'community' ? scoreColor(score) : 'var(--text2)', fontWeight: 600 }}>
-                            {tab === 'community' && score > 0 ? `${(score / 20).toFixed(1)}★` : score || '—'}
+                          <div style={{ fontSize: 11, textAlign: 'right', marginTop: 3, color: tab === 'community' ? 'var(--green-dark)' : 'var(--text2)', fontWeight: 600 }}>
+                            {tab === 'community' && score > 0 ? (score / 20).toFixed(1) : score || '—'}
                           </div>
                         </div>
 

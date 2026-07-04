@@ -43,7 +43,7 @@ function getTrustLevel(total) {
 }
 
 const STAT_ROWS = [
-  { key: 'community_score', label: 'Community',  max: 100, format: v => v > 0 ? `${(v / 20).toFixed(1)}★` : '—' },
+  { key: 'community_score', label: 'Community',  max: 100, format: v => v > 0 ? (v / 20).toFixed(1) : '—' },
   { key: 'total_ratings',   label: 'Ratings',    max: null, format: v => v },
 ]
 
@@ -292,7 +292,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text2)' }}>
                       {tab === 'community'
-                        ? `${((topOutlet.community_score || 0) / 20).toFixed(1)}★ community score`
+                        ? `${((topOutlet.community_score || 0) / 20).toFixed(1)} community score`
                         : `${topOutlet[activeTab.key] || 0} ${activeTab.desc}`}
                     </div>
                   </>
@@ -310,7 +310,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                 {tab === 'community' ? (
                   <>
                     <div style={{ fontSize: 22, fontWeight: 700, color: ratedOutlets.length ? scoreColor(avgScore) : 'var(--text3)' }}>
-                      {ratedOutlets.length ? `${(avgScore / 20).toFixed(1)}★` : '—'}
+                      {ratedOutlets.length ? (avgScore / 20).toFixed(1) : '—'}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text2)' }}>
                       {ratedOutlets.length ? `across ${ratedOutlets.length} rated outlets` : 'No community scores yet'}
@@ -454,7 +454,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                               <div className="rank-bar-fill" style={{ width: `${barWidth}%`, background: scoreColor(score) }} />
                             </div>
                             <div style={{ fontSize: 11, textAlign: 'right', marginTop: 3, color: scoreColor(score), fontWeight: 600 }}>
-                              {tab === 'community' ? (o.community_score > 0 ? `${(o.community_score / 20).toFixed(1)}★` : '—') : score || '—'}
+                              {tab === 'community' ? (o.community_score > 0 ? (o.community_score / 20).toFixed(1) : '—') : score || '—'}
                             </div>
                           </div>
                         </div>

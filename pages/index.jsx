@@ -32,6 +32,7 @@ export default function Feed({ initialArticles, initialCount }) {
   const [offset,           setOffset]           = useState(initialArticles.length)
   const [hasMore,          setHasMore]          = useState(initialArticles.length === BATCH)
   const [loadingMore,      setLoadingMore]      = useState(false)
+  const [fetchError,       setFetchError]       = useState(false)
   const [trendingArticles,     setTrendingArticles]     = useState([]) // full data — for card rendering under topics
   const [trendingTopicsSource, setTrendingTopicsSource] = useState([]) // title+outlet_id only — for topic computation
 
@@ -43,6 +44,13 @@ export default function Feed({ initialArticles, initialCount }) {
     if (!hasCached) setLoading(true)
 
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+
+    // 12s timeout — if Supabase doesn't respond, surface the error rather than
+    // spinning skeletons indefinitely.
+    const timeout = setTimeout(() => {
+      setLoading(false)
+      setFetchError(true)
+    }, 12000)
 
     Promise.all([
       // Main paginated feed — only scored articles
@@ -70,6 +78,8 @@ export default function Feed({ initialArticles, initialCount }) {
         .order('published_at', { ascending: false })
         .limit(1000),
     ]).then(([{ data }, { count }, { data: recent }, { data: topicsSrc }]) => {
+      clearTimeout(timeout)
+      setFetchError(false)
       setArticles(data || [])
       setTotalCount(count || 0)
       setOffset(BATCH)
@@ -77,6 +87,10 @@ export default function Feed({ initialArticles, initialCount }) {
       setTrendingArticles(recent || [])
       setTrendingTopicsSource(topicsSrc || [])
       if (!hasCached) setLoading(false)
+    }).catch(() => {
+      clearTimeout(timeout)
+      setLoading(false)
+      setFetchError(true)
     })
   }, [])
 
@@ -171,6 +185,7 @@ export default function Feed({ initialArticles, initialCount }) {
         savedArticleIds={savedArticleIds}
         toggleSave={toggleSave}
         onRefresh={refresh}
+        fetchError={fetchError}
       />
     </>
   )

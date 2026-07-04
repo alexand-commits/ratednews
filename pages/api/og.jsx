@@ -175,7 +175,7 @@ function OutletCard({ outlet, score, bias, fair, misleading, clickbait, stars, a
             {name}
           </div>
           <div style={{ height: 1, width: 400, background: 'rgba(216,90,48,0.35)' }} />
-          {/* Credibility */}
+          {/* Quality */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span style={{ color: TEXT2, fontSize: 13, fontFamily: SF, fontWeight: 600, letterSpacing: '0.08em' }}>CREDIBILITY</span>

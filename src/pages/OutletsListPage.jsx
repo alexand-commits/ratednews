@@ -325,10 +325,10 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
                       <div style={{
                         fontSize: 15, fontWeight: 700, lineHeight: 1,
-                        background: comScore > 0 ? 'var(--amber-light, #fff3cd)' : 'var(--bg2)',
-                        color: comScore > 0 ? 'var(--amber)' : 'var(--text3)',
+                        background: comScore > 0 ? 'var(--green-light)' : 'var(--bg2)',
+                        color: comScore > 0 ? 'var(--green-dark)' : 'var(--text3)',
                         padding: '4px 10px', borderRadius: 20,
-                      }}>{comScore > 0 ? `${(comScore / 20).toFixed(1)}★` : '—'}</div>
+                      }}>{comScore > 0 ? (comScore / 20).toFixed(1) : '—'}</div>
                       <button
                         onClick={e => {
                           e.stopPropagation()
@@ -355,10 +355,10 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
                     <div className="score-bar-row" style={{ margin: 0 }}>
                       <span className="sbl" style={{ width: 70, fontSize: 11 }}>Community</span>
                       <div className="sb-bg">
-                        <div className="sb-fill" style={{ width: `${o.community_score}%`, background: 'var(--amber)' }} />
+                        <div className="sb-fill" style={{ width: `${o.community_score}%`, background: 'var(--green)' }} />
                       </div>
-                      <span className="sbv" style={{ fontSize: 11, color: 'var(--amber)' }}>
-                        {(o.community_score / 20).toFixed(1)}★
+                      <span className="sbv" style={{ fontSize: 11, color: 'var(--green-dark)', fontWeight: 600 }}>
+                        {(o.community_score / 20).toFixed(1)}
                       </span>
                     </div>
                   )}

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { db } from '../lib/supabase'
 import { timeAgo, scoreColor } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
+import RatingDots from '../components/RatingDots'
 
 // ── Trust level (same as ProfilePage) ────────────────────────────────────────
 function getTrustLevel(total) {
@@ -215,7 +216,7 @@ export default function PublicProfilePage({ userId, isPublic, navigate, goBack, 
   const avgStars = allStars.length ? (allStars.reduce((a, b) => a + b, 0) / allStars.length).toFixed(1) : null
 
   function StarRow({ stars }) {
-    return <span style={{ fontSize: 16, color: 'var(--amber)' }}>{'★'.repeat(stars)}{'☆'.repeat(5 - stars)}</span>
+    return <RatingDots value={stars} size={8} showValue={false} />
   }
 
   function RatingBadges({ accuracy, bias, headline }) {
@@ -258,7 +259,7 @@ export default function PublicProfilePage({ userId, isPublic, navigate, goBack, 
               { value: articleRatings.length, label: 'Articles rated' },
               { value: comments.length,       label: 'Comments'       },
               { value: totalContrib,           label: 'Contributions'  },
-              ...(avgStars ? [{ value: `${avgStars}★`, label: 'Avg rating', color: 'var(--amber)' }] : []),
+              ...(avgStars ? [{ value: `${avgStars}`, label: 'Avg rating', color: 'var(--green-dark)' }] : []),
             ].map(({ value, label, color }) => (
               <div key={label} style={{ background: 'var(--bg)', borderRadius: 8, padding: '10px 8px', textAlign: 'center' }}>
                 <div style={{ fontSize: 18, fontWeight: 700, color: color || 'var(--text)' }}>{value}</div>

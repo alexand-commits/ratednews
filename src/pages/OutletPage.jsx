@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { db } from '../lib/supabase'
 import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
+import RatingDots from '../components/RatingDots'
 import OutletRatingModal from '../components/OutletRatingModal'
 
 function getInitials(str) {
@@ -285,9 +286,12 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
           </div>
           <div className="outlet-hero-score-block">
             <div className="outlet-hero-score-text">
-              <div className="big-score" style={{ color: comScore > 0 ? 'var(--amber)' : 'var(--text3)' }}>
-                {comScore > 0 ? `${(comScore / 20).toFixed(1)}★` : '—'}
+              <div className="big-score" style={{ color: comScore > 0 ? 'var(--green-dark)' : 'var(--text3)' }}>
+                {comScore > 0 ? (comScore / 20).toFixed(1) : '—'}
               </div>
+              {comScore > 0 && (
+                <div style={{ margin: '4px 0 2px' }}><RatingDots value={comScore / 20} size={9} showValue={false} /></div>
+              )}
               <div className="big-score-label">Community rating</div>
               <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>
                 {outlet.total_ratings > 0 ? `${outlet.total_ratings} ${outlet.total_ratings === 1 ? 'rating' : 'ratings'}` : 'No ratings yet'}
@@ -317,7 +321,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                   cursor: alreadyRated ? 'default' : 'pointer',
                 }}
               >
-                {alreadyRated ? '★ Rated' : '★ Rate outlet'}
+                {alreadyRated ? '● Rated' : '● Rate outlet'}
               </button>
             </div>
           </div>
@@ -328,7 +332,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
         {myRating && (
           <div style={{ background: 'var(--green-light)', border: '0.5px solid var(--green)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--green-dark)' }}>✓ Your rating</span>
-            <span style={{ fontSize: 18, color: 'var(--amber)' }}>{'★'.repeat(myRating.overallStars || myRating.overall_stars || 0)}{'☆'.repeat(5 - (myRating.overallStars || myRating.overall_stars || 0))}</span>
+            <RatingDots value={myRating.overallStars || myRating.overall_stars || 0} size={9} showValue={false} />
             {(myRating.accuracyVote || myRating.accuracy_vote) && <span style={{ fontSize: 11, background: 'var(--surface)', padding: '2px 8px', borderRadius: 20, color: 'var(--text2)' }}>{(myRating.accuracyVote || myRating.accuracy_vote).replace('_', ' ')}</span>}
             {(myRating.biasVote || myRating.bias_vote) && <span style={{ fontSize: 11, background: 'var(--surface)', padding: '2px 8px', borderRadius: 20, color: 'var(--text2)' }}>{(myRating.biasVote || myRating.bias_vote).replace('_', ' ')}</span>}
           </div>
@@ -354,7 +358,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                   <div>
                     <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{child.name}</div>
                     {child.community_score > 0 && (
-                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>{(child.community_score / 20).toFixed(1)}★</div>
+                      <div style={{ fontSize: 10, color: 'var(--green-dark)', fontWeight: 600 }}>{(child.community_score / 20).toFixed(1)}</div>
                     )}
                   </div>
                 </button>
@@ -454,10 +458,8 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                     <span>Ratings</span>
                   </div>
                 </div>
-                <div className="star-row">
-                  {[1, 2, 3, 4, 5].map(s => (
-                    <span key={s} className={s <= Math.round(avgStars || (outlet.community_score || 0) / 20) ? '' : 'star-empty'}>★</span>
-                  ))}
+                <div style={{ margin: '10px 0 12px' }}>
+                  <RatingDots value={avgStars || (outlet.community_score || 0) / 20} size={11} showValue={false} />
                 </div>
                 <button
                   className="btn-primary"
@@ -465,7 +467,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                   onClick={handleRateClick}
                   disabled={alreadyRated}
                 >
-                  {alreadyRated ? '★ Already rated' : '★ Rate this outlet'}
+                  {alreadyRated ? '● Already rated' : '● Rate this outlet'}
                 </button>
               </div>
 
@@ -478,8 +480,8 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                       <div key={o.id} className="similar-row" onClick={() => navigate('outlet', { outletId: o.id })}>
                         <OutletLogo name={o.name} size={30} borderRadius={7} />
                         <span style={{ flex: 1, fontSize: 13 }}>{o.name}</span>
-                        <span style={{ fontSize: 13, fontWeight: 500, color: oComScore > 0 ? 'var(--amber)' : 'var(--text3)' }}>
-                          {oComScore > 0 ? `${(oComScore / 20).toFixed(1)}★` : '—'}
+                        <span style={{ fontSize: 13, fontWeight: 600, color: oComScore > 0 ? 'var(--green-dark)' : 'var(--text3)' }}>
+                          {oComScore > 0 ? (oComScore / 20).toFixed(1) : '—'}
                         </span>
                       </div>
                     )
@@ -545,7 +547,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                     Community ratings are how outlets get scored on RatedNews. The more people rate, the more reliable the score.
                   </p>
                   <button className="btn-primary" style={{ marginTop: 12 }} onClick={handleRateClick}>
-                    ★ Rate this outlet
+                    ● Rate this outlet
                   </button>
                 </div>
               ) : (
@@ -563,8 +565,8 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                           </span>
                           <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>{timeAgo(r.created_at)}</span>
                         </div>
-                        <div style={{ fontSize: 18, color: 'var(--amber)', marginBottom: 8 }}>
-                          {'★'.repeat(r.overall_stars || 0)}{'☆'.repeat(5 - (r.overall_stars || 0))}
+                        <div style={{ marginBottom: 8 }}>
+                          <RatingDots value={r.overall_stars || 0} size={9} showValue={false} />
                         </div>
                         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: r.review_text ? 8 : 0 }}>
                           {r.accuracy_vote && <span style={{ fontSize: 11, background: 'var(--bg2)', padding: '2px 8px', borderRadius: 20, color: 'var(--text2)' }}>{r.accuracy_vote.replace('_', ' ')}</span>}
@@ -585,13 +587,14 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                 <div className="widget-title">Rating breakdown</div>
                 {totalRatings > 0 ? (
                   <>
-                    <div style={{ fontSize: 36, fontWeight: 500, color: 'var(--amber)', marginBottom: 4 }}>
-                      {avgStars.toFixed(1)}<span style={{ fontSize: 18 }}>★</span>
+                    <div style={{ fontSize: 36, fontWeight: 500, color: 'var(--green-dark)', marginBottom: 4 }}>
+                      {avgStars.toFixed(1)}
                     </div>
+                    <div style={{ marginBottom: 10 }}><RatingDots value={avgStars} size={9} showValue={false} /></div>
                     <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>from {totalRatings} {totalRatings === 1 ? 'rating' : 'ratings'}</div>
                     {starCounts.map(({ star, count }) => (
                       <div key={star} className="rating-bar-row">
-                        <span className="rat-label">{star}★</span>
+                        <span className="rat-label">{star}●</span>
                         <div className="rat-bg">
                           <div className="rat-fill" style={{ width: totalRatings ? `${(count / totalRatings) * 100}%` : '0%' }}></div>
                         </div>
@@ -608,7 +611,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                   onClick={handleRateClick}
                   disabled={alreadyRated}
                 >
-                  {alreadyRated ? '★ Already rated' : '★ Rate this outlet'}
+                  {alreadyRated ? '● Already rated' : '● Rate this outlet'}
                 </button>
               </div>
             </div>

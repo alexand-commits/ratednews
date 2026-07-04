@@ -45,6 +45,7 @@ const CONCURRENCY     = 15    // parallel Haiku calls per batch — well within 
 const MAX_PER_RUN     = 400   // total cap per run (fresh + backlog combined)
 const FRESH_CAP       = 200   // max articles from the last 2h scored first — raised to match ~100-110/run ingest volume
 const MIN_TITLE_LEN   = 15    // articles shorter than this get a placeholder score, not API-scored
+const MIN_SUMMARY_LEN = 60    // articles with no/very short summary get a placeholder — headline-only scoring is too imprecise to be useful
 const MAX_ARTICLE_AGE_HOURS = 36  // skip unscored articles older than this — they'll never appear in feed
 const FRESH_WINDOW_HOURS = 2  // articles younger than this are scored in the priority pass
 
@@ -238,7 +239,14 @@ Summary: ${article.summary || '(no summary available)'}`
   // article_type is validated loosely — fall back to 'news' if the model returns something unexpected
   const validatedType = ARTICLE_TYPES.includes(article_type) ? article_type : 'news'
 
-  return { article_type: validatedType, accuracy_score, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary: ai_summary || null }
+  // Hard floor for subjective formats — opinion/analysis can't be graded on the same factual
+  // accuracy scale as news reports, so enforce a minimum to prevent unfair low scores.
+  const OPINION_FLOOR = 60
+  const finalAccuracy = (validatedType === 'opinion' || validatedType === 'analysis')
+    ? Math.max(accuracy_score, OPINION_FLOOR)
+    : accuracy_score
+
+  return { article_type: validatedType, accuracy_score: finalAccuracy, bias_score, bias_direction, headline_vote, category, geographic_scope, article_region, ai_summary: ai_summary || null }
 }
 
 // ── Score a batch of articles from a query ───────────────────────────────────
@@ -253,9 +261,14 @@ async function scoreBatch(articles, skippedIds, totalThin) {
   const scoreable = []
   const thinStamps = []
   for (const article of articles) {
-    const titleLen = (article.title || '').trim().length
+    const titleLen   = (article.title || '').trim().length
+    const summaryLen = (article.summary || '').trim().length
     if (titleLen < MIN_TITLE_LEN) {
       console.log(`  ⏭  Title too short — stamping placeholder: "${(article.title || '').slice(0, 50)}"`)
+      thinStamps.push(article.id)
+      totalThin.count++
+    } else if (summaryLen < MIN_SUMMARY_LEN) {
+      console.log(`  ⏭  No/thin summary — stamping placeholder: "${(article.title || '').slice(0, 50)}"`)
       thinStamps.push(article.id)
       totalThin.count++
     } else {

@@ -3,6 +3,7 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { articleSlug, outletColor, scoreDot, timeAgo } from '../utils/helpers'
 import { toSlug } from '../utils/navigate'
+import RatingDots from './RatingDots'
 
 
 export default function NewsCard({ article, index, onClick, navigate, relatedArticles = [] }) {
@@ -82,9 +83,7 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
 
       <div className="score-row">
         {com > 0 ? (
-          <span style={{ fontSize: 11, color: 'var(--amber)', fontWeight: 600 }}>
-            {'★'.repeat(Math.round(com / 20))}{'☆'.repeat(5 - Math.round(com / 20))} {(com / 20).toFixed(1)}
-          </span>
+          <RatingDots value={com / 20} size={7} valueSize={11} />
         ) : ratings > 0 ? (
           <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg2)', padding: '2px 8px', borderRadius: 20 }}>
             {ratings} {ratings === 1 ? 'rating' : 'ratings'}
