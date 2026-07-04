@@ -7,7 +7,7 @@ import RatingDots from './RatingDots'
 import OutletLogo from './OutletLogo'
 
 
-export default function NewsCard({ article, index, onClick, navigate, relatedArticles = [] }) {
+export default function NewsCard({ article, index, onClick, navigate, relatedArticles = [], compact = false }) {
   const [imgFailed, setImgFailed] = useState(false)
 
   const outlet = article.outlets || {}
@@ -33,7 +33,7 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
   const outletSlug = outlet.name ? toSlug(outlet.name) : null
 
   return (
-    <div className="news-card" onClick={handleCardClick}>
+    <div className={`news-card${compact ? ' news-card-compact' : ''}`} onClick={handleCardClick}>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
 
         {/* Text content */}
@@ -57,14 +57,14 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
             {article.title || 'Untitled'}
           </Link>
 
-          {article.summary && <div className="news-summary">{article.summary}</div>}
+          {!compact && article.summary && <div className="news-summary">{article.summary}</div>}
         </div>
 
         {/* Thumbnail */}
         {hasImage && (
           <div style={{
             position: 'relative',
-            width: 80, height: 80, flexShrink: 0,
+            width: compact ? 52 : 80, height: compact ? 52 : 80, flexShrink: 0,
             borderRadius: 8, overflow: 'hidden',
             background: 'var(--bg2)',
           }}>
@@ -72,7 +72,7 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
               src={article.image_url}
               alt={article.title}
               fill
-              sizes="80px"
+              sizes={compact ? '52px' : '80px'}
               style={{ objectFit: 'cover' }}
               priority={index < 2}
               unoptimized

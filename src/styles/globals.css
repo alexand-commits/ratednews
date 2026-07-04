@@ -140,6 +140,11 @@ img, video, iframe, embed, object { max-width: 100%; }
 /* NEWS CARDS */
 .feed { display: flex; flex-direction: column; gap: 10px; }
 .news-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; cursor: pointer; transition: border-color 0.15s; }
+/* Compact density — denser river for power users */
+.news-card-compact { padding: 9px 14px; }
+.news-card-compact .news-headline { font-size: 14px; line-height: 1.35; margin-bottom: 4px; }
+.news-card-compact .outlet-row { margin-bottom: 3px; }
+.feed.feed-compact { gap: 6px; }
 @media (hover: hover) { .news-card:hover { border-color: var(--coral); } }
 @media (hover: none)  { .news-card:active { border-color: var(--coral); } }
 .outlet-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: nowrap; overflow: hidden; }

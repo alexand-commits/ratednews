@@ -31,10 +31,10 @@ const CATEGORIES = [
 // sync (label-for-label) with scripts/categorise.mjs. Order = first match wins.
 function guessCategory(article) {
   const text = ((article.title || '') + ' ' + (article.summary || '')).toLowerCase()
-  if (/\b(football|soccer|cricket|tennis|rugby|basketball|golf|olympic|formula ?1|\bf1\b|premier league|champions league|world cup|nba|nfl|athletics|boxing|\bufc\b|wicket|wimbledon)\b/.test(text)) return 'Sport'
-  if (/\b(war|military|troops|missile|air ?strike|bombing|invasion|ceasefire|soldier|drone strike|front ?line|combat|siege|nato|warfare|armed forces|hostage|militant)\b/.test(text)) return 'Conflict'
-  if (/\b(murder|homicide|arrest|police|court|sentenced|prison|jailed|fraud|theft|robbery|shooting|stabbing|trial|guilty|verdict|assault)\b/.test(text)) return 'Crime'
-  if (/\b(cancer|disease|hospital|doctor|patient|surgery|treatment|vaccine|nhs|mental health|medicine|clinical|virus|outbreak|obesity|diabetes)\b/.test(text)) return 'Health'
+  if (/\b(football|soccer|cricket|tennis|rugby|basketball|golf|olympic|formula ?1|\bf1\b|premier league|champions league|world cup|nba|nfl|athletics|boxing|\bufc\b|wicket|wimbledon|tour de france|cycling|wallabies|all blacks|six nations|nations championship|grand slam|player ratings|test match)\b/.test(text)) return 'Sport'
+  if (/\b(war|military|troops|missile|air ?strikes?|bombing|invasion|ceasefire|soldiers?|drone strikes?|front ?line|combat|siege|nato|warfare|armed forces|hostages?|militants?|ukraine|\bkyiv\b|zelensky|\bputin\b|\bgaza\b|\bhamas\b|hezbollah|\bidf\b)\b/.test(text)) return 'Conflict'
+  if (/\b(murder|homicide|arrests?|police|court|sentenced|prison|jailed|fraud|theft|robbery|shootings?|stabbings?|trial|guilty|verdict|assault)\b/.test(text)) return 'Crime'
+  if (/\b(cancer|diseases?|hospital|doctor|patient|surgery|treatment|vaccine|nhs|mental health|health (risk|warning|crisis)|medicine|clinical|virus|outbreak|obesity|diabetes)\b/.test(text)) return 'Health'
   if (/\b(climate|emission|carbon|pollution|wildlife|biodiversity|ocean|fossil fuel|renewable|net zero|drought|flooding|wildfire|heat ?wave)\b/.test(text)) return 'Environment'
   if (/\b(research|study|space|nasa|scientist|planet|asteroid|discovery|experiment|physics|biology|telescope|quantum|genome)\b/.test(text)) return 'Science'
   if (/\b(artificial intelligence|\bai\b|technolog|cyber|software|silicon valley|data breach|robot|smartphone|social media|chatgpt|openai|semiconductor|crypto|bitcoin|startup|\bapp\b)\b/.test(text)) return 'Tech'
@@ -43,7 +43,7 @@ function guessCategory(article) {
   if (/\b(\bart\b|culture|museum|gallery|theatre|theater|literature|book|exhibition|heritage|architecture|fashion|design|cuisine|tradition)\b/.test(text)) return 'Culture'
   if (/\b(travel|tourism|flight|hotel|visa|destination|holiday|airport|airline|cruise|passport)\b/.test(text)) return 'Travel'
   if (/\b(school|university|student|teacher|education|exam|degree|tuition|college|campus|ofsted)\b/.test(text)) return 'Education'
-  if (/\b(election|government|parliament|minister|president|senate|congress|\bmp\b|policy|party|labour|tory|conservative|democrat|republican|trump|chancellor|prime minister|vote|referendum)\b/.test(text)) return 'Politics'
+  if (/\b(elections?|government|parliament|minister|president|senate|senator|congress|\bmp\b|policy|party|labour|tory|conservative|democrat|republican|trump|chancellor|prime minister|vote|referendum|democracy|governor|lawmaker)\b/.test(text)) return 'Politics'
   return 'World'
 }
 
@@ -90,7 +90,20 @@ export default function FeedPage({
   const [search, setSearch]     = useState('')
   const [sort, setSort]         = useState('latest')
   const [feedTab, setFeedTab]         = useState(initialTab) // 'all' | 'following'
+  const [density, setDensity]         = useState('comfortable') // 'comfortable' | 'compact'
   const [legalDoc, setLegalDoc]       = useState(null)  // 'privacy' | 'terms' | 'guidelines'
+
+  // Restore saved density preference on mount
+  useEffect(() => {
+    try { const d = localStorage.getItem('rn_density'); if (d === 'compact' || d === 'comfortable') setDensity(d) } catch {}
+  }, [])
+  function toggleDensity() {
+    setDensity(d => {
+      const next = d === 'compact' ? 'comfortable' : 'compact'
+      try { localStorage.setItem('rn_density', next) } catch {}
+      return next
+    })
+  }
   const [followingArticles, setFollowingArticles] = useState([])
   const [followingLoading, setFollowingLoading]   = useState(false)
 
@@ -922,6 +935,20 @@ export default function FeedPage({
                     : <span>{SORTS.find(s => s.value === sort)?.label || 'Latest'} stories</span>
                 }
               </div>
+              {/* Density toggle */}
+              <button
+                onClick={toggleDensity}
+                title={density === 'compact' ? 'Switch to comfortable view' : 'Switch to compact view'}
+                aria-label="Toggle feed density"
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  background: 'var(--surface)', border: '0.5px solid var(--border)',
+                  borderRadius: 20, padding: '5px 12px', cursor: 'pointer',
+                  fontSize: 11, fontWeight: 600, color: 'var(--text2)', flexShrink: 0,
+                }}
+              >
+                {density === 'compact' ? '☰ Compact' : '▤ Comfortable'}
+              </button>
             </div>
 
             {/* Outlet matches — pinned above article results when search active */}
@@ -977,7 +1004,7 @@ export default function FeedPage({
               </div>
             )}
 
-            <div className="feed">
+            <div className={`feed${density === 'compact' ? ' feed-compact' : ''}`}>
               {fetchError ? (
                 <div style={{
                   textAlign: 'center', padding: '40px 20px',
@@ -1081,6 +1108,7 @@ export default function FeedPage({
                     }}
                     navigate={navigate}
                     relatedArticles={a.cluster_peers || []}
+                    compact={density === 'compact'}
                   />
                 ))
               )}

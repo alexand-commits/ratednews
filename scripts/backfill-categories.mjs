@@ -22,10 +22,13 @@ for (;;) {
   if (!data.length) break
   scanned += data.length
 
-  // Only rewrite where category is missing — don't clobber anything already set.
+  // Recategorise where category is missing OR still the 'World' catch-all —
+  // improved rules may now pull World articles into a specific category. Skip
+  // writes where nothing changes (World stays World).
   const updates = data
-    .filter(a => !a.category)
-    .map(a => ({ id: a.id, category: categorise(a.title || '', a.summary || '') }))
+    .filter(a => !a.category || a.category === 'World')
+    .map(a => ({ id: a.id, from: a.category, category: categorise(a.title || '', a.summary || '') }))
+    .filter(u => u.category !== u.from)
 
   for (let i = 0; i < updates.length; i += 100) {
     const chunk = updates.slice(i, i + 100)
