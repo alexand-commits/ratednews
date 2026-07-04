@@ -888,7 +888,10 @@ async function ingestOutlet(outlet) {
       title,
       url,
       summary,
-      category:     categorise(title, summary),
+      // Dedicated sports outlets force the Sport category so their content
+      // reliably reaches the Sports page even when a headline lacks obvious
+      // sport keywords (e.g. a transfer rumour or a club finance story).
+      category:     outlet.type === 'Sports' ? 'Sport' : categorise(title, summary),
       published_at: (() => { const p = item.pubDate ? new Date(item.pubDate) : null; return (p && !isNaN(p) && p <= new Date()) ? p.toISOString() : new Date().toISOString() })(),
       image_url:    extractImageUrl(item),
     })
@@ -911,7 +914,7 @@ async function main() {
 
   const { data: outlets, error } = await supabase
     .from('outlets')
-    .select('id, name, rss_url')
+    .select('id, name, rss_url, type')
     .not('rss_url', 'is', null)
 
   if (error) {

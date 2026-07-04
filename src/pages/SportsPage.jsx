@@ -51,9 +51,31 @@ const SPORT_KEYWORDS = {
   golf: [
     'golf','the masters','the open championship','ryder cup',
     'pga tour','lpga','us open golf','us pga championship',
-    'augusta national','par','birdie','eagle','bogey',
+    'augusta national','birdie','bogey',
     'rory mcilroy','jon rahm','scottie scheffler','tiger woods',
-    'hole-in-one','course record','links golf',
+    'hole-in-one','links golf',
+  ],
+  nfl: [
+    'nfl','american football','super bowl','quarterback','touchdown',
+    'kansas city chiefs','dallas cowboys','san francisco 49ers','philadelphia eagles',
+    'buffalo bills','patrick mahomes','tom brady','end zone','gridiron',
+  ],
+  nba: [
+    'nba','basketball','playoffs','lakers','boston celtics','golden state warriors',
+    'lebron james','steph curry','slam dunk','three-pointer','march madness',
+    'denver nuggets','milwaukee bucks',
+  ],
+  mlb: [
+    'mlb','baseball','world series','new york yankees','los angeles dodgers',
+    'home run','pitcher','shohei ohtani','strikeout','grand slam baseball','innings pitched',
+  ],
+  boxing: [
+    'boxing','heavyweight','title fight','knockout','undisputed','ufc','mma',
+    'welterweight','middleweight','anthony joshua','tyson fury','octagon','featherweight',
+  ],
+  cycling: [
+    'cycling','tour de france','giro d\'italia','vuelta','peloton','road race',
+    'time trial','yellow jersey','tadej pogacar','grand tour cycling',
   ],
 }
 
@@ -70,10 +92,15 @@ const SPORT_FILTERS = [
   { value: 'all',      label: 'All Sports' },
   { value: 'football', label: '⚽ Football' },
   { value: 'f1',       label: '🏎 F1' },
+  { value: 'nfl',      label: '🏈 NFL' },
+  { value: 'nba',      label: '🏀 Basketball' },
+  { value: 'mlb',      label: '⚾ Baseball' },
   { value: 'rugby',    label: '🏉 Rugby' },
   { value: 'tennis',   label: '🎾 Tennis' },
   { value: 'cricket',  label: '🏏 Cricket' },
   { value: 'golf',     label: '⛳ Golf' },
+  { value: 'boxing',   label: '🥊 Boxing/MMA' },
+  { value: 'cycling',  label: '🚴 Cycling' },
 ]
 
 // ─── Main component ──────────────────────────────────────────────────────────
