@@ -102,10 +102,11 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
       )}
 
       {/* Coverage strip — the differentiator: how many outlets are on this story.
-          Shows the covering outlets' logos + count, taps through to full coverage. */}
+          Shows the covering outlets' logos + count, taps through to the full
+          side-by-side story coverage page. */}
       {hasAngles && (
         <Link
-          href={`/article/${slug}`}
+          href={`/story/${slug}`}
           style={{ textDecoration: 'none' }}
           onClick={e => e.stopPropagation()}
         >
