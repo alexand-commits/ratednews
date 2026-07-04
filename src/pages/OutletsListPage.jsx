@@ -284,6 +284,46 @@ export default function OutletsListPage({ outlets, outletsLoading, navigate, goB
           ))}
         </div>
 
+        {/* Help-rate funnel — turn the empty directory into a collaborative fill-in.
+            No faked scores: real readers seed the ratings, one tap at a time. */}
+        {!outletsLoading && (() => {
+          const topLevel = outlets.filter(o => !o.parent_outlet_id)
+          const ratedCount = topLevel.filter(o => (o.total_ratings || 0) > 0).length
+          const unrated = topLevel.filter(o => !(o.total_ratings > 0) && !myRatings[o.id]).slice(0, 12)
+          if (unrated.length === 0) return null
+          const pct = topLevel.length ? Math.round((ratedCount / topLevel.length) * 100) : 0
+          return (
+            <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 18 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap', marginBottom: 4 }}>
+                <span style={{ fontSize: 14, fontWeight: 700 }}>🌱 Help build the community ratings</span>
+                <span style={{ fontSize: 12, color: 'var(--text3)', marginLeft: 'auto' }}>{ratedCount} of {topLevel.length} outlets rated</span>
+              </div>
+              <div style={{ height: 5, background: 'var(--bg2)', borderRadius: 3, overflow: 'hidden', marginBottom: 12 }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: 'var(--green)', borderRadius: 3 }} />
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 12 }}>
+                Every score comes from readers — no AI, no algorithms. Tap to rate a source you know:
+              </div>
+              <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
+                {unrated.map(o => (
+                  <div key={o.id} style={{ flexShrink: 0, width: 130, background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 10px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                    <OutletLogo name={o.name} size={32} borderRadius={8} />
+                    <div style={{ fontSize: 11, fontWeight: 600, textAlign: 'center', lineHeight: 1.25, height: 28, overflow: 'hidden' }}>{o.name}</div>
+                    <OutletTrustRateInline
+                      outlet={o}
+                      user={user}
+                      onLoginClick={onLoginClick}
+                      showToast={showToast}
+                      onRated={n => setMyRatings(m => ({ ...m, [o.id]: n }))}
+                      size={15}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
+        })()}
+
         {/* Grid */}
         {outletsLoading ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(290px, 1fr))', gap: 10 }}>
