@@ -15,14 +15,14 @@ export default function Outlets() {
         <meta property="og:description" content="Browse community ratings for 150+ major news outlets — see which readers trust most." />
         <meta property="og:url"         content="https://www.ratednews.com/outlets" />
         <meta property="og:type"        content="website" />
-        <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
+        <meta property="og:image"       content="https://www.ratednews.com/api/og?type=brand" />
         <meta property="og:image:type"  content="image/png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="News Outlet Bias Ratings — RatedNews" />
         <meta name="twitter:description" content="Community ratings for 150+ major news outlets — updated continuously." />
-        <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
+        <meta name="twitter:image"      content="https://www.ratednews.com/api/og?type=brand" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify({

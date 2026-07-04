@@ -189,14 +189,14 @@ export default function CategoryLanding({ slug, initialArticles, initialCount, c
         <meta property="og:description" content={categoryMeta.description} />
         <meta property="og:url"         content={canonical} />
         <meta property="og:type"        content="website" />
-        <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
+        <meta property="og:image"       content="https://www.ratednews.com/api/og?type=brand" />
         <meta property="og:image:type"  content="image/png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content={categoryMeta.title + ' | RatedNews'} />
         <meta name="twitter:description" content={categoryMeta.description} />
-        <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
+        <meta name="twitter:image"      content="https://www.ratednews.com/api/og?type=brand" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbLd).replace(/<\//g, '<\\/') }}

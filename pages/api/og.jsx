@@ -118,7 +118,7 @@ function ArticleCard({ title: raw, score, bias, outlet }) {
         {has && (
           <div style={{ display: 'flex', gap: 10, marginBottom: 22 }}>
             <div style={{ display: 'flex', padding: '6px 18px', borderRadius: 8, background: `rgba(${rgb},0.15)`, border: `1.5px solid rgba(${rgb},0.40)` }}>
-              <span style={{ color: scoreColor(sc), fontSize: 15, fontWeight: 700, fontFamily: SF, letterSpacing: '0.07em' }}>CREDIBILITY {sc}/100</span>
+              <span style={{ color: scoreColor(sc), fontSize: 15, fontWeight: 700, fontFamily: SF, letterSpacing: '0.07em' }}>COMMUNITY {sc}/100</span>
             </div>
             {info && (
               <div style={{ display: 'flex', padding: '6px 18px', borderRadius: 8, background: `rgba(${info.rgb},0.13)`, border: `1.5px solid rgba(${info.rgb},0.38)` }}>
@@ -336,12 +336,52 @@ function LeaderboardCard({ title, items }) {
 }
 
 // ── Handler ───────────────────────────────────────────────────────────────────
+// ── Brand / default card ──────────────────────────────────────────────────────
+// Site-wide default share image (homepage, about, rankings, etc.).
+function BrandCard() {
+  const GREEN = '#639922'
+  return (
+    <Shell>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '72px 72px 56px', justifyContent: 'center' }}>
+        <Logo size={82} />
+        <div style={{ display: 'flex', width: 360, height: 3, background: 'rgba(216,90,48,0.55)', marginTop: 22, marginBottom: 30 }} />
+        <div style={{ display: 'flex', color: TEXT1, fontFamily: SE, fontSize: 44, fontWeight: 700, lineHeight: 1.2 }}>
+          Trust the source, not just the story
+        </div>
+        <div style={{ display: 'flex', color: TEXT2, fontFamily: SF, fontSize: 25, marginTop: 20 }}>
+          Community-rated news from 150+ outlets
+        </div>
+        {/* Sample community rating — green dots */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 34 }}>
+          <div style={{ display: 'flex', gap: 9 }}>
+            {[0, 1, 2, 3, 4].map(i => (
+              <div key={i} style={{
+                width: 20, height: 20, borderRadius: 20,
+                background: i < 4 ? GREEN : 'rgba(255,255,255,0.16)',
+              }} />
+            ))}
+          </div>
+          <span style={{ display: 'flex', color: GREEN, fontFamily: SF, fontSize: 22, fontWeight: 700 }}>4.0</span>
+          <span style={{ display: 'flex', color: TEXT3, fontFamily: SF, fontSize: 18 }}>reader rating</span>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 44 }}>
+          <span style={{ color: TEXT4, fontSize: 16, fontFamily: SF }}>ratednews.com</span>
+          <span style={{ color: TEXT3, fontSize: 15, fontFamily: SF }}>Community-rated · updated continuously</span>
+        </div>
+      </div>
+    </Shell>
+  )
+}
+
 export default function handler(req) {
   try {
     const { searchParams } = new URL(req.url)
     const type = searchParams.get('type') || 'article'
     const opts = { width: W, height: H }
 
+    if (type === 'brand') {
+      return new ImageResponse(<BrandCard />, opts)
+    }
     if (type === 'outlet') {
       return new ImageResponse(<OutletCard
         outlet={searchParams.get('outlet') || ''}

@@ -47,14 +47,14 @@ export default function Sports({ articles, generatedAt }) {
         <meta property="og:description" content="Football, F1, rugby, tennis, cricket and golf — every story rated for quality and political bias." />
         <meta property="og:url"         content="https://www.ratednews.com/sports" />
         <meta property="og:type"        content="website" />
-        <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
+        <meta property="og:image"       content="https://www.ratednews.com/api/og?type=brand" />
         <meta property="og:image:type"  content="image/png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="Sports News — Quality & Bias Rated | RatedNews" />
         <meta name="twitter:description" content="Football, F1, rugby, tennis, cricket and golf — every story rated for quality and political bias." />
-        <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
+        <meta name="twitter:image"      content="https://www.ratednews.com/api/og?type=brand" />
         {itemListLd && (
           <script
             type="application/ld+json"

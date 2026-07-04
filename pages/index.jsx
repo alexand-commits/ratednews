@@ -7,17 +7,17 @@ import { useAppContext } from './_app'
 
 const BATCH = 50
 
-// Minimal column list — avoids fetching large/unused columns on every page load.
-// 'summary' kept as fallback for cards without ai_summary and for client-side search.
-// Add columns here explicitly rather than using select('*') so future DB additions
-// don't silently inflate egress.
+// Minimal column list — only what the feed cards actually render. Add columns
+// here explicitly rather than select('*') so future DB additions don't silently
+// inflate egress. The old AI columns (accuracy_score, bias_score, bias_direction,
+// headline_vote, article_type, ai_summary) were removed with AI scoring — dropping
+// them from this SELECT cuts egress on every 50–150 row feed fetch.
 const ARTICLE_SELECT = [
   'id', 'title', 'published_at', 'outlet_id',
-  'accuracy_score', 'bias_score', 'bias_direction', 'headline_vote',
-  'category', 'article_type', 'geographic_scope', 'article_region',
-  'ai_summary', 'summary', 'url', 'image_url',
+  'category', 'geographic_scope', 'article_region',
+  'summary', 'url', 'image_url',
   'total_ratings', 'community_score', 'cluster_peers',
-  'outlets(name, country, bias_direction, logo_url, accuracy_score)',
+  'outlets(name, country, logo_url)',
   'comments(count)',
 ].join(', ')
 
@@ -132,14 +132,14 @@ export default function Feed({ initialArticles, initialCount }) {
         <meta property="og:description" content="Community-rated news from 150+ outlets. Readers rate accuracy, bias and quality — updated continuously." />
         <meta property="og:url"         content="https://www.ratednews.com/" />
         <meta property="og:type"        content="website" />
-        <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
+        <meta property="og:image"       content="https://www.ratednews.com/api/og?type=brand" />
         <meta property="og:image:type"  content="image/png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="RatedNews — Trust the source, not just the story" />
         <meta name="twitter:description" content="Community-rated news from 150+ outlets. Readers rate accuracy, bias and quality — updated continuously." />
-        <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
+        <meta name="twitter:image"      content="https://www.ratednews.com/api/og?type=brand" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify({

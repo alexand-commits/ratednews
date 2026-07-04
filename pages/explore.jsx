@@ -15,11 +15,11 @@ export default function Explore() {
         <meta property="og:description" content="Search every news story across 150+ outlets by topic, person or event." />
         <meta property="og:url"         content="https://www.ratednews.com/explore" />
         <meta property="og:type"        content="website" />
-        <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
+        <meta property="og:image"       content="https://www.ratednews.com/api/og?type=brand" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="Explore — Search News by Topic | RatedNews" />
         <meta name="twitter:description" content="Search every news story across 150+ outlets by topic, person or event." />
-        <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
+        <meta name="twitter:image"      content="https://www.ratednews.com/api/og?type=brand" />
       </Head>
       <ExplorePage navigate={navigate} outlets={allOutlets} />
     </>

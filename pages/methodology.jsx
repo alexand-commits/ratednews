@@ -15,14 +15,14 @@ export default function Methodology() {
         <meta property="og:description" content="Full transparency on how RatedNews works — where the news comes from, how community ratings and scores are calculated, and known limitations." />
         <meta property="og:url"         content="https://www.ratednews.com/methodology" />
         <meta property="og:type"        content="website" />
-        <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
+        <meta property="og:image"       content="https://www.ratednews.com/api/og?type=brand" />
         <meta property="og:image:type"  content="image/png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="Methodology — How RatedNews Works" />
         <meta name="twitter:description" content="How RatedNews works — where the news comes from and how community ratings and scores are calculated." />
-        <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
+        <meta name="twitter:image"      content="https://www.ratednews.com/api/og?type=brand" />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify({

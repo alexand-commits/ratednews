@@ -16,12 +16,12 @@ export default function Document() {
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="RatedNews" />
         {/* Fallback OG image for any page that doesn't set its own */}
-        <meta property="og:image"        content="https://www.ratednews.com/og-image.png" />
+        <meta property="og:image"        content="https://www.ratednews.com/api/og?type=brand" />
         <meta property="og:image:type"   content="image/png" />
         <meta property="og:image:width"  content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"        content="summary_large_image" />
-        <meta name="twitter:image"       content="https://www.ratednews.com/og-image.png" />
+        <meta name="twitter:image"       content="https://www.ratednews.com/api/og?type=brand" />
         {/* Preconnect to Supabase — saves DNS+TLS round trip on first data fetch */}
         <link rel="preconnect" href={process.env.VITE_SUPABASE_URL} />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />

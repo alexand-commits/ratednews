@@ -15,14 +15,14 @@ export default function Categories() {
         <meta property="og:description" content="Browse news by topic — Politics, Business, Tech, Health, Sport and more. Top stories from 150+ outlets, rated by the community." />
         <meta property="og:url"         content="https://www.ratednews.com/categories" />
         <meta property="og:type"        content="website" />
-        <meta property="og:image"       content="https://www.ratednews.com/og-image.png" />
+        <meta property="og:image"       content="https://www.ratednews.com/api/og?type=brand" />
         <meta property="og:image:type"  content="image/png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="Rated News by Topic — RatedNews" />
         <meta name="twitter:description" content="Browse Politics, Business, Tech, Health, Sport and more — top stories from 150+ outlets, rated by the community." />
-        <meta name="twitter:image"      content="https://www.ratednews.com/og-image.png" />
+        <meta name="twitter:image"      content="https://www.ratednews.com/api/og?type=brand" />
       </Head>
       <CategoryPage navigate={navigate} goBack={goBack} />
     </>
