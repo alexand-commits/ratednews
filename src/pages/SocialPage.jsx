@@ -10,8 +10,19 @@ const TYPE_META = {
   roundup:         { label: 'Roundup',         emoji: '📰', color: 'var(--text2)' },
 }
 
-function PostCard({ post }) {
+function CopyButton({ text, label = 'Copy' }) {
   const [copied, setCopied] = useState(false)
+  return (
+    <button
+      onClick={() => navigator.clipboard.writeText(text).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500) })}
+      style={{ fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 99, border: '0.5px solid var(--border)', background: copied ? 'var(--green)' : 'var(--surface)', color: copied ? '#fff' : 'var(--text2)', cursor: 'pointer', flexShrink: 0 }}
+    >
+      {copied ? '✓ Copied' : label}
+    </button>
+  )
+}
+
+function PostCard({ post }) {
   const meta = TYPE_META[post.type] || { label: post.type || 'Post', emoji: '✳️', color: 'var(--text2)' }
 
   const copyText = [
@@ -19,27 +30,15 @@ function PostCard({ post }) {
     post.poll_options?.length ? `\n\nPoll options:\n• ${post.poll_options.join('\n• ')}` : '',
   ].join('')
 
-  function copy() {
-    navigator.clipboard.writeText(copyText).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    })
-  }
-
   return (
     <div style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '14px 16px', marginBottom: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: meta.color }}>
           {meta.emoji} {meta.label}
           {post.story ? <span style={{ color: 'var(--text2)', fontWeight: 600 }}> · {post.story}</span> : null}
-          {post.platform ? <span style={{ color: 'var(--text3)', fontWeight: 500 }}> · {post.platform.toUpperCase()}</span> : null}
+          <span style={{ color: 'var(--text3)', fontWeight: 500 }}> · {post.type === 'poll' ? 'X only (no Bluesky polls)' : 'X'}</span>
         </span>
-        <button
-          onClick={copy}
-          style={{ fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 99, border: '0.5px solid var(--border)', background: copied ? 'var(--green)' : 'var(--surface)', color: copied ? '#fff' : 'var(--text2)', cursor: 'pointer' }}
-        >
-          {copied ? '✓ Copied' : 'Copy'}
-        </button>
+        <CopyButton text={copyText} />
       </div>
 
       <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{post.text}</div>
@@ -53,6 +52,26 @@ function PostCard({ post }) {
           </div>
         )
       })()}
+
+      {/* Bluesky short variant — hard 300-char platform limit */}
+      {typeof post.short === 'string' && post.short && (
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: '0.5px solid var(--border)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#2E86EA' }}>🦋 Bluesky</span>
+            <CopyButton text={post.short} />
+          </div>
+          <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{post.short}</div>
+          {(() => {
+            const n = post.short.length
+            const over = n > 300
+            return (
+              <div style={{ fontSize: 11, marginTop: 8, fontWeight: 600, color: over ? 'var(--red)' : 'var(--text3)' }}>
+                {n} / 300{over ? ` · ${n - 300} over — trim before posting` : ''}
+              </div>
+            )
+          })()}
+        </div>
+      )}
 
       {post.poll_options?.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
