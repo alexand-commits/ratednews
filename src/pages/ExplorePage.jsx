@@ -76,6 +76,43 @@ export default function ExplorePage({ navigate, outlets = [] }) {
     })
   }, [feedPool, category])
 
+  // Trending topics — proper-noun tokens appearing across multiple outlets in
+  // the recent pool. Clicking one feeds the full-text search, so topics are a
+  // one-tap route into "every story about X".
+  const trendingTopics = useMemo(() => {
+    const STOP = new Set([
+      'the','a','an','in','on','at','to','for','of','and','or','is','are','was','were',
+      'says','say','said','after','as','with','by','from','over','into','its','it',
+      'his','her','their','how','why','what','who','will','have','has','had','been',
+      'be','but','not','this','that','than','then','new','top','first','last','year',
+      'old','day','week','time','way','out','up','more','most','just','also','still',
+      'even','could','would','should','may','might','amid','back','gets','got',
+      'news','report','live','today','tonight','breaking','latest','former',
+      'us','uk','about','during','two','three','four','five','watch','video',
+    ])
+    const freq = {}, outletSets = {}, display = {}
+    for (const a of feedPool) {
+      const seen = new Set()
+      for (const raw of (a.title || '').split(/\s+/)) {
+        const clean = raw.replace(/[^a-zA-Z]/g, '')
+        if (!clean || clean.length < 3) continue
+        const isProper = /^[A-Z][a-z]/.test(clean) || /^[A-Z]{2,5}$/.test(clean)
+        const key = clean.toLowerCase()
+        if (!isProper || STOP.has(key) || seen.has(key)) continue
+        seen.add(key)
+        freq[key] = (freq[key] || 0) + 1
+        if (!outletSets[key]) outletSets[key] = new Set()
+        outletSets[key].add(a.outlet_id)
+        if (!display[key]) display[key] = clean
+      }
+    }
+    return Object.entries(freq)
+      .filter(([key, count]) => count >= 4 && (outletSets[key]?.size ?? 0) >= 3)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 14)
+      .map(([key]) => display[key])
+  }, [feedPool])
+
   // Debounced search
   useEffect(() => {
     clearTimeout(searchTimer.current)
@@ -118,7 +155,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
 
   return (
     <div className="page-content">
-      <div className="container" style={{ paddingTop: 16, maxWidth: 1000 }}>
+      <div className="container" style={{ paddingTop: 16, maxWidth: 1240 }}>
 
         {/* Page heading */}
         <div style={{ marginBottom: 20 }}>
@@ -171,6 +208,8 @@ export default function ExplorePage({ navigate, outlets = [] }) {
           </div>
         )}
 
+        <div className="grid">
+        <div>
         {/* ── Search results ── */}
         {isSearchActive && (
           <div style={{ marginTop: 8 }}>
@@ -217,8 +256,8 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         {/* ── Discovery content (no search) ── */}
         {!isSearchActive && (
           <>
-            {/* Category filter */}
-            <div className="filter-bar" style={{ marginTop: 20, marginBottom: 16 }}>
+            {/* Category filter — mobile only; the sidebar owns categories on desktop */}
+            <div className="filter-bar hide-desktop" style={{ marginTop: 20, marginBottom: 16 }}>
               {CATEGORIES.map(c => (
                 <button
                   key={c.value}
@@ -259,6 +298,44 @@ export default function ExplorePage({ navigate, outlets = [] }) {
             )}
           </>
         )}
+        </div>
+
+        {/* ── Desktop sidebar — categories that all show at once + tappable topics ── */}
+        <aside className="sidebar desktop-only">
+          <div className="widget">
+            <div className="widget-title">Browse categories</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              {CATEGORIES.map(c => (
+                <button
+                  key={c.value}
+                  className={`pill${!isSearchActive && category === c.value ? ' active' : ''}`}
+                  onClick={() => { setCategory(c.value); setSearch('') }}
+                  style={{ fontSize: 12 }}
+                >{c.emoji ? `${c.emoji} ` : ''}{c.label}</button>
+              ))}
+            </div>
+          </div>
+
+          {trendingTopics.length > 0 && (
+            <div className="widget">
+              <div className="widget-title">🔥 Trending topics</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                {trendingTopics.map(topic => (
+                  <button
+                    key={topic}
+                    className={`pill${search.trim() === topic ? ' active' : ''}`}
+                    onClick={() => setSearch(topic)}
+                    style={{ fontSize: 12 }}
+                  >{topic}</button>
+                ))}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 10, lineHeight: 1.5 }}>
+                Tap a topic to search every story about it.
+              </div>
+            </div>
+          )}
+        </aside>
+        </div>
       </div>
     </div>
   )
