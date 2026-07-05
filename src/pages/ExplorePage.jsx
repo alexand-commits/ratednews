@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { db } from '../lib/supabase'
 import { timeAgo, articleSlug } from '../utils/helpers'
+import { computeTrendingTopics } from '../utils/topics'
 import OutletLogo from '../components/OutletLogo'
 import NewsCard from '../components/NewsCard'
 
@@ -66,6 +67,19 @@ export default function ExplorePage({ navigate, outlets = [] }) {
       .then(({ data }) => { setFeedPool(data || []); setFeedLoading(false) })
   }, [])
 
+  // Lightweight 24h pool for topic extraction — title+outlet_id only
+  // (~100 bytes/row), same shape the homepage feeds the shared extractor.
+  const [topicsSource, setTopicsSource] = useState([])
+  useEffect(() => {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    db.from('articles')
+      .select('title, outlet_id')
+      .gte('published_at', cutoff)
+      .order('published_at', { ascending: false })
+      .limit(1000)
+      .then(({ data }) => setTopicsSource(data || []))
+  }, [])
+
   // Browse feed — filter by category, dedupe clustered stories
   const browseFeed = useMemo(() => {
     const seen = new Set()
@@ -76,42 +90,10 @@ export default function ExplorePage({ navigate, outlets = [] }) {
     })
   }, [feedPool, category])
 
-  // Trending topics — proper-noun tokens appearing across multiple outlets in
-  // the recent pool. Clicking one feeds the full-text search, so topics are a
+  // Trending topics — shared phrase-first extraction (same engine as the
+  // homepage chips). Clicking one feeds the full-text search, so topics are a
   // one-tap route into "every story about X".
-  const trendingTopics = useMemo(() => {
-    const STOP = new Set([
-      'the','a','an','in','on','at','to','for','of','and','or','is','are','was','were',
-      'says','say','said','after','as','with','by','from','over','into','its','it',
-      'his','her','their','how','why','what','who','will','have','has','had','been',
-      'be','but','not','this','that','than','then','new','top','first','last','year',
-      'old','day','week','time','way','out','up','more','most','just','also','still',
-      'even','could','would','should','may','might','amid','back','gets','got',
-      'news','report','live','today','tonight','breaking','latest','former',
-      'us','uk','about','during','two','three','four','five','watch','video',
-    ])
-    const freq = {}, outletSets = {}, display = {}
-    for (const a of feedPool) {
-      const seen = new Set()
-      for (const raw of (a.title || '').split(/\s+/)) {
-        const clean = raw.replace(/[^a-zA-Z]/g, '')
-        if (!clean || clean.length < 3) continue
-        const isProper = /^[A-Z][a-z]/.test(clean) || /^[A-Z]{2,5}$/.test(clean)
-        const key = clean.toLowerCase()
-        if (!isProper || STOP.has(key) || seen.has(key)) continue
-        seen.add(key)
-        freq[key] = (freq[key] || 0) + 1
-        if (!outletSets[key]) outletSets[key] = new Set()
-        outletSets[key].add(a.outlet_id)
-        if (!display[key]) display[key] = clean
-      }
-    }
-    return Object.entries(freq)
-      .filter(([key, count]) => count >= 4 && (outletSets[key]?.size ?? 0) >= 3)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 14)
-      .map(([key]) => display[key])
-  }, [feedPool])
+  const trendingTopics = useMemo(() => computeTrendingTopics(topicsSource), [topicsSource])
 
   // Debounced search
   useEffect(() => {
@@ -155,10 +137,10 @@ export default function ExplorePage({ navigate, outlets = [] }) {
 
   return (
     <div className="page-content">
-      <div className="container" style={{ paddingTop: 16, maxWidth: 1240 }}>
+      <div className="container" style={{ paddingTop: 16, maxWidth: 1000 }}>
 
         {/* Page heading */}
-        <div style={{ marginBottom: 20 }}>
+        <div className="explore-head" style={{ marginBottom: 20 }}>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text)', margin: 0, marginBottom: 4, fontFamily: 'var(--font-playfair), serif' }}>
             🔍 Explore
           </h1>
@@ -167,7 +149,8 @@ export default function ExplorePage({ navigate, outlets = [] }) {
           </p>
         </div>
 
-        {/* Search bar */}
+        {/* Search bar — centred hero on desktop */}
+        <div className="explore-search">
         <div className="search-bar" style={{ marginBottom: 6 }}>
           <span className="search-icon">🔍</span>
           <input
@@ -207,9 +190,8 @@ export default function ExplorePage({ navigate, outlets = [] }) {
             </div>
           </div>
         )}
+        </div>
 
-        <div className="grid">
-        <div>
         {/* ── Search results ── */}
         {isSearchActive && (
           <div style={{ marginTop: 8 }}>
@@ -256,7 +238,37 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         {/* ── Discovery content (no search) ── */}
         {!isSearchActive && (
           <>
-            {/* Category filter — mobile only; the sidebar owns categories on desktop */}
+            {/* Desktop discovery hub — categories + topics, centred under the search */}
+            <div className="explore-hub">
+              <div>
+                <div className="hub-label">Browse categories</div>
+                <div className="hub-chips">
+                  {CATEGORIES.map(c => (
+                    <button
+                      key={c.value}
+                      className={`pill${category === c.value ? ' active' : ''}`}
+                      onClick={() => setCategory(c.value)}
+                    >{c.emoji ? `${c.emoji} ` : ''}{c.label}</button>
+                  ))}
+                </div>
+              </div>
+              {trendingTopics.length > 0 && (
+                <div>
+                  <div className="hub-label">🔥 Trending topics — tap to search every story</div>
+                  <div className="hub-chips">
+                    {trendingTopics.map(topic => (
+                      <button
+                        key={topic}
+                        className="pill"
+                        onClick={() => setSearch(topic)}
+                      >{topic}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Category filter — mobile only; the hub owns categories on desktop */}
             <div className="filter-bar hide-desktop" style={{ marginTop: 20, marginBottom: 16 }}>
               {CATEGORIES.map(c => (
                 <button
@@ -298,44 +310,6 @@ export default function ExplorePage({ navigate, outlets = [] }) {
             )}
           </>
         )}
-        </div>
-
-        {/* ── Desktop sidebar — categories that all show at once + tappable topics ── */}
-        <aside className="sidebar desktop-only">
-          <div className="widget">
-            <div className="widget-title">Browse categories</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-              {CATEGORIES.map(c => (
-                <button
-                  key={c.value}
-                  className={`pill${!isSearchActive && category === c.value ? ' active' : ''}`}
-                  onClick={() => { setCategory(c.value); setSearch('') }}
-                  style={{ fontSize: 12 }}
-                >{c.emoji ? `${c.emoji} ` : ''}{c.label}</button>
-              ))}
-            </div>
-          </div>
-
-          {trendingTopics.length > 0 && (
-            <div className="widget">
-              <div className="widget-title">🔥 Trending topics</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                {trendingTopics.map(topic => (
-                  <button
-                    key={topic}
-                    className={`pill${search.trim() === topic ? ' active' : ''}`}
-                    onClick={() => setSearch(topic)}
-                    style={{ fontSize: 12 }}
-                  >{topic}</button>
-                ))}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 10, lineHeight: 1.5 }}>
-                Tap a topic to search every story about it.
-              </div>
-            </div>
-          )}
-        </aside>
-        </div>
       </div>
     </div>
   )

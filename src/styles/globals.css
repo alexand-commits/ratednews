@@ -228,6 +228,16 @@ img, video, iframe, embed, object { max-width: 100%; }
   .desktop-only { display: flex; }
   .hide-desktop { display: none !important; }
 }
+
+/* ── Explore discovery hub — centred search + categories + topics on desktop ── */
+.explore-hub { display: none; }
+@media (min-width: 1024px) {
+  .explore-head { text-align: center; }
+  .explore-search { max-width: 680px; margin: 0 auto; }
+  .explore-hub { display: flex; flex-direction: column; align-items: center; gap: 20px; max-width: 780px; margin: 24px auto 34px; }
+  .explore-hub .hub-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; text-align: center; }
+  .explore-hub .hub-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+}
 .widget { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; }
 .widget-title { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text2); margin-bottom: 14px; }
 
