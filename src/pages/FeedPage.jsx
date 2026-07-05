@@ -722,7 +722,7 @@ export default function FeedPage({
 
       {/* Wider shell on desktop so the two-column story grid + sidebar breathe;
           max-width is irrelevant below 1024px so mobile is untouched. */}
-      <div className="container" style={{ maxWidth: 1240 }}>
+      <div className="container" style={{ maxWidth: 1240, paddingTop: 14 }}>
 
         {/* Feed views — one row: Top stories / Latest / My feed.
             'Top stories' and 'Latest' are the all-outlets feed with the two
@@ -754,6 +754,21 @@ export default function FeedPage({
               : <span style={{ fontSize: 10, color: 'var(--coral)', fontWeight: 500, marginLeft: 5, background: 'rgba(255,99,71,0.1)', padding: '1px 6px', borderRadius: 10 }}>Follow outlets</span>
             }
           </div>
+          {/* Density toggle — right end of the tab row */}
+          <button
+            onClick={toggleDensity}
+            title={density === 'compact' ? 'Switch to comfortable view' : 'Switch to compact view'}
+            aria-label="Toggle feed density"
+            style={{
+              marginLeft: 'auto', alignSelf: 'center',
+              display: 'flex', alignItems: 'center', gap: 5,
+              background: 'var(--surface)', border: '0.5px solid var(--border)',
+              borderRadius: 20, padding: '5px 12px', cursor: 'pointer',
+              fontSize: 11, fontWeight: 600, color: 'var(--text2)', flexShrink: 0,
+            }}
+          >
+            {density === 'compact' ? '☰ Compact' : '▤ Comfortable'}
+          </button>
         </div>
 
         {/* My feed context strip */}
@@ -833,8 +848,9 @@ export default function FeedPage({
             </div>
           )}
 
-          {/* Hint text — shown when not searching and no history dropdown */}
-          {!search && !(searchFocused && searchHistory.length > 0) && (
+          {/* Hint text — only while the search is focused and empty; idle state
+              stays chrome-free so stories start higher on the page */}
+          {searchFocused && !search && searchHistory.length === 0 && (
             <p style={{ fontSize: 11, color: 'var(--text3)', marginTop: -8, marginBottom: 10, paddingLeft: 2 }}>
               Searches every story across all outlets — not just headlines
             </p>
@@ -876,35 +892,23 @@ export default function FeedPage({
 
         <div className="grid">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10, flexWrap: 'wrap', gap: 8 }}>
-              <div className="section-label" style={{ margin: 0 }}>
+            {/* Contextual header — only rendered when it says something the
+                tabs don't already (search count, category/region filter).
+                The plain sort label duplicated the active tab; the density
+                toggle now lives in the tabs row. */}
+            {(isSearchActive || category !== 'all' || region !== 'all') && (
+              <div className="section-label" style={{ marginBottom: 10 }}>
                 {isSearchActive
                   ? dbLoading
                     ? 'Searching…'
                     : `${displayList.length} result${displayList.length !== 1 ? 's' : ''} for "${search}"`
-                  : (category !== 'all' || region !== 'all')
-                    ? <>
-                        {category !== 'all' && <span>{category}</span>}
-                        {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}>{category !== 'all' ? ' · ' : ''}{REGIONS.find(r => r.value === region)?.label}</span>}
-                      </>
-                    : <span>{sort === 'latest' ? 'Latest stories' : (SORTS.find(s => s.value === sort)?.label || 'Top stories')}</span>
+                  : <>
+                      {category !== 'all' && <span>{category}</span>}
+                      {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}>{category !== 'all' ? ' · ' : ''}{REGIONS.find(r => r.value === region)?.label}</span>}
+                    </>
                 }
               </div>
-              {/* Density toggle */}
-              <button
-                onClick={toggleDensity}
-                title={density === 'compact' ? 'Switch to comfortable view' : 'Switch to compact view'}
-                aria-label="Toggle feed density"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5,
-                  background: 'var(--surface)', border: '0.5px solid var(--border)',
-                  borderRadius: 20, padding: '5px 12px', cursor: 'pointer',
-                  fontSize: 11, fontWeight: 600, color: 'var(--text2)', flexShrink: 0,
-                }}
-              >
-                {density === 'compact' ? '☰ Compact' : '▤ Comfortable'}
-              </button>
-            </div>
+            )}
 
             {/* Outlet matches — pinned above article results when search active */}
             {isSearchActive && matchedOutlets.length > 0 && (
