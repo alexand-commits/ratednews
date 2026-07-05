@@ -118,7 +118,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
 
   return (
     <div className="page-content">
-      <div className="container" style={{ paddingTop: 16, maxWidth: 680 }}>
+      <div className="container" style={{ paddingTop: 16, maxWidth: 1000 }}>
 
         {/* Page heading */}
         <div style={{ marginBottom: 20 }}>
@@ -244,7 +244,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
             ) : browseFeed.length === 0 ? (
               <div className="empty-state"><p>No stories match these filters yet.</p></div>
             ) : (
-              <div className="feed">
+              <div className="feed feed--grid">
                 {browseFeed.map((a, i) => (
                   <NewsCard
                     key={a.id}

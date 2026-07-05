@@ -155,7 +155,7 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
     return (
       <div className="page-content" {...pullHandlers}>
         {pullIndicator}
-        <div className="container" style={{ maxWidth: 680 }}>
+        <div className="container" style={{ maxWidth: 1000 }}>
           <button className="back-btn" onClick={goBack}>← Back</button>
           <div style={{ textAlign: 'center', padding: '60px 0' }}>
             <div style={{ fontSize: 48, marginBottom: 16 }}>⚽</div>
@@ -172,7 +172,7 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
   return (
     <div className="page-content" {...pullHandlers}>
       {pullIndicator}
-      <div className="container" style={{ maxWidth: 680 }}>
+      <div className="container" style={{ maxWidth: 1000 }}>
         <button className="back-btn" onClick={goBack}>← Back</button>
 
         {/* Page header */}
@@ -226,7 +226,7 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
             <p>No {activeSport} stories available yet.</p>
           </div>
         ) : (
-          <div className="feed">
+          <div className="feed feed--grid">
             {filtered.map((a, i) => (
               <NewsCard
                 key={a.id}

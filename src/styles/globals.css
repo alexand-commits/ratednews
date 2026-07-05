@@ -153,16 +153,16 @@ img, video, iframe, embed, object { max-width: 100%; }
    rest flow into a two-column card grid. The existing 300px Sidebar acts as
    the right rail. Suppressed for search/topic views (no .feed--home class). */
 @media (min-width: 1024px) {
-  .feed--home { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+  :is(.feed--home, .feed--grid) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
   /* Non-card children (error banner, empty states, infinite-scroll sentinel) span the row */
-  .feed--home > *:not(.news-card) { grid-column: 1 / -1; }
+  :is(.feed--home, .feed--grid) > *:not(.news-card) { grid-column: 1 / -1; }
   /* Hero story */
-  .feed--home > .news-card:first-child { grid-column: 1 / -1; padding: 20px 22px; }
-  .feed--home > .news-card:first-child .news-headline { font-size: 27px; line-height: 1.22; margin-bottom: 10px; }
-  .feed--home > .news-card:first-child .news-summary { font-size: 14.5px; -webkit-line-clamp: 3; }
-  .feed--home > .news-card:first-child > div:first-child { gap: 24px !important; }
+  :is(.feed--home, .feed--grid) > .news-card:first-child { grid-column: 1 / -1; padding: 20px 22px; }
+  :is(.feed--home, .feed--grid) > .news-card:first-child .news-headline { font-size: 27px; line-height: 1.22; margin-bottom: 10px; }
+  :is(.feed--home, .feed--grid) > .news-card:first-child .news-summary { font-size: 14.5px; -webkit-line-clamp: 3; }
+  :is(.feed--home, .feed--grid) > .news-card:first-child > div:first-child { gap: 24px !important; }
   /* Enlarge the hero thumbnail — the wrapper carries inline 80px sizing, hence !important */
-  .feed--home > .news-card:first-child > div:first-child > div:nth-child(2) { width: 340px !important; height: 210px !important; border-radius: 10px !important; }
+  :is(.feed--home, .feed--grid) > .news-card:first-child > div:first-child > div:nth-child(2) { width: 340px !important; height: 210px !important; border-radius: 10px !important; }
 }
 .news-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; cursor: pointer; transition: border-color 0.15s; }
 /* Compact density — denser river for power users */

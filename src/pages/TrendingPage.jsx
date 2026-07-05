@@ -147,7 +147,7 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
   return (
     <div className="page-content" {...pullHandlers}>
     {pullIndicator}
-    <div className="container" style={{ maxWidth: 680 }}>
+    <div className="container" style={{ maxWidth: 860 }}>
       <button className="back-btn" onClick={goBack}>← Back</button>
 
       {/* Page header */}
