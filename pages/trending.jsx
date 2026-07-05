@@ -151,7 +151,7 @@ export async function getStaticProps() {
         selected.push(a)
         selectedTokenSets.push(t)
       }
-      if (selected.length >= 20) break
+      if (selected.length >= 30) break
     }
 
     const articles = selected.map(({ _trendScore, _coverage, ...rest }) => ({ ...rest, coverage: _coverage }))
