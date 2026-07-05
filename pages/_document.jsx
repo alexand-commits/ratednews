@@ -5,7 +5,7 @@ export default function Document() {
     <Html lang="en">
       <Head>
         {/* Match system chrome to dark/light page background — prevents floaty nav on mobile */}
-        <meta name="theme-color" content="#111110" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#201E1C" media="(prefers-color-scheme: dark)" />
         <meta name="theme-color" content="#F8F6F4" media="(prefers-color-scheme: light)" />
         <meta name="robots" content="index, follow" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -29,7 +29,7 @@ export default function Document() {
       <body>
         {/* Runs before React hydrates — prevents dark mode flash */}
         {/* Default to dark mode — apply light only if user has explicitly chosen it */}
-        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme');var dark=t!=='light';var bg=dark?'#111110':'#F8F6F4';document.documentElement.setAttribute('data-theme',dark?'dark':'light');document.documentElement.style.background=bg;document.body.style.background=bg;}catch(e){}})()`  }} />
+        <script dangerouslySetInnerHTML={{ __html: `(function(){try{var t=localStorage.getItem('theme');var dark=t!=='light';var bg=dark?'#201E1C':'#F8F6F4';document.documentElement.setAttribute('data-theme',dark?'dark':'light');document.documentElement.style.background=bg;document.body.style.background=bg;}catch(e){}})()`  }} />
         <Main />
         <NextScript />
       </body>

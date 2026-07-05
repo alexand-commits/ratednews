@@ -56,7 +56,7 @@ export default function App({ Component, pageProps }) {
     // Also set background directly on html + body so the colour is visible
     // immediately — before CSS variables resolve — and fills any gap below
     // the fixed bottom nav on iOS Safari / Android Chrome.
-    const bg = isDark ? '#111110' : '#F8F6F4'
+    const bg = isDark ? '#201E1C' : '#F8F6F4'
     root.style.background = bg
     document.body.style.background = bg
     localStorage.setItem('theme', isDark ? 'dark' : 'light')

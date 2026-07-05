@@ -13,7 +13,7 @@ export default function ServerError() {
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         minHeight: '100vh', padding: '0 24px',
-        background: 'var(--bg, #111110)',
+        background: 'var(--bg, #201E1C)',
       }}>
         <div style={{ textAlign: 'center', maxWidth: 420 }}>
 

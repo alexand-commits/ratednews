@@ -31,11 +31,14 @@
 }
 
 [data-theme="dark"] {
-  --bg: #111110;
-  --bg2: #1C1B19;
-  --border: #2C2A27;
-  --border2: #3D3A35;
-  --divider: #4A4744;
+  /* Warm charcoal, not black — the page sits one step below the cards
+     (--surface #2E2B28) so they still read as raised without the void-like
+     near-black gap. */
+  --bg: #201E1C;
+  --bg2: #282623;
+  --border: #383430;
+  --border2: #46413C;
+  --divider: #524E48;
   --text: #EDECEA;
   --text2: #A8A49E;
   --text3: #6B6760;
@@ -64,7 +67,7 @@ img, video, iframe, embed, object { max-width: 100%; }
 
 /* HEADER */
 .header { background: rgba(255,255,255,0.82); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 0.5px solid var(--border); padding: 0 24px; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
-[data-theme="dark"] .header { background: rgba(17,17,16,0.82); }
+[data-theme="dark"] .header { background: rgba(32,30,28,0.82); }
 .logo { font-family: var(--font-playfair), serif; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; cursor: pointer; }
 .logo span { color: var(--coral); }
 .nav { display: flex; gap: 20px; align-items: center; }
