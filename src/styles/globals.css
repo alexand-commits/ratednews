@@ -153,9 +153,11 @@ img, video, iframe, embed, object { max-width: 100%; }
    rest flow into a two-column card grid. The existing 300px Sidebar acts as
    the right rail. Suppressed for search/topic views (no .feed--home class). */
 @media (min-width: 1024px) {
-  :is(.feed--home, .feed--grid) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
+  :is(.feed--home, .feed--grid, .feed--grid-plain) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: stretch; }
   /* Non-card children (error banner, empty states, infinite-scroll sentinel) span the row */
-  :is(.feed--home, .feed--grid) > *:not(.news-card) { grid-column: 1 / -1; }
+  :is(.feed--home, .feed--grid, .feed--grid-plain) > *:not(.news-card) { grid-column: 1 / -1; }
+  /* .feed--grid-plain gets the columns but NO hero treatment — used where the
+     list is chronological and enlarging the newest item would fake importance */
   /* Hero story */
   :is(.feed--home, .feed--grid) > .news-card:first-child { grid-column: 1 / -1; padding: 20px 22px; }
   :is(.feed--home, .feed--grid) > .news-card:first-child .news-headline { font-size: 27px; line-height: 1.22; margin-bottom: 10px; }
@@ -234,10 +236,13 @@ img, video, iframe, embed, object { max-width: 100%; }
 @media (min-width: 1024px) {
   .explore-head { text-align: center; }
   .explore-search { max-width: 680px; margin: 0 auto; }
-  .explore-hub { display: flex; flex-direction: column; align-items: center; gap: 20px; max-width: 780px; margin: 24px auto 34px; }
-  .explore-hub .hub-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 10px; text-align: center; }
-  .explore-hub .hub-chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .explore-hub { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 780px; margin: 18px auto 26px; }
+  .explore-hub .hub-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 7px; text-align: center; }
+  .explore-hub .hub-chips { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
 }
+/* Topic chips act differently to filters (they launch a search) — mark them */
+.pill-topic { color: var(--coral); border-color: rgba(216, 90, 48, 0.4); }
+.pill-topic:hover { border-color: var(--coral); background: rgba(216, 90, 48, 0.08); }
 .widget { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; }
 .widget-title { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text2); margin-bottom: 14px; }
 

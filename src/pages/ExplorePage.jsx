@@ -235,6 +235,14 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         {/* ── Search results ── */}
         {isSearchActive && (
           <div style={{ marginTop: 8 }}>
+            {/* Escape hatch back to the browse view */}
+            <button
+              onClick={() => setSearch('')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text2)', padding: 0, marginBottom: 14, display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              ← Back to browse
+            </button>
+
             {/* Outlet matches */}
             {matchedOutlets.length > 0 && (
               <div style={{ marginBottom: 16 }}>
@@ -308,12 +316,12 @@ export default function ExplorePage({ navigate, outlets = [] }) {
                 <div>
                   <div className="hub-label">🔥 Trending topics — tap to search every story</div>
                   <div className="hub-chips">
-                    {trendingTopics.map(topic => (
+                    {trendingTopics.slice(0, 8).map(topic => (
                       <button
                         key={topic}
-                        className="pill"
+                        className="pill pill-topic"
                         onClick={() => setSearch(topic)}
-                      >{topic}</button>
+                      >🔍 {topic}</button>
                     ))}
                   </div>
                 </div>
@@ -348,7 +356,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
             ) : browseFeed.length === 0 ? (
               <div className="empty-state"><p>No stories match these filters yet.</p></div>
             ) : (
-              <div className="feed feed--grid">
+              <div className="feed feed--grid-plain">
                 {browseFeed.map((a, i) => (
                   <NewsCard
                     key={a.id}
