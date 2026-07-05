@@ -28,17 +28,6 @@ const REGIONS = [
   { value: 'Americas',      label: 'Americas'      },
 ]
 
-const COVERAGE_REGIONS = [
-  { value: 'US',            label: 'US'            },
-  { value: 'UK',            label: 'UK'            },
-  { value: 'Europe',        label: 'Europe'        },
-  { value: 'MiddleEast',    label: 'Middle East'   },
-  { value: 'Africa',        label: 'Africa'        },
-  { value: 'AsiaPac',       label: 'Asia Pacific'  },
-  { value: 'Americas',      label: 'Americas'      },
-  { value: 'International', label: 'International' },
-]
-
 const TRUST_LEVELS = [
   { min: 50, label: 'Expert',           emoji: '🏅', color: '#D85A30' },
   { min: 20, label: 'Trusted Reviewer', emoji: '⭐', color: '#639922' },
@@ -198,28 +187,10 @@ export default function OutletsRankingsPage({
   const [compareMode, setCompareMode] = useState(false)
   const [compareIds,  setCompareIds]  = useState([])
   const [showSuggest, setShowSuggest] = useState(false)
-  const [coverage,    setCoverage]    = useState([])
   const [leaders,     setLeaders]     = useState([])
   const [lbLoading,   setLbLoading]   = useState(false)
   const [lbLoaded,    setLbLoaded]    = useState(false)
   const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
-
-  // Coverage data
-  useEffect(() => {
-    const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-    Promise.all(
-      COVERAGE_REGIONS.map(r =>
-        db.from('articles')
-          .select('*', { count: 'exact', head: true })
-          .eq('article_region', r.value)
-          .gte('published_at', since7)
-          .then(({ count }) => ({ ...r, count: count || 0 }))
-      )
-    ).then(results => {
-      const total = results.reduce((s, r) => s + r.count, 0) || 1
-      setCoverage(results.map(r => ({ ...r, pct: Math.round((r.count / total) * 100) })).sort((a, b) => b.count - a.count))
-    })
-  }, [])
 
   // Leaderboard data — lazy loaded
   useEffect(() => {
@@ -309,7 +280,6 @@ export default function OutletsRankingsPage({
         <div className="tabs" style={{ marginBottom: 20 }}>
           <div className={`tab${section === 'outlets' ? ' active' : ''}`} onClick={() => setSection('outlets')}>📡 Outlets</div>
           <div className={`tab${section === 'leaderboard' ? ' active' : ''}`} onClick={() => setSection('leaderboard')}>🏅 Contributors</div>
-          <div className={`tab${section === 'coverage' ? ' active' : ''}`} onClick={() => setSection('coverage')}>🗺 Coverage</div>
         </div>
 
         {/* ── OUTLETS SECTION ─────────────────────────────────────────────── */}
@@ -559,59 +529,6 @@ export default function OutletsRankingsPage({
                 You're not in the top 25 yet. Keep rating articles to climb the board!
               </div>
             )}
-          </>
-        )}
-
-        {/* ── COVERAGE SECTION ────────────────────────────────────────────── */}
-        {section === 'coverage' && (
-          <>
-            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 20, lineHeight: 1.6 }}>
-              How articles published in the last 7 days are distributed across world regions. Regions under 5% of total coverage are flagged as gaps.
-            </div>
-            {coverage.length === 0 ? (
-              <div className="empty-state"><p>Loading coverage data…</p></div>
-            ) : (() => {
-              const maxCount = coverage[0].count || 1
-              const total    = coverage.reduce((s, r) => s + r.count, 0)
-              const gaps     = coverage.filter(r => r.pct < 5)
-              return (
-                <>
-                  <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-                    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 120 }}>
-                      <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Total articles</div>
-                      <div style={{ fontSize: 22, fontWeight: 700 }}>{total.toLocaleString()}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text2)' }}>last 7 days</div>
-                    </div>
-                    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 120 }}>
-                      <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Coverage gaps</div>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: gaps.length ? 'var(--red)' : 'var(--green)' }}>{gaps.length}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text2)' }}>{gaps.length ? gaps.map(g => g.label).join(', ') : 'All regions covered'}</div>
-                    </div>
-                  </div>
-                  <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px' }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 16 }}>Regional breakdown</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {coverage.map(r => (
-                        <div key={r.value}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <span style={{ fontSize: 13, color: r.pct < 5 ? 'var(--red)' : 'var(--text1)', fontWeight: r.pct < 5 ? 600 : 400 }}>{r.label}{r.pct < 5 ? ' ↓' : ''}</span>
-                            <span style={{ fontSize: 12, color: 'var(--text3)' }}>{r.count.toLocaleString()} articles · {r.pct}%</span>
-                          </div>
-                          <div style={{ height: 6, background: 'var(--border)', borderRadius: 3 }}>
-                            <div style={{ height: '100%', width: `${(r.count / maxCount) * 100}%`, borderRadius: 3, background: r.pct < 5 ? 'var(--red)' : r.pct > 30 ? 'var(--coral)' : 'var(--text3)', transition: 'width 0.4s ease' }} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  {gaps.length > 0 && (
-                    <div style={{ marginTop: 16, background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
-                      <strong style={{ color: 'var(--text1)' }}>Underrepresented regions:</strong> {gaps.map(g => g.label).join(', ')} each account for less than 5% of recent coverage.
-                    </div>
-                  )}
-                </>
-              )
-            })()}
           </>
         )}
 
