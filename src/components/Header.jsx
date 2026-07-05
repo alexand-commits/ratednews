@@ -146,6 +146,23 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
                   </div>
                 )}
 
+                {/* Owner-only: social content desk */}
+                {user.email === 'alexandchow@gmail.com' && (
+                  <button
+                    onClick={() => { setMenuOpen(false); navigate('social') }}
+                    style={{
+                      width: '100%', padding: '9px 16px', background: 'none', border: 'none',
+                      cursor: 'pointer', fontSize: 13, color: 'var(--text)', textAlign: 'left',
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      borderBottom: '0.5px solid var(--border)',
+                    }}
+                    onMouseOver={e => e.currentTarget.style.background = 'var(--bg)'}
+                    onMouseOut={e => e.currentTarget.style.background = 'none'}
+                  >
+                    <span style={{ fontSize: 14 }}>🚀</span> Social desk
+                  </button>
+                )}
+
                 {/* Nav links */}
                 <button
                   onClick={() => { setMenuOpen(false); navigate('profile') }}
