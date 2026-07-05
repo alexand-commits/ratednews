@@ -41,14 +41,14 @@ export default function MethodologyPage({ goBack }) {
             How RatedNews works
           </h1>
           <p style={{ fontSize: 15, color: 'var(--text2)', lineHeight: 1.75 }}>
-            RatedNews is a community-powered news aggregator. We pull articles from 50+ outlets and let readers rate what they read.
+            RatedNews is a community-powered news aggregator. We pull articles from 200+ outlets and let readers rate what they read.
             Every score you see comes from the community — no algorithms, no AI scoring.
           </p>
         </div>
 
         <Section title="What we aggregate">
           <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 14 }}>
-            RatedNews pulls articles from 50+ news outlets via RSS feeds, updated every 30 minutes. Articles are grouped by story
+            RatedNews aggregates headlines from 200+ news outlets, refreshed continuously throughout the day. Articles are grouped by story
             so you can compare how different outlets cover the same event.
           </p>
           <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.75 }}>
