@@ -492,14 +492,12 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {sameStoryArticles.map(a => {
                   const o = a.outlets || {}
-                  const [oBg] = outletColor(o.name || 'X')
                   return (
                     <div
                       key={a.id}
                       onClick={() => navigate('article', { articleId: a.id, title: a.title })}
                       style={{
-                        display: 'flex', alignItems: 'center', gap: 10,
-                        padding: '10px 12px', minHeight: 44,
+                        padding: '10px 12px',
                         background: 'var(--surface)',
                         border: '0.5px solid var(--border)',
                         borderRadius: 8, cursor: 'pointer',
@@ -508,19 +506,28 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                       onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--coral)'}
                       onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border)'}
                     >
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: oBg, flexShrink: 0 }} />
-                      <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {o.name || 'Unknown'}
-                      </span>
-                      <span style={{ fontSize: 12, color: 'var(--text3)', flexShrink: 0 }}>→</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                        <OutletLogo name={o.name || 'X'} size={18} borderRadius={5} />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {o.name || 'Unknown'}
+                        </span>
+                        <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>{timeAgo(a.published_at)}</span>
+                      </div>
+                      {/* The peer's own headline — the framing contrast is the point */}
+                      <div style={{ fontSize: 13.5, fontWeight: 500, color: 'var(--text)', lineHeight: 1.45, fontFamily: 'var(--font-playfair), serif' }}>
+                        {a.title}
+                      </div>
                     </div>
                   )
                 })}
               </div>
               {(article.cluster_peers?.length || 0) > sameStoryArticles.length && (
-                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 6, paddingLeft: 2 }}>
-                  and {(article.cluster_peers.length) - sameStoryArticles.length} more outlet{(article.cluster_peers.length - sameStoryArticles.length) !== 1 ? 's' : ''} covering this story
-                </div>
+                <Link
+                  href={`/story/${articleSlug(article.title, article.id)}`}
+                  style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--coral)', marginTop: 8, paddingLeft: 2, textDecoration: 'none' }}
+                >
+                  See all {(article.cluster_peers.length) + 1} outlets covering this story →
+                </Link>
               )}
             </div>
           )}
