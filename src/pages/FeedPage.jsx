@@ -860,30 +860,9 @@ export default function FeedPage({
           </div>
         )}
 
-        {/* Category filter */}
-        <div className="filter-bar" style={{ marginBottom: 8 }}>
-          {CATEGORIES.map(c => (
-            <button
-              key={c.value}
-              className={`pill${category === c.value ? ' active' : ''}`}
-              onClick={() => setCategory(c.value)}
-            >{c.label}</button>
-          ))}
-        </div>
-
-        {/* Region + Sort — one always-visible scrollable row (sort works on mobile too) */}
+        {/* Sort — Top stories / Latest. Category + region browsing lives on Explore. */}
         {!isSearchActive && (
           <div className="filter-bar" style={{ marginBottom: 16 }}>
-            <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Region</span>
-            {REGIONS.map(r => (
-              <button
-                key={r.value}
-                className={`pill${region === r.value ? ' active' : ''}`}
-                onClick={() => setRegion(r.value)}
-              >{r.label}</button>
-            ))}
-            <span style={{ width: 1, background: 'var(--border)', alignSelf: 'stretch', flexShrink: 0, margin: '4px 4px' }} />
-            <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Sort</span>
             {SORTS.map(s => (
               <button
                 key={s.value}

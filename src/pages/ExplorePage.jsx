@@ -2,21 +2,41 @@ import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { db } from '../lib/supabase'
 import { timeAgo, articleSlug } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
+import NewsCard from '../components/NewsCard'
 
+// Must match scripts/categorise.mjs. 'all' first for the filter pill.
 const CATEGORIES = [
-  { value: 'Politics',       slug: 'politics',       emoji: '🏛',  label: 'Politics',       color: '#4B6FBF' },
-  { value: 'Business',       slug: 'business',       emoji: '📈',  label: 'Business',       color: '#2E8B57' },
-  { value: 'Tech',           slug: 'tech',           emoji: '💻',  label: 'Tech',           color: '#7C5CBF' },
-  { value: 'Science',        slug: 'science',        emoji: '🔬',  label: 'Science',        color: '#2196F3' },
-  { value: 'Health',         slug: 'health',         emoji: '🏥',  label: 'Health',         color: '#D84B8A' },
-  { value: 'Environment',    slug: 'environment',    emoji: '🌱',  label: 'Environment',    color: '#4CAF50' },
-  { value: 'Sport',          slug: 'sport',          emoji: '⚽',  label: 'Sport',          color: '#E84B4B' },
-  { value: 'Entertainment',  slug: 'entertainment',  emoji: '🎬',  label: 'Entertainment',  color: '#FF9800' },
-  { value: 'Conflict',       slug: 'conflict',       emoji: '⚔️',  label: 'Conflict',       color: '#757575' },
-  { value: 'Crime',          slug: 'crime',          emoji: '🔍',  label: 'Crime',          color: '#795548' },
-  { value: 'World',          slug: 'world',          emoji: '🌍',  label: 'World',          color: '#009688' },
-  { value: 'Education',      slug: 'education',      emoji: '🎓',  label: 'Education',      color: '#D85A30' },
+  { value: 'all',            slug: '',               emoji: '',    label: 'All'           },
+  { value: 'Politics',       slug: 'politics',       emoji: '🏛',  label: 'Politics'      },
+  { value: 'World',          slug: 'world',          emoji: '🌍',  label: 'World'         },
+  { value: 'Business',       slug: 'business',       emoji: '📈',  label: 'Business'      },
+  { value: 'Tech',           slug: 'tech',           emoji: '💻',  label: 'Tech'          },
+  { value: 'Science',        slug: 'science',        emoji: '🔬',  label: 'Science'       },
+  { value: 'Health',         slug: 'health',         emoji: '🏥',  label: 'Health'        },
+  { value: 'Environment',    slug: 'environment',    emoji: '🌱',  label: 'Environment'   },
+  { value: 'Sport',          slug: 'sport',          emoji: '⚽',  label: 'Sport'         },
+  { value: 'Entertainment',  slug: 'entertainment',  emoji: '🎬',  label: 'Entertainment' },
+  { value: 'Culture',        slug: 'culture',        emoji: '🎭',  label: 'Culture'       },
+  { value: 'Crime',          slug: 'crime',          emoji: '🔍',  label: 'Crime'         },
+  { value: 'Conflict',       slug: 'conflict',       emoji: '⚔️',  label: 'Conflict'      },
+  { value: 'Travel',         slug: 'travel',         emoji: '✈️',  label: 'Travel'        },
+  { value: 'Education',      slug: 'education',       emoji: '🎓',  label: 'Education'     },
 ]
+
+const REGIONS = [
+  { value: 'all',        label: 'All'          },
+  { value: 'US',         label: 'US'           },
+  { value: 'UK',         label: 'UK'           },
+  { value: 'Europe',     label: 'Europe'       },
+  { value: 'MiddleEast', label: 'Middle East'  },
+  { value: 'Africa',     label: 'Africa'       },
+  { value: 'AsiaPac',    label: 'Asia Pacific' },
+  { value: 'Americas',   label: 'Americas'     },
+]
+
+function getArticleRegion(a) {
+  return a.article_region || a.outlets?.country || 'International'
+}
 
 const STOP = new Set([
   'the','a','an','in','on','at','to','for','of','and','or','is','are','was','were',
@@ -64,12 +84,6 @@ function computeTrendingTopics(articles) {
     .map(([key]) => display[key] || key.charAt(0).toUpperCase() + key.slice(1))
 }
 
-function accBadgeClass(score) {
-  if (score >= 70) return 'score-badge score-badge-green'
-  if (score >= 50) return 'score-badge score-badge-amber'
-  return 'score-badge score-badge-red'
-}
-
 export default function ExplorePage({ navigate, outlets = [] }) {
   const [search, setSearch]           = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
@@ -79,6 +93,10 @@ export default function ExplorePage({ navigate, outlets = [] }) {
   const [topicsSource, setTopicsSource] = useState([])
   const [dbResults, setDbResults]       = useState(null)
   const [dbLoading, setDbLoading]       = useState(false)
+  const [category, setCategory]         = useState('all')
+  const [region, setRegion]             = useState('all')
+  const [feedPool, setFeedPool]         = useState([])
+  const [feedLoading, setFeedLoading]   = useState(true)
   const searchTimer = useRef(null)
   const inputRef    = useRef(null)
 
@@ -111,7 +129,28 @@ export default function ExplorePage({ navigate, outlets = [] }) {
       .then(({ data }) => setTopicsSource(data || []))
   }, [])
 
+  // Fetch a recent pool to power the browse feed (category + region filters)
+  useEffect(() => {
+    setFeedLoading(true)
+    db.from('articles')
+      .select('id, title, published_at, outlet_id, category, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comments(count)')
+      .order('published_at', { ascending: false })
+      .limit(200)
+      .then(({ data }) => { setFeedPool(data || []); setFeedLoading(false) })
+  }, [])
+
   const trendingTopics = useMemo(() => computeTrendingTopics(topicsSource), [topicsSource])
+
+  // Browse feed — apply category + region filters, dedupe clustered stories
+  const browseFeed = useMemo(() => {
+    const seen = new Set()
+    return feedPool.filter(a => {
+      if (category !== 'all' && (a.category || 'World') !== category) return false
+      if (region !== 'all' && getArticleRegion(a) !== region) return false
+      if (a.cluster_id) { if (seen.has(a.cluster_id)) return false; seen.add(a.cluster_id) }
+      return true
+    })
+  }, [feedPool, category, region])
 
   // Debounced search
   useEffect(() => {
@@ -126,8 +165,8 @@ export default function ExplorePage({ navigate, outlets = [] }) {
       if (!escaped) { setDbResults([]); setDbLoading(false); return }
       const { data } = await db
         .from('articles')
-        .select('id, title, published_at, accuracy_score, bias_direction, category, ai_summary, url, outlets(name, logo_url, bias_direction)')
-        .or(`title.ilike.%${escaped}%,ai_summary.ilike.%${escaped}%`)
+        .select('id, title, published_at, category, summary, url, outlets(name, logo_url, country)')
+        .or(`title.ilike.%${escaped}%,summary.ilike.%${escaped}%`)
         .order('published_at', { ascending: false })
         .limit(30)
       setDbResults(data || [])
@@ -157,10 +196,6 @@ export default function ExplorePage({ navigate, outlets = [] }) {
     navigate('feed', { topic })
   }
 
-  function goToCategory(slug) {
-    navigate('category', { slug })
-  }
-
   return (
     <div className="page-content">
       <div className="container" style={{ paddingTop: 16, maxWidth: 680 }}>
@@ -171,7 +206,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
             🔍 Explore
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>
-            Search every story across all outlets
+            Search, or browse by topic and region across all outlets
           </p>
         </div>
 
@@ -230,7 +265,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
                       onClick={() => navigate('outlet', { outletId: o.id })}
                       style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer' }}
                     >
-                      <OutletLogo outlet={o} size={18} />
+                      <OutletLogo name={o.name} size={18} />
                       <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text1)' }}>{o.name}</span>
                     </button>
                   ))}
@@ -283,45 +318,60 @@ export default function ExplorePage({ navigate, outlets = [] }) {
               </div>
             )}
 
-            {/* Categories grid */}
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-                Browse Categories
-              </div>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(3, 1fr)',
-                gap: 10,
-              }}>
-                {CATEGORIES.map(cat => (
-                  <button
-                    key={cat.value}
-                    onClick={() => goToCategory(cat.slug)}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 6,
-                      padding: '14px 8px',
-                      background: 'var(--bg2)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 12,
-                      cursor: 'pointer',
-                      transition: 'background 0.15s',
-                      minWidth: 0,
-                    }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg3)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'var(--bg2)'}
-                  >
-                    <span style={{ fontSize: 22 }}>{cat.emoji}</span>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)', textAlign: 'center', lineHeight: 1.2 }}>
-                      {cat.label}
-                    </span>
-                  </button>
+            {/* Category filter */}
+            <div className="filter-bar" style={{ marginTop: 4, marginBottom: 8 }}>
+              {CATEGORIES.map(c => (
+                <button
+                  key={c.value}
+                  className={`pill${category === c.value ? ' active' : ''}`}
+                  onClick={() => setCategory(c.value)}
+                >{c.emoji ? `${c.emoji} ` : ''}{c.label}</button>
+              ))}
+            </div>
+
+            {/* Region filter */}
+            <div className="filter-bar" style={{ marginBottom: 16 }}>
+              <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Region</span>
+              {REGIONS.map(r => (
+                <button
+                  key={r.value}
+                  className={`pill${region === r.value ? ' active' : ''}`}
+                  onClick={() => setRegion(r.value)}
+                >{r.label}</button>
+              ))}
+            </div>
+
+            {/* Browse feed */}
+            <div className="section-label" style={{ marginBottom: 10 }}>
+              {category === 'all' && region === 'all'
+                ? 'Latest across all outlets'
+                : [category !== 'all' ? category : null, region !== 'all' ? REGIONS.find(r => r.value === region)?.label : null].filter(Boolean).join(' · ')}
+            </div>
+            {feedLoading ? (
+              <div className="feed">
+                {[0, 1, 2, 3].map(i => (
+                  <div key={i} className="skeleton-news-card">
+                    <div className="skeleton-line skeleton-shimmer" style={{ width: '85%', height: 14, marginBottom: 6 }} />
+                    <div className="skeleton-line skeleton-shimmer" style={{ width: '55%', height: 14 }} />
+                  </div>
                 ))}
               </div>
-            </div>
+            ) : browseFeed.length === 0 ? (
+              <div className="empty-state"><p>No stories match these filters yet.</p></div>
+            ) : (
+              <div className="feed">
+                {browseFeed.map((a, i) => (
+                  <NewsCard
+                    key={a.id}
+                    article={a}
+                    index={i}
+                    navigate={navigate}
+                    onClick={() => navigate('article', { articleId: a.id, title: a.title })}
+                    relatedArticles={a.cluster_peers || []}
+                  />
+                ))}
+              </div>
+            )}
           </>
         )}
       </div>
@@ -331,8 +381,6 @@ export default function ExplorePage({ navigate, outlets = [] }) {
 
 function SearchResultRow({ article, navigate }) {
   const outlet = article.outlets || {}
-  const score  = article.accuracy_score
-
   return (
     <div
       className="row-hover"
@@ -340,20 +388,17 @@ function SearchResultRow({ article, navigate }) {
       style={{ padding: '12px 0', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-        <OutletLogo outlet={outlet} size={14} />
+        <OutletLogo name={outlet.name} size={14} />
         <span style={{ fontSize: 12, color: 'var(--text3)', fontWeight: 500 }}>{outlet.name}</span>
         <span style={{ fontSize: 11, color: 'var(--text3)' }}>·</span>
         <span style={{ fontSize: 11, color: 'var(--text3)' }}>{timeAgo(article.published_at)}</span>
-        {score != null && (
-          <span className={accBadgeClass(score)} style={{ marginLeft: 'auto', flexShrink: 0 }}>✦ {score}</span>
-        )}
       </div>
       <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--text1)', lineHeight: 1.4 }}>
         {article.title}
       </p>
-      {article.ai_summary && (
+      {article.summary && (
         <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--text3)', lineHeight: 1.4 }}>
-          {article.ai_summary.slice(0, 120)}{article.ai_summary.length > 120 ? '…' : ''}
+          {article.summary.slice(0, 120)}{article.summary.length > 120 ? '…' : ''}
         </p>
       )}
     </div>
