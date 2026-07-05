@@ -720,7 +720,9 @@ export default function FeedPage({
     <div className="page-content" {...pullHandlers}>
       {pullIndicator}
 
-      <div className="container">
+      {/* Wider shell on desktop so the two-column story grid + sidebar breathe;
+          max-width is irrelevant below 1024px so mobile is untouched. */}
+      <div className="container" style={{ maxWidth: 1240 }}>
 
         {/* Feed tabs — All / My Feed */}
         <div className="tabs" style={{ marginBottom: 14 }}>
@@ -958,7 +960,10 @@ export default function FeedPage({
               </div>
             )}
 
-            <div className={`feed${density === 'compact' ? ' feed-compact' : ''}`}>
+            {/* feed--home enables the desktop grid (≥1024px, CSS-only — mobile
+                unaffected). Suppressed during search/topic views where a hero
+                treatment on the first result would be wrong. */}
+            <div className={`feed${density === 'compact' ? ' feed-compact' : ''}${!isSearchActive && !activeTopic ? ' feed--home' : ''}`}>
               {fetchError ? (
                 <div style={{
                   textAlign: 'center', padding: '40px 20px',
