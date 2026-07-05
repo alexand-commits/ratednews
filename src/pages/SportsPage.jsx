@@ -103,23 +103,52 @@ const SPORT_FILTERS = [
   { value: 'cycling',  label: '🚴 Cycling' },
 ]
 
+const SORTS = [
+  { value: 'trending', label: 'Top stories' },
+  { value: 'latest',   label: 'Latest' },
+]
+
 // ─── Main component ──────────────────────────────────────────────────────────
 export default function SportsPage({ articles, generatedAt, navigate, goBack, onRefresh }) {
   const [activeSport, setActiveSport] = useState('all')
+  const [sort, setSort]               = useState('trending')
   const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
 
   const updatedMins = generatedAt
     ? Math.round((Date.now() - new Date(generatedAt)) / 60000)
     : null
 
-  // Attach sport type to each article client-side, sort by latest
-  const tagged = (articles || [])
-    .map(a => ({ ...a, _sportType: detectSportType(a) }))
-    .sort((a, b) => new Date(b.published_at) - new Date(a.published_at))
+  // Attach sport type to each article client-side
+  const tagged = (articles || []).map(a => ({ ...a, _sportType: detectSportType(a) }))
 
-  const filtered = activeSport === 'all'
+  const bySport = activeSport === 'all'
     ? tagged
     : tagged.filter(a => a._sportType === activeSport)
+
+  // Same sorts as the homepage feed. 'Top stories' uses the shared trend
+  // formula (keep in sync with FeedPage / pages/index.jsx) + cluster dedup;
+  // 'Latest' is pure chronology.
+  let filtered
+  if (sort === 'trending') {
+    const trendScore = a => {
+      const coverage  = a.cluster_peers?.length || 0
+      const comments  = a.comments?.[0]?.count || 0
+      const hoursAgo  = Math.max(0.1, (Date.now() - new Date(a.published_at)) / 3600000)
+      return (coverage * 12 + comments * 5 + 1) / Math.pow(hoursAgo + 2, 1.8)
+    }
+    const seen = new Set()
+    filtered = bySport
+      .slice()
+      .sort((a, b) => trendScore(b) - trendScore(a))
+      .filter(a => {
+        if (!a.cluster_id) return true
+        if (seen.has(a.cluster_id)) return false
+        seen.add(a.cluster_id)
+        return true
+      })
+  } else {
+    filtered = bySport.slice().sort((a, b) => new Date(b.published_at) - new Date(a.published_at))
+  }
 
 
   if (!articles || articles.length === 0) {
@@ -164,6 +193,19 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text2)' }}>
             Quality-rated coverage across all major sports
           </p>
+        </div>
+
+        {/* Sort — Top stories / Latest, mirroring the homepage feed */}
+        <div className="filter-bar" style={{ marginBottom: 8 }}>
+          {SORTS.map(s => (
+            <button
+              key={s.value}
+              className={`pill${sort === s.value ? ' active' : ''}`}
+              onClick={() => setSort(s.value)}
+            >
+              {s.label}
+            </button>
+          ))}
         </div>
 
         {/* Sport filter pills */}
