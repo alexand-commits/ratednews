@@ -76,6 +76,69 @@ function PackCard({ pack }) {
   )
 }
 
+function Composer() {
+  const [input, setInput]     = useState('')
+  const [posts, setPosts]     = useState(null)
+  const [busy, setBusy]       = useState(false)
+  const [error, setError]     = useState('')
+
+  async function generate() {
+    if (!input.trim() || busy) return
+    setBusy(true); setError(''); setPosts(null)
+    try {
+      const { data: { session } } = await db.auth.getSession()
+      const res = await fetch('/api/social-compose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ headlines: input }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Generation failed')
+      setPosts(json.posts || [])
+    } catch (e) {
+      setError(e.message || 'Something went wrong')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 24 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>✍️ Compose from your own headlines</div>
+      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
+        Paste a headline, or several from different outlets — one per line (e.g. <em>BBC — Bank holds rates</em>). We'll draft a few post options.
+      </div>
+      <textarea
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        placeholder={'BBC — Bank holds interest rates at 5%\nTelegraph — Millions face mortgage pain as Bank refuses to cut\nGuardian — Rate hold offers relief but squeeze continues'}
+        rows={4}
+        style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', fontSize: 13, lineHeight: 1.5, padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '0.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit', marginBottom: 10 }}
+      />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button
+          onClick={generate}
+          disabled={busy || !input.trim()}
+          className="nav-pill"
+          style={{ opacity: busy || !input.trim() ? 0.55 : 1, cursor: busy || !input.trim() ? 'default' : 'pointer' }}
+        >
+          {busy ? 'Generating…' : 'Generate posts'}
+        </button>
+        {error && <span style={{ fontSize: 12, color: 'var(--red)' }}>{error}</span>}
+      </div>
+
+      {posts && posts.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          {posts.map((post, i) => <PostCard key={i} post={post} />)}
+        </div>
+      )}
+      {posts && posts.length === 0 && (
+        <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 12 }}>No posts came back — try rewording or adding another headline.</div>
+      )}
+    </div>
+  )
+}
+
 export default function SocialPage({ user, goBack }) {
   const [packs, setPacks]     = useState([])
   const [loading, setLoading] = useState(true)
@@ -117,6 +180,12 @@ export default function SocialPage({ user, goBack }) {
           <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>
             Fresh drafts every 8 hours, built from your real coverage. Review, tweak, post — nothing goes out automatically.
           </p>
+        </div>
+
+        <Composer />
+
+        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 12 }}>
+          Scheduled drafts
         </div>
 
         {loading ? (
