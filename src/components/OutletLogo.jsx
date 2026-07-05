@@ -263,6 +263,15 @@ const OUTLET_DOMAINS = {
   'Minnesota Star Tribune':    'startribune.com',
   'The Local France':          'thelocal.fr',
   'The Local Germany':         'thelocal.de',
+  // July 2026 global round 2
+  'Al-Monitor':                'al-monitor.com',
+  'AllAfrica':                 'allafrica.com',
+  'The Diplomat':              'thediplomat.com',
+  'Havana Times':              'havanatimes.org',
+  'Euractiv':                  'euractiv.com',
+  'The Local Spain':           'thelocal.es',
+  'Swissinfo':                 'swissinfo.ch',
+  'Romania Insider':           'romania-insider.com',
 }
 
 // Direct logo URLs for outlets that share a domain with another outlet

@@ -47,11 +47,24 @@ const parserBrowser = new Parser({
 })
 const parserDefault = new Parser({ timeout: 10000, customFields: PARSER_FIELDS })
 
+// Third fingerprint: a plain, self-identifying bot UA. Some CDNs (Al Arabiya)
+// 403 both the Chrome UA (no real browser TLS fingerprint) AND the default
+// node UA, but allow an honest bot.
+const parserBot = new Parser({
+  timeout: 10000,
+  headers: { 'User-Agent': 'Mozilla/5.0 (compatible; RatedNewsBot/1.0; +https://www.ratednews.com)' },
+  customFields: PARSER_FIELDS,
+})
+
 async function fetchFeed(url) {
   try {
     return await parserBrowser.parseURL(url)
   } catch {
-    return await parserDefault.parseURL(url)
+    try {
+      return await parserDefault.parseURL(url)
+    } catch {
+      return await parserBot.parseURL(url)
+    }
   }
 }
 
@@ -858,10 +871,24 @@ async function ingestOutlet(outlet) {
   }
 
   const runCap = ARTICLES_PER_OUTLET_PER_RUN
-  const items = feed.items.slice(0, runCap)
+  // Sort newest-first before taking the top N. Many feeds are NOT date-ordered
+  // (Google News search feeds sort by relevance; Semafor/PinkNews emit unordered
+  // items) — without this, the same stale top-of-feed items get age-skipped on
+  // every run and the outlet never ingests anything.
+  const items = feed.items
+    .slice()
+    .sort((a, b) => (new Date(b.isoDate || b.pubDate || 0) || 0) - (new Date(a.isoDate || a.pubDate || 0) || 0))
+    .slice(0, runCap)
   let inserted = 0, skipped = 0, errors = 0
 
-  const urls   = items.map(i => i.link || i.guid).filter(Boolean)
+  // Atom feeds (Jacobin, Daily Star) put the article URL in <id>, which
+  // rss-parser exposes as `id`, not `link` — fall back to it when it's a URL.
+  const itemUrl = i => {
+    const u = i.link || i.guid || i.id
+    return typeof u === 'string' && u.startsWith('http') ? u : null
+  }
+
+  const urls   = items.map(itemUrl).filter(Boolean)
   const titles = items.map(i => itemTitle(i)).filter(Boolean)
 
   const [{ data: existingByUrl }, { data: existingByTitle }] = await Promise.all([
@@ -873,7 +900,7 @@ async function ingestOutlet(outlet) {
   const existingTitles = new Set((existingByTitle || []).map(r => r.title))
 
   for (const item of items) {
-    const url   = item.link || item.guid
+    const url   = itemUrl(item)
     const title = cleanTitle(itemTitle(item), outlet.name)
     if (!url || !title) continue
     if (isTooOld(item.pubDate, outlet.name)) { skipped++; continue }
