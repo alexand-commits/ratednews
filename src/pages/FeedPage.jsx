@@ -724,10 +724,22 @@ export default function FeedPage({
           max-width is irrelevant below 1024px so mobile is untouched. */}
       <div className="container" style={{ maxWidth: 1240 }}>
 
-        {/* Feed tabs — All / My Feed */}
+        {/* Feed views — one row: Top stories / Latest / My feed.
+            'Top stories' and 'Latest' are the all-outlets feed with the two
+            sorts; 'My feed' is followed outlets. Replaces the old
+            All-stories/My-feed tabs + separate sort pill row. */}
         <div className="tabs" style={{ marginBottom: 14 }}>
-          <div className={`tab${feedTab === 'all' ? ' active' : ''}`} onClick={() => setFeedTab('all')}>
-            All stories
+          <div
+            className={`tab${feedTab === 'all' && sort === 'trending' ? ' active' : ''}`}
+            onClick={() => { setFeedTab('all'); setSort('trending') }}
+          >
+            Top stories
+          </div>
+          <div
+            className={`tab${feedTab === 'all' && sort === 'latest' ? ' active' : ''}`}
+            onClick={() => { setFeedTab('all'); setSort('latest') }}
+          >
+            Latest
           </div>
           <div
             className={`tab${feedTab === 'following' ? ' active' : ''}`}
@@ -859,19 +871,6 @@ export default function FeedPage({
                 )
               })}
             </div>
-          </div>
-        )}
-
-        {/* Sort — Top stories / Latest. Category + region browsing lives on Explore. */}
-        {!isSearchActive && (
-          <div className="filter-bar" style={{ marginBottom: 16 }}>
-            {SORTS.map(s => (
-              <button
-                key={s.value}
-                className={`pill${sort === s.value ? ' active' : ''}`}
-                onClick={() => setSort(s.value)}
-              >{s.label}</button>
-            ))}
           </div>
         )}
 
