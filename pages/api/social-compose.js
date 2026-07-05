@@ -1,8 +1,11 @@
 /**
  * POST /api/social-compose  (owner-only)
- * On-demand social post generator. Body: { headlines: string }
- * The owner pastes a headline or several (optionally "Outlet — headline" per
- * line) and gets back a few ready-to-post options. Non-streaming JSON.
+ * On-demand social post generator. Two modes:
+ *   { headlines: string, steer?: string } — compose from pasted headlines.
+ *   { trending: true, steer?: string }    — server picks the 3 most-covered
+ *     stories from the last 36h (cross-outlet clusters) and drafts posts per
+ *     story, timed to ride what's hot on X/Bluesky right now.
+ * Non-streaming JSON.
  */
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
@@ -49,8 +52,51 @@ CTA & links — keep it un-salesy
 
 Output STRICT JSON only — no markdown, no prose around it:
 {"posts":[
-  {"type":"coverage_spread|poll|media_literacy","platform":"x","text":"<ready-to-post copy>","poll_options":["A","B"]?,"why":"<one line>"}
+  {"type":"coverage_spread|poll|media_literacy","platform":"x","story":"<2-4 word story label>","text":"<ready-to-post copy>","poll_options":["A","B"]?,"why":"<one line>"}
 ]}`
+
+// ── Trending story selection — same cross-outlet signal as the feed ──────────
+async function trendingStories() {
+  const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY)
+  const since = new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString()
+  const { data, error } = await supabase
+    .from('articles')
+    .select('title, category, published_at, cluster_id, outlets(name)')
+    .not('cluster_id', 'is', null)
+    .gte('published_at', since)
+    .order('published_at', { ascending: false })
+    .limit(600)
+  if (error) throw error
+
+  // Group by cluster; one headline per distinct outlet — that's the spread.
+  const clusters = new Map()
+  for (const a of data || []) {
+    const name = a.outlets?.name
+    if (!name) continue
+    if (!clusters.has(a.cluster_id)) clusters.set(a.cluster_id, { headlines: [], outlets: new Set(), category: a.category, newest: a.published_at })
+    const c = clusters.get(a.cluster_id)
+    if (!c.outlets.has(name)) { c.outlets.add(name); c.headlines.push({ outlet: name, title: a.title }) }
+  }
+
+  return [...clusters.values()]
+    .filter(c => c.outlets.size >= 3)
+    .sort((x, y) => y.outlets.size - x.outlets.size || new Date(y.newest) - new Date(x.newest))
+    .slice(0, 3)
+}
+
+function trendingPrompt(stories) {
+  const blocks = stories.map((c, i) => {
+    const lines = c.headlines.slice(0, 6).map(h => `  - ${h.outlet}: "${h.title}"`).join('\n')
+    return `STORY ${i + 1}${c.category ? ` (${c.category})` : ''} — covered by ${c.outlets.size} outlets right now:\n${lines}`
+  }).join('\n\n')
+  return `These are the 3 most cross-covered stories on RatedNews RIGHT NOW — they're what the news cycle (and the X/Bluesky timeline) is on today:
+
+${blocks}
+
+Draft one "coverage_spread" post per story (pick the sharpest framing contrast in each), plus one "poll" post for whichever single story has the most striking split (poll_options = two outlet names from that story). 4 posts total. Label every post's "story" field so they're groupable.
+
+Return the JSON only.`
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -66,9 +112,10 @@ export default async function handler(req, res) {
   const { data: { user }, error: authErr } = await authClient.auth.getUser()
   if (authErr || !user || user.email !== OWNER) return res.status(403).json({ error: 'Forbidden' })
 
-  const headlines = (req.body?.headlines || '').toString().trim()
-  const steer     = (req.body?.steer || '').toString().trim().slice(0, 300)
-  if (!headlines) return res.status(400).json({ error: 'Paste at least one headline.' })
+  const isTrending = req.body?.trending === true
+  const headlines  = (req.body?.headlines || '').toString().trim()
+  const steer      = (req.body?.steer || '').toString().trim().slice(0, 300)
+  if (!isTrending && !headlines) return res.status(400).json({ error: 'Paste at least one headline.' })
   if (headlines.length > 4000) return res.status(400).json({ error: 'Too much text — trim it down.' })
 
   const steerBlock = steer
@@ -76,12 +123,21 @@ export default async function handler(req, res) {
     : ''
 
   try {
+    let userPrompt
+    if (isTrending) {
+      const stories = await trendingStories()
+      if (!stories.length) return res.status(200).json({ posts: [], note: 'No strongly cross-covered stories in the last 36h.' })
+      userPrompt = trendingPrompt(stories) + steerBlock
+    } else {
+      userPrompt = `Here is the headline(s) to work from:\n\n${headlines}${steerBlock}\n\nReturn the JSON only.`
+    }
+
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const msg = await client.messages.create({
       model: MODEL,
-      max_tokens: 1500,
+      max_tokens: 2000,
       system: SYSTEM,
-      messages: [{ role: 'user', content: `Here is the headline(s) to work from:\n\n${headlines}${steerBlock}\n\nReturn the JSON only.` }],
+      messages: [{ role: 'user', content: userPrompt }],
     })
     const text = msg.content.filter(b => b.type === 'text').map(b => b.text).join('')
     const start = text.indexOf('{'), end = text.lastIndexOf('}')

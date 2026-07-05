@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { db } from '../lib/supabase'
-import { timeAgo } from '../utils/helpers'
 
 const OWNER = 'alexandchow@gmail.com'
 
@@ -32,6 +31,7 @@ function PostCard({ post }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
         <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: meta.color }}>
           {meta.emoji} {meta.label}
+          {post.story ? <span style={{ color: 'var(--text2)', fontWeight: 600 }}> · {post.story}</span> : null}
           {post.platform ? <span style={{ color: 'var(--text3)', fontWeight: 500 }}> · {post.platform.toUpperCase()}</span> : null}
         </span>
         <button
@@ -69,19 +69,54 @@ function PostCard({ post }) {
   )
 }
 
-function PackCard({ pack }) {
-  const p = pack.pack || {}
-  const posts = p.posts || []
+function TrendingGenerator() {
+  const [posts, setPosts] = useState(null)
+  const [busy, setBusy]   = useState(false)
+  const [error, setError] = useState('')
+  const [note, setNote]   = useState('')
+
+  async function generate() {
+    if (busy) return
+    setBusy(true); setError(''); setNote(''); setPosts(null)
+    try {
+      const { data: { session } } = await db.auth.getSession()
+      const res = await fetch('/api/social-compose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ trending: true }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Generation failed')
+      setPosts(json.posts || [])
+      if (json.note) setNote(json.note)
+    } catch (e) {
+      setError(e.message || 'Something went wrong')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
-    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 20 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>
-          {posts.length} posts
-          {p.story_count ? <span style={{ color: 'var(--text3)', fontWeight: 500 }}> · from {p.story_count} {p.story_count === 1 ? 'story' : 'stories'}</span> : null}
-        </div>
-        <span style={{ fontSize: 12, color: 'var(--text3)' }}>{timeAgo(pack.created_at)}</span>
+    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 16 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>⚡ Generate from trending</div>
+      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
+        Drafts posts for the 3 most cross-covered stories right now — post while the timeline's still on them.
       </div>
-      {posts.map((post, i) => <PostCard key={i} post={post} />)}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button onClick={generate} disabled={busy} className="nav-pill" style={{ opacity: busy ? 0.55 : 1, cursor: busy ? 'default' : 'pointer' }}>
+          {busy ? 'Reading the news cycle…' : 'Generate posts'}
+        </button>
+        {error && <span style={{ fontSize: 12, color: 'var(--red)' }}>{error}</span>}
+      </div>
+
+      {posts && posts.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          {posts.map((post, i) => <PostCard key={i} post={post} />)}
+        </div>
+      )}
+      {posts && posts.length === 0 && (
+        <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 12 }}>{note || 'Nothing strongly cross-covered right now — try again after the next news wave.'}</div>
+      )}
     </div>
   )
 }
@@ -158,19 +193,7 @@ function Composer() {
 }
 
 export default function SocialPage({ user, goBack }) {
-  const [packs, setPacks]     = useState([])
-  const [loading, setLoading] = useState(true)
-
   const isOwner = user?.email === OWNER
-
-  useEffect(() => {
-    if (!isOwner) { setLoading(false); return }
-    db.from('social_drafts')
-      .select('id, created_at, pack')
-      .order('created_at', { ascending: false })
-      .limit(20)
-      .then(({ data }) => { setPacks(data || []); setLoading(false) })
-  }, [isOwner])
 
   if (!isOwner) {
     return (
@@ -196,28 +219,12 @@ export default function SocialPage({ user, goBack }) {
             🚀 Social content desk
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>
-            Fresh drafts every 8 hours, built from your real coverage. Review, tweak, post — nothing goes out automatically.
+            Generate posts from what's trending right now, or compose from your own headlines. Review, tweak, post — nothing goes out automatically.
           </p>
         </div>
 
+        <TrendingGenerator />
         <Composer />
-
-        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 12 }}>
-          Scheduled drafts
-        </div>
-
-        {loading ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {[0, 1].map(i => <div key={i} className="skeleton" style={{ height: 160, borderRadius: 12 }} />)}
-          </div>
-        ) : packs.length === 0 ? (
-          <div className="empty-state">
-            <h3>No drafts yet</h3>
-            <p>The first pack will appear here after the next scheduled run (every 8 hours), or trigger the “Social Content Desk” workflow manually in GitHub Actions.</p>
-          </div>
-        ) : (
-          packs.map(pk => <PackCard key={pk.id} pack={pk} />)
-        )}
       </div>
     </div>
   )
