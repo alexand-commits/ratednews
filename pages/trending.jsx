@@ -4,7 +4,7 @@ import { useAppContext } from './_app'
 import TrendingPage from '../src/pages/TrendingPage'
 
 export default function Trending({ articles, generatedAt }) {
-  const { navigate, goBack } = useAppContext()
+  const { navigate, goBack, allOutlets } = useAppContext()
   const router = useRouter()
 
   async function onRefresh() {
@@ -56,6 +56,7 @@ export default function Trending({ articles, generatedAt }) {
         navigate={navigate}
         goBack={goBack}
         onRefresh={onRefresh}
+        outlets={allOutlets}
       />
     </>
   )
@@ -84,7 +85,7 @@ export async function getStaticProps() {
 
     const { data, error } = await supabase
       .from('articles')
-      .select('id, title, published_at, category, summary, image_url, view_count, total_ratings, community_score, outlets(name, logo_url, country), comments(count)')
+      .select('id, title, published_at, outlet_id, category, summary, image_url, view_count, total_ratings, community_score, outlets(name, logo_url, country), comments(count)')
       .gte('published_at', since24h)
       .order('published_at', { ascending: false })
       .limit(200)

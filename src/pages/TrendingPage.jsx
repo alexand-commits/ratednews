@@ -1,8 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
+import { computeTrendingTopics } from '../utils/topics'
+import Sidebar from '../components/Sidebar'
 
 function RankedRow({ a, rank, isLast, navigate }) {
   const [imgFailed, setImgFailed] = useState(false)
@@ -112,7 +114,10 @@ function RankedRow({ a, rank, isLast, navigate }) {
   )
 }
 
-export default function TrendingPage({ articles, generatedAt, navigate, goBack, onRefresh }) {
+export default function TrendingPage({ articles, generatedAt, navigate, goBack, onRefresh, outlets = [] }) {
+  // Rail topics — shared engine over the trending pool; taps jump to the
+  // homepage feed filtered to that topic
+  const trendingTopics = useMemo(() => computeTrendingTopics(articles || []), [articles])
   const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
 
   const updatedMins = generatedAt
@@ -147,8 +152,7 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
   return (
     <div className="page-content" {...pullHandlers}>
     {pullIndicator}
-    <div className="container" style={{ maxWidth: 860 }}>
-      <button className="back-btn" onClick={goBack}>← Back</button>
+    <div className="container" style={{ maxWidth: 1240, paddingTop: 14 }}>
 
       {/* Page header */}
       <div style={{ marginBottom: 20 }}>
@@ -170,6 +174,8 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
         </p>
       </div>
 
+      <div className="grid">
+      <div>
       {/* Hero card */}
       <div
         onClick={() => navigate('article', { articleId: hero.id, title: hero.title })}
@@ -260,6 +266,16 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
           </div>
         </>
       )}
+      </div>
+
+      {/* Rail — trending topics (tap → filtered feed) + top rated outlets */}
+      <Sidebar
+        outlets={outlets}
+        navigate={navigate}
+        trendingTopics={trendingTopics}
+        onTopic={topic => navigate('feed', { topic })}
+      />
+      </div>
     </div>
     </div>
   )

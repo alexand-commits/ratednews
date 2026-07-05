@@ -72,11 +72,19 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
         </div>
       </div>
       <nav className="nav">
-        <a onClick={() => navigate('feed')}>Feed</a>
-        <a onClick={() => navigate('trending')}>Trending</a>
-        <a onClick={() => navigate('sports')}>Sports</a>
-        <a onClick={() => navigate('explore')}>Explore</a>
-        <a onClick={() => navigate('outlets')}>Outlets</a>
+        {[
+          { label: 'Feed',     page: 'feed',     match: p => p === '/' },
+          { label: 'Trending', page: 'trending', match: p => p === '/trending' },
+          { label: 'Sports',   page: 'sports',   match: p => p === '/sports' },
+          { label: 'Explore',  page: 'explore',  match: p => p === '/explore' },
+          { label: 'Outlets',  page: 'outlets',  match: p => p === '/outlets' || p.startsWith('/outlet/') || p === '/rankings' },
+        ].map(l => (
+          <a
+            key={l.page}
+            className={l.match(router.pathname) ? 'active' : undefined}
+            onClick={() => navigate(l.page)}
+          >{l.label}</a>
+        ))}
       </nav>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <button className="theme-toggle" onClick={toggleTheme} title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}>

@@ -253,8 +253,9 @@ export default function OutletsRankingsPage({
   return (
     <div className="page-content" {...pullHandlers}>
       {pullIndicator}
-      <div className="container" style={{ maxWidth: 800 }}>
-        <button className="back-btn" onClick={goBack}>← Back</button>
+      <div className="container" style={{ maxWidth: 1240, paddingTop: 14 }}>
+        <div className="grid">
+        <div>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
@@ -345,8 +346,8 @@ export default function OutletsRankingsPage({
               <input type="text" placeholder="Search outlets or countries..." value={search} onChange={e => setSearch(e.target.value)} />
             </div>
 
-            {/* Region filter */}
-            <div className="filter-bar" style={{ marginBottom: 16 }}>
+            {/* Region filter — mobile only; the rail owns region on desktop */}
+            <div className="filter-bar hide-desktop" style={{ marginBottom: 16 }}>
               <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Region</span>
               {REGIONS.map(r => (
                 <button key={r.value} className={`pill${region === r.value ? ' active' : ''}`} onClick={() => setRegion(r.value)}>{r.label}</button>
@@ -533,6 +534,48 @@ export default function OutletsRankingsPage({
         )}
 
         <div style={{ height: 16 }} />
+        </div>
+
+        {/* Rail — outlets by region (click filters) + suggest CTA */}
+        <aside className="sidebar desktop-only">
+          <div className="widget">
+            <div className="widget-title">Outlets by region</div>
+            {REGIONS.filter(r => r.value !== 'all').map(r => {
+              const count = outlets.filter(o => !o.parent_outlet_id && (o.country || 'International') === r.value).length
+              const active = region === r.value
+              return (
+                <div
+                  key={r.value}
+                  onClick={() => setRegion(active ? 'all' : r.value)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 2px', cursor: 'pointer', borderBottom: '0.5px solid var(--border)', color: active ? 'var(--coral)' : 'var(--text2)', fontSize: 13, fontWeight: active ? 600 : 400 }}
+                >
+                  <span>{r.label}</span>
+                  <span style={{ fontSize: 12, color: active ? 'var(--coral)' : 'var(--text3)', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
+                </div>
+              )
+            })}
+            {region !== 'all' && (
+              <button onClick={() => setRegion('all')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--coral)', padding: '10px 0 0', fontWeight: 600 }}>
+                ✕ Clear region filter
+              </button>
+            )}
+          </div>
+
+          <div className="widget">
+            <div className="widget-title">Missing a source?</div>
+            <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 12 }}>
+              We add outlets the community asks for — feeds are verified before they go live.
+            </div>
+            <button
+              className="btn-outline"
+              style={{ width: '100%', fontSize: 12 }}
+              onClick={() => { if (!user) { onLoginClick(); return } setShowSuggest(true) }}
+            >
+              ➕ Suggest an outlet
+            </button>
+          </div>
+        </aside>
+        </div>
       </div>
 
       {showSuggest && (
