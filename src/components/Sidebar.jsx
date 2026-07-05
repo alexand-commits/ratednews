@@ -24,7 +24,7 @@ export default function Sidebar({ outlets, navigate }) {
             <div key={o.id} className="outlet-rank-row" onClick={() => navigate('outlet', { outletId: o.id })}>
               <span className="rank-num">{i + 1}</span>
               <OutletLogo name={o.name} size={30} borderRadius={7} />
-              <span className="outlet-rank-name">{o.name}</span>
+              <span className="outlet-rank-name" title={o.name}>{o.name}</span>
               <RatingDots value={o.community_score / 20} size={7} valueSize={12} />
             </div>
           ))
@@ -41,7 +41,7 @@ export default function Sidebar({ outlets, navigate }) {
       <div className="widget">
         <div className="widget-title">How scores work</div>
         <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 12 }}>
-          Outlet scores come entirely from reader ratings. Rate articles and outlets to shape the rankings.
+          Outlet scores come entirely from reader ratings. Rate the sources you read to shape the rankings.
         </div>
         {topByRatings.length > 0 && (
           <div style={{ marginBottom: 10 }}>
@@ -50,7 +50,7 @@ export default function Sidebar({ outlets, navigate }) {
               <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer' }} onClick={() => navigate('outlet', { outletId: o.id })}>
                 <OutletLogo name={o.name} size={22} borderRadius={5} />
                 <span style={{ flex: 1, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
-                <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>{o.total_ratings} ratings</span>
+                <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>{o.total_ratings} {o.total_ratings === 1 ? 'rating' : 'ratings'}</span>
               </div>
             ))}
           </div>

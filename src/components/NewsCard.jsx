@@ -58,6 +58,28 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
           </Link>
 
           {!compact && article.summary && <div className="news-summary">{article.summary}</div>}
+
+          {/* Category + score live inside the text column so that on
+              summary-less cards the whole block centres against the thumbnail
+              as one unit — no orphaned gap between headline and category. */}
+          {(article.category || com > 0 || ratings > 0) && (
+            <div className="score-row">
+              {article.category && (
+                <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', color: 'var(--text3)' }}>
+                  {article.category}
+                </span>
+              )}
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                {com > 0 ? (
+                  <RatingDots value={com / 20} size={7} valueSize={11} />
+                ) : ratings > 0 ? (
+                  <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg2)', padding: '2px 8px', borderRadius: 20 }}>
+                    {ratings} {ratings === 1 ? 'rating' : 'ratings'}
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Thumbnail */}
@@ -81,25 +103,6 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
           </div>
         )}
       </div>
-
-      {(article.category || com > 0 || ratings > 0) && (
-        <div className="score-row">
-          {article.category && (
-            <span style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.02em', textTransform: 'uppercase', color: 'var(--text3)' }}>
-              {article.category}
-            </span>
-          )}
-          <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
-            {com > 0 ? (
-              <RatingDots value={com / 20} size={7} valueSize={11} />
-            ) : ratings > 0 ? (
-              <span style={{ fontSize: 10, color: 'var(--text3)', background: 'var(--bg2)', padding: '2px 8px', borderRadius: 20 }}>
-                {ratings} {ratings === 1 ? 'rating' : 'ratings'}
-              </span>
-            ) : null}
-          </div>
-        </div>
-      )}
 
       {/* Coverage strip — the differentiator: how many outlets are on this story.
           Shows the covering outlets' logos + count, taps through to the full
