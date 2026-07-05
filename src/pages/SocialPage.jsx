@@ -48,8 +48,8 @@ function PostCard({ post }) {
         const n = post.text.length
         const over = n > 280
         return (
-          <div style={{ fontSize: 11, marginTop: 8, fontWeight: 600, color: over ? 'var(--red)' : 'var(--text3)' }}>
-            {n} / 280{over ? ` · ${n - 280} over` : ''}
+          <div style={{ fontSize: 11, marginTop: 8, fontWeight: 600, color: over ? 'var(--amber, #C98A08)' : 'var(--text3)' }}>
+            {n} chars{over ? ' · past 280 (fine on Premium)' : ''}
           </div>
         )
       })()}
