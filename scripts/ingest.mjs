@@ -793,9 +793,15 @@ const OUTLET_MAX_TITLE_LENGTH = {
 }
 
 // ── Per-run article cap ───────────────────────────────────────────────────────
-// Maximum articles ingested from any single outlet per run.
-// At 30-min cadence: 3/run = up to ~144 articles/day per outlet.
-const ARTICLES_PER_OUTLET_PER_RUN = 3
+// Maximum articles considered from any single outlet per run.
+// This must exceed the outlet's peak burst per cron interval, or the overflow
+// is PERMANENTLY dropped: each run takes the newest N, so items pushed past
+// position N never re-enter the window. At 3/run, BBC News and The Guardian
+// were losing ~75% of their output (bursts of 5-10 articles per 15-30 min;
+// GitHub's */15 cron is best-effort and often fires closer to every 30 min).
+// Cost of a higher cap is ~zero in steady state: the existing-URL/title check
+// runs BEFORE summary enrichment, so work done per run = genuinely new items.
+const ARTICLES_PER_OUTLET_PER_RUN = 12
 
 function isTitleTooLong(title, outletName) {
   const limit = OUTLET_MAX_TITLE_LENGTH[outletName]
