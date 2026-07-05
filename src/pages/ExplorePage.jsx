@@ -25,6 +25,24 @@ const CATEGORIES = [
 ]
 
 
+const REGIONS = [
+  { value: 'all',        label: 'All regions'  },
+  { value: 'US',         label: 'US'           },
+  { value: 'UK',         label: 'UK'           },
+  { value: 'Europe',     label: 'Europe'       },
+  { value: 'MiddleEast', label: 'Middle East'  },
+  { value: 'Africa',     label: 'Africa'       },
+  { value: 'AsiaPac',    label: 'Asia Pacific' },
+  { value: 'Americas',   label: 'Americas'     },
+]
+
+// Region resolution: per-article region when the categoriser set one, else the
+// outlet's home region (outlets.country is populated for every outlet — this is
+// what makes region filtering reliable, unlike the old article_region-only reads).
+function articleRegion(a) {
+  return a.article_region || a.outlets?.country || 'International'
+}
+
 export default function ExplorePage({ navigate, outlets = [] }) {
   const [search, setSearch]           = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
@@ -34,8 +52,11 @@ export default function ExplorePage({ navigate, outlets = [] }) {
   const [dbResults, setDbResults]       = useState(null)
   const [dbLoading, setDbLoading]       = useState(false)
   const [category, setCategory]         = useState('all')
+  const [region, setRegion]             = useState('all')
   const [feedPool, setFeedPool]         = useState([])
   const [feedLoading, setFeedLoading]   = useState(true)
+  const [catCache, setCatCache]         = useState({})   // category → articles (deep fetch)
+  const [catLoading, setCatLoading]     = useState(false)
   const searchTimer = useRef(null)
   const inputRef    = useRef(null)
 
@@ -80,15 +101,34 @@ export default function ExplorePage({ navigate, outlets = [] }) {
       .then(({ data }) => setTopicsSource(data || []))
   }, [])
 
-  // Browse feed — filter by category, dedupe clustered stories
+  // Deep per-category fetch — the shared 200-article pool only spans the last
+  // hour or two at current ingest volume, which starved low-volume categories.
+  // Selecting a category pulls its own 100 newest articles (cached per session).
+  useEffect(() => {
+    if (category === 'all' || catCache[category]) return
+    setCatLoading(true)
+    db.from('articles')
+      .select('id, title, published_at, outlet_id, category, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comments(count)')
+      .eq('category', category)
+      .order('published_at', { ascending: false })
+      .limit(100)
+      .then(({ data }) => {
+        setCatCache(prev => ({ ...prev, [category]: data || [] }))
+        setCatLoading(false)
+      })
+  }, [category, catCache])
+
+  // Browse feed — category pool (deep) or the recent pool, region-filtered,
+  // clustered stories deduped
   const browseFeed = useMemo(() => {
+    const source = category === 'all' ? feedPool : (catCache[category] || [])
     const seen = new Set()
-    return feedPool.filter(a => {
-      if (category !== 'all' && (a.category || 'World') !== category) return false
+    return source.filter(a => {
+      if (region !== 'all' && articleRegion(a) !== region) return false
       if (a.cluster_id) { if (seen.has(a.cluster_id)) return false; seen.add(a.cluster_id) }
       return true
     })
-  }, [feedPool, category])
+  }, [feedPool, catCache, category, region])
 
   // Trending topics — shared phrase-first extraction (same engine as the
   // homepage chips). Clicking one feeds the full-text search, so topics are a
@@ -252,6 +292,18 @@ export default function ExplorePage({ navigate, outlets = [] }) {
                   ))}
                 </div>
               </div>
+              <div>
+                <div className="hub-label">Region</div>
+                <div className="hub-chips">
+                  {REGIONS.map(r => (
+                    <button
+                      key={r.value}
+                      className={`pill${region === r.value ? ' active' : ''}`}
+                      onClick={() => setRegion(r.value)}
+                    >{r.label}</button>
+                  ))}
+                </div>
+              </div>
               {trendingTopics.length > 0 && (
                 <div>
                   <div className="hub-label">🔥 Trending topics — tap to search every story</div>
@@ -282,8 +334,9 @@ export default function ExplorePage({ navigate, outlets = [] }) {
             {/* Browse feed */}
             <div className="section-label" style={{ marginBottom: 10 }}>
               {category === 'all' ? 'Latest across all outlets' : category}
+              {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
             </div>
-            {feedLoading ? (
+            {(feedLoading || (category !== 'all' && catLoading && !catCache[category])) ? (
               <div className="feed">
                 {[0, 1, 2, 3].map(i => (
                   <div key={i} className="skeleton-news-card">
