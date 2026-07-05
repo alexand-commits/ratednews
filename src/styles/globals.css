@@ -202,7 +202,6 @@ img, video, iframe, embed, object { max-width: 100%; }
 /* OUTLET RANKINGS */
 .outlet-rank-row { display: flex; align-items: center; gap: 12px; padding: 9px 0; border-bottom: 0.5px solid var(--border); cursor: pointer; }
 .outlet-rank-row:last-child { border-bottom: none; }
-.outlet-rank-row:hover { border-color: var(--coral); }
 .outlet-rank-row:hover .outlet-rank-name { color: var(--coral); }
 .rank-num { font-size: 11px; color: var(--text3); width: 16px; }
 .outlet-av { width: 30px; height: 30px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 500; flex-shrink: 0; }
