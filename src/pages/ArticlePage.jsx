@@ -243,8 +243,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   const moreFromOutlet = relatedArticles.outlet || []
   const sameCategory   = relatedArticles.category || []
 
-  let hostname = 'source'
-  try { hostname = article.url ? new URL(article.url).hostname : 'source' } catch (_) {}
 
   const sortedComments = [...comments].sort((a, b) => {
     if (commentSort === 'new') return new Date(b.created_at) - new Date(a.created_at)
@@ -462,6 +460,26 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
           <div className="article-headline-full">{article.title || ''}</div>
 
+          {/* Summary + primary actions — the read/share moment lives with the headline */}
+          {article.summary && (
+            <div style={{ fontSize: 14.5, color: 'var(--text2)', lineHeight: 1.65, marginBottom: 16 }}>
+              {article.summary}
+            </div>
+          )}
+          <div className="article-actions" style={{ marginBottom: 20 }}>
+            <button className="btn-primary" onClick={() => article.url && window.open(article.url, '_blank')}>
+              Read full article on {outlet.name || 'source'} ↗
+            </button>
+            <button className="btn-outline" onClick={async () => {
+              const shareUrl = `https://www.ratednews.com/article/${articleSlug(article.title, article.id)}`
+              if (navigator.share) {
+                try { await navigator.share({ title: article.title, text: article.title, url: shareUrl }) } catch (_) {}
+              } else {
+                navigator.clipboard.writeText(shareUrl).then(() => showToast('Link copied!')).catch(() => showToast('Could not copy'))
+              }
+            }}>↑ Share</button>
+          </div>
+
           {/* Contextual trust prompt — convert the reading moment into an outlet rating */}
           <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
@@ -532,38 +550,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
             </div>
           )}
 
-          <div className="browser-wrap" style={{ marginBottom: 14 }}>
-            <div className="rn-browser-bar">
-              <div className="rn-browser-label">
-                <span className="url-lock">🔒</span>
-                <span style={{ opacity: 0.85 }}>{hostname}</span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span className="rn-browser-badge">Opens in app</span>
-              </div>
-            </div>
-            <div className="browser-content">
-              <div className="browser-headline">{article.title || ''}</div>
-              <div className="browser-byline">{outlet.name || ''} · {timeAgo(article.published_at)}</div>
-              <div className="browser-body">
-                {article.summary || "Click \"Read full article\" to read the complete story on the publisher's website."}
-              </div>
-            </div>
-          </div>
-
-          <div className="article-actions">
-            <button className="btn-primary" onClick={() => article.url && window.open(article.url, '_blank')}>
-              Read full article on {outlet.name || 'source'} ↗
-            </button>
-            <button className="btn-outline" onClick={async () => {
-              const shareUrl = `https://www.ratednews.com/article/${articleSlug(article.title, article.id)}`
-              if (navigator.share) {
-                try { await navigator.share({ title: article.title, text: article.title, url: shareUrl }) } catch (_) {}
-              } else {
-                navigator.clipboard.writeText(shareUrl).then(() => showToast('Link copied!')).catch(() => showToast('Could not copy'))
-              }
-            }}>↑ Share</button>
-          </div>
         </div>
 
         {/* More from this outlet */}
