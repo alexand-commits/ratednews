@@ -23,66 +23,6 @@ const CATEGORIES = [
   { value: 'Education',      slug: 'education',       emoji: '🎓',  label: 'Education'     },
 ]
 
-const REGIONS = [
-  { value: 'all',        label: 'All'          },
-  { value: 'US',         label: 'US'           },
-  { value: 'UK',         label: 'UK'           },
-  { value: 'Europe',     label: 'Europe'       },
-  { value: 'MiddleEast', label: 'Middle East'  },
-  { value: 'Africa',     label: 'Africa'       },
-  { value: 'AsiaPac',    label: 'Asia Pacific' },
-  { value: 'Americas',   label: 'Americas'     },
-]
-
-function getArticleRegion(a) {
-  return a.article_region || a.outlets?.country || 'International'
-}
-
-const STOP = new Set([
-  'the','a','an','in','on','at','to','for','of','and','or','is','are','was','were',
-  'says','say','said','after','as','with','by','from','over','into','its','it',
-  'his','her','their','how','why','what','who','will','have','has','had','been',
-  'be','but','not','this','that','than','then','new','top','first','last','year',
-  'old','day','week','time','way','out','up','more','most','just','also','still',
-  'even','could','would','should','may','might','amid','back','gets','got','amid',
-  'news','report','live','today','tonight','breaking','latest','after','former',
-  'us','uk','about','during','two','three','four','five','six','seven','eight',
-])
-
-// Extract proper-noun tokens (capitalised, non-stop words 3+ chars)
-function properTokens(title) {
-  return (title || '').split(/\s+/).flatMap(raw => {
-    const clean = raw.replace(/[^a-zA-Z]/g, '')
-    if (!clean || clean.length < 3) return []
-    const isProper = /^[A-Z][a-z]/.test(clean) || /^[A-Z]{2,5}$/.test(clean)
-    const key = clean.toLowerCase()
-    if (!isProper || STOP.has(key)) return []
-    return [{ key, display: clean }]
-  })
-}
-
-function computeTrendingTopics(articles) {
-  const freq    = {}
-  const outletSets = {}
-  const display = {}
-
-  for (const a of articles) {
-    const tokens = properTokens(a.title)
-    const seen   = new Set()
-    for (const { key, display: d } of tokens) {
-      freq[key] = (freq[key] || 0) + 1
-      if (!outletSets[key]) outletSets[key] = new Set()
-      if (!seen.has(key)) { outletSets[key].add(a.outlet_id); seen.add(key) }
-      if (!display[key]) display[key] = d
-    }
-  }
-
-  return Object.entries(freq)
-    .filter(([key, count]) => count >= 3 && (outletSets[key]?.size ?? 0) >= 2)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 12)
-    .map(([key]) => display[key] || key.charAt(0).toUpperCase() + key.slice(1))
-}
 
 export default function ExplorePage({ navigate, outlets = [] }) {
   const [search, setSearch]           = useState('')
@@ -90,11 +30,9 @@ export default function ExplorePage({ navigate, outlets = [] }) {
   const [searchHistory, setSearchHistory] = useState(() => {
     try { return JSON.parse(localStorage.getItem('rn_searchHistory') || '[]') } catch { return [] }
   })
-  const [topicsSource, setTopicsSource] = useState([])
   const [dbResults, setDbResults]       = useState(null)
   const [dbLoading, setDbLoading]       = useState(false)
   const [category, setCategory]         = useState('all')
-  const [region, setRegion]             = useState('all')
   const [feedPool, setFeedPool]         = useState([])
   const [feedLoading, setFeedLoading]   = useState(true)
   const searchTimer = useRef(null)
@@ -118,18 +56,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
     return () => clearInterval(id)
   }, [search])
 
-  // Fetch 24h articles for trending topic computation
-  useEffect(() => {
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    db.from('articles')
-      .select('title, outlet_id')
-      .gte('published_at', cutoff)
-      .order('published_at', { ascending: false })
-      .limit(500)
-      .then(({ data }) => setTopicsSource(data || []))
-  }, [])
-
-  // Fetch a recent pool to power the browse feed (category + region filters)
+  // Fetch a recent pool to power the browse feed (category filter)
   useEffect(() => {
     setFeedLoading(true)
     db.from('articles')
@@ -139,18 +66,15 @@ export default function ExplorePage({ navigate, outlets = [] }) {
       .then(({ data }) => { setFeedPool(data || []); setFeedLoading(false) })
   }, [])
 
-  const trendingTopics = useMemo(() => computeTrendingTopics(topicsSource), [topicsSource])
-
-  // Browse feed — apply category + region filters, dedupe clustered stories
+  // Browse feed — filter by category, dedupe clustered stories
   const browseFeed = useMemo(() => {
     const seen = new Set()
     return feedPool.filter(a => {
       if (category !== 'all' && (a.category || 'World') !== category) return false
-      if (region !== 'all' && getArticleRegion(a) !== region) return false
       if (a.cluster_id) { if (seen.has(a.cluster_id)) return false; seen.add(a.cluster_id) }
       return true
     })
-  }, [feedPool, category, region])
+  }, [feedPool, category])
 
   // Debounced search
   useEffect(() => {
@@ -192,10 +116,6 @@ export default function ExplorePage({ navigate, outlets = [] }) {
 
   const isSearchActive = dbResults !== null
 
-  function goToTopic(topic) {
-    navigate('feed', { topic })
-  }
-
   return (
     <div className="page-content">
       <div className="container" style={{ paddingTop: 16, maxWidth: 680 }}>
@@ -206,7 +126,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
             🔍 Explore
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>
-            Search, or browse by topic and region across all outlets
+            Search every story, or browse by topic across all outlets
           </p>
         </div>
 
@@ -297,29 +217,8 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         {/* ── Discovery content (no search) ── */}
         {!isSearchActive && (
           <>
-            {/* Trending topics */}
-            {trendingTopics.length > 0 && (
-              <div style={{ marginTop: 24, marginBottom: 28 }}>
-                <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-                  🔥 Trending · 24h
-                </div>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                  {trendingTopics.map(topic => (
-                    <button
-                      key={topic}
-                      className="pill"
-                      onClick={() => goToTopic(topic)}
-                      style={{ fontSize: 13 }}
-                    >
-                      {topic}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Category filter */}
-            <div className="filter-bar" style={{ marginTop: 4, marginBottom: 8 }}>
+            <div className="filter-bar" style={{ marginTop: 20, marginBottom: 16 }}>
               {CATEGORIES.map(c => (
                 <button
                   key={c.value}
@@ -329,23 +228,9 @@ export default function ExplorePage({ navigate, outlets = [] }) {
               ))}
             </div>
 
-            {/* Region filter */}
-            <div className="filter-bar" style={{ marginBottom: 16 }}>
-              <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Region</span>
-              {REGIONS.map(r => (
-                <button
-                  key={r.value}
-                  className={`pill${region === r.value ? ' active' : ''}`}
-                  onClick={() => setRegion(r.value)}
-                >{r.label}</button>
-              ))}
-            </div>
-
             {/* Browse feed */}
             <div className="section-label" style={{ marginBottom: 10 }}>
-              {category === 'all' && region === 'all'
-                ? 'Latest across all outlets'
-                : [category !== 'all' ? category : null, region !== 'all' ? REGIONS.find(r => r.value === region)?.label : null].filter(Boolean).join(' · ')}
+              {category === 'all' ? 'Latest across all outlets' : category}
             </div>
             {feedLoading ? (
               <div className="feed">
