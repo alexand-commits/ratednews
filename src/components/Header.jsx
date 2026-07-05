@@ -1,5 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { useRouter } from 'next/router'
 import { db } from '../lib/supabase'
+
+// Root tabs served by the mobile bottom nav — no back arrow on these.
+// Everything else (article, story, outlet, profile, about…) gets one.
+const TAB_PATHS = new Set(['/', '/trending', '/sports', '/explore', '/outlets'])
 
 function getTrustLevel(total) {
   if (total >= 50) return { label: 'Expert',           emoji: '🏅', color: '#D85A30' }
@@ -13,6 +18,10 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
   const [menuOpen, setMenuOpen] = useState(false)
   const [stats, setStats]       = useState(null)
   const menuRef = useRef(null)
+  const router  = useRouter()
+
+  // Twitter-style mobile back arrow: detail pages only, never the root tabs.
+  const showBack = !TAB_PATHS.has(router.pathname)
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -50,8 +59,17 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
 
   return (
     <header className="header">
-      <div className="logo" onClick={() => navigate('feed')}>
-        Rated<span>News</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
+        {showBack && (
+          <button
+            className="header-back mobile-only"
+            onClick={() => (window.history.length > 1 ? router.back() : navigate('feed'))}
+            aria-label="Back"
+          >←</button>
+        )}
+        <div className="logo" onClick={() => navigate('feed')}>
+          Rated<span>News</span>
+        </div>
       </div>
       <nav className="nav">
         <a onClick={() => navigate('feed')}>Feed</a>
@@ -59,7 +77,6 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
         <a onClick={() => navigate('sports')}>Sports</a>
         <a onClick={() => navigate('explore')}>Explore</a>
         <a onClick={() => navigate('outlets')}>Outlets</a>
-        <a onClick={() => navigate('about')}>How it works</a>
       </nav>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <button className="theme-toggle" onClick={toggleTheme} title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}>
@@ -224,16 +241,7 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
             )}
           </div>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button
-              onClick={() => navigate('about')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: 'var(--text2)', padding: '4px 2px' }}
-              className="mobile-only"
-            >
-              How it works
-            </button>
-            <button className="nav-pill" onClick={onLoginClick}>Sign in</button>
-          </div>
+          <button className="nav-pill" onClick={onLoginClick}>Sign in</button>
         )}
         <div className="tagline">Trust the source, not just the story</div>
       </div>

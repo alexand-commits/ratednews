@@ -110,6 +110,9 @@ img, video, iframe, embed, object { max-width: 100%; }
   .tagline { display: none; }
 }
 .mobile-only { display: none; }
+/* Mobile header back arrow (Twitter-style) — .mobile-only reveals it under 768px */
+.header-back { align-items: center; justify-content: center; background: none; border: none; cursor: pointer; font-size: 21px; line-height: 1; color: var(--text); padding: 6px 10px 6px 0; margin-left: -2px; flex-shrink: 0; }
+.header-back:active { color: var(--coral); }
 @media (max-width: 768px) { .mobile-only { display: inline-flex !important; } }
 
 /* Feed search + sort hidden on mobile — search lives in the Explore tab */
