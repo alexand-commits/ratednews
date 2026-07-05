@@ -31,7 +31,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   const [replies, setReplies] = useState({}) // { [parentId]: [reply, ...] }
   const [userProfiles, setUserProfiles] = useState({}) // { [user_id]: username }
   const [fetchedArticle, setFetchedArticle] = useState(null)
-  const [relatedArticles, setRelatedArticles] = useState([])
   const [sameStoryArticles, setSameStoryArticles] = useState([])
 
   const article = allArticles.find(a => a.id === articleId) || fetchedArticle
@@ -183,36 +182,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
       })
   }, [article?.id])
 
-  // Fetch related articles once the current article is known
-  useEffect(() => {
-    if (!article) return
-    setRelatedArticles([])
-    const { outlet_id, category, id } = article
-
-    const outletPromise = db.from('articles')
-      .select('*, outlets(name, logo_url, country, bias_direction)')
-      .eq('outlet_id', outlet_id)
-      .neq('id', id)
-      .order('published_at', { ascending: false })
-      .limit(4)
-
-    const categoryPromise = category
-      ? db.from('articles')
-          .select('*, outlets(name, logo_url, country, bias_direction)')
-          .eq('category', category)
-          .neq('outlet_id', outlet_id)
-          .neq('id', id)
-          .order('published_at', { ascending: false })
-          .limit(4)
-      : Promise.resolve({ data: [] })
-
-    Promise.all([outletPromise, categoryPromise]).then(
-      ([{ data: outletData }, { data: categoryData }]) => {
-        setRelatedArticles({ outlet: outletData || [], category: categoryData || [] })
-      }
-    )
-  }, [article?.id])
-
   // If article isn't in the local cache (e.g. older than the loaded feed window),
   // fetch it directly from the DB so we never show a blank page
   useEffect(() => {
@@ -240,8 +209,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   const [bg, fg] = outletColor(outlet.name || 'X')
 
   // Related articles — fetched client-side in the useEffect above
-  const moreFromOutlet = relatedArticles.outlet || []
-  const sameCategory   = relatedArticles.category || []
 
 
   const sortedComments = [...comments].sort((a, b) => {
@@ -551,63 +518,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
           )}
 
         </div>
-
-        {/* More from this outlet */}
-        {moreFromOutlet.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <div className="section-label" style={{ marginBottom: 10 }}>More from {outlet.name}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-              {moreFromOutlet.map((a, i) => {
-                const [abg] = outletColor(a.outlets?.name || '')
-                return (
-                  <div
-                    key={a.id}
-                    onClick={e => { if (e.target.closest('a')) return; navigate('article', { articleId: a.id, title: a.title }) }}
-                    className="row-hover"
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: i < moreFromOutlet.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }}
-                  >
-                    <div style={{ width: 4, height: 40, borderRadius: 2, background: abg, flexShrink: 0 }} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <Link href={`/article/${articleSlug(a.title, a.id)}`} style={{ fontSize: 13, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>{a.title}</Link>
-                      <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span>{timeAgo(a.published_at)}</span>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Same category, different outlets */}
-        {sameCategory.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <div className="section-label" style={{ marginBottom: 10 }}>
-              More {article.category} — from other outlets
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 1, background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-              {sameCategory.map((a, i) => {
-                return (
-                  <div
-                    key={a.id}
-                    onClick={e => { if (e.target.closest('a')) return; navigate('article', { articleId: a.id, title: a.title }) }}
-                    className="row-hover"
-                    style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px', borderBottom: i < sameCategory.length - 1 ? '0.5px solid var(--border)' : 'none', cursor: 'pointer' }}
-                  >
-                    <OutletLogo name={a.outlets?.name || ''} size={28} borderRadius={7} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <Link href={`/article/${articleSlug(a.title, a.id)}`} style={{ fontSize: 13, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: 3, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textDecoration: 'none', color: 'inherit' }}>{a.title}</Link>
-                      <div style={{ fontSize: 11, color: 'var(--text3)', display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        <span>{a.outlets?.name} · {timeAgo(a.published_at)}</span>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Comments */}
         <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
