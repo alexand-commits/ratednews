@@ -445,7 +445,7 @@ export default function FeedPage({
     // Common verbs
     'win','wins','won','lose','loses','lost','hit','hits','face','faces','back',
     'set','get','make','take','give','come','rise','fall','drop','cut','end',
-    'start','begin','grow','reach','help','lead','leave','use','see','run',
+    'stop','stops','stopped','start','begin','grow','reach','help','lead','leave','use','see','run',
     'hold','keep','bring','turn','say','says','said','show','shows','told',
     'call','calls','called','push','pushed','seek','seeks','sought',
     'join','joins','joined','open','opens','opened','close','closes','closed',
