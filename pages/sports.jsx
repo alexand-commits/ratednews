@@ -16,7 +16,7 @@ function articleSlug(title, id) {
 }
 
 export default function Sports({ articles, generatedAt }) {
-  const { navigate, goBack } = useAppContext()
+  const { navigate, goBack, allOutlets } = useAppContext()
   const router = useRouter()
 
   async function onRefresh() {
@@ -68,6 +68,7 @@ export default function Sports({ articles, generatedAt }) {
         navigate={navigate}
         goBack={goBack}
         onRefresh={onRefresh}
+        outlets={allOutlets}
       />
     </>
   )
@@ -83,7 +84,7 @@ export async function getStaticProps() {
 
     const { data, error } = await supabase
       .from('articles')
-      .select('id, title, published_at, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, logo_url, country), comments(count)')
+      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, logo_url, country), comments(count)')
       .eq('category', 'Sport')
       .order('published_at', { ascending: false })
       .limit(400)

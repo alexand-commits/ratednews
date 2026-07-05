@@ -182,7 +182,7 @@ const PLACE_PREFIXES = new Set([
 ])
 
 // Stop-words allowed to sit *inside* a phrase but not start/end one
-const PHRASE_CONNECTORS = new Set(['of','the','and','in','on','at','to','for','by','with','from','over','into','as','a'])
+const PHRASE_CONNECTORS = new Set(['of','the','and','in','on','at','to','for','by','with','from','over','into','as','a','de','da','del','van','von','le','la'])
 
 export function computeTrendingTopics(topicsSource) {
     const phraseFreq   = {}
@@ -223,7 +223,9 @@ export function computeTrendingTopics(topicsSource) {
       }
 
       rawWords.forEach((raw, idx) => {
-        const clean = raw.replace(/[^a-zA-Z'-]/g, '').replace(/^'+|'+$/g, '')
+        // Strip possessive 's first — "Balogun's" must merge with "Balogun",
+        // not surface as the mangled plural "Baloguns"
+        const clean = raw.replace(/['\u2019]s(?=\W|$)/, '').replace(/[^a-zA-Z'-]/g, '').replace(/^'+|'+$/g, '')
         if (!clean) { flushBuffer(); return }
         const isAcronym    = /^[A-Z]{2,6}$/.test(clean)
         const key0         = clean.toLowerCase()
@@ -247,7 +249,7 @@ export function computeTrendingTopics(topicsSource) {
 
       // ── Pass 2: single proper nouns & acronyms ──
       rawWords.forEach((raw, idx) => {
-        const clean = raw.replace(/[^a-zA-Z]/g, '')
+        const clean = raw.replace(/['\u2019]s(?=\W|$)/, '').replace(/[^a-zA-Z]/g, '')
         if (!clean) return
         const isAcronym    = /^[A-Z]{2,6}$/.test(clean)
         const key          = clean.toLowerCase()

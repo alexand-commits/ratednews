@@ -1,6 +1,9 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import NewsCard from '../components/NewsCard'
+import OutletLogo from '../components/OutletLogo'
+import RatingDots from '../components/RatingDots'
 import { timeAgo } from '../utils/helpers'
+import { computeTrendingTopics } from '../utils/topics'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
 // ─── Sport detection ────────────────────────────────────────────────────────
@@ -109,9 +112,10 @@ const SORTS = [
 ]
 
 // ─── Main component ──────────────────────────────────────────────────────────
-export default function SportsPage({ articles, generatedAt, navigate, goBack, onRefresh }) {
+export default function SportsPage({ articles, generatedAt, navigate, goBack, onRefresh, outlets = [] }) {
   const [activeSport, setActiveSport] = useState('all')
   const [sort, setSort]               = useState('trending')
+  const [activeTopic, setActiveTopic] = useState(null)
   const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
 
   const updatedMins = generatedAt
@@ -121,9 +125,14 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
   // Attach sport type to each article client-side
   const tagged = (articles || []).map(a => ({ ...a, _sportType: detectSportType(a) }))
 
-  const bySport = activeSport === 'all'
+  // Trending sport topics — same shared engine as home/Explore, fed the
+  // sports-only pool. Chips filter this feed client-side by title match.
+  const trendingTopics = useMemo(() => computeTrendingTopics(articles || []), [articles])
+
+  const bySport = (activeSport === 'all'
     ? tagged
     : tagged.filter(a => a._sportType === activeSport)
+  ).filter(a => !activeTopic || (a.title || '').toLowerCase().includes(activeTopic.toLowerCase()))
 
   // Same sorts as the homepage feed. 'Top stories' uses the shared trend
   // formula (keep in sync with FeedPage / pages/index.jsx) + cluster dedup;
@@ -150,6 +159,14 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
     filtered = bySport.slice().sort((a, b) => new Date(b.published_at) - new Date(a.published_at))
   }
 
+  // Rail: dedicated sports outlets (top-level only), rated ones first
+  const sportsOutlets = useMemo(() =>
+    outlets
+      .filter(o => o.type === 'Sports' && !o.parent_outlet_id)
+      .sort((a, b) => (b.community_score || 0) - (a.community_score || 0) || (a.name || '').localeCompare(b.name || ''))
+      .slice(0, 8)
+  , [outlets])
+
 
   if (!articles || articles.length === 0) {
     return (
@@ -172,11 +189,9 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
   return (
     <div className="page-content" {...pullHandlers}>
       {pullIndicator}
-      <div className="container" style={{ maxWidth: 1000 }}>
-        <button className="back-btn" onClick={goBack}>← Back</button>
-
-        {/* Page header */}
-        <div style={{ marginBottom: 20 }}>
+      <div className="container" style={{ maxWidth: 1240, paddingTop: 14 }}>
+        {/* Page header — Sports is a root tab, no back button */}
+        <div style={{ marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
             <h1 style={{
               fontSize: 26, fontWeight: 700, margin: 0,
@@ -190,21 +205,18 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
               </span>
             )}
           </div>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text2)' }}>
-            Quality-rated coverage across all major sports
-          </p>
         </div>
 
-        {/* Sort — Top stories / Latest, mirroring the homepage feed */}
-        <div className="filter-bar" style={{ marginBottom: 8 }}>
+        {/* View tabs — Top stories / Latest, same anatomy as the homepage */}
+        <div className="tabs" style={{ marginBottom: 14 }}>
           {SORTS.map(s => (
-            <button
+            <div
               key={s.value}
-              className={`pill${sort === s.value ? ' active' : ''}`}
+              className={`tab${sort === s.value ? ' active' : ''}`}
               onClick={() => setSort(s.value)}
             >
               {s.label}
-            </button>
+            </div>
           ))}
         </div>
 
@@ -221,24 +233,74 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
           ))}
         </div>
 
-        {filtered.length === 0 ? (
-          <div className="empty-state">
-            <p>No {activeSport} stories available yet.</p>
+        <div className="grid">
+          <div>
+            {activeTopic && (
+              <div className="section-label" style={{ marginBottom: 10 }}>
+                {activeTopic}
+                <button
+                  onClick={() => setActiveTopic(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--coral)', marginLeft: 10, padding: 0 }}
+                >✕ clear</button>
+              </div>
+            )}
+            {filtered.length === 0 ? (
+              <div className="empty-state">
+                <p>No {activeTopic || activeSport} stories available yet.</p>
+              </div>
+            ) : (
+              <div className="feed feed--grid">
+                {filtered.map((a, i) => (
+                  <NewsCard
+                    key={a.id}
+                    article={a}
+                    index={i}
+                    onClick={() => navigate('article', { articleId: a.id, title: a.title })}
+                    navigate={navigate}
+                    relatedArticles={a.cluster_peers || []}
+                  />
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="feed feed--grid">
-            {filtered.map((a, i) => (
-              <NewsCard
-                key={a.id}
-                article={a}
-                index={i}
-                onClick={() => navigate('article', { articleId: a.id, title: a.title })}
-                navigate={navigate}
-                relatedArticles={a.cluster_peers || []}
-              />
-            ))}
-          </div>
-        )}
+
+          {/* Sports rail — trending sport topics + dedicated sports outlets */}
+          <aside className="sidebar">
+            {trendingTopics.length > 0 && (
+              <div className="widget sidebar-trending">
+                <div className="widget-title">🔥 Trending in sport</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                  {trendingTopics.slice(0, 10).map(topic => (
+                    <button
+                      key={topic}
+                      className={`pill${activeTopic === topic ? ' active' : ''}`}
+                      onClick={() => setActiveTopic(activeTopic === topic ? null : topic)}
+                      style={{ fontSize: 12 }}
+                    >{topic}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {sportsOutlets.length > 0 && (
+              <div className="widget">
+                <div className="widget-title">Sports outlets</div>
+                {sportsOutlets.map(o => (
+                  <div key={o.id} className="outlet-rank-row" onClick={() => navigate('outlet', { outletId: o.id })}>
+                    <OutletLogo name={o.name} size={26} borderRadius={6} />
+                    <span className="outlet-rank-name" title={o.name}>{o.name}</span>
+                    {(o.community_score || 0) > 0
+                      ? <RatingDots value={o.community_score / 20} size={7} valueSize={12} />
+                      : <span style={{ fontSize: 10, color: 'var(--text3)', flexShrink: 0 }}>Not rated yet</span>}
+                  </div>
+                ))}
+                <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 10, lineHeight: 1.5 }}>
+                  Trust a sports source? Be the first to rate it.
+                </div>
+              </div>
+            )}
+          </aside>
+        </div>
       </div>
     </div>
   )
