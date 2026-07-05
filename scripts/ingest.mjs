@@ -31,6 +31,7 @@ const PARSER_FIELDS = {
     ['media:content', 'mediaContent'],
     ['media:thumbnail', 'mediaThumbnail'],
     ['content:encoded', 'contentEncoded'],
+    ['source', 'rssSource'],
   ],
 }
 
@@ -740,6 +741,23 @@ function isTooShort(title) {
   return title.trim().length < 15
 }
 
+// ── Syndication guard ─────────────────────────────────────────────────────────
+// Aggregator feeds (Yahoo Sports) republish partner content and mark the true
+// publisher in the RSS <source> tag ("SB Nation", "The El Paso Times"…).
+// Attributing those items to the feed's outlet mislabels the source — fatal for
+// a trust product — so skip any item whose <source> names a different publisher.
+// Feeds without a <source> tag (nearly all direct feeds) are unaffected.
+function isSyndicated(item, outletName) {
+  const raw = item.rssSource
+  const src = typeof raw === 'string' ? raw : (raw?._ ?? raw?.title ?? '')
+  if (!src || typeof src !== 'string') return false
+  const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+  const a = norm(src), b = norm(outletName)
+  if (!a || !b) return false
+  // Loose match tolerates "Yahoo!" vs "Yahoo Sports", "USA TODAY Sports" vs "USA Today"
+  return !(a.includes(b) || b.includes(a))
+}
+
 // Rough non-English heuristic — if >40% of chars are non-ASCII, skip
 function isLikelyNonEnglish(title) {
   const nonAscii = (title.match(/[^\x00-\x7F]/g) || []).length
@@ -910,6 +928,7 @@ async function ingestOutlet(outlet) {
     const title = cleanTitle(itemTitle(item), outlet.name)
     if (!url || !title) continue
     if (isTooOld(item.pubDate, outlet.name)) { skipped++; continue }
+    if (isSyndicated(item, outlet.name))     { skipped++; continue }
     if (isTooShort(title))                   { skipped++; continue }
     if (isLikelyNonEnglish(title))           { skipped++; continue }
     if (isJunk(title))                       { skipped++; continue }
