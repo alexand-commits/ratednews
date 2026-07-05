@@ -2,19 +2,36 @@ import React from 'react'
 import OutletLogo from './OutletLogo'
 import RatingDots from './RatingDots'
 
-export default function Sidebar({ outlets, navigate }) {
+export default function Sidebar({ outlets, navigate, trendingTopics = [], activeTopic = null, onTopic }) {
   const top5 = outlets
     .filter(o => (o.community_score || 0) > 0 && !o.parent_outlet_id)
     .sort((a, b) => (b.community_score || 0) - (a.community_score || 0))
     .slice(0, 5)
 
-  const topByRatings = outlets
-    .filter(o => (o.total_ratings || 0) > 0 && !o.parent_outlet_id)
-    .sort((a, b) => (b.total_ratings || 0) - (a.total_ratings || 0))
-    .slice(0, 3)
-
   return (
     <div className="sidebar">
+      {/* Trending topics — desktop only (mobile keeps the inline chips above the feed) */}
+      {trendingTopics.length > 0 && onTopic && (
+        <div className="widget sidebar-trending">
+          <div className="widget-title">🔥 Trending · 24h</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+            {trendingTopics.map(topic => {
+              const isActive = activeTopic === topic
+              return (
+                <button
+                  key={topic}
+                  onClick={() => onTopic(topic)}
+                  className={`pill${isActive ? ' active' : ''}`}
+                  style={{ fontSize: 12 }}
+                >
+                  {topic}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="widget">
         <div className="widget-title">Top rated outlets</div>
         {top5.length === 0 ? (
@@ -36,31 +53,12 @@ export default function Sidebar({ outlets, navigate }) {
         >
           Full rankings →
         </button>
-      </div>
-
-      <div className="widget">
-        <div className="widget-title">How scores work</div>
-        <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 12 }}>
-          Outlet scores come entirely from reader ratings. Rate the sources you read to shape the rankings.
+        <div style={{ borderTop: '0.5px solid var(--border)', marginTop: 14, paddingTop: 12, fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>
+          Scores come entirely from reader ratings — rate the sources you read to shape them.{' '}
+          <a href="/methodology" style={{ color: 'var(--text3)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+            How it works →
+          </a>
         </div>
-        {topByRatings.length > 0 && (
-          <div style={{ marginBottom: 10 }}>
-            <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 6 }}>Most rated</div>
-            {topByRatings.map(o => (
-              <div key={o.id} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, cursor: 'pointer' }} onClick={() => navigate('outlet', { outletId: o.id })}>
-                <OutletLogo name={o.name} size={22} borderRadius={5} />
-                <span style={{ flex: 1, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
-                <span style={{ fontSize: 11, color: 'var(--text3)', flexShrink: 0 }}>{o.total_ratings} {o.total_ratings === 1 ? 'rating' : 'ratings'}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        <a
-          href="/methodology"
-          style={{ display: 'block', marginTop: 4, fontSize: 11, color: 'var(--text3)', textDecoration: 'none', textAlign: 'right' }}
-        >
-          How it works →
-        </a>
       </div>
     </div>
   )

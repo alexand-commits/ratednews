@@ -829,9 +829,9 @@ export default function FeedPage({
           )}
         </div>
 
-        {/* Topic insight cards */}
+        {/* Topic insight cards — inline on mobile; ≥1024px these live in the sidebar */}
         {topicInsights.length > 0 && (
-          <div style={{ marginBottom: 14 }}>
+          <div className="trending-inline" style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
               🔥 Trending · 24h
             </div>
@@ -1156,7 +1156,13 @@ export default function FeedPage({
               )}
             </div>
           </div>
-          <Sidebar outlets={outlets} navigate={navigate} />
+          <Sidebar
+            outlets={outlets}
+            navigate={navigate}
+            trendingTopics={topicInsights.map(t => t.topic)}
+            activeTopic={activeTopic}
+            onTopic={topic => setActiveTopic(activeTopic === topic ? null : topic)}
+          />
         </div>
       </div>
 
