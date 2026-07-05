@@ -78,6 +78,7 @@ function PackCard({ pack }) {
 
 function Composer() {
   const [input, setInput]     = useState('')
+  const [steer, setSteer]     = useState('')
   const [posts, setPosts]     = useState(null)
   const [busy, setBusy]       = useState(false)
   const [error, setError]     = useState('')
@@ -90,7 +91,7 @@ function Composer() {
       const res = await fetch('/api/social-compose', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ headlines: input }),
+        body: JSON.stringify({ headlines: input, steer }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Generation failed')
@@ -114,6 +115,13 @@ function Composer() {
         placeholder={'BBC — Bank holds interest rates at 5%\nTelegraph — Millions face mortgage pain as Bank refuses to cut\nGuardian — Rate hold offers relief but squeeze continues'}
         rows={4}
         style={{ width: '100%', boxSizing: 'border-box', resize: 'vertical', fontSize: 13, lineHeight: 1.5, padding: '10px 12px', borderRadius: 'var(--radius-sm)', border: '0.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit', marginBottom: 10 }}
+      />
+      <input
+        type="text"
+        value={steer}
+        onChange={e => setSteer(e.target.value)}
+        placeholder="Optional: steer the tone — e.g. “lean into the comedy of the wording”"
+        style={{ width: '100%', boxSizing: 'border-box', fontSize: 13, padding: '9px 12px', borderRadius: 'var(--radius-sm)', border: '0.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontFamily: 'inherit', marginBottom: 10 }}
       />
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <button
