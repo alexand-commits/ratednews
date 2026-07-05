@@ -44,6 +44,16 @@ function PostCard({ post }) {
 
       <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{post.text}</div>
 
+      {typeof post.text === 'string' && (() => {
+        const n = post.text.length
+        const over = n > 280
+        return (
+          <div style={{ fontSize: 11, marginTop: 8, fontWeight: 600, color: over ? 'var(--red)' : 'var(--text3)' }}>
+            {n} / 280{over ? ` · ${n - 280} over` : ''}
+          </div>
+        )
+      })()}
+
       {post.poll_options?.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
           {post.poll_options.map((o, i) => (

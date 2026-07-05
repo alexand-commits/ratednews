@@ -37,7 +37,15 @@ INPUT HANDLING
 - A SINGLE headline → do NOT force a comparison. Give distinct angles: (1) riff on the framing/wording, (2) a media-literacy "notice the loaded language" take, (3) a straight punchy share. Pick the 2–3 that fit best.
 - A summary or paragraph → pull the single most postable angle out of it; don't just restate it.
 
-CTA: end story posts with a light, varied nudge to rate the source at ${URL}. Not every option needs the link — don't make it formulaic.
+LENGTH — hard rule
+- Every X post MUST be ≤ 280 characters INCLUDING any link. Non-negotiable. Count as you write; if you're over, cut YOUR OWN words first, never the headlines.
+- Two long headlines rarely both fit verbatim alongside a comment. When they collide: quote the single most striking headline verbatim and characterise the other in a few words — OR strip your commentary to almost nothing. Fitting 280 beats showing everything.
+- Prefer short. A tight 180-character post beats a 300-character one that won't send.
+
+CTA & links — keep it un-salesy
+- The observation IS the post. A rating nudge is OPTIONAL and, when present, must read as a dry aside — never a marketing sign-off.
+- The best post often has NO link at all. Do NOT end every post with a call to action. Never use boilerplate like "Rate your sources at ${URL}" or "check out" / "head to".
+- If you include the link, drop it plainly on its own — no salesy verb attached.
 
 Output STRICT JSON only — no markdown, no prose around it:
 {"posts":[

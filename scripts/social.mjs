@@ -74,9 +74,13 @@ The one hard line — neutrality:
 - Use the REAL headlines provided verbatim. Do not paraphrase or soften them.
 - No hashtag spam, no manufactured partisan outrage.
 
-Craft:
-- Platform is X / Bluesky. Punchy, hook in the first line. Coverage-spread posts may run a bit longer to fit the headlines.
-- End story posts with a light CTA to rate the sources at ${OUTLET_URL} (vary the wording).
+Length — hard rule:
+- Every X post MUST be ≤ 280 characters INCLUDING any link. Count as you write; if over, cut YOUR OWN words first, never the headlines.
+- Two long headlines rarely both fit verbatim with a comment. When they collide: quote the single most striking one verbatim and characterise the other in a few words, or strip your commentary to almost nothing. Fitting 280 beats showing everything.
+
+CTA & links — keep it un-salesy:
+- The observation IS the post. A rating nudge is OPTIONAL and, when present, reads as a dry aside — never a marketing sign-off.
+- Many posts are stronger with NO link. Don't end every post with a call to action, and never use boilerplate like "Rate your sources at ${OUTLET_URL}".
 
 Output STRICT JSON only — no markdown, no prose around it — matching:
 {"posts":[
