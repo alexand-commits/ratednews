@@ -270,6 +270,21 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         )}
         </div>
 
+        {/* Region edition switcher — full-width above the grid so the rail
+            aligns with content, not controls */}
+        {!isSearchActive && (
+          <div className="filter-bar desktop-only" style={{ marginBottom: 16 }}>
+            <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Region</span>
+            {REGIONS.map(r => (
+              <button
+                key={r.value}
+                className={`pill${region === r.value ? ' active' : ''}`}
+                onClick={() => setRegion(r.value)}
+              >{r.label}</button>
+            ))}
+          </div>
+        )}
+
         <div className="grid">
         <div>
         {/* ── Search results ── */}
@@ -326,17 +341,6 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         {/* ── Discovery content (no search) ── */}
         {!isSearchActive && (
           <>
-            {/* Region edition switcher — desktop; the digest recomputes per region */}
-            <div className="filter-bar desktop-only" style={{ marginBottom: 18 }}>
-              <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Region</span>
-              {REGIONS.map(r => (
-                <button
-                  key={r.value}
-                  className={`pill${region === r.value ? ' active' : ''}`}
-                  onClick={() => setRegion(r.value)}
-                >{r.label}</button>
-              ))}
-            </div>
             {/* Category filter — mobile only; the hub owns categories on desktop */}
             <div className="filter-bar hide-desktop" style={{ marginTop: 20, marginBottom: 16 }}>
               {CATEGORIES.map(c => (
@@ -419,12 +423,14 @@ export default function ExplorePage({ navigate, outlets = [] }) {
             ) : (
               <>
                 {/* Deep category view */}
-                <div className="section-label" style={{ marginBottom: 10 }}>
-                  {category}
-                  {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <h2 style={{ margin: 0, fontFamily: 'var(--font-playfair), serif', fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>
+                    {CATEGORIES.find(c => c.value === category)?.emoji} {category}
+                    {region !== 'all' && <span style={{ fontWeight: 400, fontSize: 14, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
+                  </h2>
                   <button
                     onClick={() => goCategory('all')}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--coral)', marginLeft: 10, padding: 0 }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--coral)', padding: 0 }}
                   >✕ all sections</button>
                 </div>
                 {browseFeed.length === 0 ? (
@@ -450,7 +456,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         </div>
 
         {/* ── Rail — topics lead (like every other page's rail), filters follow ── */}
-        <aside className="sidebar desktop-only">
+        <aside className="sidebar desktop-only" style={{ marginTop: 38 }}>
           {trendingTopics.length > 0 && (
             <div className="widget">
               <div className="widget-title">🔥 Trending topics</div>
