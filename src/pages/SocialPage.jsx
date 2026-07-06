@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { db } from '../lib/supabase'
+import { timeAgo } from '../utils/helpers'
 
 const OWNER = 'alexandchow@gmail.com'
 
@@ -90,7 +91,7 @@ function PostCard({ post }) {
   )
 }
 
-function TrendingGenerator() {
+function TrendingGenerator({ onRun }) {
   const [posts, setPosts] = useState(null)
   const [busy, setBusy]   = useState(false)
   const [error, setError] = useState('')
@@ -110,6 +111,7 @@ function TrendingGenerator() {
       if (!res.ok) throw new Error(json.error || 'Generation failed')
       setPosts(json.posts || [])
       if (json.note) setNote(json.note)
+      if (json.posts?.length) onRun?.(json.posts, 'trending')
     } catch (e) {
       setError(e.message || 'Something went wrong')
     } finally {
@@ -142,7 +144,7 @@ function TrendingGenerator() {
   )
 }
 
-function Composer() {
+function Composer({ onRun }) {
   const [input, setInput]     = useState('')
   const [steer, setSteer]     = useState('')
   const [posts, setPosts]     = useState(null)
@@ -162,6 +164,7 @@ function Composer() {
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Generation failed')
       setPosts(json.posts || [])
+      if (json.posts?.length) onRun?.(json.posts, 'compose')
     } catch (e) {
       setError(e.message || 'Something went wrong')
     } finally {
@@ -216,10 +219,25 @@ function Composer() {
 export default function SocialPage({ user, goBack }) {
   const isOwner = user?.email === OWNER
 
+  // Keep exactly one previous run: the main column shows what you just
+  // generated; the rail shows the batch before it (persisted, so it also
+  // survives a reload). Not a history — one slot.
+  const [railRun, setRailRun] = useState(null)
+  useEffect(() => {
+    try { setRailRun(JSON.parse(localStorage.getItem('rn_social_lastrun') || 'null')) } catch {}
+  }, [])
+  function recordRun(posts, kind) {
+    try {
+      const prev = JSON.parse(localStorage.getItem('rn_social_lastrun') || 'null')
+      if (prev) setRailRun(prev)
+      localStorage.setItem('rn_social_lastrun', JSON.stringify({ posts, kind, at: Date.now() }))
+    } catch {}
+  }
+
   if (!isOwner) {
     return (
       <div className="page-content">
-        <div className="container" style={{ maxWidth: 640 }}>
+        <div className="container" style={{ maxWidth: 1240 }}>
           <button className="back-btn" onClick={goBack}>← Back</button>
           <div className="empty-state">
             <h3>🔒 Private</h3>
@@ -232,7 +250,7 @@ export default function SocialPage({ user, goBack }) {
 
   return (
     <div className="page-content">
-      <div className="container" style={{ maxWidth: 640 }}>
+      <div className="container" style={{ maxWidth: 1240 }}>
         <button className="back-btn" onClick={goBack}>← Back</button>
 
         <div style={{ marginBottom: 20 }}>
@@ -244,8 +262,31 @@ export default function SocialPage({ user, goBack }) {
           </p>
         </div>
 
-        <TrendingGenerator />
-        <Composer />
+        <div className="grid">
+        <div>
+        <TrendingGenerator onRun={recordRun} />
+        <Composer onRun={recordRun} />
+        </div>
+
+        {/* Rail — the previous run, so regenerating never destroys good copy */}
+        <aside className="sidebar desktop-only">
+          {railRun?.posts?.length ? (
+            <div className="widget">
+              <div className="widget-title">
+                Previous run · {railRun.kind === 'trending' ? 'trending' : 'composer'} · {timeAgo(new Date(railRun.at).toISOString())}
+              </div>
+              {railRun.posts.map((post, i) => <PostCard key={i} post={post} />)}
+            </div>
+          ) : (
+            <div className="widget">
+              <div className="widget-title">Previous run</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6 }}>
+                Your last batch will appear here when you generate a new one — regenerating never loses the previous copy.
+              </div>
+            </div>
+          )}
+        </aside>
+        </div>
       </div>
     </div>
   )
