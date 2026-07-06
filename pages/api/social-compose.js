@@ -95,10 +95,39 @@ async function trendingStories() {
     if (!c.outlets.has(name)) { c.outlets.add(name); c.headlines.push({ outlet: name, title: a.title, summary: (a.summary || '').slice(0, 220) }) }
   }
 
-  return [...clusters.values()]
+  // One slot per saga: big running stories fragment into several clusters
+  // (the ban, the phone call, the appeal…) and would otherwise fill every
+  // slot. Collapse clusters sharing 3+ significant title tokens — the saga
+  // keeps one slot (its highest-coverage development), the rest go to
+  // genuinely different stories.
+  const STOP = new Set(['the','a','an','in','on','at','to','for','of','and','or','is','are','was','were','says','say','said','after','as','with','by','from','over','into','its','his','her','their','will','have','has','had','been','be','but','not','this','that','than','then'])
+  const sig = c => {
+    const t = new Set()
+    for (const h of c.headlines) {
+      for (const w of (h.title || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)) {
+        if (w.length > 3 && !STOP.has(w)) t.add(w)
+      }
+    }
+    return t
+  }
+  const sorted = [...clusters.values()]
     .filter(c => c.outlets.size >= 3)
     .sort((x, y) => y.outlets.size - x.outlets.size || new Date(y.newest) - new Date(x.newest))
-    .slice(0, 3)
+  const selected = []
+  const tokenSets = []
+  for (const c of sorted) {
+    const t = sig(c)
+    const isSameSaga = tokenSets.some(prev => {
+      let shared = 0
+      for (const w of t) if (prev.has(w)) { shared++; if (shared >= 3) return true }
+      return false
+    })
+    if (isSameSaga) continue
+    selected.push(c)
+    tokenSets.push(t)
+    if (selected.length === 3) break
+  }
+  return selected
 }
 
 function trendingPrompt(stories) {
