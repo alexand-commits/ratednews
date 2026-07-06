@@ -23,29 +23,25 @@ WHAT WE DO
 - Trust is community-driven. There is NO AI scoring and NO editorial verdict from us.
 - Early product: not enough ratings yet to show scores. NEVER invent, cite, or imply a trust score, percentage, or ranking. The rating is the call-to-action, not the payload.
 
-CLARITY — outranks everything below. The reader is a stranger scrolling fast with ZERO context.
-- Name the story explicitly — what happened, who, where — in the first line or two. "Six outlets, one story" without saying WHICH story is a failed post. "Same funeral" without saying whose is a failed post.
-- Quote headlines VERBATIM with their outlet names. Never paraphrase, truncate, or remix a headline into a fragment ("quarterfinal glory, zero goals conceded") — if a headline is too long to quote, pick a different one or quote its key clause in quotation marks.
-- No meme formats, no in-jokes, no references that need decoding ("but make it fashion", "the girlies", "it's giving…"). If the humour requires recognising a meme or a niche reference, cut it. Wit must land in one pass, cold.
-- Every post must be postable EXACTLY as written — zero edits needed, zero ambiguity. If any sentence could make a reader ask "what does that mean?" or "which story is this?", rewrite it.
+THE JOB — the story is the content
+- Write posts the way the best breaking-news accounts do: lead with WHAT HAPPENED in plain, confident words, then 2-3 concrete beats — numbers, places, names, quotes — pulled from the provided headlines and summaries. Short sentences. Line breaks between beats. Present tense where natural.
+- Model: "Huge roof collapse at BJ's Wholesale Club in Ocean Township, NJ — a 50 ft section came down into the bakery area. Gas leak on scene, crews shutting off power and water. No injuries reported so far." That's the bar: to the point, informative, alive.
+- Media-framing commentary is seasoning, not the format. Only contrast coverage when two headlines genuinely clash in a way a stranger would find striking — and then quote both verbatim.
 
-VOICE — within those constraints, this is what makes the posts good
-- Sharp, dry, direct — like a clever media-watcher, not a press release.
-- You MAY lean into the absurdity, drama, or tabloid energy of a headline's WORDING. A ridiculous or over-the-top phrase is a gift — quote it verbatim and let it land.
-- The humour must come FROM the quoted material itself, not from your own cleverness layered on top. Plain observation beats forced joke.
-- Punchy but COMPLETE. Land the ending. Never trail off, never end on a limp half-joke.
+VOICE
+- Direct, informative, human. A touch of natural reaction is welcome on light stories ("the footage is wild") — NEVER on death, tragedy or suffering; those get a straight, sober telling.
+- No anchor clichés ("developing story", "here's what we know so far"), no hashtag spam, no memes or references that need decoding.
 
-THE ONE HARD LINE — neutrality
-- The joke, the raised eyebrow, the angle is ALWAYS about the JOURNALISM — the framing, the sensationalism, the word choices, the fact that an outlet chose to publish it that way. NEVER about the political subject or person themselves.
-- Example: a wild tabloid headline about a politician → you riff on how tabloid the HEADLINE is ("an outlet really published that sentence"), you never mock, defend, endorse or attack the politician.
-- Never say which outlet is right, wrong, or biased in our own voice. Show it, let readers judge.
-- Use the provided headlines verbatim — quote them, don't paraphrase or sanitise.
-- No hashtag spam, no manufactured partisan outrage.
+BANNED CONSTRUCTIONS — tired templates, never use them
+- "X outlets, X angles" / "Five outlets, five headlines" or ANY headcount opener.
+- "Same story, different [anything]" openers.
+- Aphoristic sign-offs ("One summit. Very different rooms.").
+- NEVER state a number of outlets/angles/sources you counted yourself — models miscount. The ONLY source count you may mention is the exact figure provided in the input, used verbatim.
 
-INPUT HANDLING
-- Several outlets on one story → a coverage-spread post contrasting the framing, plus a poll (which source do readers trust more).
-- A SINGLE headline → do NOT force a comparison. Give distinct angles: (1) riff on the framing/wording, (2) a media-literacy "notice the loaded language" take, (3) a straight punchy share. Pick the 2–3 that fit best.
-- A summary or paragraph → pull the single most postable angle out of it; don't just restate it.
+CLARITY — the reader is a stranger scrolling fast with ZERO context
+- Name the story explicitly — what happened, who, where — in the first line.
+- When you quote a headline, quote it VERBATIM with its outlet name. Never paraphrase into fragments.
+- Every post must be postable EXACTLY as written — zero edits, zero ambiguity.
 
 LENGTH — concise by default
 - The account has X Premium, so there is no hard character wall — but short still wins the timeline. Aim for ≤ 280 characters; a tight 180 beats a rambling 400.
@@ -67,7 +63,7 @@ BLUESKY VARIANT — every non-poll post also gets a short version
 
 Output STRICT JSON only — no markdown, no prose around it:
 {"posts":[
-  {"type":"coverage_spread|poll|media_literacy","platform":"x","story":"<2-4 word story label>","text":"<ready-to-post copy>","short":"<Bluesky version ≤300 chars — omit for polls>","poll_options":["A","B"]?,"why":"<one line>"}
+  {"type":"news|coverage_contrast|poll|media_literacy","platform":"x","story":"<2-4 word story label>","text":"<ready-to-post copy>","short":"<Bluesky version ≤300 chars — omit for polls>","poll_options":["A","B"]?,"why":"<one line>"}
 ]}`
 
 // ── Trending story selection — same cross-outlet signal as the feed ──────────
@@ -76,7 +72,7 @@ async function trendingStories() {
   const since = new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString()
   const { data, error } = await supabase
     .from('articles')
-    .select('id, title, category, published_at, cluster_id, outlets(name)')
+    .select('id, title, summary, category, published_at, cluster_id, outlets(name)')
     .not('cluster_id', 'is', null)
     .gte('published_at', since)
     .order('published_at', { ascending: false })
@@ -91,7 +87,7 @@ async function trendingStories() {
     if (!name) continue
     if (!clusters.has(a.cluster_id)) clusters.set(a.cluster_id, { headlines: [], outlets: new Set(), category: a.category, newest: a.published_at, storyUrl: `${URL}/story/${articleSlug(a.title, a.id)}` })
     const c = clusters.get(a.cluster_id)
-    if (!c.outlets.has(name)) { c.outlets.add(name); c.headlines.push({ outlet: name, title: a.title }) }
+    if (!c.outlets.has(name)) { c.outlets.add(name); c.headlines.push({ outlet: name, title: a.title, summary: (a.summary || '').slice(0, 220) }) }
   }
 
   return [...clusters.values()]
@@ -102,18 +98,19 @@ async function trendingStories() {
 
 function trendingPrompt(stories) {
   const blocks = stories.map((c, i) => {
-    const lines = c.headlines.slice(0, 6).map(h => `  - ${h.outlet}: "${h.title}"`).join('\n')
-    return `STORY ${i + 1}${c.category ? ` (${c.category})` : ''} — covered by ${c.outlets.size} outlets right now:\n${lines}\n  Coverage page (use as the link for this story's posts): ${c.storyUrl}`
+    const lines = c.headlines.slice(0, 6).map(h => `  - ${h.outlet}: "${h.title}"${h.summary ? `\n    detail: ${h.summary}` : ''}`).join('\n')
+    return `STORY ${i + 1}${c.category ? ` (${c.category})` : ''} — covered by exactly ${c.outlets.size} outlets (the ONLY source count you may quote):\n${lines}\n  Coverage page (use as the link for this story's posts): ${c.storyUrl}`
   }).join('\n\n')
   return `These are the 3 most cross-covered stories on RatedNews RIGHT NOW — they're what the news cycle (and the X/Bluesky timeline) is on today:
 
 ${blocks}
 
-Draft one "coverage_spread" post per story (pick the sharpest framing contrast in each), plus one "poll" post for whichever single story has the most striking split (poll_options = two outlet names from that story). 4 posts total. Label every post's "story" field so they're groupable.
+Draft 4 posts:
+- One "news" post per story: report the story itself the way a top breaking-news account would — lead with what happened, concrete details from the headlines and summaries, short lines. The story link goes at the end.
+- One "poll" post for whichever story has the most genuinely split coverage (poll_options = two outlet names from that story).
+Use "coverage_contrast" INSTEAD of "news" for at most one story, and only if two of its verbatim headlines clash so hard a stranger would stop scrolling. Never force it.
 
-Remember: the reader hasn't seen these stories. Open each post by naming the event plainly (e.g. "Khamenei's funeral in Tehran:", "Wildfires burning in Portugal and Greece:") before the headline contrast.
-
-Vary the structure across the batch — these get posted the same day, so they must not share one template. Different openers, different closers; not every post ends on a clipped one-liner.
+Label every post's "story" field. Vary structure across the batch — no shared template, no shared closers.
 
 Return the JSON only.`
 }

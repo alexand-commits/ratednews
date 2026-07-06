@@ -4,6 +4,8 @@ import { db } from '../lib/supabase'
 const OWNER = 'alexandchow@gmail.com'
 
 const TYPE_META = {
+  news:              { label: 'News post',        emoji: '📰', color: 'var(--text2)' },
+  coverage_contrast: { label: 'Coverage contrast', emoji: '🪞', color: 'var(--coral)' },
   coverage_spread: { label: 'Coverage spread', emoji: '🪞', color: 'var(--coral)' },
   poll:            { label: 'Poll',            emoji: '🗳️', color: 'var(--blue)' },
   media_literacy:  { label: 'Media literacy',  emoji: '🧠', color: 'var(--green-dark)' },
