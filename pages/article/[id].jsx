@@ -22,7 +22,7 @@ const SHORT_ID_SUFFIX_RE = /-([0-9a-f]{8})$/i
 export default function ArticleDetail({ article: initialArticle }) {
   const router = useRouter()
   const { navigate, goBack, showToast, user, openAuthModal,
-          savedArticleIds, toggleSave } = useAppContext()
+          savedArticleIds, toggleSave, allOutlets } = useAppContext()
 
   // ISR pages can be up to 1h stale — refresh score data client-side so the
   // quality card always reflects the latest accuracy_score, bias, etc.
@@ -205,6 +205,7 @@ export default function ArticleDetail({ article: initialArticle }) {
           onLoginClick={openAuthModal}
           isSaved={savedArticleIds.has(article.id)}
           toggleSave={toggleSave}
+          outlets={allOutlets}
         />
       </ErrorBoundary>
     </>

@@ -8,7 +8,7 @@ const SHORT_ID_SUFFIX_RE = /-([0-9a-f]{8})$/i
 const BARE_SHORT_RE       = /^([0-9a-f]{8})$/i
 
 export default function StoryDetail({ story }) {
-  const { navigate, goBack, showToast, user, openAuthModal } = useAppContext()
+  const { navigate, goBack, showToast, user, openAuthModal, allOutlets } = useAppContext()
   if (!story) return null
 
   const count = story.members?.length || 0
@@ -39,6 +39,7 @@ export default function StoryDetail({ story }) {
           showToast={showToast}
           user={user}
           onLoginClick={openAuthModal}
+          outlets={allOutlets}
         />
       </ErrorBoundary>
     </>

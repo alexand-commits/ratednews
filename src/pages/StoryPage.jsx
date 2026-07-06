@@ -4,11 +4,12 @@ import OutletLogo from '../components/OutletLogo'
 import { OutletTrustRateInline } from '../components/OutletTrustRate'
 import { articleSlug, timeAgo, outletColor } from '../utils/helpers'
 import { db } from '../lib/supabase'
+import Sidebar from '../components/Sidebar'
 
 // Full-coverage view of a single story — every outlet covering it, side by side.
 // The differentiator surfaced as a first-class, shareable page: "this story,
 // N sources, here's each one — and rate the ones you trust in one tap."
-export default function StoryPage({ story, navigate, goBack, user, onLoginClick, showToast }) {
+export default function StoryPage({ story, navigate, goBack, user, onLoginClick, showToast, outlets = [] }) {
   const members = story?.members || []
   const count   = members.length
   const [myRatings, setMyRatings] = useState({})
@@ -34,8 +35,11 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
 
   return (
     <div className="page-content">
-      <div className="container" style={{ maxWidth: 720 }}>
+      <div className="container">
         <button className="back-btn" onClick={goBack}>← Back</button>
+
+        <div className="grid">
+        <div>
 
         {/* Header */}
         <div style={{ marginBottom: 22 }}>
@@ -106,6 +110,10 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
         </div>
 
         <div style={{ height: 24 }} />
+        </div>
+
+        <Sidebar outlets={outlets} navigate={navigate} />
+        </div>
       </div>
     </div>
   )

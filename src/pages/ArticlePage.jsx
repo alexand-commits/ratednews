@@ -4,6 +4,7 @@ import { db } from '../lib/supabase'
 import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import OutletTrustRate from '../components/OutletTrustRate'
+import Sidebar from '../components/Sidebar'
 
 // Extract meaningful initials from a username or email — avoids numbers/symbols
 function getInitials(str) {
@@ -20,7 +21,7 @@ function getInitials(str) {
   return words.slice(0, 2).map(w => w.replace(/[^a-zA-Z]/g, '')[0] || '').join('').toUpperCase() || '?'
 }
 
-export default function ArticlePage({ articleId, allArticles, navigate, goBack, showToast, refreshArticle, user, onLoginClick, isSaved, toggleSave }) {
+export default function ArticlePage({ articleId, allArticles, navigate, goBack, showToast, refreshArticle, user, onLoginClick, isSaved, toggleSave, outlets = [] }) {
   const [comments, setComments] = useState([])
   const [commentInput, setCommentInput] = useState('')
   const [commentSort, setCommentSort] = useState('top')
@@ -403,6 +404,8 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
       <div className="container">
         <button className="back-btn" onClick={goBack}>← Back</button>
 
+        <div className="grid">
+        <div>
         <div className="article-preview-card">
           <div className="article-outlet-row">
             <OutletLogo name={outlet.name || ''} size={32} borderRadius={8} />
@@ -561,6 +564,10 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               sortedComments.map(c => <CommentRow key={c.id} c={c} />)
             )}
           </div>
+        </div>
+        </div>
+
+        <Sidebar outlets={outlets} navigate={navigate} />
         </div>
       </div>
     </div>
