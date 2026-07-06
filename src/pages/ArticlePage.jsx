@@ -5,6 +5,7 @@ import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import OutletTrustRate from '../components/OutletTrustRate'
 import Sidebar from '../components/Sidebar'
+import { useTrendingTopics } from '../hooks/useTrendingTopics'
 
 // Extract meaningful initials from a username or email — avoids numbers/symbols
 function getInitials(str) {
@@ -22,6 +23,7 @@ function getInitials(str) {
 }
 
 export default function ArticlePage({ articleId, allArticles, navigate, goBack, showToast, refreshArticle, user, onLoginClick, isSaved, toggleSave, outlets = [] }) {
+  const trendingTopics = useTrendingTopics()
   const [comments, setComments] = useState([])
   const [commentInput, setCommentInput] = useState('')
   const [commentSort, setCommentSort] = useState('top')
@@ -567,7 +569,12 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
         </div>
         </div>
 
-        <Sidebar outlets={outlets} navigate={navigate} />
+        <Sidebar
+          outlets={outlets}
+          navigate={navigate}
+          trendingTopics={trendingTopics}
+          onTopic={topic => navigate('feed', { topic })}
+        />
         </div>
       </div>
     </div>

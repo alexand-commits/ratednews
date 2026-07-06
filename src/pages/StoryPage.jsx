@@ -5,11 +5,13 @@ import { OutletTrustRateInline } from '../components/OutletTrustRate'
 import { articleSlug, timeAgo, outletColor } from '../utils/helpers'
 import { db } from '../lib/supabase'
 import Sidebar from '../components/Sidebar'
+import { useTrendingTopics } from '../hooks/useTrendingTopics'
 
 // Full-coverage view of a single story — every outlet covering it, side by side.
 // The differentiator surfaced as a first-class, shareable page: "this story,
 // N sources, here's each one — and rate the ones you trust in one tap."
 export default function StoryPage({ story, navigate, goBack, user, onLoginClick, showToast, outlets = [] }) {
+  const trendingTopics = useTrendingTopics()
   const members = story?.members || []
   const count   = members.length
   const [myRatings, setMyRatings] = useState({})
@@ -112,7 +114,12 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
         <div style={{ height: 24 }} />
         </div>
 
-        <Sidebar outlets={outlets} navigate={navigate} />
+        <Sidebar
+          outlets={outlets}
+          navigate={navigate}
+          trendingTopics={trendingTopics}
+          onTopic={topic => navigate('feed', { topic })}
+        />
         </div>
       </div>
     </div>
