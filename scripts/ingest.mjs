@@ -803,6 +803,10 @@ function cleanTitle(title, outletName) {
 // Tabloids routinely use very long headlines for lifestyle/clickbait content.
 // Legitimate news headlines rarely exceed 120 chars — anything longer from
 // these outlets is almost always celebrity gossip, sex advice, or sponsored fluff.
+// Outlets whose RSS ships a generic fallback image on every item — the same
+// junk banner repeated across cards. Their articles render text-only instead.
+const NO_IMAGE_OUTLETS = new Set(['Punch'])
+
 const OUTLET_MAX_TITLE_LENGTH = {
   'Daily Mail':       110,  // tightened from 125 — DM's junk rate is 62%, cap aggressively
   'The Sun':          100,  // tightened from 110
@@ -951,7 +955,7 @@ async function ingestOutlet(outlet) {
       // sport keywords (e.g. a transfer rumour or a club finance story).
       category:     outlet.type === 'Sports' ? 'Sport' : categorise(title, summary),
       published_at: (() => { const p = item.pubDate ? new Date(item.pubDate) : null; return (p && !isNaN(p) && p <= new Date()) ? p.toISOString() : new Date().toISOString() })(),
-      image_url:    extractImageUrl(item),
+      image_url:    NO_IMAGE_OUTLETS.has(outlet.name) ? null : extractImageUrl(item),
     })
 
     if (error) {
