@@ -333,46 +333,18 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         )}
         </div>
 
-        {/* ── Rail — categories, region, topics: same anatomy as every other page ── */}
+        {/* ── Rail — topics lead (like every other page's rail), filters follow ── */}
         <aside className="sidebar desktop-only">
-          <div className="widget">
-            <div className="widget-title">Browse categories</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-              {CATEGORIES.map(c => (
-                <button
-                  key={c.value}
-                  className={`pill${!isSearchActive && category === c.value ? ' active' : ''}`}
-                  onClick={() => { setCategory(c.value); setSearch('') }}
-                  style={{ fontSize: 12 }}
-                >{c.emoji ? `${c.emoji} ` : ''}{c.label}</button>
-              ))}
-            </div>
-          </div>
-
-          <div className="widget">
-            <div className="widget-title">Region</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-              {REGIONS.map(r => (
-                <button
-                  key={r.value}
-                  className={`pill${region === r.value ? ' active' : ''}`}
-                  onClick={() => setRegion(r.value)}
-                  style={{ fontSize: 12 }}
-                >{r.label}</button>
-              ))}
-            </div>
-          </div>
-
           {trendingTopics.length > 0 && (
             <div className="widget">
               <div className="widget-title">🔥 Trending topics</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {trendingTopics.slice(0, 8).map(topic => (
                   <button
                     key={topic}
                     className="pill pill-topic"
                     onClick={() => setSearch(topic)}
-                    style={{ fontSize: 12 }}
+                    style={{ fontSize: 11.5, padding: '4px 11px' }}
                   >🔍 {topic}</button>
                 ))}
               </div>
@@ -381,6 +353,34 @@ export default function ExplorePage({ navigate, outlets = [] }) {
               </div>
             </div>
           )}
+
+          <div className="widget">
+            <div className="widget-title">Browse categories</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {CATEGORIES.map(c => (
+                <button
+                  key={c.value}
+                  className={`pill${!isSearchActive && category === c.value ? ' active' : ''}`}
+                  onClick={() => { setCategory(c.value); setSearch('') }}
+                  style={{ fontSize: 11.5, padding: '4px 11px' }}
+                >{c.emoji ? `${c.emoji} ` : ''}{c.label}</button>
+              ))}
+            </div>
+          </div>
+
+          <div className="widget">
+            <div className="widget-title">Region</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {REGIONS.map(r => (
+                <button
+                  key={r.value}
+                  className={`pill${region === r.value ? ' active' : ''}`}
+                  onClick={() => setRegion(r.value)}
+                  style={{ fontSize: 11.5, padding: '4px 11px' }}
+                >{r.label}</button>
+              ))}
+            </div>
+          </div>
         </aside>
         </div>
       </div>
