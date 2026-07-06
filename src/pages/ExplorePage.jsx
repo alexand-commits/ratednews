@@ -36,13 +36,6 @@ const REGIONS = [
   { value: 'Americas',   label: 'Americas'     },
 ]
 
-// Region resolution: per-article region when the categoriser set one, else the
-// outlet's home region (outlets.country is populated for every outlet — this is
-// what makes region filtering reliable, unlike the old article_region-only reads).
-function articleRegion(a) {
-  return a.article_region || a.outlets?.country || 'International'
-}
-
 export default function ExplorePage({ navigate, outlets = [] }) {
   const [search, setSearch]           = useState('')
   const [searchFocused, setSearchFocused] = useState(false)
@@ -101,34 +94,52 @@ export default function ExplorePage({ navigate, outlets = [] }) {
       .then(({ data }) => setTopicsSource(data || []))
   }, [])
 
-  // Deep per-category fetch — the shared 200-article pool only spans the last
-  // hour or two at current ingest volume, which starved low-volume categories.
-  // Selecting a category pulls its own 100 newest articles (cached per session).
+  // Region = the outlet's home region ("UK" means stories from UK outlets —
+  // same meaning as the Outlets page). Picking a region fetches a full-depth
+  // pool from the DB (400 newest from that region's outlets) instead of
+  // thinning the global pool client-side; cached per region.
+  const [regionCache, setRegionCache] = useState({})
   useEffect(() => {
-    if (category === 'all' || catCache[category]) return
-    setCatLoading(true)
+    if (region === 'all' || regionCache[region]) return
     db.from('articles')
-      .select('id, title, published_at, outlet_id, category, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comments(count)')
-      .eq('category', category)
+      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets!inner(name, country, logo_url), comments(count)')
+      .eq('outlets.country', region)
       .order('published_at', { ascending: false })
+      .limit(400)
+      .then(({ data }) => setRegionCache(prev => ({ ...prev, [region]: data || [] })))
+  }, [region, regionCache])
+
+  // Deep per-category fetch — region-aware (cache key category:region) so the
+  // category view is a true regional edition, not a client-side thinning of
+  // the newest 100 global rows.
+  const catKey = `${category}:${region}`
+  useEffect(() => {
+    if (category === 'all' || catCache[catKey]) return
+    setCatLoading(true)
+    let q = db.from('articles')
+      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets!inner(name, country, logo_url), comments(count)')
+      .eq('category', category)
+    if (region !== 'all') q = q.eq('outlets.country', region)
+    q.order('published_at', { ascending: false })
       .limit(100)
       .then(({ data }) => {
-        setCatCache(prev => ({ ...prev, [category]: data || [] }))
+        setCatCache(prev => ({ ...prev, [catKey]: data || [] }))
         setCatLoading(false)
       })
-  }, [category, catCache])
+  }, [catKey, category, region, catCache])
 
-  // Browse feed — category pool (deep) or the recent pool, region-filtered,
-  // clustered stories deduped
+  // Browse feed — the right pool for the view (global, regional, or category
+  // edition), clustered stories deduped
   const browseFeed = useMemo(() => {
-    const source = category === 'all' ? feedPool : (catCache[category] || [])
+    const source = category === 'all'
+      ? (region === 'all' ? feedPool : (regionCache[region] || []))
+      : (catCache[catKey] || [])
     const seen = new Set()
     return source.filter(a => {
-      if (region !== 'all' && articleRegion(a) !== region) return false
       if (a.cluster_id) { if (seen.has(a.cluster_id)) return false; seen.add(a.cluster_id) }
       return true
     })
-  }, [feedPool, catCache, category, region])
+  }, [feedPool, regionCache, catCache, category, region, catKey])
 
   // Category switches reset scroll — otherwise 'View all' leaves you anchored
   // mid-page over freshly swapped (older) content.
@@ -142,8 +153,8 @@ export default function ExplorePage({ navigate, outlets = [] }) {
   // every section?" rather than duplicating the homepage's Latest stream.
   const digest = useMemo(() => {
     const seen = new Set()
-    const pool = feedPool.filter(a => {
-      if (region !== 'all' && articleRegion(a) !== region) return false
+    const basePool = region === 'all' ? feedPool : (regionCache[region] || [])
+    const pool = basePool.filter(a => {
       if (a.cluster_id) { if (seen.has(a.cluster_id)) return false; seen.add(a.cluster_id) }
       return true
     })
@@ -166,7 +177,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         items: byCat[c.value].slice().sort((x, y) => trendScore(y) - trendScore(x)).slice(0, 4),
       }))
       .sort((a, b) => b.count - a.count)
-  }, [feedPool, region])
+  }, [feedPool, regionCache, region])
 
   // Trending topics — shared phrase-first extraction (same engine as the
   // homepage chips). Clicking one feeds the full-text search, so topics are a
@@ -352,7 +363,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
               ))}
             </div>
 
-            {(feedLoading || (category !== 'all' && catLoading && !catCache[category])) ? (
+            {(feedLoading || (category === 'all' && region !== 'all' && !regionCache[region]) || (category !== 'all' && catLoading && !catCache[catKey])) ? (
               <div className="feed">
                 {[0, 1, 2, 3].map(i => (
                   <div key={i} className="skeleton-news-card">
