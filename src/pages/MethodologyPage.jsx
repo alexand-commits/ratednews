@@ -31,8 +31,6 @@ export default function MethodologyPage({ goBack, navigate, outlets = [] }) {
   return (
     <div className="page-content">
       <div className="container" style={{ maxWidth: 1100 }}>
-        <div className="grid">
-        <div>
         <button className="back-btn" onClick={goBack}>← Back</button>
 
         {/* Header */}
@@ -48,6 +46,9 @@ export default function MethodologyPage({ goBack, navigate, outlets = [] }) {
             Every score you see comes from the community — no algorithms, no AI scoring.
           </p>
         </div>
+
+        <div className="grid">
+        <div>
 
         <Section title="What we aggregate">
           <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 14 }}>

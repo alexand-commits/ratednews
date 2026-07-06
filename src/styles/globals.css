@@ -243,6 +243,7 @@ img, video, iframe, embed, object { max-width: 100%; }
 /* Topic chips act differently to filters (they launch a search) — mark them */
 .pill-topic { color: var(--coral); border-color: rgba(216, 90, 48, 0.4); }
 .pill-topic:hover { border-color: var(--coral); background: rgba(216, 90, 48, 0.08); }
+.pill-topic.active { background: var(--coral); border-color: var(--coral); color: #fff; }
 .widget { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; }
 .widget-title { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text2); margin-bottom: 14px; }
 

@@ -273,10 +273,10 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
                   {trendingTopics.slice(0, 10).map(topic => (
                     <button
                       key={topic}
-                      className={`pill${activeTopic === topic ? ' active' : ''}`}
+                      className={`pill pill-topic${activeTopic === topic ? ' active' : ''}`}
                       onClick={() => setActiveTopic(activeTopic === topic ? null : topic)}
-                      style={{ fontSize: 12 }}
-                    >{topic}</button>
+                      style={{ fontSize: 11.5, padding: '4px 11px' }}
+                    >🔍 {topic}</button>
                   ))}
                 </div>
               </div>

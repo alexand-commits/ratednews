@@ -21,10 +21,10 @@ export default function Sidebar({ outlets, navigate, trendingTopics = [], active
                 <button
                   key={topic}
                   onClick={() => onTopic(topic)}
-                  className={`pill${isActive ? ' active' : ''}`}
-                  style={{ fontSize: 12 }}
+                  className={`pill pill-topic${isActive ? ' active' : ''}`}
+                  style={{ fontSize: 11.5, padding: '4px 11px' }}
                 >
-                  {topic}
+                  🔍 {topic}
                 </button>
               )
             })}

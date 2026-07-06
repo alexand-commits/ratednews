@@ -90,20 +90,7 @@ export default function FeedPage({
   const [search, setSearch]     = useState('')
   const [sort, setSort]         = useState('trending')
   const [feedTab, setFeedTab]         = useState(initialTab) // 'all' | 'following'
-  const [density, setDensity]         = useState('comfortable') // 'comfortable' | 'compact'
   const [legalDoc, setLegalDoc]       = useState(null)  // 'privacy' | 'terms' | 'guidelines'
-
-  // Restore saved density preference on mount
-  useEffect(() => {
-    try { const d = localStorage.getItem('rn_density'); if (d === 'compact' || d === 'comfortable') setDensity(d) } catch {}
-  }, [])
-  function toggleDensity() {
-    setDensity(d => {
-      const next = d === 'compact' ? 'comfortable' : 'compact'
-      try { localStorage.setItem('rn_density', next) } catch {}
-      return next
-    })
-  }
   const [followingArticles, setFollowingArticles] = useState([])
   const [followingLoading, setFollowingLoading]   = useState(false)
 
@@ -458,21 +445,6 @@ export default function FeedPage({
               : <span style={{ fontSize: 10, color: 'var(--coral)', fontWeight: 500, marginLeft: 5, background: 'rgba(255,99,71,0.1)', padding: '1px 6px', borderRadius: 10 }}>Follow outlets</span>
             }
           </div>
-          {/* Density toggle — right end of the tab row */}
-          <button
-            onClick={toggleDensity}
-            title={density === 'compact' ? 'Switch to comfortable view' : 'Switch to compact view'}
-            aria-label="Toggle feed density"
-            style={{
-              marginLeft: 'auto', alignSelf: 'center',
-              display: 'flex', alignItems: 'center', gap: 5,
-              background: 'var(--surface)', border: '0.5px solid var(--border)',
-              borderRadius: 20, padding: '5px 12px', cursor: 'pointer',
-              fontSize: 11, fontWeight: 600, color: 'var(--text2)', flexShrink: 0,
-            }}
-          >
-            {density === 'compact' ? '☰ Compact' : '▤ Comfortable'}
-          </button>
         </div>
 
         {/* My feed context strip */}
@@ -597,9 +569,7 @@ export default function FeedPage({
         <div className="grid">
           <div>
             {/* Contextual header — only rendered when it says something the
-                tabs don't already (search count, category/region filter).
-                The plain sort label duplicated the active tab; the density
-                toggle now lives in the tabs row. */}
+                tabs don't already (search count, category/region filter). */}
             {(isSearchActive || category !== 'all' || region !== 'all') && (
               <div className="section-label" style={{ marginBottom: 10 }}>
                 {isSearchActive
@@ -670,7 +640,7 @@ export default function FeedPage({
             {/* feed--home enables the desktop grid (≥1024px, CSS-only — mobile
                 unaffected). Suppressed during search/topic views where a hero
                 treatment on the first result would be wrong. */}
-            <div className={`feed${density === 'compact' ? ' feed-compact' : ''}${!isSearchActive && !activeTopic ? ' feed--home' : ''}`}>
+            <div className={`feed${!isSearchActive && !activeTopic ? ' feed--home' : ''}`}>
               {fetchError ? (
                 <div style={{
                   textAlign: 'center', padding: '40px 20px',
@@ -795,7 +765,6 @@ export default function FeedPage({
                     }}
                     navigate={navigate}
                     relatedArticles={a.cluster_peers || []}
-                    compact={density === 'compact'}
                   />
                 ))
               )}
