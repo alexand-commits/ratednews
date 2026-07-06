@@ -84,7 +84,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
     db.from('articles')
       .select('id, title, published_at, outlet_id, category, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comments(count)')
       .order('published_at', { ascending: false })
-      .limit(200)
+      .limit(400)
       .then(({ data }) => { setFeedPool(data || []); setFeedLoading(false) })
   }, [])
 
@@ -129,6 +129,37 @@ export default function ExplorePage({ navigate, outlets = [] }) {
       return true
     })
   }, [feedPool, catCache, category, region])
+
+  // Category digest — Explore's desktop default. One section per category with
+  // its top stories (trend-scored), so the page answers "what's happening across
+  // every section?" rather than duplicating the homepage's Latest stream.
+  const digest = useMemo(() => {
+    const seen = new Set()
+    const pool = feedPool.filter(a => {
+      if (region !== 'all' && articleRegion(a) !== region) return false
+      if (a.cluster_id) { if (seen.has(a.cluster_id)) return false; seen.add(a.cluster_id) }
+      return true
+    })
+    const trendScore = a => {
+      const coverage = a.cluster_peers?.length || 0
+      const comments = a.comments?.[0]?.count || 0
+      const hoursAgo = Math.max(0.1, (Date.now() - new Date(a.published_at)) / 3600000)
+      return (coverage * 12 + comments * 5 + 1) / Math.pow(hoursAgo + 2, 1.8)
+    }
+    const byCat = {}
+    for (const a of pool) {
+      const c = a.category || 'World'
+      ;(byCat[c] = byCat[c] || []).push(a)
+    }
+    return CATEGORIES
+      .filter(c => c.value !== 'all' && (byCat[c.value]?.length || 0) >= 3)
+      .map(c => ({
+        ...c,
+        count: byCat[c.value].length,
+        items: byCat[c.value].slice().sort((x, y) => trendScore(y) - trendScore(x)).slice(0, 4),
+      }))
+      .sort((a, b) => b.count - a.count)
+  }, [feedPool, region])
 
   // Trending topics — shared phrase-first extraction (same engine as the
   // homepage chips). Clicking one feeds the full-text search, so topics are a
@@ -299,11 +330,6 @@ export default function ExplorePage({ navigate, outlets = [] }) {
               ))}
             </div>
 
-            {/* Browse feed */}
-            <div className="section-label" style={{ marginBottom: 10 }}>
-              {category === 'all' ? 'Latest across all outlets' : category}
-              {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
-            </div>
             {(feedLoading || (category !== 'all' && catLoading && !catCache[category])) ? (
               <div className="feed">
                 {[0, 1, 2, 3].map(i => (
@@ -313,21 +339,93 @@ export default function ExplorePage({ navigate, outlets = [] }) {
                   </div>
                 ))}
               </div>
-            ) : browseFeed.length === 0 ? (
-              <div className="empty-state"><p>No stories match these filters yet.</p></div>
+            ) : category === 'all' ? (
+              <>
+                {/* Desktop: category digest — the section front */}
+                <div className="desktop-only" style={{ flexDirection: 'column', gap: 30 }}>
+                  {digest.length === 0 ? (
+                    <div className="empty-state"><p>No stories match these filters yet.</p></div>
+                  ) : digest.map(sec => (
+                    <section key={sec.value}>
+                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
+                        <div className="section-label" style={{ margin: 0 }}>
+                          {sec.emoji} {sec.label}
+                          {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
+                        </div>
+                        <button
+                          onClick={() => setCategory(sec.value)}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--coral)', padding: 0 }}
+                        >View all →</button>
+                      </div>
+                      <div className="feed feed--grid-plain">
+                        {sec.items.map((a, i) => (
+                          <NewsCard
+                            key={a.id}
+                            article={a}
+                            index={i}
+                            navigate={navigate}
+                            onClick={() => navigate('article', { articleId: a.id, title: a.title })}
+                            relatedArticles={a.cluster_peers || []}
+                            compact
+                          />
+                        ))}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+
+                {/* Mobile: flat latest list (unchanged behaviour) */}
+                <div className="hide-desktop">
+                  <div className="section-label" style={{ marginBottom: 10 }}>
+                    Latest across all outlets
+                    {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
+                  </div>
+                  {browseFeed.length === 0 ? (
+                    <div className="empty-state"><p>No stories match these filters yet.</p></div>
+                  ) : (
+                    <div className="feed">
+                      {browseFeed.map((a, i) => (
+                        <NewsCard
+                          key={a.id}
+                          article={a}
+                          index={i}
+                          navigate={navigate}
+                          onClick={() => navigate('article', { articleId: a.id, title: a.title })}
+                          relatedArticles={a.cluster_peers || []}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </>
             ) : (
-              <div className="feed feed--grid-plain">
-                {browseFeed.map((a, i) => (
-                  <NewsCard
-                    key={a.id}
-                    article={a}
-                    index={i}
-                    navigate={navigate}
-                    onClick={() => navigate('article', { articleId: a.id, title: a.title })}
-                    relatedArticles={a.cluster_peers || []}
-                  />
-                ))}
-              </div>
+              <>
+                {/* Deep category view */}
+                <div className="section-label" style={{ marginBottom: 10 }}>
+                  {category}
+                  {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
+                  <button
+                    onClick={() => setCategory('all')}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--coral)', marginLeft: 10, padding: 0 }}
+                  >✕ all sections</button>
+                </div>
+                {browseFeed.length === 0 ? (
+                  <div className="empty-state"><p>No stories match these filters yet.</p></div>
+                ) : (
+                  <div className="feed feed--grid-plain">
+                    {browseFeed.map((a, i) => (
+                      <NewsCard
+                        key={a.id}
+                        article={a}
+                        index={i}
+                        navigate={navigate}
+                        onClick={() => navigate('article', { articleId: a.id, title: a.title })}
+                        relatedArticles={a.cluster_peers || []}
+                      />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
