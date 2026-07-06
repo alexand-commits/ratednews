@@ -225,6 +225,17 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
           )}
         </div>
 
+        {/* World Cup scores strip */}
+        <div
+          onClick={() => navigate('scores')}
+          className="border-hover"
+          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', marginBottom: 14, background: 'var(--surface)', border: '0.5px solid var(--border)', borderLeft: '3px solid var(--coral)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}
+        >
+          <span style={{ fontSize: 16 }}>🏆</span>
+          <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>World Cup 2026 — live scores &amp; fixtures</span>
+          <span style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--coral)', fontWeight: 600 }}>→</span>
+        </div>
+
         {/* Sport filter pills */}
         <div className="filter-bar" style={{ marginBottom: 16 }}>
           {SPORT_FILTERS.map(f => (
