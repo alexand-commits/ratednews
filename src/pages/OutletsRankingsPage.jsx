@@ -254,8 +254,6 @@ export default function OutletsRankingsPage({
     <div className="page-content" {...pullHandlers}>
       {pullIndicator}
       <div className="container" style={{ maxWidth: 1240, paddingTop: 14 }}>
-        <div className="grid">
-        <div>
 
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
@@ -282,6 +280,9 @@ export default function OutletsRankingsPage({
           <div className={`tab${section === 'outlets' ? ' active' : ''}`} onClick={() => setSection('outlets')}>📡 Outlets</div>
           <div className={`tab${section === 'leaderboard' ? ' active' : ''}`} onClick={() => setSection('leaderboard')}>🏅 Contributors</div>
         </div>
+
+        <div className="grid">
+        <div>
 
         {/* ── OUTLETS SECTION ─────────────────────────────────────────────── */}
         {section === 'outlets' && (

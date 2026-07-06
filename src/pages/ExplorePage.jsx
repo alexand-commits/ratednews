@@ -177,10 +177,10 @@ export default function ExplorePage({ navigate, outlets = [] }) {
 
   return (
     <div className="page-content">
-      <div className="container" style={{ paddingTop: 16, maxWidth: 1000 }}>
+      <div className="container" style={{ paddingTop: 14, maxWidth: 1240 }}>
 
         {/* Page heading */}
-        <div className="explore-head" style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: 20 }}>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text)', margin: 0, marginBottom: 4, fontFamily: 'var(--font-playfair), serif' }}>
             🔍 Explore
           </h1>
@@ -189,8 +189,8 @@ export default function ExplorePage({ navigate, outlets = [] }) {
           </p>
         </div>
 
-        {/* Search bar — centred hero on desktop */}
-        <div className="explore-search">
+        {/* Search bar */}
+        <div>
         <div className="search-bar" style={{ marginBottom: 6 }}>
           <span className="search-icon">🔍</span>
           <input
@@ -232,6 +232,8 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         )}
         </div>
 
+        <div className="grid">
+        <div>
         {/* ── Search results ── */}
         {isSearchActive && (
           <div style={{ marginTop: 8 }}>
@@ -286,48 +288,6 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         {/* ── Discovery content (no search) ── */}
         {!isSearchActive && (
           <>
-            {/* Desktop discovery hub — categories + topics, centred under the search */}
-            <div className="explore-hub">
-              <div>
-                <div className="hub-label">Browse categories</div>
-                <div className="hub-chips">
-                  {CATEGORIES.map(c => (
-                    <button
-                      key={c.value}
-                      className={`pill${category === c.value ? ' active' : ''}`}
-                      onClick={() => setCategory(c.value)}
-                    >{c.emoji ? `${c.emoji} ` : ''}{c.label}</button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <div className="hub-label">Region</div>
-                <div className="hub-chips">
-                  {REGIONS.map(r => (
-                    <button
-                      key={r.value}
-                      className={`pill${region === r.value ? ' active' : ''}`}
-                      onClick={() => setRegion(r.value)}
-                    >{r.label}</button>
-                  ))}
-                </div>
-              </div>
-              {trendingTopics.length > 0 && (
-                <div>
-                  <div className="hub-label">🔥 Trending topics — tap to search every story</div>
-                  <div className="hub-chips">
-                    {trendingTopics.slice(0, 8).map(topic => (
-                      <button
-                        key={topic}
-                        className="pill pill-topic"
-                        onClick={() => setSearch(topic)}
-                      >🔍 {topic}</button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
             {/* Category filter — mobile only; the hub owns categories on desktop */}
             <div className="filter-bar hide-desktop" style={{ marginTop: 20, marginBottom: 16 }}>
               {CATEGORIES.map(c => (
@@ -371,6 +331,58 @@ export default function ExplorePage({ navigate, outlets = [] }) {
             )}
           </>
         )}
+        </div>
+
+        {/* ── Rail — categories, region, topics: same anatomy as every other page ── */}
+        <aside className="sidebar desktop-only">
+          <div className="widget">
+            <div className="widget-title">Browse categories</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              {CATEGORIES.map(c => (
+                <button
+                  key={c.value}
+                  className={`pill${!isSearchActive && category === c.value ? ' active' : ''}`}
+                  onClick={() => { setCategory(c.value); setSearch('') }}
+                  style={{ fontSize: 12 }}
+                >{c.emoji ? `${c.emoji} ` : ''}{c.label}</button>
+              ))}
+            </div>
+          </div>
+
+          <div className="widget">
+            <div className="widget-title">Region</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+              {REGIONS.map(r => (
+                <button
+                  key={r.value}
+                  className={`pill${region === r.value ? ' active' : ''}`}
+                  onClick={() => setRegion(r.value)}
+                  style={{ fontSize: 12 }}
+                >{r.label}</button>
+              ))}
+            </div>
+          </div>
+
+          {trendingTopics.length > 0 && (
+            <div className="widget">
+              <div className="widget-title">🔥 Trending topics</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                {trendingTopics.slice(0, 8).map(topic => (
+                  <button
+                    key={topic}
+                    className="pill pill-topic"
+                    onClick={() => setSearch(topic)}
+                    style={{ fontSize: 12 }}
+                  >🔍 {topic}</button>
+                ))}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 10, lineHeight: 1.5 }}>
+                Tap a topic to search every story about it.
+              </div>
+            </div>
+          )}
+        </aside>
+        </div>
       </div>
     </div>
   )

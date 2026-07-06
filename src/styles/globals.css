@@ -233,15 +233,6 @@ img, video, iframe, embed, object { max-width: 100%; }
   .hide-desktop { display: none !important; }
 }
 
-/* ── Explore discovery hub — centred search + categories + topics on desktop ── */
-.explore-hub { display: none; }
-@media (min-width: 1024px) {
-  .explore-head { text-align: center; }
-  .explore-search { max-width: 680px; margin: 0 auto; }
-  .explore-hub { display: flex; flex-direction: column; align-items: center; gap: 12px; max-width: 780px; margin: 18px auto 26px; }
-  .explore-hub .hub-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 7px; text-align: center; }
-  .explore-hub .hub-chips { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
-}
 /* Topic chips act differently to filters (they launch a search) — mark them */
 .pill-topic { color: var(--coral); border-color: rgba(216, 90, 48, 0.4); }
 .pill-topic:hover { border-color: var(--coral); background: rgba(216, 90, 48, 0.08); }
