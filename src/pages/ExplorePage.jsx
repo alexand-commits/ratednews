@@ -228,8 +228,8 @@ export default function ExplorePage({ navigate, outlets = [] }) {
     <div className="page-content">
       <div className="container" style={{ paddingTop: 14, maxWidth: 1240 }}>
 
-        {/* Page heading */}
-        <div style={{ marginBottom: 20 }}>
+        {/* Page heading — mobile only; the active nav tab labels the page on desktop */}
+        <div className="hide-desktop" style={{ marginBottom: 20 }}>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text)', margin: 0, marginBottom: 4, fontFamily: 'var(--font-playfair), serif' }}>
             🔍 Explore
           </h1>

@@ -190,8 +190,8 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
     <div className="page-content" {...pullHandlers}>
       {pullIndicator}
       <div className="container" style={{ maxWidth: 1240, paddingTop: 14 }}>
-        {/* Page header — Sports is a root tab, no back button */}
-        <div style={{ marginBottom: 14 }}>
+        {/* Page header — mobile only; the active nav tab labels the page on desktop */}
+        <div className="hide-desktop" style={{ marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
             <h1 style={{
               fontSize: 26, fontWeight: 700, margin: 0,
@@ -218,6 +218,11 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
               {s.label}
             </div>
           ))}
+          {updatedMins !== null && (
+            <span className="desktop-only" style={{ marginLeft: 'auto', alignSelf: 'center', fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>
+              Updated {updatedMins <= 1 ? 'just now' : `${updatedMins} mins ago`}
+            </span>
+          )}
         </div>
 
         {/* Sport filter pills */}

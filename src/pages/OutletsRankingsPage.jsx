@@ -255,8 +255,9 @@ export default function OutletsRankingsPage({
       {pullIndicator}
       <div className="container" style={{ maxWidth: 1240, paddingTop: 14 }}>
 
-        {/* Header */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        {/* Header — mobile only; the active nav tab labels the page on desktop
+            and the rail carries the Suggest CTA there */}
+        <div className="hide-desktop" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
             <h1 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 26, fontWeight: 700, marginBottom: 4 }}>
               📡 Outlets

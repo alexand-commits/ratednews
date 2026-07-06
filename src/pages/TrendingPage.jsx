@@ -154,8 +154,8 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
     {pullIndicator}
     <div className="container" style={{ maxWidth: 1240, paddingTop: 14 }}>
 
-      {/* Page header */}
-      <div style={{ marginBottom: 20 }}>
+      {/* Page header — mobile only; the active nav tab labels the page on desktop */}
+      <div className="hide-desktop" style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap' }}>
           <h1 style={{
             fontSize: 26, fontWeight: 700, color: 'var(--text)',
