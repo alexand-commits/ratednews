@@ -263,6 +263,9 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
       <div className="container">
         <button className="back-btn" onClick={goBack}>← Back</button>
 
+        <div className="grid">
+        <div>
+
         <div className="outlet-hero" style={{ borderLeft: '3px solid var(--coral)' }}>
           <OutletLogo name={outlet.name} size={64} borderRadius={14} />
           <div className="outlet-hero-info">
@@ -683,6 +686,32 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
           user={user}
         />
       )}
+
+        </div>
+
+        {/* Rail — more outlets from this region, rated first */}
+        <aside className="sidebar desktop-only" style={{ marginTop: 38 }}>
+          <div className="widget">
+            <div className="widget-title">More {outlet?.country || ''} outlets</div>
+            {allOutlets
+              .filter(o => !o.parent_outlet_id && o.id !== outletId && (o.country || 'International') === (outlet?.country || 'International'))
+              .sort((a, b) => (b.community_score || 0) - (a.community_score || 0) || (b.total_ratings || 0) - (a.total_ratings || 0))
+              .slice(0, 7)
+              .map(o => (
+                <div key={o.id} className="outlet-rank-row" onClick={() => navigate('outlet', { outletId: o.id })}>
+                  <OutletLogo name={o.name} size={26} borderRadius={6} />
+                  <span className="outlet-rank-name" title={o.name}>{o.name}</span>
+                  {(o.community_score || 0) > 0
+                    ? <RatingDots value={o.community_score / 20} size={7} valueSize={12} />
+                    : <span style={{ fontSize: 10, color: 'var(--text3)', flexShrink: 0 }}>Not rated</span>}
+                </div>
+              ))}
+            <button className="btn-outline" style={{ width: '100%', marginTop: 12, fontSize: 12 }} onClick={() => navigate('outlets')}>
+              All outlets →
+            </button>
+          </div>
+        </aside>
+        </div>
     </div>
   )
 }

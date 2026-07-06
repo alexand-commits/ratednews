@@ -3,7 +3,7 @@ import { useAppContext } from './_app'
 import AboutPage from '../src/pages/AboutPage'
 
 export default function About() {
-  const { navigate, goBack } = useAppContext()
+  const { navigate, goBack, allOutlets } = useAppContext()
 
   return (
     <>
@@ -58,7 +58,7 @@ export default function About() {
           }) }}
         />
       </Head>
-      <AboutPage navigate={navigate} goBack={goBack} />
+      <AboutPage navigate={navigate} goBack={goBack} outlets={allOutlets} />
     </>
   )
 }

@@ -1,12 +1,15 @@
 import React, { useState } from 'react'
 import LegalModal from '../components/LegalModal'
+import Sidebar from '../components/Sidebar'
 
-export default function AboutPage({ navigate, goBack }) {
+export default function AboutPage({ navigate, goBack, outlets = [] }) {
   const [legalDoc, setLegalDoc] = useState(null)
   return (
     <>
     <div className="page-content">
-      <div className="container" style={{ maxWidth: 720 }}>
+      <div className="container" style={{ maxWidth: 1100 }}>
+        <div className="grid">
+        <div>
         <button className="back-btn" onClick={goBack}>← Back</button>
 
         <div style={{ marginBottom: 32 }}>
@@ -109,6 +112,10 @@ export default function AboutPage({ navigate, goBack }) {
         </div>
 
         <div style={{ height: 24 }} />
+        </div>
+
+        <Sidebar outlets={outlets} navigate={navigate} />
+        </div>
       </div>
     </div>
 

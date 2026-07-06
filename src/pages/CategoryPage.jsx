@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { db } from '../lib/supabase'
 import { timeAgo } from '../utils/helpers'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
+import Sidebar from '../components/Sidebar'
 
 const CATEGORIES = [
   { value: 'Politics',       slug: 'politics',       emoji: '🏛',  label: 'Politics',       color: '#4B6FBF' },
@@ -26,7 +27,7 @@ const REGIONS = [
   { value: 'int', label: '🌐 International'   },
 ]
 
-export default function CategoryPage({ navigate, goBack }) {
+export default function CategoryPage({ navigate, goBack, outlets = [] }) {
   const [region, setRegion] = useState('all')
   const [counts, setCounts] = useState({})
   const [previews, setPreviews] = useState({}) // category → latest article
@@ -99,6 +100,9 @@ export default function CategoryPage({ navigate, goBack }) {
       {pullIndicator}
       <div className="container">
         <button className="back-btn" onClick={goBack}>← Back</button>
+
+        <div className="grid">
+        <div>
 
         <div style={{ marginBottom: 16 }}>
           <h1 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
@@ -190,6 +194,10 @@ export default function CategoryPage({ navigate, goBack }) {
               </button>
             )
           })}
+        </div>
+        </div>
+
+        <Sidebar outlets={outlets} navigate={navigate} />
         </div>
       </div>
     </div>

@@ -104,6 +104,7 @@ export default function ProfileRoute({ userId, username, isPublic }) {
         )}
       </Head>
       <PublicProfilePage
+        outlets={allOutlets}
         userId={userId}
         isPublic={isPublic}
         navigate={navigate}

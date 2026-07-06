@@ -3,7 +3,7 @@ import { useAppContext } from './_app'
 import MethodologyPage from '../src/pages/MethodologyPage'
 
 export default function Methodology() {
-  const { goBack } = useAppContext()
+  const { goBack, navigate, allOutlets } = useAppContext()
 
   return (
     <>
@@ -44,7 +44,7 @@ export default function Methodology() {
           }) }}
         />
       </Head>
-      <MethodologyPage goBack={goBack} />
+      <MethodologyPage goBack={goBack} navigate={navigate} outlets={allOutlets} />
     </>
   )
 }

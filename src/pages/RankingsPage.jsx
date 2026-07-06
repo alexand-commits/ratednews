@@ -5,6 +5,17 @@ import InfoTip from '../components/InfoTip'
 import { db } from '../lib/supabase'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 
+const REGIONS = [
+  { value: 'all',        label: 'All'          },
+  { value: 'US',         label: 'US'           },
+  { value: 'UK',         label: 'UK'           },
+  { value: 'Europe',     label: 'Europe'       },
+  { value: 'MiddleEast', label: 'Middle East'  },
+  { value: 'Africa',     label: 'Africa'       },
+  { value: 'AsiaPac',    label: 'Asia Pacific' },
+  { value: 'Americas',   label: 'Americas'     },
+]
+
 const OUTLET_TABS = [
   {
     id: 'community', label: 'Community', key: 'community_score',
@@ -18,17 +29,6 @@ const OUTLET_TABS = [
     tip: 'Outlets ranked by how many community ratings they have received. More ratings = more community engagement.',
     chipLabel: 'total ratings', unit: '',
   },
-]
-
-const COVERAGE_REGIONS = [
-  { value: 'US',            label: 'US'           },
-  { value: 'UK',            label: 'UK'           },
-  { value: 'Europe',        label: 'Europe'       },
-  { value: 'MiddleEast',    label: 'Middle East'  },
-  { value: 'Africa',        label: 'Africa'       },
-  { value: 'AsiaPac',       label: 'Asia Pacific' },
-  { value: 'Americas',      label: 'Americas'     },
-  { value: 'International', label: 'International'},
 ]
 
 const TRUST_LEVELS = [
@@ -153,26 +153,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
   const [region, setRegion]           = useState('all')
   const [compareMode, setCompareMode] = useState(false)
   const [compareIds, setCompareIds]   = useState([])
-  const [coverage, setCoverage]       = useState([])
   const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
-
-  // Fetch coverage counts per region (last 7 days)
-  useEffect(() => {
-    const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-    Promise.all(
-      COVERAGE_REGIONS.map(r =>
-        db.from('articles')
-          .select('*', { count: 'exact', head: true })
-          .eq('article_region', r.value)
-          .gte('published_at', since7)
-          .then(({ count }) => ({ ...r, count: count || 0 }))
-      )
-    ).then(results => {
-      const total = results.reduce((s, r) => s + r.count, 0) || 1
-      setCoverage(results.map(r => ({ ...r, pct: Math.round((r.count / total) * 100) }))
-        .sort((a, b) => b.count - a.count))
-    })
-  }, [])
 
   function toggleCompareOutlet(id) {
     setCompareIds(prev => {
@@ -252,8 +233,7 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
   return (
     <div className="page-content" {...pullHandlers}>
       {pullIndicator}
-      <div className="container" style={{ maxWidth: 800 }}>
-        <button className="back-btn" onClick={goBack}>← Back</button>
+      <div className="container" style={{ maxWidth: 1240, paddingTop: 14 }}>
 
         <div style={{ marginBottom: 20 }}>
           <h1 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 26, fontWeight: 700, marginBottom: 6 }}>
@@ -272,10 +252,10 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
           <div className={`tab${section === 'leaderboard' ? ' active' : ''}`} onClick={() => setSection('leaderboard')}>
             🏅 Contributors
           </div>
-          <div className={`tab${section === 'coverage' ? ' active' : ''}`} onClick={() => setSection('coverage')}>
-            🗺 Coverage
-          </div>
         </div>
+
+        <div className="grid">
+        <div>
 
         {/* ── OUTLETS SECTION ── */}
         {section === 'outlets' && (
@@ -552,75 +532,30 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
           </>
         )}
 
-        {/* ── COVERAGE SECTION ── */}
-        {section === 'coverage' && (
-          <>
-            <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 20, lineHeight: 1.6 }}>
-              How articles published in the last 7 days are distributed across world regions. Regions under 5% of total coverage are flagged as gaps.
-            </div>
-
-            {coverage.length === 0 ? (
-              <div className="empty-state"><p>Loading coverage data…</p></div>
-            ) : (() => {
-              const maxCount = coverage[0].count || 1
-              const total = coverage.reduce((s, r) => s + r.count, 0)
-              const gaps = coverage.filter(r => r.pct < 5)
-              return (
-                <>
-                  {/* Summary chips */}
-                  <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-                    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 120 }}>
-                      <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Total articles</div>
-                      <div style={{ fontSize: 22, fontWeight: 700 }}>{total.toLocaleString()}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text2)' }}>last 7 days</div>
-                    </div>
-                    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 120 }}>
-                      <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Coverage gaps</div>
-                      <div style={{ fontSize: 22, fontWeight: 700, color: gaps.length ? 'var(--red)' : 'var(--green)' }}>{gaps.length}</div>
-                      <div style={{ fontSize: 12, color: 'var(--text2)' }}>{gaps.length ? `${gaps.map(g => g.label).join(', ')}` : 'All regions covered'}</div>
-                    </div>
-                  </div>
-
-                  {/* Bar chart */}
-                  <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px' }}>
-                    <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text3)', marginBottom: 16 }}>
-                      Regional breakdown
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {coverage.map(r => (
-                        <div key={r.value}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                            <span style={{ fontSize: 13, color: r.pct < 5 ? 'var(--red)' : 'var(--text1)', fontWeight: r.pct < 5 ? 600 : 400 }}>
-                              {r.label}{r.pct < 5 ? ' ↓' : ''}
-                            </span>
-                            <span style={{ fontSize: 12, color: 'var(--text3)' }}>{r.count.toLocaleString()} articles · {r.pct}%</span>
-                          </div>
-                          <div style={{ height: 6, background: 'var(--border)', borderRadius: 3 }}>
-                            <div style={{
-                              height: '100%',
-                              width: `${(r.count / maxCount) * 100}%`,
-                              borderRadius: 3,
-                              background: r.pct < 5 ? 'var(--red)' : r.pct > 30 ? 'var(--coral)' : 'var(--text3)',
-                              transition: 'width 0.4s ease',
-                            }} />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {gaps.length > 0 && (
-                    <div style={{ marginTop: 16, background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', fontSize: 13, color: 'var(--text2)', lineHeight: 1.6 }}>
-                      <strong style={{ color: 'var(--text1)' }}>Underrepresented regions:</strong> {gaps.map(g => g.label).join(', ')} each account for less than 5% of recent coverage. This reflects the outlets currently in our feed network, not global news importance.
-                    </div>
-                  )}
-                </>
-              )
-            })()}
-          </>
-        )}
-
         <div style={{ height: 16 }} />
+        </div>
+
+        {/* Rail — outlets by region, click to filter */}
+        <aside className="sidebar desktop-only">
+          <div className="widget">
+            <div className="widget-title">Outlets by region</div>
+            {REGIONS.filter(r => r.value !== 'all').map(r => {
+              const count = outlets.filter(o => !o.parent_outlet_id && (o.country || 'International') === r.value).length
+              const active = region === r.value
+              return (
+                <div
+                  key={r.value}
+                  onClick={() => setRegion(active ? 'all' : r.value)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 2px', cursor: 'pointer', borderBottom: '0.5px solid var(--border)', color: active ? 'var(--coral)' : 'var(--text2)', fontSize: 13, fontWeight: active ? 600 : 400 }}
+                >
+                  <span>{r.label}</span>
+                  <span style={{ fontSize: 12, color: active ? 'var(--coral)' : 'var(--text3)', fontVariantNumeric: 'tabular-nums' }}>{count}</span>
+                </div>
+              )
+            })}
+          </div>
+        </aside>
+        </div>
       </div>
     </div>
   )

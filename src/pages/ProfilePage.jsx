@@ -380,8 +380,11 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
 
   return (
     <div className="page-content">
-      <div className="container" style={{ maxWidth: 700 }}>
+      <div className="container" style={{ maxWidth: 1100 }}>
         <button className="back-btn" onClick={goBack}>← Back</button>
+
+        <div className="grid">
+        <div>
 
         {/* Onboarding banner */}
         {showOnboarding && (
@@ -947,6 +950,36 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
         </div>
 
         <div style={{ height: 32 }} />
+        </div>
+
+        {/* Rail — the next outlets to rate: followed-but-unrated first, then
+            the most-rated outlets you haven't weighed in on */}
+        <aside className="sidebar desktop-only">
+          <div className="widget">
+            <div className="widget-title">Rate your sources</div>
+            {(() => {
+              const ratedIds = new Set(outletRatings.map(r => r.outlet_id))
+              const followedUnrated = allOutlets.filter(o => followedOutletIds.has(o.id) && !ratedIds.has(o.id))
+              const popularUnrated  = allOutlets.filter(o => !o.parent_outlet_id && !ratedIds.has(o.id) && !followedOutletIds.has(o.id))
+                .sort((a, b) => (b.total_ratings || 0) - (a.total_ratings || 0))
+              const picks = [...followedUnrated, ...popularUnrated].slice(0, 6)
+              if (picks.length === 0) return <div style={{ fontSize: 12, color: 'var(--text3)' }}>You have rated everything you follow — nice.</div>
+              return picks.map(o => (
+                <div key={o.id} className="outlet-rank-row" onClick={() => navigate('outlet', { outletId: o.id })}>
+                  <OutletLogo name={o.name} size={26} borderRadius={6} />
+                  <span className="outlet-rank-name" title={o.name}>{o.name}</span>
+                  <span style={{ fontSize: 10, color: followedOutletIds.has(o.id) ? 'var(--coral)' : 'var(--text3)', flexShrink: 0 }}>
+                    {followedOutletIds.has(o.id) ? 'Following' : 'Rate →'}
+                  </span>
+                </div>
+              ))
+            })()}
+            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 10, lineHeight: 1.5 }}>
+              Your ratings shape the community scores.
+            </div>
+          </div>
+        </aside>
+        </div>
       </div>
     </div>
   )

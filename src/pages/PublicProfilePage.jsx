@@ -3,6 +3,7 @@ import { db } from '../lib/supabase'
 import { timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import RatingDots from '../components/RatingDots'
+import Sidebar from '../components/Sidebar'
 
 // ── Trust level ───────────────────────────────────────────────────────────────
 function getTrustLevel(total) {
@@ -38,7 +39,7 @@ function SourceList({ title, items, tint, navigate }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function PublicProfilePage({ userId, isPublic, navigate, goBack, showToast }) {
+export default function PublicProfilePage({ userId, isPublic, navigate, goBack, showToast, outlets = [] }) {
   const [profile, setProfile]           = useState(null)
   const [outletRatings, setOutletRatings] = useState([])
   const [following, setFollowing]       = useState([])
@@ -115,9 +116,11 @@ export default function PublicProfilePage({ userId, isPublic, navigate, goBack, 
 
   return (
     <div className="page-content">
-      <div className="container" style={{ maxWidth: 700 }}>
+      <div className="container" style={{ maxWidth: 1100 }}>
         <button className="back-btn" onClick={goBack}>← Back</button>
 
+        <div className="grid">
+        <div>
         {/* Hero */}
         <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
@@ -206,6 +209,10 @@ export default function PublicProfilePage({ userId, isPublic, navigate, goBack, 
             ))}
           </div>
         )}
+        </div>
+
+        <Sidebar outlets={outlets} navigate={navigate} />
+        </div>
       </div>
     </div>
   )

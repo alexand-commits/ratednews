@@ -1,4 +1,5 @@
 import React from 'react'
+import Sidebar from '../components/Sidebar'
 
 function Section({ title, children }) {
   return (
@@ -26,10 +27,12 @@ function Callout({ color = 'var(--amber)', children }) {
   )
 }
 
-export default function MethodologyPage({ goBack }) {
+export default function MethodologyPage({ goBack, navigate, outlets = [] }) {
   return (
     <div className="page-content">
-      <div className="container" style={{ maxWidth: 720 }}>
+      <div className="container" style={{ maxWidth: 1100 }}>
+        <div className="grid">
+        <div>
         <button className="back-btn" onClick={goBack}>← Back</button>
 
         {/* Header */}
@@ -125,6 +128,10 @@ export default function MethodologyPage({ goBack }) {
           </p>
         </div>
 
+        </div>
+
+        {navigate && <Sidebar outlets={outlets} navigate={navigate} />}
+        </div>
       </div>
     </div>
   )
