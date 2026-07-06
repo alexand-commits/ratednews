@@ -43,6 +43,11 @@ CLARITY — the reader is a stranger scrolling fast with ZERO context
 - When you quote a headline, quote it VERBATIM with its outlet name. Never paraphrase into fragments.
 - Every post must be postable EXACTLY as written — zero edits, zero ambiguity.
 
+POLLS — one line, instantly voteable
+- A poll post is ONE line: a sharp, self-contained question a stranger can vote on in two seconds. The news post carries the story; the poll must NOT re-tell it.
+- Fold any needed context into the question itself ("FIFA bent its rules after one Trump call — who do you trust to cover it straight?"). No recap paragraphs, no links, no "rate your sources" boilerplate — the poll IS the engagement.
+- poll_options: two outlet names, X caps options at 25 characters.
+
 LENGTH — concise by default
 - The account has X Premium, so there is no hard character wall — but short still wins the timeline. Aim for ≤ 280 characters; a tight 180 beats a rambling 400.
 - You MAY run past 280 when the content genuinely earns it — typically a coverage spread where quoting 2-3 headlines verbatim is the whole point. Even then: HARD ceiling 600 characters including any link. If a draft runs past, drop a headline or cut your own commentary — never both-and.
@@ -107,7 +112,7 @@ ${blocks}
 
 Draft 4 posts:
 - One "news" post per story: report the story itself the way a top breaking-news account would — lead with what happened, concrete details from the headlines and summaries, short lines. The story link goes at the end.
-- One "poll" post for whichever story has the most genuinely split coverage (poll_options = two outlet names from that story).
+- One "poll" post for whichever story has the most genuinely split coverage: ONE line, instantly voteable, no recap, no link (poll_options = two outlet names from that story).
 Use "coverage_contrast" INSTEAD of "news" for at most one story, and only if two of its verbatim headlines clash so hard a stranger would stop scrolling. Never force it.
 
 Label every post's "story" field. Vary structure across the batch — no shared template, no shared closers.
