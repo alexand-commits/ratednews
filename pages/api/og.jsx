@@ -339,34 +339,77 @@ function LeaderboardCard({ title, items }) {
 // ── Brand / default card ──────────────────────────────────────────────────────
 // Site-wide default share image (homepage, about, rankings, etc.).
 function BrandCard() {
-  const GREEN = '#639922'
+  const GREEN   = '#8DC44A'
+  const SURFACE = '#2E2B28'
+  const LINE    = 'rgba(255,255,255,0.10)'
+  const outletDots = ['#5B7BC0', '#C0392B', '#639922', '#C8930A', '#D85A30']
+  // Mock coverage rows — width pairs for the headline "text" bars
+  const rows = [
+    { dot: '#5B7BC0', w1: 190, w2: 120 },
+    { dot: '#C0392B', w1: 160, w2: 150 },
+    { dot: '#639922', w1: 200, w2: 90  },
+  ]
   return (
     <Shell>
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '72px 72px 56px', justifyContent: 'center' }}>
-        <Logo size={82} />
-        <div style={{ display: 'flex', width: 360, height: 3, background: 'rgba(216,90,48,0.55)', marginTop: 22, marginBottom: 30 }} />
-        <div style={{ display: 'flex', color: TEXT1, fontFamily: SE, fontSize: 44, fontWeight: 700, lineHeight: 1.2 }}>
-          Trust the source, not just the story
-        </div>
-        <div style={{ display: 'flex', color: TEXT2, fontFamily: SF, fontSize: 25, marginTop: 20 }}>
-          Community-rated news from 150+ outlets
-        </div>
-        {/* Sample community rating — green dots */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 34 }}>
-          <div style={{ display: 'flex', gap: 9 }}>
-            {[0, 1, 2, 3, 4].map(i => (
-              <div key={i} style={{
-                width: 20, height: 20, borderRadius: 20,
-                background: i < 4 ? GREEN : 'rgba(255,255,255,0.16)',
-              }} />
-            ))}
+      <div style={{ display: 'flex', flex: 1, padding: '64px 64px 48px', gap: 56 }}>
+        {/* Left: brand + tagline */}
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1.2, justifyContent: 'center' }}>
+          <Logo size={72} />
+          <div style={{ display: 'flex', width: 320, height: 3, background: 'rgba(216,90,48,0.55)', marginTop: 22, marginBottom: 30 }} />
+          <div style={{ display: 'flex', color: TEXT1, fontFamily: SE, fontSize: 46, fontWeight: 700, lineHeight: 1.18 }}>
+            Trust the source, not just the story
           </div>
-          <span style={{ display: 'flex', color: GREEN, fontFamily: SF, fontSize: 22, fontWeight: 700 }}>4.0</span>
-          <span style={{ display: 'flex', color: TEXT3, fontFamily: SF, fontSize: 18 }}>reader rating</span>
+          <div style={{ display: 'flex', color: TEXT2, fontFamily: SF, fontSize: 24, marginTop: 22 }}>
+            Community-rated news from 200+ outlets
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 40 }}>
+            <span style={{ color: TEXT4, fontSize: 16, fontFamily: SF }}>ratednews.com</span>
+            <span style={{ display: 'flex', width: 4, height: 4, borderRadius: 4, background: TEXT4 }} />
+            <span style={{ color: TEXT3, fontSize: 15, fontFamily: SF }}>updated continuously</span>
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 44 }}>
-          <span style={{ color: TEXT4, fontSize: 16, fontFamily: SF }}>ratednews.com</span>
-          <span style={{ color: TEXT3, fontSize: 15, fontFamily: SF }}>Community-rated · updated continuously</span>
+
+        {/* Right: product vignette — one story, many sources */}
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center' }}>
+          <div style={{
+            display: 'flex', flexDirection: 'column',
+            background: SURFACE, border: `1px solid ${LINE}`, borderRadius: 18,
+            padding: '26px 28px', gap: 18,
+          }}>
+            <span style={{ color: TEXT3, fontFamily: SF, fontSize: 13, fontWeight: 700, letterSpacing: 2 }}>ONE STORY · EVERY ANGLE</span>
+            {rows.map((r, i) => (
+              <div key={String(i)} style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingBottom: i < rows.length - 1 ? 18 : 0, borderBottom: i < rows.length - 1 ? `1px solid ${LINE}` : 'none' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ display: 'flex', width: 12, height: 12, borderRadius: 12, background: r.dot }} />
+                  <div style={{ display: 'flex', width: 86, height: 9, borderRadius: 9, background: 'rgba(255,255,255,0.22)' }} />
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ display: 'flex', width: r.w1, height: 11, borderRadius: 11, background: 'rgba(255,255,255,0.13)' }} />
+                  <div style={{ display: 'flex', width: r.w2, height: 11, borderRadius: 11, background: 'rgba(255,255,255,0.13)' }} />
+                </div>
+              </div>
+            ))}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4 }}>
+              <div style={{ display: 'flex' }}>
+                {outletDots.map((c, i) => (
+                  <span key={String(i)} style={{
+                    display: 'flex', width: 22, height: 22, borderRadius: 22,
+                    background: c, marginLeft: i === 0 ? 0 : -7,
+                    border: `2px solid ${SURFACE}`,
+                  }} />
+                ))}
+              </div>
+              <span style={{ display: 'flex', color: CORAL_L, fontFamily: SF, fontSize: 17, fontWeight: 700 }}>22 sources covering this story</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 20, justifyContent: 'center' }}>
+            <div style={{ display: 'flex', gap: 7 }}>
+              {[0, 1, 2, 3, 4].map(i => (
+                <span key={String(i)} style={{ display: 'flex', width: 14, height: 14, borderRadius: 14, background: i < 4 ? GREEN : 'rgba(255,255,255,0.14)' }} />
+              ))}
+            </div>
+            <span style={{ display: 'flex', color: TEXT2, fontFamily: SF, fontSize: 17 }}>Rate the sources you trust</span>
+          </div>
         </div>
       </div>
     </Shell>

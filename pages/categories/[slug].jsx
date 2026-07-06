@@ -46,12 +46,12 @@ export const CATEGORY_META = [
   {
     value: 'Health', slug: 'health', emoji: '🏥',
     title: 'Health & Medical News Rated for Quality',
-    description: 'Health and medical news rated by the community — clinical research, vaccines, public health and healthcare policy, compared across 150+ community-rated outlets.',
+    description: 'Health and medical news rated by the community — clinical research, vaccines, public health and healthcare policy, compared across 200+ community-rated outlets.',
   },
   {
     value: 'Environment', slug: 'environment', emoji: '🌱',
     title: 'Climate & Environment News Rated for Quality',
-    description: 'Climate and environment news rated by the community — emissions, biodiversity, net zero policy and sustainability, compared across 150+ community-rated outlets.',
+    description: 'Climate and environment news rated by the community — emissions, biodiversity, net zero policy and sustainability, compared across 200+ community-rated outlets.',
   },
   {
     value: 'Entertainment', slug: 'entertainment', emoji: '🎬',
@@ -61,7 +61,7 @@ export const CATEGORY_META = [
   {
     value: 'Culture', slug: 'culture', emoji: '🎭',
     title: 'Culture & Arts News Rated for Quality',
-    description: 'Arts and culture news rated by the community — books, film, art, theatre, fashion and heritage, compared across 150+ community-rated outlets.',
+    description: 'Arts and culture news rated by the community — books, film, art, theatre, fashion and heritage, compared across 200+ community-rated outlets.',
   },
   {
     value: 'Crime', slug: 'crime', emoji: '🔍',

@@ -9,10 +9,10 @@ export default function About() {
     <>
       <Head>
         <title>How It Works — RatedNews</title>
-        <meta name="description" content="How RatedNews works: a community-rated news aggregator pulling top stories from 150+ outlets, where readers rate the news outlets they trust for accuracy, bias and quality." />
+        <meta name="description" content="How RatedNews works: a community-rated news aggregator pulling top stories from 200+ outlets, where readers rate the news outlets they trust for accuracy, bias and quality." />
         <link rel="canonical" href="https://www.ratednews.com/about" />
         <meta property="og:title"       content="How RatedNews Works — Community-Rated News" />
-        <meta property="og:description" content="A community-rated news aggregator pulling top stories from 150+ outlets, where readers rate the news outlets they trust for accuracy, bias and quality." />
+        <meta property="og:description" content="A community-rated news aggregator pulling top stories from 200+ outlets, where readers rate the news outlets they trust for accuracy, bias and quality." />
         <meta property="og:url"         content="https://www.ratednews.com/about" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/api/og?type=brand" />
@@ -21,7 +21,7 @@ export default function About() {
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="How RatedNews Works" />
-        <meta name="twitter:description" content="Community-rated news from 150+ outlets — readers rate accuracy, bias and quality." />
+        <meta name="twitter:description" content="Community-rated news from 200+ outlets — readers rate accuracy, bias and quality." />
         <meta name="twitter:image"      content="https://www.ratednews.com/api/og?type=brand" />
         <script
           type="application/ld+json"
@@ -32,7 +32,7 @@ export default function About() {
               {
                 '@type': 'Question',
                 name: 'What is RatedNews?',
-                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews is a community-rated news aggregator that pulls top stories from 150+ UK, US and international news outlets and lets readers rate the news outlets they trust for accuracy, bias and quality.' },
+                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews is a community-rated news aggregator that pulls top stories from 200+ UK, US and international news outlets and lets readers rate the news outlets they trust for accuracy, bias and quality.' },
               },
               {
                 '@type': 'Question',
@@ -47,7 +47,7 @@ export default function About() {
               {
                 '@type': 'Question',
                 name: 'Which news outlets does RatedNews cover?',
-                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews aggregates 150+ major news outlets including BBC, CNN, Fox News, The Guardian, The New York Times, Wall Street Journal, Daily Mail, Reuters, AP, and many more UK, US, and international sources.' },
+                acceptedAnswer: { '@type': 'Answer', text: 'RatedNews aggregates 200+ major news outlets including BBC, CNN, Fox News, The Guardian, The New York Times, Wall Street Journal, Daily Mail, Reuters, AP, and many more UK, US, and international sources.' },
               },
               {
                 '@type': 'Question',
