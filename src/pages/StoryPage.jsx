@@ -38,9 +38,6 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
       <div className="container">
         <button className="back-btn" onClick={goBack}>← Back</button>
 
-        <div className="grid">
-        <div>
-
         {/* Header */}
         <div style={{ marginBottom: 22 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
@@ -58,6 +55,9 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
             Compare how each outlet is covering it — and rate the sources you trust.
           </p>
         </div>
+
+        <div className="grid">
+        <div>
 
         {/* Coverage list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
