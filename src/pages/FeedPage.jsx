@@ -769,7 +769,7 @@ export default function FeedPage({
                 </div>
               ) : displayList.length === 0 && activeTopic ? (
                 <div className="empty-state">
-                  <h3>No articles on "{activeTopic}" in the last 24h</h3>
+                  <h3>No stories on "{activeTopic}" in the last 24h</h3>
                   <p>This topic may have trended earlier. Check back after the next update.</p>
                   <button className="btn-outline" style={{ marginTop: 12, fontSize: 13 }} onClick={() => setActiveTopic(null)}>
                     Back to all stories
@@ -820,7 +820,7 @@ export default function FeedPage({
                 <div style={{ textAlign: 'center', padding: '28px 16px', borderTop: '1px solid var(--divider)', marginTop: 8 }}>
                   <div style={{ fontSize: 20, marginBottom: 6 }}>📰</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 3 }}>
-                    {displayList.length} article{displayList.length !== 1 ? 's' : ''} on {activeTopic} in the last 24h
+                    {displayList.length} {displayList.length !== 1 ? 'stories' : 'story'} on {activeTopic} in the last 24h
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>That's everything — updates hourly</div>
                   <button
