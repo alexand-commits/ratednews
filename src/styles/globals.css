@@ -222,6 +222,13 @@ img, video, iframe, embed, object { max-width: 100%; }
 
 /* SIDEBAR */
 .sidebar { display: flex; flex-direction: column; gap: 14px; }
+/* Desktop: the rail sticks under the header instead of floating in empty space
+   as the (much taller) content column scrolls; scrolls internally if taller
+   than the viewport. */
+@media (min-width: 1024px) {
+  .grid > .sidebar { position: sticky; top: 68px; align-self: flex-start; max-height: calc(100vh - 84px); overflow-y: auto; scrollbar-width: none; }
+  .grid > .sidebar::-webkit-scrollbar { display: none; }
+}
 /* Trending topics live inline above the feed on mobile, in the sidebar on desktop */
 .sidebar-trending { display: none; }
 /* Generic desktop/mobile visibility helpers (1024px breakpoint, matching the grid) */

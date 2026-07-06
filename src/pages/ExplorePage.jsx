@@ -130,6 +130,13 @@ export default function ExplorePage({ navigate, outlets = [] }) {
     })
   }, [feedPool, catCache, category, region])
 
+  // Category switches reset scroll — otherwise 'View all' leaves you anchored
+  // mid-page over freshly swapped (older) content.
+  function goCategory(v) {
+    setCategory(v)
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0 })
+  }
+
   // Category digest — Explore's desktop default. One section per category with
   // its top stories (trend-scored), so the page answers "what's happening across
   // every section?" rather than duplicating the homepage's Latest stream.
@@ -319,13 +326,24 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         {/* ── Discovery content (no search) ── */}
         {!isSearchActive && (
           <>
+            {/* Region edition switcher — desktop; the digest recomputes per region */}
+            <div className="filter-bar desktop-only" style={{ marginBottom: 18 }}>
+              <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Region</span>
+              {REGIONS.map(r => (
+                <button
+                  key={r.value}
+                  className={`pill${region === r.value ? ' active' : ''}`}
+                  onClick={() => setRegion(r.value)}
+                >{r.label}</button>
+              ))}
+            </div>
             {/* Category filter — mobile only; the hub owns categories on desktop */}
             <div className="filter-bar hide-desktop" style={{ marginTop: 20, marginBottom: 16 }}>
               {CATEGORIES.map(c => (
                 <button
                   key={c.value}
                   className={`pill${category === c.value ? ' active' : ''}`}
-                  onClick={() => setCategory(c.value)}
+                  onClick={() => goCategory(c.value)}
                 >{c.emoji ? `${c.emoji} ` : ''}{c.label}</button>
               ))}
             </div>
@@ -348,12 +366,12 @@ export default function ExplorePage({ navigate, outlets = [] }) {
                   ) : digest.map(sec => (
                     <section key={sec.value}>
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
-                        <div className="section-label" style={{ margin: 0 }}>
+                        <h2 style={{ margin: 0, fontFamily: 'var(--font-playfair), serif', fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>
                           {sec.emoji} {sec.label}
-                          {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
-                        </div>
+                          {region !== 'all' && <span style={{ fontWeight: 400, fontSize: 14, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
+                        </h2>
                         <button
-                          onClick={() => setCategory(sec.value)}
+                          onClick={() => goCategory(sec.value)}
                           style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--coral)', padding: 0 }}
                         >View all →</button>
                       </div>
@@ -405,7 +423,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
                   {category}
                   {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
                   <button
-                    onClick={() => setCategory('all')}
+                    onClick={() => goCategory('all')}
                     style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--coral)', marginLeft: 10, padding: 0 }}
                   >✕ all sections</button>
                 </div>
@@ -459,26 +477,13 @@ export default function ExplorePage({ navigate, outlets = [] }) {
                 <button
                   key={c.value}
                   className={`pill${!isSearchActive && category === c.value ? ' active' : ''}`}
-                  onClick={() => { setCategory(c.value); setSearch('') }}
+                  onClick={() => { goCategory(c.value); setSearch('') }}
                   style={{ fontSize: 11.5, padding: '4px 11px' }}
                 >{c.emoji ? `${c.emoji} ` : ''}{c.label}</button>
               ))}
             </div>
           </div>
 
-          <div className="widget">
-            <div className="widget-title">Region</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {REGIONS.map(r => (
-                <button
-                  key={r.value}
-                  className={`pill${region === r.value ? ' active' : ''}`}
-                  onClick={() => setRegion(r.value)}
-                  style={{ fontSize: 11.5, padding: '4px 11px' }}
-                >{r.label}</button>
-              ))}
-            </div>
-          </div>
         </aside>
         </div>
       </div>
