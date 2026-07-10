@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { db } from '../lib/supabase'
+import { track } from '../utils/track'
 import { timeAgo, articleSlug } from '../utils/helpers'
 import { computeTrendingTopics } from '../utils/topics'
 import OutletLogo from '../components/OutletLogo'
@@ -203,6 +204,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         .limit(30)
       setDbResults(data || [])
       setDbLoading(false)
+      track('search', { source: 'explore' })
       // save to history
       const t = search.trim()
       if (t.length >= 2) {

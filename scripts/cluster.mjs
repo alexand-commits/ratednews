@@ -132,8 +132,27 @@ async function main() {
 
   for (const { clusterId, members } of clusters) {
     for (const member of members) {
+      // "N sources" should mean publishers, not feeds — post-flattening,
+      // BBC World + BBC Politics are separate outlets but one publisher.
+      // Dedupe peers by normalised publisher key (keep the newest per publisher).
+      const SUFFIX_RE = /\s+(World|Politics|Business|Markets|Money|Tech(nology)?|Science|Health|Entertainment|Arts|Culture|Environment|Travel|Education|Sport(s)?( [A-Za-z0-9 ]+)?|US|News)$/i
+      const pubKey = name => {
+        let k = (name || '').replace(/^The\s+/i, '').trim()
+        // Strip section suffixes to a fixed point: "Fox News Politics" → "Fox News" → "Fox"
+        for (let prev = null; prev !== k; ) { prev = k; k = k.replace(SUFFIX_RE, '').trim() }
+        k = k.toLowerCase()
+        if (k === 'nyt') k = 'new york times'
+        return k
+      }
+      const seenPubs = new Set([pubKey(member.outlets?.name)])
       const peers = members
         .filter(m => m.id !== member.id)
+        .filter(m => {
+          const k = pubKey(m.outlets?.name)
+          if (seenPubs.has(k)) return false
+          seenPubs.add(k)
+          return true
+        })
         .map(m => ({
           id:        m.id,
           outlet_id: m.outlet_id,

@@ -5,11 +5,13 @@ import Script from 'next/script'
 import { db } from '../src/lib/supabase'
 import Header from '../src/components/Header'
 import BottomNav from '../src/components/BottomNav'
+import Footer from '../src/components/Footer'
 import Toast from '../src/components/Toast'
 import AuthModal from '../src/components/AuthModal'
 import PasswordResetModal from '../src/components/PasswordResetModal'
 import ErrorBoundary from '../src/components/ErrorBoundary'
 import { createNavigate } from '../src/utils/navigate'
+import { track } from '../src/utils/track'
 import { Analytics } from '@vercel/analytics/react'
 import { playfair, lato } from '../src/lib/fonts'
 import '../src/styles/globals.css'
@@ -165,6 +167,7 @@ export default function App({ Component, pageProps }) {
   }
 
   async function toggleFollow(outletId) {
+    track('follow_outlet', { outlet_id: outletId })
     if (!user) return
     const isFollowing = followedOutletIds.has(outletId)
     if (isFollowing) {
@@ -254,6 +257,7 @@ export default function App({ Component, pageProps }) {
 
       <ErrorBoundary>
         <Component {...pageProps} />
+        <Footer />
       </ErrorBoundary>
 
       {showAuthModal && (

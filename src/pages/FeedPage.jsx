@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar'
 import LegalModal from '../components/LegalModal'
 import { timeAgo } from '../utils/helpers'
 import { db } from '../lib/supabase'
+import { track } from '../utils/track'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 import { computeTrendingTopics } from '../utils/topics'
 
@@ -222,6 +223,7 @@ export default function FeedPage({
     if (search.trim().length < 2) {
       setDbResults(null)
       setDbLoading(false)
+      track('search', { source: 'feed' })
       return
     }
     setDbLoading(true)
@@ -399,6 +401,21 @@ export default function FeedPage({
     }
     return out
   }, [rawList])
+
+
+  // Hero slot needs an image — a text-only hero reads flat. On the default
+  // trending view, promote the first imaged story to the front (order of the
+  // rest unchanged). Search/topic/latest views keep pure order.
+  const heroList = useMemo(() => {
+    if (isSearchActive || activeTopic || sort !== 'trending' || feedTab !== 'all') return displayList
+    if (!displayList.length || displayList[0].image_url) return displayList
+    const idx = displayList.slice(0, 6).findIndex(a => a.image_url)
+    if (idx <= 0) return displayList
+    const next = displayList.slice()
+    const [hero] = next.splice(idx, 1)
+    next.unshift(hero)
+    return next
+  }, [displayList, isSearchActive, activeTopic, sort, feedTab])
 
   // Outlet search — match search term against outlet names
   const matchedOutlets = useMemo(() => {
@@ -754,7 +771,7 @@ export default function FeedPage({
                   </button>
                 </div>
               ) : (
-                displayList.map((a, i) => (
+                heroList.map((a, i) => (
                   <NewsCard
                     key={a.id}
                     article={a}

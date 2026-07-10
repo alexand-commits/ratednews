@@ -884,6 +884,26 @@ async function enrichSummary(url, rssSummary) {
   }
 }
 
+// Section feeds are a stronger category signal than keyword matching — an
+// article arriving via "BBC Business" IS business news. Suffix → category.
+const SECTION_CATEGORY = [
+  [/\b(World)$/i, 'World'],
+  [/\bPolitics$/i, 'Politics'],
+  [/\b(Business|Markets|Money)$/i, 'Business'],
+  [/\b(Tech|Technology)$/i, 'Tech'],
+  [/\bScience$/i, 'Science'],
+  [/\bHealth$/i, 'Health'],
+  [/\b(Entertainment|Arts)$/i, 'Entertainment'],
+  [/\bCulture$/i, 'Culture'],
+  [/\bEnvironment$/i, 'Environment'],
+  [/\bTravel$/i, 'Travel'],
+  [/\bEducation$/i, 'Education'],
+]
+function sectionCategory(outletName) {
+  for (const [re, cat] of SECTION_CATEGORY) if (re.test(outletName || '')) return cat
+  return null
+}
+
 async function ingestOutlet(outlet) {
   if (!outlet.rss_url) {
     console.log(`  ⚠️  No rss_url set — skipping`)
@@ -953,7 +973,7 @@ async function ingestOutlet(outlet) {
       // Dedicated sports outlets force the Sport category so their content
       // reliably reaches the Sports page even when a headline lacks obvious
       // sport keywords (e.g. a transfer rumour or a club finance story).
-      category:     outlet.type === 'Sports' ? 'Sport' : categorise(title, summary),
+      category:     outlet.type === 'Sports' ? 'Sport' : (sectionCategory(outlet.name) || categorise(title, summary)),
       published_at: (() => { const p = item.pubDate ? new Date(item.pubDate) : null; return (p && !isNaN(p) && p <= new Date()) ? p.toISOString() : new Date().toISOString() })(),
       image_url:    NO_IMAGE_OUTLETS.has(outlet.name) ? null : extractImageUrl(item),
     })

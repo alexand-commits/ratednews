@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { db } from '../lib/supabase'
 import RatingDots, { RatingDotsInput } from './RatingDots'
+import { track } from '../utils/track'
 
 // One-tap outlet trust rating. Tapping a dot submits immediately — no modal,
 // no required accuracy/bias/headline fields. The detailed rating modal is still
@@ -51,6 +52,7 @@ export default function OutletTrustRate({
     }
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(25)
     onRated?.(n)
+    track('rate_outlet', { outlet_id: outlet?.id, stars: n })
   }
 
   const rated = stars > 0
@@ -90,6 +92,7 @@ export function OutletTrustRateInline({ outlet, user, onLoginClick, onRated, sho
     if (error) { setStars(prev); showToast?.('Could not save'); return }
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(25)
     onRated?.(n)
+    track('rate_outlet', { outlet_id: outlet?.id, stars: n })
   }
 
   const active = hover || stars

@@ -527,9 +527,9 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
         {/* Comments */}
         <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 14 }}>
-            Discussion <span style={{ color: 'var(--text3)', fontWeight: 400 }}>{comments.length} comments</span>
+            Discussion {comments.length > 0 && <span style={{ color: 'var(--text3)', fontWeight: 400 }}>{comments.length} comment{comments.length !== 1 ? 's' : ''}</span>}
           </div>
-          <div className="sort-row">
+          {comments.length > 0 && <div className="sort-row">
             <span className="sort-label">Sort:</span>
             {['top', 'new', 'controversial'].map(s => (
               <button
@@ -540,7 +540,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 {s.charAt(0).toUpperCase() + s.slice(1)}
               </button>
             ))}
-          </div>
+          </div>}
           <div className="compose-row">
             <div className="compose-av">{user ? getInitials(user.email) : '?'}</div>
             <input

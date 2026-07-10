@@ -2,6 +2,7 @@ import React from 'react'
 import OutletLogo from './OutletLogo'
 import RatingDots from './RatingDots'
 import { isRankEligible } from '../utils/helpers'
+import { track } from '../utils/track'
 
 export default function Sidebar({ outlets, navigate, trendingTopics = [], activeTopic = null, onTopic }) {
   const top5 = outlets
@@ -29,7 +30,7 @@ export default function Sidebar({ outlets, navigate, trendingTopics = [], active
               return (
                 <button
                   key={topic}
-                  onClick={() => onTopic(topic)}
+                  onClick={() => { track('topic_tap', { topic }); onTopic(topic) }}
                   className={`pill pill-topic${isActive ? ' active' : ''}`}
                   style={{ fontSize: 11.5, padding: '4px 11px' }}
                 >
