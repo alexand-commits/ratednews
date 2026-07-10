@@ -104,11 +104,15 @@ async function getSupabase() {
 }
 
 export async function getStaticPaths() {
-  const supabase = await getSupabase()
-  const { data: outlets } = await supabase.from('outlets').select('name')
-  return {
-    paths: (outlets || []).map(o => ({ params: { slug: toSlug(o.name) } })),
-    fallback: 'blocking', // new outlets get a page on first visit
+  try {
+    const supabase = await getSupabase()
+    const { data: outlets } = await supabase.from('outlets').select('name')
+    return {
+      paths: (outlets || []).map(o => ({ params: { slug: toSlug(o.name) } })),
+      fallback: 'blocking', // new outlets get a page on first visit
+    }
+  } catch {
+    return { paths: [], fallback: 'blocking' }
   }
 }
 

@@ -235,9 +235,13 @@ export default function CategoryLanding({ slug, initialArticles, initialCount, c
 }
 
 export async function getStaticPaths() {
-  return {
-    paths: CATEGORY_META.map(c => ({ params: { slug: c.slug } })),
-    fallback: false,
+  try {
+    return {
+      paths: CATEGORY_META.map(c => ({ params: { slug: c.slug } })),
+      fallback: false,
+    }
+  } catch {
+    return { paths: [], fallback: false }
   }
 }
 

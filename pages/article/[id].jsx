@@ -223,19 +223,25 @@ async function getSupabase() {
 }
 
 export async function getStaticPaths() {
-  const supabase = await getSupabase()
-  // Pre-build the 500 most recent articles with slug-based paths
-  const { data: articles } = await supabase
-    .from('articles')
-    .select('id, title')
-    .order('published_at', { ascending: false })
-    .limit(500)
+  // try/catch keeps env-less builds (CI build check) green — fallback:
+  // 'blocking' means every path still server-renders on first hit.
+  try {
+    const supabase = await getSupabase()
+    // Pre-build the 500 most recent articles with slug-based paths
+    const { data: articles } = await supabase
+      .from('articles')
+      .select('id, title')
+      .order('published_at', { ascending: false })
+      .limit(500)
 
-  return {
-    paths: (articles || []).map(a => ({
-      params: { id: articleSlug(a.title, a.id) },
-    })),
-    fallback: 'blocking', // server-render on first hit — prevents Google indexing skeleton (no canonical)
+    return {
+      paths: (articles || []).map(a => ({
+        params: { id: articleSlug(a.title, a.id) },
+      })),
+      fallback: 'blocking', // server-render on first hit — prevents Google indexing skeleton (no canonical)
+    }
+  } catch {
+    return { paths: [], fallback: 'blocking' }
   }
 }
 
