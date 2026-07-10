@@ -440,7 +440,7 @@ export default function OutletsRankingsPage({
                           onClick={e => { e.stopPropagation(); if (!user) { onLoginClick(); return } toggleFollow(o.id) }}
                           style={{ fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20, border: followedOutletIds.has(o.id) ? '1px solid var(--border)' : '1px solid var(--coral)', background: followedOutletIds.has(o.id) ? 'var(--bg)' : 'rgba(216,90,48,0.08)', color: followedOutletIds.has(o.id) ? 'var(--text3)' : 'var(--coral)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
                         >
-                          {followedOutletIds.has(o.id) ? '✓' : '+'}
+                          {followedOutletIds.has(o.id) ? '✓ Following' : '+ Follow'}
                         </button>
                       </div>
 
