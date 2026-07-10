@@ -55,9 +55,6 @@ export function createNavigate(router, outlets = []) {
       case 'sports':
         router.push('/sports')
         break
-      case 'scores':
-        router.push('/sports/scores')
-        break
       case 'profile':
         router.push('/profile')
         break
