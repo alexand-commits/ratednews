@@ -155,7 +155,6 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   const similar = allOutlets.filter(o => o.id !== outletId && o.country === outlet?.country && !o.parent_outlet_id).slice(0, 4)
 
   // Parent / child outlet relationships
-  const parentOutlet  = outlet.parent_outlet_id ? allOutlets.find(o => o.id === outlet.parent_outlet_id) : null
   const childOutlets  = allOutlets.filter(o => o.parent_outlet_id === outletId)
   const websiteUrl = outlet.website_url || (() => {
     if (!outlet.rss_url) return null
@@ -270,15 +269,6 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
             <div className="outlet-meta-chips">
               <span className="meta-chip"><span>🌍</span>{outlet.country || 'Unknown'}</span>
               <span className="meta-chip">{outlet.type || 'News outlet'}</span>
-              {parentOutlet && (
-                <button
-                  onClick={() => navigate('outlet', { outletId: parentOutlet.id })}
-                  className="meta-chip"
-                  style={{ background: 'rgba(216,90,48,0.08)', border: '1px solid rgba(216,90,48,0.25)', color: 'var(--coral)', fontWeight: 600, cursor: 'pointer' }}
-                >
-                  ↑ Part of {parentOutlet.name}
-                </button>
-              )}
               {websiteUrl && (
                 <a
                   href={websiteUrl} target="_blank" rel="noopener noreferrer"

@@ -394,7 +394,6 @@ export default function OutletsRankingsPage({
                   const barWidth   = Math.round((score / maxScore) * 100)
                   const isTop3     = i < 3 && !search && region === 'all'
                   const isSelected = compareIds.includes(o.id)
-                  const children   = outlets.filter(c => c.parent_outlet_id === o.id)
 
                   return (
                     <div key={o.id}
@@ -444,20 +443,6 @@ export default function OutletsRankingsPage({
                         </button>
                       </div>
 
-                      {children.length > 0 && (
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', padding: '0 18px 10px 62px' }}>
-                          <span style={{ fontSize: 10, color: 'var(--text3)', alignSelf: 'center' }}>Sections:</span>
-                          {children.map(child => (
-                            <button
-                              key={child.id}
-                              onClick={e => { e.stopPropagation(); navigate('outlet', { outletId: child.id }) }}
-                              style={{ fontSize: 10, fontWeight: 600, padding: '2px 10px', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text2)', cursor: 'pointer' }}
-                            >
-                              {child.name}
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   )
                 })
