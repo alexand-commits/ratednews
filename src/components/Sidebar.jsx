@@ -3,6 +3,7 @@ import OutletLogo from './OutletLogo'
 import RatingDots from './RatingDots'
 import { isRankEligible } from '../utils/helpers'
 import { track } from '../utils/track'
+import DigestSignup from './DigestSignup'
 
 export default function Sidebar({ outlets, navigate, trendingTopics = [], activeTopic = null, onTopic }) {
   const top5 = outlets
@@ -70,6 +71,8 @@ export default function Sidebar({ outlets, navigate, trendingTopics = [], active
           </a>
         </div>
       </div>
+
+      <DigestSignup />
     </div>
   )
 }

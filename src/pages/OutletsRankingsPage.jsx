@@ -3,6 +3,7 @@ import { scoreColor, isRankEligible, MIN_RANK_RATINGS } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import { db } from '../lib/supabase'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
+import DigestSignup from '../components/DigestSignup'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -571,6 +572,7 @@ export default function OutletsRankingsPage({
               ➕ Suggest an outlet
             </button>
           </div>
+          <DigestSignup />
         </aside>
         </div>
       </div>

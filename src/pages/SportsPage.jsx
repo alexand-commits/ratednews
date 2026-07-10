@@ -5,6 +5,7 @@ import RatingDots from '../components/RatingDots'
 import { timeAgo } from '../utils/helpers'
 import { computeTrendingTopics } from '../utils/topics'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
+import DigestSignup from '../components/DigestSignup'
 
 // ─── Sport detection ────────────────────────────────────────────────────────
 const SPORT_KEYWORDS = {
@@ -312,6 +313,8 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
                 </div>
               </div>
             )}
+
+            <DigestSignup />
           </aside>
         </div>
       </div>

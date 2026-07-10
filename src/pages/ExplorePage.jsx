@@ -5,6 +5,7 @@ import { timeAgo, articleSlug } from '../utils/helpers'
 import { computeTrendingTopics } from '../utils/topics'
 import OutletLogo from '../components/OutletLogo'
 import NewsCard from '../components/NewsCard'
+import DigestSignup from '../components/DigestSignup'
 
 // Must match scripts/categorise.mjs. 'all' first for the filter pill.
 const CATEGORIES = [
@@ -511,6 +512,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
             </div>
           </div>
 
+          <DigestSignup />
         </aside>
         </div>
       </div>

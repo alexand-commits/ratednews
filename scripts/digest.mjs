@@ -142,9 +142,18 @@ async function main() {
   }
   const { data: prefs } = await db.from('email_prefs').select('user_id, weekly_digest, unsub_token').in('user_id', ids)
   const prefMap = new Map((prefs || []).map(p => [p.user_id, p]))
-  const audience = users.filter(u => u.email && (prefMap.get(u.id)?.weekly_digest !== false))
+  const accountAudience = users.filter(u => u.email && (prefMap.get(u.id)?.weekly_digest !== false))
 
-  console.log(`Audience: ${audience.length} of ${users.length} users`)
+  // Public sidebar signups (no account) — dedupe against account emails
+  const { data: subs } = await db.from('digest_subscribers').select('email, unsub_token').eq('subscribed', true)
+  const accountEmails = new Set(accountAudience.map(u => u.email.toLowerCase()))
+  const publicAudience = (subs || []).filter(s => !accountEmails.has(s.email.toLowerCase()))
+
+  const audience = [
+    ...accountAudience.map(u => ({ email: u.email, token: prefMap.get(u.id)?.unsub_token || '' })),
+    ...publicAudience.map(s => ({ email: s.email, token: s.unsub_token })),
+  ]
+  console.log(`Audience: ${audience.length} (${accountAudience.length} accounts + ${publicAudience.length} subscribers)`)
 
   if (process.env.DIGEST_PREVIEW) {
     const fs = await import('fs')
@@ -160,7 +169,7 @@ async function main() {
 
   let sent = 0
   for (const u of audience) {
-    const html = renderEmail(content, prefMap.get(u.id)?.unsub_token || '')
+    const html = renderEmail(content, u.token)
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },
@@ -169,7 +178,7 @@ async function main() {
         to: u.email,
         subject: `This week's most-covered stories — ${content.topStories[0]?.title?.slice(0, 60)}…`,
         html,
-        headers: { 'List-Unsubscribe': `<${SITE}/api/unsubscribe?token=${prefMap.get(u.id)?.unsub_token || ''}>` },
+        headers: { 'List-Unsubscribe': `<${SITE}/api/unsubscribe?token=${u.token}>` },
       }),
     })
     if (res.ok) sent++
