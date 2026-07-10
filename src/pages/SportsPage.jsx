@@ -273,7 +273,15 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
           <aside className="sidebar">
             {trendingTopics.length > 0 && (
               <div className="widget sidebar-trending">
-                <div className="widget-title">🔥 Trending in sport</div>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                  <div className="widget-title">🔥 Trending in sport</div>
+                  {activeTopic && (
+                    <button
+                      onClick={() => setActiveTopic(null)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--coral)', padding: 0 }}
+                    >✕ Clear</button>
+                  )}
+                </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
                   {trendingTopics.slice(0, 10).map(topic => (
                     <button

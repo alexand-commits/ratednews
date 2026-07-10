@@ -13,7 +13,15 @@ export default function Sidebar({ outlets, navigate, trendingTopics = [], active
       {/* Trending topics — desktop only (mobile keeps the inline chips above the feed) */}
       {trendingTopics.length > 0 && onTopic && (
         <div className="widget sidebar-trending">
-          <div className="widget-title">🔥 Trending · 24h</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+            <div className="widget-title">🔥 Trending · 24h</div>
+            {activeTopic && (
+              <button
+                onClick={() => onTopic(activeTopic)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--coral)', padding: 0 }}
+              >✕ Clear</button>
+            )}
+          </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
             {trendingTopics.map(topic => {
               const isActive = activeTopic === topic

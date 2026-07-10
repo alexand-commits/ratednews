@@ -553,6 +553,12 @@ export default function RankingsPage({ outlets, outletsLoading, navigate, goBack
                 </div>
               )
             })}
+            {region !== 'all' && (
+              <button
+                onClick={() => setRegion('all')}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--coral)', padding: '10px 0 0', fontWeight: 600 }}
+              >✕ Clear region filter</button>
+            )}
           </div>
         </aside>
         </div>

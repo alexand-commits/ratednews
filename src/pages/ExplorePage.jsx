@@ -488,7 +488,15 @@ export default function ExplorePage({ navigate, outlets = [] }) {
           )}
 
           <div className="widget">
-            <div className="widget-title">Browse categories</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+              <div className="widget-title">Browse categories</div>
+              {category !== 'all' && (
+                <button
+                  onClick={() => goCategory('all')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--coral)', padding: 0 }}
+                >✕ Clear</button>
+              )}
+            </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {CATEGORIES.map(c => (
                 <button
