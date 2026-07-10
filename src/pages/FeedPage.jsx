@@ -711,7 +711,7 @@ export default function FeedPage({
                         >
                           <OutletLogo name={o.name} size={24} borderRadius={6} />
                           <span style={{ fontSize: 12, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{o.name}</span>
-                          <span style={{ fontSize: 13, fontWeight: 700, color: following ? 'var(--green-dark)' : 'var(--coral)', flexShrink: 0 }}>{following ? '✓' : '+'}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: following ? 'var(--green-dark)' : 'var(--coral)', flexShrink: 0 }}>{following ? '✓ Following' : '+ Follow'}</span>
                         </button>
                       )
                     })}
