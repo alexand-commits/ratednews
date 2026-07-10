@@ -48,7 +48,7 @@ export default function Sidebar({ outlets, navigate, trendingTopics = [], active
           <div style={{ fontSize: 12, color: 'var(--text3)' }}>Outlets are ranked once they have 3+ community ratings — be one of the first to rate.</div>
         ) : (
           top5.map((o, i) => (
-            <div key={o.id} className="outlet-rank-row" onClick={() => navigate('outlet', { outletId: o.id })}>
+            <div key={o.id} className="outlet-rank-row" role="link" tabIndex={0} onKeyDown={e => e.key === 'Enter' && navigate('outlet', { outletId: o.id })} onClick={() => navigate('outlet', { outletId: o.id })}>
               <span className="rank-num">{i + 1}</span>
               <OutletLogo name={o.name} size={30} borderRadius={7} />
               <span className="outlet-rank-name" title={o.name}>{o.name}</span>

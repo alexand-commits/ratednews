@@ -899,7 +899,11 @@ const SECTION_CATEGORY = [
   [/\bTravel$/i, 'Travel'],
   [/\bEducation$/i, 'Education'],
 ]
+// Only applies to known section-feed families — 'Rest of World' is a tech
+// publication, not a World section.
+const SECTION_FAMILIES = /^(BBC|Guardian|NYT|Sky News|Independent|NPR|Fox News|Telegraph|WSJ)\s/
 function sectionCategory(outletName) {
+  if (!SECTION_FAMILIES.test(outletName || '')) return null
   for (const [re, cat] of SECTION_CATEGORY) if (re.test(outletName || '')) return cat
   return null
 }
@@ -1008,17 +1012,25 @@ async function main() {
 
   let totalInserted = 0
 
-  for (const outlet of outlets) {
-    console.log(`📡 ${outlet.name}`)
-    try {
-      const { inserted, skipped, errors } = await ingestOutlet(outlet)
-      console.log(`   ✅ ${inserted} new  •  ${skipped} already exist  •  ${errors} errors`)
-      totalInserted += inserted
-    } catch (err) {
-      // One malformed feed must never take down the rest of the run
-      console.error(`   ❌ Unexpected error — skipping outlet: ${err.message}`)
+  // 280+ feeds serially is ~7 min/run; a small worker pool keeps the run well
+  // inside the 15-min cron window as the outlet list grows.
+  const CONCURRENCY = 6
+  const queue = [...outlets]
+  async function worker() {
+    while (queue.length) {
+      const outlet = queue.shift()
+      if (!outlet) break
+      try {
+        const { inserted, skipped, errors } = await ingestOutlet(outlet)
+        console.log(`📡 ${outlet.name} — ✅ ${inserted} new • ${skipped} skipped • ${errors} errors`)
+        totalInserted += inserted
+      } catch (err) {
+        // One malformed feed must never take down the rest of the run
+        console.error(`📡 ${outlet.name} — ❌ ${err.message}`)
+      }
     }
   }
+  await Promise.all(Array.from({ length: CONCURRENCY }, worker))
 
   console.log(`\n===========================`)
   console.log(`✅ Done — ${totalInserted} new articles ingested`)

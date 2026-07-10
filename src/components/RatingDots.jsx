@@ -14,7 +14,7 @@ export default function RatingDots({
 }) {
   const filled = Math.round(value)
   return (
-    <span style={{ display: 'inline-flex', alignItems: 'center', gap: gap + 2 }}>
+    <span role="img" aria-label={`Community rating ${Number(value || 0).toFixed(1)} out of 5`} style={{ display: 'inline-flex', alignItems: 'center', gap: gap + 2 }}>
       <span style={{ display: 'inline-flex', gap }} aria-hidden="true">
         {Array.from({ length: count }, (_, i) => {
           const on = i < filled

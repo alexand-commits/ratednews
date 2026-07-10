@@ -85,7 +85,7 @@ export async function getStaticProps() {
 
     const { data, error } = await supabase
       .from('articles')
-      .select('id, title, published_at, outlet_id, category, summary, image_url, view_count, total_ratings, community_score, outlets(name, logo_url, country), comments(count)')
+      .select('id, title, published_at, outlet_id, category, summary, image_url, view_count, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, logo_url, country), comments(count)')
       .gte('published_at', since24h)
       .order('published_at', { ascending: false })
       .limit(200)
@@ -127,7 +127,9 @@ export async function getStaticProps() {
       const hoursAgo  = (Date.now() - new Date(a.published_at)) / 3600000
       const views     = a.view_count || 0
       const comments  = a.comments?.[0]?.count || 0
-      const coverage  = coverageMap[a.id] || 0
+      // cluster_peers is publisher-deduped by scripts/cluster.mjs — the same
+      // number every other surface shows. Token overlap only for unclustered.
+      const coverage  = a.cluster_peers?.length ?? (coverageMap[a.id] || 0)
       // Cross-outlet coverage is the primary signal — stories covered by many
       // outlets score highest. Views + comments boost when traffic picks up.
       // Gravity decay: score / (age + 2)^1.8 — age naturally pushes stories down.
@@ -142,7 +144,12 @@ export async function getStaticProps() {
     // with an already-selected article. Keeps the best representative per story.
     const selected = []
     const selectedTokenSets = []
+    const seenClusters = new Set()
     for (const a of scored) {
+      if (a.cluster_id) {
+        if (seenClusters.has(a.cluster_id)) continue
+        seenClusters.add(a.cluster_id)
+      }
       const t = new Set(tokens(a.title))
       const isDupe = selectedTokenSets.some(existing => {
         const shared = [...t].filter(w => existing.has(w)).length
@@ -155,7 +162,7 @@ export async function getStaticProps() {
       if (selected.length >= 30) break
     }
 
-    const articles = selected.map(({ _trendScore, _coverage, ...rest }) => ({ ...rest, coverage: _coverage }))
+    const articles = selected.map(({ _trendScore, _coverage, cluster_peers, ...rest }) => ({ ...rest, coverage: _coverage }))
 
     return {
       props: {
