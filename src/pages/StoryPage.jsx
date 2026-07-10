@@ -111,6 +111,24 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
           })}
         </div>
 
+        {/* Mobile topic exit-ramp — the rail's trending widget is desktop-only */}
+        {trendingTopics.length > 0 && (
+          <div className="hide-desktop" style={{ marginTop: 20 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 8 }}>
+              🔥 Trending now
+            </div>
+            <div className="filter-bar" style={{ marginBottom: 0 }}>
+              {trendingTopics.slice(0, 8).map(topic => (
+                <button
+                  key={topic}
+                  className="pill pill-topic"
+                  onClick={() => navigate('feed', { topic })}
+                >🔍 {topic}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div style={{ height: 24 }} />
         </div>
 

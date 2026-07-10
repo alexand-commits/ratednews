@@ -355,8 +355,32 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         {/* ── Discovery content (no search) ── */}
         {!isSearchActive && (
           <>
+            {/* Mobile discovery — the desktop hub owns these ≥1024px */}
+            {trendingTopics.length > 0 && (
+              <div className="filter-bar hide-desktop" style={{ marginTop: 16, marginBottom: 8 }}>
+                {trendingTopics.slice(0, 8).map(topic => (
+                  <button
+                    key={topic}
+                    className="pill pill-topic"
+                    onClick={() => setSearch(topic)}
+                  >🔍 {topic}</button>
+                ))}
+              </div>
+            )}
+
+            {/* Region — same editions as desktop */}
+            <div className="filter-bar hide-desktop" style={{ marginBottom: 8 }}>
+              {REGIONS.map(r => (
+                <button
+                  key={r.value}
+                  className={`pill${region === r.value ? ' active' : ''}`}
+                  onClick={() => setRegion(r.value)}
+                >{r.label}</button>
+              ))}
+            </div>
+
             {/* Category filter — mobile only; the hub owns categories on desktop */}
-            <div className="filter-bar hide-desktop" style={{ marginTop: 20, marginBottom: 16 }}>
+            <div className="filter-bar hide-desktop" style={{ marginBottom: 16 }}>
               {CATEGORIES.map(c => (
                 <button
                   key={c.value}

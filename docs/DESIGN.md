@@ -22,6 +22,9 @@
 - Shell: .container (1100 default; 1240 for grid pages)
 - Grid pages: .grid = content | 300px .sidebar (sticky ≥1024px)
 - Breakpoints: 768px (mobile chrome), 1024px (desktop grid + rails)
+- Tablet (769–1023px) is DELIBERATELY the mobile layout plus the top nav —
+  the two-column grid needs ≥1024px to give the 300px rail honest room.
+  Mobile-parity features (inline trending, hide-desktop rows) cover it.
 - Rails: .widget boxes; lead with 🔥 trending where applicable
 - Filters that engage show ✕ Clear in the widget header (ClearButton)
 

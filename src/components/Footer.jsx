@@ -7,7 +7,7 @@ export default function Footer() {
   const [legalDoc, setLegalDoc] = useState(null)
   const link = { color: 'var(--text3)', textDecoration: 'none', cursor: 'pointer', fontSize: 12 }
   return (
-    <footer style={{ borderTop: '0.5px solid var(--border)', marginTop: 32, padding: '20px 24px calc(20px + env(safe-area-inset-bottom, 0px))' }}>
+    <footer className="site-footer" style={{ borderTop: '0.5px solid var(--border)', marginTop: 32, padding: '20px 24px calc(20px + env(safe-area-inset-bottom, 0px))' }}>
       <div style={{ maxWidth: 1240, margin: '0 auto', display: 'flex', alignItems: 'center', gap: 18, flexWrap: 'wrap' }}>
         <span style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 14, fontWeight: 700 }}>
           Rated<span style={{ color: 'var(--coral)' }}>News</span>

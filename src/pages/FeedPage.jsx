@@ -8,6 +8,7 @@ import { db } from '../lib/supabase'
 import { track } from '../utils/track'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 import { computeTrendingTopics } from '../utils/topics'
+import DigestSignup from '../components/DigestSignup'
 
 // Category taxonomy — must match scripts/categorise.mjs (the server-side source
 // of truth that sets article.category at ingest).
@@ -772,17 +773,25 @@ export default function FeedPage({
                 </div>
               ) : (
                 heroList.map((a, i) => (
-                  <NewsCard
-                    key={a.id}
-                    article={a}
-                    index={i}
-                    onClick={() => {
-                      searchInputRef.current?.blur()
-                      navigate('article', { articleId: a.id, title: a.title })
-                    }}
-                    navigate={navigate}
-                    relatedArticles={a.cluster_peers || []}
-                  />
+                  <React.Fragment key={a.id}>
+                    <NewsCard
+                      article={a}
+                      index={i}
+                      onClick={() => {
+                        searchInputRef.current?.blur()
+                        navigate('article', { articleId: a.id, title: a.title })
+                      }}
+                      navigate={navigate}
+                      relatedArticles={a.cluster_peers || []}
+                    />
+                    {/* Mobile: the sidebar (and its signup) is unreachable below an
+                        infinite feed — surface the digest capture in-feed instead */}
+                    {i === 9 && (
+                      <div className="mobile-block">
+                        <DigestSignup />
+                      </div>
+                    )}
+                  </React.Fragment>
                 ))
               )}
 

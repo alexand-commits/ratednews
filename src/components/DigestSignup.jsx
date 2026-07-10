@@ -52,6 +52,8 @@ export default function DigestSignup() {
           <form onSubmit={subscribe} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <input
               type="email"
+              inputMode="email"
+              autoComplete="email"
               value={email}
               onChange={e => { setEmail(e.target.value); if (status === 'error') setStatus('idle') }}
               placeholder="you@example.com"

@@ -524,6 +524,24 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
         </div>
 
+        {/* Mobile topic exit-ramp — the rail's trending widget is desktop-only */}
+        {trendingTopics.length > 0 && (
+          <div className="hide-desktop" style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 8 }}>
+              🔥 Trending now
+            </div>
+            <div className="filter-bar" style={{ marginBottom: 0 }}>
+              {trendingTopics.slice(0, 8).map(topic => (
+                <button
+                  key={topic}
+                  className="pill pill-topic"
+                  onClick={() => navigate('feed', { topic })}
+                >🔍 {topic}</button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Comments */}
         <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 14 }}>
