@@ -12,6 +12,7 @@ export default function StoryDetail({ story }) {
   if (!story) return null
 
   const count = story.members?.length || 0
+  const ogImage = `https://www.ratednews.com/api/og?type=story&title=${encodeURIComponent((story.title || '').slice(0, 120))}&count=${count}&sources=${encodeURIComponent([...new Set((story.members || []).map(m => m.outlets?.name).filter(Boolean))].slice(0, 4).join('|'))}`
   const title = `${story.title} — ${count} ${count === 1 ? 'source' : 'sources'} covering it | RatedNews`
   const desc  = `See how ${count} news outlets are covering this story, side by side, on RatedNews. Rate the sources you trust.`
   const url   = `https://www.ratednews.com/story/${story.slug}`
@@ -20,13 +21,18 @@ export default function StoryDetail({ story }) {
     <>
       <Head>
         <title>{title}</title>
+        {/* Coverage-spread share card — the product's signature moment */}
         <meta name="description" content={desc} />
         <link rel="canonical" href={url} />
         <meta property="og:title"       content={`${story.title} — ${count} sources covering it`} />
         <meta property="og:description" content={desc} />
         <meta property="og:url"         content={url} />
         <meta property="og:type"        content="website" />
-        <meta property="og:image"       content="https://www.ratednews.com/api/og?type=brand" />
+        <meta property="og:image"       content={ogImage} />
+        <meta property="og:image:type"  content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta name="twitter:image"      content={ogImage} />
         <meta name="twitter:card"        content="summary_large_image" />
         <meta name="twitter:title"       content={`${story.title} — ${count} sources`} />
         <meta name="twitter:description" content={desc} />

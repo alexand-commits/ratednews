@@ -52,3 +52,11 @@ export function timeAgo(ts) {
   if (diff < 86400 * 30) return Math.floor(diff / 86400) + ' days ago'
   return Math.floor(diff / (86400 * 30)) + ' months ago'
 }
+
+// Minimum community ratings before an outlet holds a ranked position.
+// Below this, scores render as provisional — a 5.0 from one rating is noise,
+// and ranking on it undermines the whole trust proposition.
+export const MIN_RANK_RATINGS = 3
+export function isRankEligible(o) {
+  return (o?.total_ratings || 0) >= MIN_RANK_RATINGS && (o?.community_score || 0) > 0
+}

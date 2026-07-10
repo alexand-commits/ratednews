@@ -282,7 +282,6 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
             </div>
             <div className="outlet-desc">{outlet.description || ''}</div>
             <div style={{ display: 'flex', gap: 10, marginTop: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-              <span className="meta-chip"><span>✓</span>Editorially verified</span>
               <button
                 onClick={() => { if (!user) { onLoginClick(); return } toggleFollow(outletId) }}
                 style={{

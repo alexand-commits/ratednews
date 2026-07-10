@@ -416,6 +416,45 @@ function BrandCard() {
   )
 }
 
+
+// ── Story / coverage card ─────────────────────────────────────────────────────
+// One story, many sources — the product's signature moment as a share card.
+function StoryCard({ title, count, sources }) {
+  const names = (sources || '').split('|').map(x => x.trim()).filter(Boolean).slice(0, 4)
+  const dotColors = ['#5B7BC0', '#C0392B', '#639922', '#C8930A', '#D85A30']
+  return (
+    <Shell>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, padding: '64px 72px 48px', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <Logo size={40} />
+          <span style={{ color: CORAL_L, fontSize: 19, fontWeight: 800, fontFamily: SF }}>{count || '?'} sources · one story</span>
+        </div>
+        <div style={{ display: 'flex', width: 300, height: 3, background: 'rgba(216,90,48,0.5)', marginTop: 24, marginBottom: 28 }} />
+        <div style={{ display: 'flex', color: TEXT1, fontFamily: SE, fontSize: 46, fontWeight: 700, lineHeight: 1.2 }}>
+          {(title || '').slice(0, 120)}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 34 }}>
+          {names.map((n, i) => (
+            <div key={String(i)} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <span style={{ display: 'flex', width: 13, height: 13, borderRadius: 13, background: dotColors[i % dotColors.length] }} />
+              <span style={{ display: 'flex', color: TEXT2, fontFamily: SF, fontSize: 21, fontWeight: 600 }}>{n}</span>
+            </div>
+          ))}
+          {Number(count) > names.length && (
+            <span style={{ display: 'flex', color: TEXT3, fontFamily: SF, fontSize: 18, marginLeft: 25 }}>
+              +{Number(count) - names.length} more outlets — compare every angle
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 40 }}>
+          <span style={{ color: TEXT4, fontSize: 16, fontFamily: SF }}>ratednews.com</span>
+          <span style={{ color: TEXT3, fontSize: 15, fontFamily: SF }}>Trust the source, not just the story</span>
+        </div>
+      </div>
+    </Shell>
+  )
+}
+
 export default function handler(req) {
   try {
     const { searchParams } = new URL(req.url)
@@ -424,6 +463,13 @@ export default function handler(req) {
 
     if (type === 'brand') {
       return new ImageResponse(<BrandCard />, opts)
+    }
+    if (type === 'story') {
+      return new ImageResponse(<StoryCard
+        title={searchParams.get('title') || ''}
+        count={searchParams.get('count') || ''}
+        sources={searchParams.get('sources') || ''}
+      />, opts)
     }
     if (type === 'outlet') {
       return new ImageResponse(<OutletCard

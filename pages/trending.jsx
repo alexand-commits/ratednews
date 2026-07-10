@@ -28,10 +28,10 @@ export default function Trending({ articles, generatedAt }) {
   return (
     <>
       <Head>
-        <title>Trending News — Quality &amp; Bias Rated | RatedNews</title>
+        <title>Trending News — Most-Covered Stories Right Now | RatedNews</title>
         <meta name="description" content="The most discussed news stories right now, ranked by how many outlets are covering each story. Top news from 200+ community-rated outlets." />
         <link rel="canonical" href="https://www.ratednews.com/trending" />
-        <meta property="og:title"       content="Trending News — Quality & Bias Rated | RatedNews" />
+        <meta property="og:title"       content="Trending News — Most-Covered Stories | RatedNews" />
         <meta property="og:description" content="The most discussed news stories right now, ranked by how many outlets are covering each story. Top news from 200+ community-rated outlets." />
         <meta property="og:url"         content="https://www.ratednews.com/trending" />
         <meta property="og:type"        content="website" />
@@ -40,7 +40,7 @@ export default function Trending({ articles, generatedAt }) {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
-        <meta name="twitter:title"      content="Trending News — Quality & Bias Rated | RatedNews" />
+        <meta name="twitter:title"      content="Trending News — Most-Covered Stories | RatedNews" />
         <meta name="twitter:description" content="The most discussed news stories right now, ranked by how many outlets are covering each story. Top news from 200+ community-rated outlets." />
         <meta name="twitter:image"      content="https://www.ratednews.com/api/og?type=brand" />
         {itemListLd && (

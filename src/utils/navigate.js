@@ -47,7 +47,7 @@ export function createNavigate(router, outlets = []) {
         router.push(`/categories/${opts.slug}`)
         break
       case 'rankings':
-        router.push('/rankings')
+        router.push('/outlets')
         break
       case 'trending':
         router.push('/trending')
@@ -63,9 +63,6 @@ export function createNavigate(router, outlets = []) {
         break
       case 'about':
         router.push('/about')
-        break
-      case 'social-agent':
-        router.push('/social-agent')
         break
       case 'social':
         router.push('/social')

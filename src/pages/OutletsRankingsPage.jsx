@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { scoreColor } from '../utils/helpers'
+import { scoreColor, isRankEligible, MIN_RANK_RATINGS } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import { db } from '../lib/supabase'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
@@ -233,7 +233,7 @@ export default function OutletsRankingsPage({
   // ── Sorted list ──────────────────────────────────────────────────────────────
   const activeTab = SCORE_TABS.find(t => t.id === tab)
 
-  const sorted = outlets
+  const pool = outlets
     .filter(o => !o.parent_outlet_id)
     .filter(o => region === 'all' || (o.country || 'International') === region)
     .filter(o =>
@@ -241,12 +241,18 @@ export default function OutletsRankingsPage({
       o.name.toLowerCase().includes(search.toLowerCase()) ||
       (o.country || '').toLowerCase().includes(search.toLowerCase())
     )
-    .slice()
-    .sort((a, b) => (b[activeTab.key] || 0) - (a[activeTab.key] || 0))
 
-  const ratedSorted = sorted.filter(o => (o[activeTab.key] || 0) > 0)
-  const topOutlet   = ratedSorted[0]
-  const maxScore    = tab === 'most_rated' ? Math.max(...ratedSorted.map(o => o.total_ratings || 0), 1) : 100
+  // A 5.0 from one rating is noise, not a ranking. Only outlets with
+  // MIN_RANK_RATINGS+ hold ranked positions; below-threshold scores render
+  // as provisional, and the headline stats only speak for eligible outlets.
+  const eligible    = pool.filter(isRankEligible).sort((a, b) => (b[activeTab.key] || 0) - (a[activeTab.key] || 0))
+  const provisional = pool.filter(o => !isRankEligible(o) && (o.total_ratings || 0) > 0).sort((a, b) => (b.total_ratings || 0) - (a.total_ratings || 0))
+  const unrated     = pool.filter(o => !isRankEligible(o) && !(o.total_ratings > 0)).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  const sorted      = [...eligible, ...provisional, ...unrated]
+
+  const ratedSorted = eligible
+  const topOutlet   = eligible[0]
+  const maxScore    = tab === 'most_rated' ? Math.max(...eligible.map(o => o.total_ratings || 0), 1) : 100
 
   const parentCount = outlets.filter(o => !o.parent_outlet_id).length
 
@@ -304,7 +310,7 @@ export default function OutletsRankingsPage({
                 ) : (
                   <>
                     <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text3)', margin: '6px 0 4px' }}>—</div>
-                    <div style={{ fontSize: 12, color: 'var(--text3)' }}>No ratings yet</div>
+                    <div style={{ fontSize: 12, color: 'var(--text3)' }}>Needs {MIN_RANK_RATINGS}+ ratings to rank</div>
                   </>
                 )}
               </div>
@@ -392,7 +398,9 @@ export default function OutletsRankingsPage({
                 sorted.map((o, i) => {
                   const score      = o[activeTab.key] || 0
                   const barWidth   = Math.round((score / maxScore) * 100)
-                  const isTop3     = i < 3 && !search && region === 'all'
+                  const eligibleRow = isRankEligible(o)
+                  const isProvisional = !eligibleRow && (o.total_ratings || 0) > 0
+                  const isTop3     = eligibleRow && i < 3 && !search && region === 'all'
                   const isSelected = compareIds.includes(o.id)
 
                   return (
@@ -412,7 +420,7 @@ export default function OutletsRankingsPage({
                           </div>
                         ) : (
                           <span style={{ fontSize: isTop3 ? 15 : 12, fontWeight: isTop3 ? 700 : 400, color: i === 0 ? '#b8860b' : i === 1 ? '#888' : i === 2 ? '#a0522d' : 'var(--text3)', width: 26, flexShrink: 0, textAlign: 'center' }}>
-                            {isTop3 && i === 0 ? '🥇' : isTop3 && i === 1 ? '🥈' : isTop3 && i === 2 ? '🥉' : i + 1}
+                            {isTop3 && i === 0 ? '🥇' : isTop3 && i === 1 ? '🥈' : isTop3 && i === 2 ? '🥉' : eligibleRow ? i + 1 : '—'}
                           </span>
                         )}
 
@@ -430,8 +438,10 @@ export default function OutletsRankingsPage({
                           <div className="rank-bar-bg">
                             <div className="rank-bar-fill" style={{ width: `${barWidth}%`, background: tab === 'community' ? 'var(--green)' : 'var(--coral)' }} />
                           </div>
-                          <div style={{ fontSize: 11, textAlign: 'right', marginTop: 3, color: tab === 'community' ? 'var(--green-dark)' : 'var(--text2)', fontWeight: 600 }}>
-                            {tab === 'community' && score > 0 ? (score / 20).toFixed(1) : score || '—'}
+                          <div style={{ fontSize: 11, textAlign: 'right', marginTop: 3, color: isProvisional ? 'var(--text3)' : tab === 'community' ? 'var(--green-dark)' : 'var(--text2)', fontWeight: 600 }}>
+                            {isProvisional
+                              ? `${tab === 'community' && score > 0 ? (score / 20).toFixed(1) + ' · ' : ''}provisional`
+                              : tab === 'community' && score > 0 ? (score / 20).toFixed(1) : score || '—'}
                           </div>
                         </div>
 

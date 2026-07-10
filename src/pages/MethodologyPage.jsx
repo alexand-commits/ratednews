@@ -65,12 +65,10 @@ export default function MethodologyPage({ goBack, navigate, outlets = [] }) {
           <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.75, marginBottom: 16 }}>
             Trust on RatedNews is rated at the <strong style={{ color: 'var(--text)' }}>outlet</strong> level — the news source, not the individual article.
             A source's score is where the community's collective judgement is most meaningful, and it's the number that reaches a reliable
-            sample fastest. Any signed-in reader can rate an outlet with a single tap, and change it any time. Outlet ratings capture:
+            sample fastest. Any signed-in reader can rate an outlet with a single tap, and change it any time. A rating is:
           </p>
           {[
-            { label: 'Overall stars', desc: '1–5 stars. Your overall view of the outlet as a news source.' },
-            { label: 'Accuracy', desc: 'How reliably accurate you find this outlet\'s reporting in general.' },
-            { label: 'Political bias', desc: 'Your assessment of the outlet\'s general political lean.' },
+            { label: 'Overall stars', desc: '1–5 stars — your overall trust in the outlet as a news source. Deliberately simple: one honest signal, aggregated across many readers.' },
           ].map(({ label, desc }) => (
             <div key={label} style={{ display: 'flex', gap: 14, marginBottom: 14, paddingBottom: 14, borderBottom: '0.5px solid var(--border)' }}>
               <div style={{ fontSize: 13, fontWeight: 700, minWidth: 130, color: 'var(--text)' }}>{label}</div>
