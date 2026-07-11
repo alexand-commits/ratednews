@@ -88,9 +88,28 @@ function itemTitle(item) {
   return ''
 }
 
+// Strips feed boilerplate that leaks into snippets: WordPress "The post X
+// appeared first on Y" tails, "Read more"/"Read More:" link stubs, bare URLs.
+export function cleanSummary(raw) {
+  let s = String(raw || '')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\s*The post\b[\s\S]{0,300}?appeared first on[\s\S]*$/i, '')
+    .replace(/\s*Read More:[\s\S]*$/i, '')
+    .replace(/\s*Read more (?:on|at|here|about)\b[\s\S]*$/i, '')
+    .replace(/\s*Continue reading[\s\S]*$/i, '')
+    .replace(/\s*https?:\/\/\S+\s*$/i, '')
+    .replace(/\s*\[…\]\s*$|\s*\[\.\.\.\]\s*$/, '…')
+    .trim()
+  if (s.length > 500) {
+    s = s.slice(0, 500)
+    const cut = s.lastIndexOf(' ')
+    if (cut > 400) s = s.slice(0, cut) + '…' // break at a word, not mid-word
+  }
+  return s || null
+}
+
 function extractSummary(item) {
-  const raw = item.contentSnippet || item.summary || item.description || ''
-  return raw.replace(/<[^>]*>/g, '').trim().slice(0, 500) || null
+  return cleanSummary(item.contentSnippet || item.summary || item.description || '')
 }
 
 // ── Junk filter ───────────────────────────────────────────────────────────────

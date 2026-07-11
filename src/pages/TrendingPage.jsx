@@ -114,6 +114,92 @@ function RankedRow({ a, rank, isLast, navigate }) {
   )
 }
 
+function HeroCard({ hero, navigate }) {
+  const [imgFailed, setImgFailed] = useState(false)
+  const heroOutlet = hero.outlets || {}
+  const [heroBg] = outletColor(heroOutlet.name || 'X')
+  const heroSlug = articleSlug(hero.title, hero.id)
+  const hasImage = hero.image_url && !imgFailed
+
+  return (
+    <div
+      onClick={() => navigate('article', { articleId: hero.id, title: hero.title })}
+      style={{
+        background: 'var(--surface)',
+        border: '0.5px solid var(--border)',
+        borderRadius: 'var(--radius)',
+        padding: 20,
+        marginBottom: 12,
+        cursor: 'pointer',
+      }}
+    >
+      <div className={hasImage ? 'trend-hero' : undefined}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: heroBg, flexShrink: 0 }} />
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>
+              {heroOutlet.name || 'Unknown'}
+            </span>
+            {hero.coverage > 0 && (
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--coral)', background: 'rgba(216,90,48,0.08)', border: '0.5px solid rgba(216,90,48,0.25)', borderRadius: 20, padding: '2px 10px' }}>
+                📰 {hero.coverage + 1} outlets covering
+              </span>
+            )}
+            <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>
+              {timeAgo(hero.published_at)}
+            </span>
+          </div>
+
+          <Link
+            href={`/article/${heroSlug}`}
+            style={{ textDecoration: 'none', color: 'inherit' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <h2 className="trend-hero-title" style={{
+              margin: '0 0 10px',
+              fontWeight: 700,
+              lineHeight: 1.3,
+              fontFamily: 'var(--font-playfair), Georgia, serif',
+              color: 'var(--text)',
+            }}>
+              {hero.title}
+            </h2>
+          </Link>
+
+          {hero.summary && (
+            <p style={{
+              margin: 0,
+              fontSize: 13,
+              color: 'var(--text2)',
+              lineHeight: 1.55,
+              display: '-webkit-box',
+              WebkitLineClamp: 3,
+              WebkitBoxOrient: 'vertical',
+              overflow: 'hidden',
+            }}>
+              {hero.summary}
+            </p>
+          )}
+        </div>
+
+        {hasImage && (
+          <div className="trend-hero-img">
+            <Image
+              src={hero.image_url}
+              alt=""
+              fill
+              sizes="(max-width: 768px) 100vw, 260px"
+              style={{ objectFit: 'cover' }}
+              unoptimized
+              onError={() => setImgFailed(true)}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function TrendingPage({ articles, generatedAt, navigate, goBack, onRefresh, outlets = [] }) {
   // Rail topics — shared engine over the trending pool; taps jump to the
   // homepage feed filtered to that topic
@@ -144,10 +230,6 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
 
   const hero = articles[0]
   const ranked = articles.slice(1)
-  const heroOutlet = hero.outlets || {}
-  const [heroBg] = outletColor(heroOutlet.name || 'X')
-  const heroSlug = articleSlug(hero.title, hero.id)
-
 
   return (
     <div className="page-content" {...pullHandlers}>
@@ -176,71 +258,7 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
 
       <div className="grid">
       <div>
-      {/* Hero card */}
-      <div
-        onClick={() => navigate('article', { articleId: hero.id, title: hero.title })}
-        style={{
-          background: 'var(--surface)',
-          border: '0.5px solid var(--border)',
-          borderRadius: 'var(--radius)',
-          padding: 20,
-          marginBottom: 12,
-          cursor: 'pointer',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-          <span
-            style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: heroBg, flexShrink: 0,
-            }}
-          />
-          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>
-            {heroOutlet.name || 'Unknown'}
-          </span>
-          {hero.coverage > 0 && (
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--coral)', background: 'rgba(216,90,48,0.08)', border: '0.5px solid rgba(216,90,48,0.25)', borderRadius: 20, padding: '2px 10px' }}>
-              📰 {hero.coverage + 1} outlets covering
-            </span>
-          )}
-          <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>
-            {timeAgo(hero.published_at)}
-          </span>
-        </div>
-
-        <Link
-          href={`/article/${heroSlug}`}
-          style={{ textDecoration: 'none', color: 'inherit' }}
-          onClick={e => e.stopPropagation()}
-        >
-          <h2 style={{
-            margin: '0 0 10px',
-            fontSize: 22,
-            fontWeight: 700,
-            lineHeight: 1.35,
-            fontFamily: 'var(--font-playfair), Georgia, serif',
-            color: 'var(--text)',
-          }}>
-            {hero.title}
-          </h2>
-        </Link>
-
-        {hero.summary && (
-          <p style={{
-            margin: '0 0 12px',
-            fontSize: 13,
-            color: 'var(--text2)',
-            lineHeight: 1.5,
-            display: '-webkit-box',
-            WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
-            overflow: 'hidden',
-          }}>
-            {hero.summary}
-          </p>
-        )}
-
-      </div>
+      <HeroCard hero={hero} navigate={navigate} />
 
       {/* Ranked list */}
       {ranked.length > 0 && (
