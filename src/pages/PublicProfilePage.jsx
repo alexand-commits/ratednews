@@ -4,6 +4,7 @@ import { timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import RatingDots from '../components/RatingDots'
 import Sidebar from '../components/Sidebar'
+import UserAvatar from '../components/UserAvatar'
 
 // ── Trust level ───────────────────────────────────────────────────────────────
 function getTrustLevel(total) {
@@ -39,13 +40,21 @@ function SourceList({ title, items, tint, navigate }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-export default function PublicProfilePage({ userId, isPublic, navigate, goBack, showToast, outlets = [] }) {
+export default function PublicProfilePage({ userId, isPublic, navigate, goBack, showToast, outlets = [], viewer = null }) {
   const [profile, setProfile]           = useState(null)
   const [outletRatings, setOutletRatings] = useState([])
   const [following, setFollowing]       = useState([])
   const [comments, setComments]         = useState([])
   const [loading, setLoading]           = useState(true)
   const [notFound, setNotFound]         = useState(false)
+  const [viewerRatings, setViewerRatings] = useState([])
+
+  // Taste match: the visitor's own outlet ratings, compared client-side
+  useEffect(() => {
+    if (!viewer || viewer.id === userId) { setViewerRatings([]); return }
+    db.from('outlet_ratings').select('outlet_id, overall_stars').eq('user_id', viewer.id)
+      .then(({ data }) => setViewerRatings(data || []))
+  }, [viewer, userId])
 
   useEffect(() => {
     if (!userId) { setNotFound(true); setLoading(false); return }
@@ -124,9 +133,7 @@ export default function PublicProfilePage({ userId, isPublic, navigate, goBack, 
         {/* Hero */}
         <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-            <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--purple, #8B5CF6)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, flexShrink: 0 }}>
-              {initials}
-            </div>
+            <UserAvatar name={displayName} emoji={profile.avatar_emoji} color={profile.avatar_color || 'var(--purple, #8B5CF6)'} size={52} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 4 }}>
                 {profile.username ? <span><span style={{ color: 'var(--text3)', fontWeight: 400 }}>@</span>{profile.username}</span> : displayName}
@@ -137,6 +144,9 @@ export default function PublicProfilePage({ userId, isPublic, navigate, goBack, 
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--text3)' }}>Member since {memberSince}</span>
               </div>
+              {profile.bio && (
+                <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 8, lineHeight: 1.5 }}>{profile.bio}</div>
+              )}
             </div>
           </div>
 
@@ -155,6 +165,30 @@ export default function PublicProfilePage({ userId, isPublic, navigate, goBack, 
             ))}
           </div>
         </div>
+
+        {/* Taste match — how the visitor's ratings align with this reader's */}
+        {(() => {
+          if (!viewerRatings.length || !outletRatings.length) return null
+          const mine = new Map(viewerRatings.map(r => [r.outlet_id, r.overall_stars || 0]))
+          const shared = outletRatings.filter(r => mine.has(r.outlet_id))
+          if (shared.length < 2) return null
+          const aligned = shared.filter(r => Math.abs((r.overall_stars || 0) - mine.get(r.outlet_id)) <= 1)
+          const pct = Math.round((aligned.length / shared.length) * 100)
+          const split = shared
+            .map(r => ({ name: r.outlets?.name, diff: Math.abs((r.overall_stars || 0) - mine.get(r.outlet_id)) }))
+            .sort((a, b) => b.diff - a.diff)[0]
+          return (
+            <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+              <div style={{ fontSize: 26, fontWeight: 800, color: pct >= 60 ? 'var(--green-dark)' : 'var(--coral)', fontVariantNumeric: 'tabular-nums' }}>{pct}%</div>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Taste match</div>
+                <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5 }}>
+                  You both rate {shared.length} of the same sources{split && split.diff >= 2 ? <> — you split hardest on <strong>{split.name}</strong></> : ' — and mostly agree'}.
+                </div>
+              </div>
+            </div>
+          )
+        })()}
 
         {/* Sources they trust / distrust — the centrepiece */}
         {outletRatings.length > 0 ? (

@@ -104,6 +104,7 @@ export default function ProfileRoute({ userId, username, isPublic }) {
         )}
       </Head>
       <PublicProfilePage
+        viewer={user}
         outlets={allOutlets}
         userId={userId}
         isPublic={isPublic}

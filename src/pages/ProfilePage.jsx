@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { db } from '../lib/supabase'
 import { timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
+import UserAvatar, { AVATAR_COLORS } from '../components/UserAvatar'
 import RatingDots from '../components/RatingDots'
 
 // ── Trust level ───────────────────────────────────────────────────────────────
@@ -167,6 +168,11 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
   const [deleteInput, setDeleteInput]             = useState('')
   const [deleting, setDeleting]                   = useState(false)
   const [showOnboarding, setShowOnboarding]       = useState(false)
+  const [editingLook, setEditingLook]             = useState(false)   // avatar + bio editor
+  const [bioInput, setBioInput]                   = useState('')
+  const [lookColor, setLookColor]                 = useState(null)
+  const [lookEmoji, setLookEmoji]                 = useState('')
+  const [lookSaving, setLookSaving]               = useState(false)
   const [isPublic,       setIsPublic]             = useState(false)
   const [togglingPublic, setTogglingPublic]       = useState(false)
   const [showProfileInfo, setShowProfileInfo]     = useState(false)
@@ -199,7 +205,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
     const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
 
     Promise.all([
-      db.from('profiles').select('username, public_profile, username_changed_at').eq('user_id', user.id).maybeSingle(),
+      db.from('profiles').select('username, public_profile, username_changed_at, bio, avatar_color, avatar_emoji').eq('user_id', user.id).maybeSingle(),
       db.from('ratings')
         .select('*, articles(id, title, category, bias_direction, outlets(name))')
         .eq('user_id', user.id)
@@ -296,6 +302,18 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
     showToast('Username updated!')
   }
 
+  async function saveLook() {
+    setLookSaving(true)
+    const patch = { bio: bioInput.trim().slice(0, 160) || null, avatar_color: lookColor, avatar_emoji: lookEmoji.trim().slice(0, 4) || null }
+    const { error, count } = await db.from('profiles').update(patch, { count: 'exact' }).eq('user_id', user.id)
+    if (!error && count === 0) await db.from('profiles').insert({ user_id: user.id, ...patch })
+    setLookSaving(false)
+    if (error) { showToast('Could not save — try again'); return }
+    setProfile(pr => ({ ...pr, ...patch }))
+    setEditingLook(false)
+    showToast('Profile updated')
+  }
+
   async function togglePublicProfile() {
     setTogglingPublic(true)
     const next = !isPublic
@@ -353,6 +371,12 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
   const avgTrust   = trustStars.length ? (trustStars.reduce((a, b) => a + b, 0) / trustStars.length).toFixed(1) : null
   const trusts     = outletRatings.filter(r => (r.overall_stars || 0) >= 4)
   const distrusts  = outletRatings.filter(r => (r.overall_stars || 0) > 0 && (r.overall_stars || 0) <= 2)
+
+  // Reading week — views in the last 7 days + dominant topic
+  const weekViews = articleViews.filter(v => Date.now() - new Date(v.viewed_at) < 7 * 86400000)
+  const weekTopicCounts = {}
+  weekViews.forEach(v => { const c = v.articles?.category; if (c) weekTopicCounts[c] = (weekTopicCounts[c] || 0) + 1 })
+  const weekTopTopic = Object.entries(weekTopicCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || null
 
   // Media diet — prefer view history (last 90 days), fall back to ratings
   const dietSource = articleViews.length > 0 ? articleViews : articleRatings
@@ -431,9 +455,14 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
         {/* Hero card */}
         <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: 20, marginBottom: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16 }}>
-            <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'var(--coral)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, fontWeight: 700, flexShrink: 0 }}>
-              {initials}
-            </div>
+            <button
+              onClick={() => { setEditingLook(v => !v); setBioInput(profile?.bio || ''); setLookColor(profile?.avatar_color || null); setLookEmoji(profile?.avatar_emoji || '') }}
+              title="Edit avatar & bio"
+              style={{ position: 'relative', background: 'none', border: 'none', padding: 0, cursor: 'pointer', flexShrink: 0 }}
+            >
+              <UserAvatar name={displayName} emoji={profile?.avatar_emoji} color={profile?.avatar_color} size={52} />
+              <span style={{ position: 'absolute', bottom: -2, right: -2, width: 18, height: 18, borderRadius: '50%', background: 'var(--surface)', border: '1px solid var(--border2)', fontSize: 9, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✎</span>
+            </button>
             <div style={{ flex: 1, minWidth: 0 }}>
               {editingName ? (
                 <div style={{ marginBottom: 6 }}>
@@ -486,8 +515,51 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--text3)' }}>Member since {memberSince}</span>
               </div>
+              {profile?.bio && !editingLook && (
+                <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 8, lineHeight: 1.5 }}>{profile.bio}</div>
+              )}
             </div>
           </div>
+
+          {/* Avatar + bio editor */}
+          {editingLook && (
+            <div style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text3)', marginBottom: 8 }}>Avatar</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 12 }}>
+                {AVATAR_COLORS.map(c => (
+                  <button key={c} onClick={() => setLookColor(c)} aria-label={`Colour ${c}`}
+                    style={{ width: 26, height: 26, borderRadius: '50%', background: c, border: lookColor === c ? '2.5px solid var(--text)' : '2.5px solid transparent', cursor: 'pointer' }} />
+                ))}
+                <input
+                  value={lookEmoji}
+                  onChange={e => setLookEmoji(e.target.value)}
+                  placeholder="emoji"
+                  maxLength={4}
+                  aria-label="Avatar emoji"
+                  style={{ width: 64, fontSize: 14, padding: '4px 8px', borderRadius: 8, border: '0.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', textAlign: 'center' }}
+                />
+                <UserAvatar name={displayName} emoji={lookEmoji || null} color={lookColor} size={34} />
+              </div>
+              <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text3)', marginBottom: 6 }}>Bio</div>
+              <textarea
+                value={bioInput}
+                onChange={e => setBioInput(e.target.value)}
+                maxLength={160}
+                rows={2}
+                placeholder="One line about how you read the news…"
+                style={{ width: '100%', boxSizing: 'border-box', fontSize: 13, padding: '8px 10px', borderRadius: 8, border: '0.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', resize: 'none', fontFamily: 'inherit' }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+                <span style={{ fontSize: 10, color: 'var(--text3)' }}>{160 - bioInput.length} characters left</span>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button onClick={() => setEditingLook(false)} style={{ fontSize: 12, padding: '5px 12px', borderRadius: 8, border: '1px solid var(--border)', background: 'none', color: 'var(--text2)', cursor: 'pointer' }}>Cancel</button>
+                  <button onClick={saveLook} disabled={lookSaving} style={{ fontSize: 12, padding: '5px 14px', borderRadius: 8, border: 'none', background: 'var(--coral)', color: '#fff', cursor: 'pointer', fontWeight: 600, opacity: lookSaving ? 0.6 : 1 }}>
+                    {lookSaving ? 'Saving…' : 'Save'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Username nudge — shown when no username set and not currently editing */}
           {!profile?.username && !editingName && !loading && (
@@ -511,6 +583,8 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
               ...(avgTrust ? [{ value: `${avgTrust}`, label: 'Avg trust', color: 'var(--green-dark)' }] : []),
               { value: followedOutletIds.size,  label: 'Following'     },
               { value: comments.length,         label: 'Comments'      },
+              ...(weekViews.length ? [{ value: weekViews.length, label: 'Read this week' }] : []),
+              ...(weekTopTopic ? [{ value: weekTopTopic, label: 'Top topic · 7d' }] : []),
             ].map(({ value, label, color }) => (
               <div key={label} style={{ background: 'var(--bg)', borderRadius: 8, padding: '10px 8px', textAlign: 'center' }}>
                 <div style={{ fontSize: 18, fontWeight: 700, color: color || 'var(--text)' }}>{value}</div>
@@ -550,9 +624,14 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               {isPublic && (
-                <button onClick={copyProfileLink} style={{ fontSize: 11, padding: '4px 12px', borderRadius: 20, border: '1px solid var(--coral)', background: 'none', color: 'var(--coral)', cursor: 'pointer', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                  {linkCopied ? '✓ Copied!' : 'Copy link'}
-                </button>
+                <>
+                  <button onClick={() => navigate('publicProfile', { userId: user.id })} style={{ fontSize: 11, padding: '4px 12px', borderRadius: 20, border: '1px solid var(--border)', background: 'none', color: 'var(--text2)', cursor: 'pointer', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    View as visitor
+                  </button>
+                  <button onClick={copyProfileLink} style={{ fontSize: 11, padding: '4px 12px', borderRadius: 20, border: '1px solid var(--coral)', background: 'none', color: 'var(--coral)', cursor: 'pointer', fontFamily: 'var(--font-dm-sans), sans-serif', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                    {linkCopied ? '✓ Copied!' : 'Copy link'}
+                  </button>
+                </>
               )}
               <button
                 onClick={togglePublicProfile}

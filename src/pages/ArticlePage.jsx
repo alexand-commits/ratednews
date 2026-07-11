@@ -33,6 +33,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   const [replyInputs, setReplyInputs] = useState({}) // { [commentId]: text }
   const [replies, setReplies] = useState({}) // { [parentId]: [reply, ...] }
   const [userProfiles, setUserProfiles] = useState({}) // { [user_id]: username }
+  const [userLooks, setUserLooks] = useState({})         // { [user_id]: { color, emoji } }
   const [fetchedArticle, setFetchedArticle] = useState(null)
   const [sameStoryArticles, setSameStoryArticles] = useState([])
 
@@ -74,13 +75,17 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
         const ids = [...new Set(loaded.map(c => c.user_id).filter(Boolean))]
         if (ids.length > 0) {
           db.from('profiles')
-            .select('user_id, username')
+            .select('user_id, username, avatar_color, avatar_emoji')
             .in('user_id', ids)
             .then(({ data: profiles }) => {
               if (profiles) {
-                const map = {}
-                profiles.forEach(p => { map[p.user_id] = p.username })
+                const map = {}, looks = {}
+                profiles.forEach(p => {
+                  map[p.user_id] = p.username
+                  looks[p.user_id] = { color: p.avatar_color, emoji: p.avatar_emoji }
+                })
                 setUserProfiles(map)
+                setUserLooks(looks)
               }
             })
         }
@@ -249,6 +254,20 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     setReplyingTo(null)
     setReplies(prev => ({ ...prev, [parentId]: [...(prev[parentId] || []), data[0]] }))
     showToast('Reply posted!')
+
+    // Notify the parent commenter (never yourself) — fire-and-forget
+    const parent = comments.find(c => c.id === parentId)
+    if (parent?.user_id && parent.user_id !== user.id) {
+      db.from('notifications').insert({
+        user_id: parent.user_id,
+        actor_id: user.id,
+        type: 'reply',
+        article_id: articleId,
+        article_title: (article?.title || '').slice(0, 120),
+        actor_name: userProfiles[user.id] || user.email?.split('@')[0] || 'A reader',
+        snippet: body.slice(0, 90),
+      }).then(({ error: nErr }) => { if (nErr) console.warn('notify failed', nErr.message) })
+    }
   }
 
   async function loadReplies(parentId) {
@@ -327,8 +346,11 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     return (
       <div className={isReply ? 'reply' : 'comment'}>
         <div className="comment-header">
-          <div className="c-av" style={{ background: 'var(--purple-light)', color: 'var(--purple)' }}>
-            {initials}
+          <div className="c-av" style={{
+            background: (c.user_id && userLooks[c.user_id]?.color) || 'var(--purple-light)',
+            color: (c.user_id && userLooks[c.user_id]?.color) ? '#fff' : 'var(--purple)',
+          }}>
+            {(c.user_id && userLooks[c.user_id]?.emoji) || initials}
           </div>
           <span
             className="c-user"

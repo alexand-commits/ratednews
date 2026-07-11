@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import { db } from '../lib/supabase'
+import NotificationsBell from './NotificationsBell'
 
 // Root tabs served by the mobile bottom nav — no back arrow on these.
 // Everything else (article, story, outlet, profile, about…) gets one.
@@ -90,6 +91,7 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
         <button className="theme-toggle" onClick={toggleTheme} title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}>
           {isDark ? '☀️' : '🌙'}
         </button>
+        <NotificationsBell user={user} navigate={navigate} />
 
         {user ? (
           <div ref={menuRef} style={{ position: 'relative' }}>
