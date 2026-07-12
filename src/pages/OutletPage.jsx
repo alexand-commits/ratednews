@@ -134,6 +134,17 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
       .order('upvotes', { ascending: false })
       .then(({ data }) => setComments(data || []))
 
+    // Restore this user's persisted votes so a refresh can't re-inflate.
+    if (user) {
+      db.from('comment_votes').select('comment_id, dir').eq('user_id', user.id)
+        .then(({ data }) => {
+          if (!data) return
+          const m = {}
+          data.forEach(v => { m[`${v.comment_id}-${v.dir}`] = true })
+          setVotedComments(m)
+        })
+    }
+
     // Already rated?
     if (user) {
       db.from('outlet_ratings')
@@ -235,20 +246,32 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
     showToast('Comment posted!')
   }
 
+  // Persisted through comment_votes + the atomic delta_comment_vote RPC (same
+  // as ArticlePage). The old raw read-then-increment let a user inflate a vote
+  // indefinitely across refreshes and raced concurrent voters.
   async function voteComment(commentId, dir) {
     if (!user) { onLoginClick(); return }
     const key = `${commentId}-${dir}`
+    const field = dir === 1 ? 'upvotes' : 'downvotes'
+    const applyDelta = (delta) => setComments(prev => prev.map(c =>
+      c.id === commentId ? { ...c, [field]: Math.max(0, (c[field] || 0) + delta) } : c))
+
     if (votedComments[key]) {
+      // Un-vote
       setVotedComments(prev => { const n = { ...prev }; delete n[key]; return n })
+      applyDelta(-1)
+      const { error } = await db.from('comment_votes').delete().eq('user_id', user.id).eq('comment_id', commentId)
+      if (error) { setVotedComments(prev => ({ ...prev, [key]: true })); applyDelta(1); showToast('Could not remove vote — please try again'); return }
+      await db.rpc('delta_comment_vote', { comment_id: commentId, field_name: field, delta: -1 })
       return
     }
+
+    // Vote — the unique (user_id, comment_id) constraint blocks double-voting
+    const { error } = await db.from('comment_votes').insert({ user_id: user.id, comment_id: commentId, dir })
+    if (error) { setVotedComments(prev => ({ ...prev, [key]: true })); showToast('You already voted on this comment'); return }
     setVotedComments(prev => ({ ...prev, [key]: true }))
-    const field = dir === 1 ? 'upvotes' : 'downvotes'
-    const { data } = await db.from('comments').select(field).eq('id', commentId).single()
-    if (data) {
-      await db.from('comments').update({ [field]: (data[field] || 0) + 1 }).eq('id', commentId)
-      setComments(prev => prev.map(c => c.id === commentId ? { ...c, [field]: (c[field] || 0) + 1 } : c))
-    }
+    applyDelta(1)
+    await db.rpc('delta_comment_vote', { comment_id: commentId, field_name: field, delta: 1 })
   }
 
   function ScoreBar({ label, value, tip }) {
