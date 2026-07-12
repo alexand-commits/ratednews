@@ -28,10 +28,14 @@ create table if not exists digest_subscribers (
 );
 alter table digest_subscribers enable row level security;
 
--- Anyone may sign up (insert only — no select policy, so the list can't be scraped).
+-- Anyone may sign up (insert only — no select policy, so the list can't be
+-- scraped). Scope the policy to anon/authenticated explicitly and ensure the
+-- table-level INSERT grant is present (a table created in the SQL editor as the
+-- postgres role doesn't always inherit the anon grant automatically).
+grant insert on digest_subscribers to anon, authenticated;
 drop policy if exists "public signup" on digest_subscribers;
 create policy "public signup" on digest_subscribers
-  for insert with check (true);
+  for insert to anon, authenticated with check (true);
 
 -- Remove any legacy insecure opt-out policy if a prior run created it.
 drop policy if exists "unsubscribe by token" on digest_subscribers;
