@@ -71,7 +71,6 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
         <div className="logo" onClick={() => navigate('feed')}>
           Rated<span>News</span>
         </div>
-        <span className="tagline">Trust the source, not just the story</span>
       </div>
       <nav className="nav">
         {[
