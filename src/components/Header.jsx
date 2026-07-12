@@ -71,6 +71,7 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
         <div className="logo" onClick={() => navigate('feed')}>
           Rated<span>News</span>
         </div>
+        <span className="tagline">Trust the source, not just the story</span>
       </div>
       <nav className="nav">
         {[
@@ -88,8 +89,15 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
         ))}
       </nav>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <button className="theme-toggle" onClick={toggleTheme} title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}>
-          {isDark ? '☀️' : '🌙'}
+        <button
+          className="theme-switch"
+          role="switch"
+          aria-checked={isDark}
+          onClick={toggleTheme}
+          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          <span className={`theme-switch-opt${!isDark ? ' on' : ''}`}>☀️</span>
+          <span className={`theme-switch-opt${isDark ? ' on' : ''}`}>🌙</span>
         </button>
         <NotificationsBell user={user} navigate={navigate} />
 
@@ -253,7 +261,6 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
         ) : (
           <button className="nav-pill" onClick={onLoginClick}>Sign in</button>
         )}
-        <div className="tagline">Trust the source, not just the story</div>
       </div>
     </header>
   )
