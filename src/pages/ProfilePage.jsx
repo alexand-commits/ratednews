@@ -185,7 +185,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
   // Redirect unauthenticated users — must be in useEffect (never during SSR render)
   useEffect(() => {
     if (!user) navigate('feed')
-  }, [user])
+  }, [user?.id])
 
   // Onboarding banner — show until explicitly dismissed
   useEffect(() => {
@@ -260,7 +260,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
       setSavedItems(savedRows)
       setLoading(false)
     })
-  }, [user])
+  }, [user?.id])
 
   async function saveUsername() {
     const val = nameInput.trim()

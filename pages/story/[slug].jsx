@@ -17,6 +17,34 @@ export default function StoryDetail({ story }) {
   const desc  = `See how ${count} news outlets are covering this story, side by side, on RatedNews. Rate the sources you trust.`
   const url   = `https://www.ratednews.com/story/${story.slug}`
 
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          { '@type': 'ListItem', position: 1, name: 'Home',     item: 'https://www.ratednews.com' },
+          { '@type': 'ListItem', position: 2, name: 'Trending', item: 'https://www.ratednews.com/trending' },
+          { '@type': 'ListItem', position: 3, name: story.title, item: url },
+        ],
+      },
+      {
+        '@type': 'NewsArticle',
+        headline: (story.title || '').slice(0, 110),
+        url,
+        image: [ogImage],
+        description: desc,
+        ...(story.latest_published_at || story.created_at
+          ? { datePublished: story.latest_published_at || story.created_at }
+          : {}),
+        publisher: { '@type': 'Organization', name: 'RatedNews', url: 'https://www.ratednews.com' },
+        isBasedOn: [...new Set((story.members || []).map(m => m.url).filter(Boolean))].slice(0, 10),
+      },
+    ],
+  }
+  // Neutralise any `</script>` sequence in feed-derived strings before injection.
+  const jsonLdStr = JSON.stringify(jsonLd).replace(/<\//g, '<\\/')
+
   return (
     <>
       <Head>
@@ -36,6 +64,7 @@ export default function StoryDetail({ story }) {
         <meta name="twitter:card"        content="summary_large_image" />
         <meta name="twitter:title"       content={`${story.title} — ${count} sources`} />
         <meta name="twitter:description" content={desc} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdStr }} />
       </Head>
       <ErrorBoundary>
         <StoryPage

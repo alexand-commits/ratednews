@@ -3,7 +3,9 @@ import { db } from '../lib/supabase'
 import { timeAgo } from '../utils/helpers'
 
 // Header bell — replies to your comments land here. Unread count fetched on
-// mount and every 90s; opening the dropdown marks everything read.
+// mount and every 5 min while the tab is visible; opening the dropdown marks
+// everything read. (Replies aren't a 90-second-latency feature, and background
+// tabs shouldn't poll all day.)
 export default function NotificationsBell({ user, navigate }) {
   const [open, setOpen]     = useState(false)
   const [items, setItems]   = useState([])
@@ -14,15 +16,19 @@ export default function NotificationsBell({ user, navigate }) {
     if (!user) return
     let mounted = true
     async function poll() {
+      if (document.visibilityState !== 'visible') return
       const { count } = await db.from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id).eq('read', false)
       if (mounted) setUnread(count || 0)
     }
     poll()
-    const id = setInterval(poll, 90000)
-    return () => { mounted = false; clearInterval(id) }
-  }, [user])
+    const id = setInterval(poll, 300000)
+    // Re-check immediately when the tab is refocused rather than waiting out the interval.
+    const onVis = () => { if (document.visibilityState === 'visible') poll() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { mounted = false; clearInterval(id); document.removeEventListener('visibilitychange', onVis) }
+  }, [user?.id])
 
   useEffect(() => {
     function onClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }

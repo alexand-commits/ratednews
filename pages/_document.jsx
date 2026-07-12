@@ -9,7 +9,9 @@ export default function Document() {
         <meta name="theme-color" content="#F8F6F4" media="(prefers-color-scheme: light)" />
         <meta name="robots" content="index, follow" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        <link rel="apple-touch-icon" href="/social-icon.png" />
+        {/* PNG fallback for crawlers/older browsers that don't fetch SVG favicons */}
+        <link rel="icon" type="image/png" href="/social-icon.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/social-icon.png" />
         <link rel="manifest" href="/manifest.json" />
         {/* iOS PWA — required for full-screen standalone mode on iPhone/iPad */}
         <meta name="apple-mobile-web-app-capable" content="yes" />

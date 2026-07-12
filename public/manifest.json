@@ -1,18 +1,24 @@
 {
   "name": "RatedNews",
   "short_name": "RatedNews",
-  "description": "AI-powered bias and accuracy ratings for 100+ news outlets — trust the source, not just the story.",
+  "description": "Community-rated news from 200+ outlets — readers rate every article and outlet for accuracy, bias and quality. Trust the source, not just the story.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#F8F6F4",
-  "theme_color": "#D85A30",
+  "background_color": "#201E1C",
+  "theme_color": "#201E1C",
   "orientation": "portrait-primary",
   "icons": [
     {
       "src": "/social-icon.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/social-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/favicon.svg",

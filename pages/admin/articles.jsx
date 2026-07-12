@@ -5,8 +5,6 @@ import ArticleReviewPage from '../../src/pages/ArticleReviewPage'
 
 const ALLOWED_EMAIL = 'alexandchow@gmail.com'
 
-export async function getServerSideProps() { return { props: {} } }
-
 export default function AdminArticles() {
   const { goBack, navigate, user } = useAppContext()
 

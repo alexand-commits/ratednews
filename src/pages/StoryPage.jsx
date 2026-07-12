@@ -27,7 +27,7 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
         ;(data || []).forEach(r => { m[r.outlet_id] = r.overall_stars })
         setMyRatings(m)
       })
-  }, [user, story?.anchorId])
+  }, [user?.id, story?.anchorId])
 
   function share() {
     const url = typeof window !== 'undefined' ? window.location.href : ''

@@ -5,8 +5,6 @@ import { useAppContext } from './_app'
 import ProfilePage from '../src/pages/ProfilePage'
 import { db } from '../src/lib/supabase'
 
-export async function getServerSideProps() { return { props: {} } }
-
 export default function Profile() {
   const { navigate, goBack, user, showToast,
           followedOutletIds, allOutlets, toggleFollow,

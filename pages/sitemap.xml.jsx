@@ -13,9 +13,9 @@ const CATEGORY_SLUGS = [
 const STATIC_PAGES = [
   { url: 'https://www.ratednews.com/',           priority: '1.0', changefreq: 'hourly'  },
   { url: 'https://www.ratednews.com/outlets',    priority: '0.9', changefreq: 'daily'   },
-  { url: 'https://www.ratednews.com/rankings',   priority: '0.9', changefreq: 'hourly'  },
   { url: 'https://www.ratednews.com/trending',   priority: '0.9', changefreq: 'hourly'  },
   { url: 'https://www.ratednews.com/sports',     priority: '0.9', changefreq: 'hourly'  },
+  { url: 'https://www.ratednews.com/explore',    priority: '0.7', changefreq: 'daily'   },
   { url: 'https://www.ratednews.com/categories', priority: '0.8', changefreq: 'daily'   },
   { url: 'https://www.ratednews.com/about',       priority: '0.5', changefreq: 'monthly' },
   { url: 'https://www.ratednews.com/methodology', priority: '0.5', changefreq: 'monthly' },

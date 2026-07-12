@@ -214,7 +214,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
       clearTimeout(realtimeTimer)
       if (channel) db.removeChannel(channel)
     }
-  }, [articleId, user])
+  }, [articleId, user?.id])
 
   // Fetch same-story articles — use pre-computed cluster_peers when available,
   // fall back to title keyword search for articles not yet clustered.
@@ -305,7 +305,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     if (!user || !oid) { setMyOutletTrust(0); return }
     db.from('outlet_ratings').select('overall_stars').eq('outlet_id', oid).eq('user_id', user.id).maybeSingle()
       .then(({ data }) => setMyOutletTrust(data?.overall_stars || 0))
-  }, [user, article?.outlet_id])
+  }, [user?.id, article?.outlet_id])
 
   if (!article) return null
 
@@ -454,7 +454,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
             </div>
           </div>
 
-          <div className="article-headline-full">{article.title || ''}</div>
+          <h1 className="article-headline-full">{article.title || ''}</h1>
 
           {/* Summary + primary actions — the read/share moment lives with the headline */}
           {article.summary && (

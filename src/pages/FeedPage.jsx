@@ -198,6 +198,7 @@ export default function FeedPage({
     if (search || activeTopic || feedTab === 'following') return
     const poll = async () => {
       if (!latestPublishedAtRef.current) return
+      if (document.visibilityState !== 'visible') return // don't poll backgrounded tabs
       const { count } = await db
         .from('articles')
         .select('*', { count: 'exact', head: true })
@@ -205,7 +206,9 @@ export default function FeedPage({
       if (count > 0) setNewArticleCount(count)
     }
     const id = setInterval(poll, 2 * 60 * 1000) // every 2 minutes
-    return () => clearInterval(id)
+    const onVis = () => { if (document.visibilityState === 'visible') poll() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVis) }
   }, [search, activeTopic, feedTab])
 
   function handleNewArticlesBanner() {
@@ -432,6 +435,9 @@ export default function FeedPage({
       {/* Wider shell on desktop so the two-column story grid + sidebar breathe;
           max-width is irrelevant below 1024px so mobile is untouched. */}
       <div className="container" style={{ maxWidth: 1240, paddingTop: 14 }}>
+
+        {/* SEO/a11y page heading — the feed itself is the visible UI. */}
+        <h1 className="sr-only">RatedNews — community-rated news from 200+ outlets</h1>
 
         {/* Feed views — one row: Top stories / Latest / My feed.
             'Top stories' and 'Latest' are the all-outlets feed with the two

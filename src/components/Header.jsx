@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/router'
+import Link from 'next/link'
 import { db } from '../lib/supabase'
 import NotificationsBell from './NotificationsBell'
 
@@ -32,6 +33,10 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
+
+  // Drop cached stats when the account changes, so a sign-out → sign-in as a
+  // different user in the same session doesn't show the previous user's numbers.
+  useEffect(() => { setStats(null) }, [user?.id])
 
   // Lazily fetch quick stats when dropdown opens — only once per session
   useEffect(() => {
@@ -68,23 +73,23 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
             aria-label="Back"
           >←</button>
         )}
-        <div className="logo" onClick={() => navigate('feed')}>
+        <Link href="/" className="logo">
           Rated<span>News</span>
-        </div>
+        </Link>
       </div>
       <nav className="nav">
         {[
-          { label: 'Feed',     page: 'feed',     match: p => p === '/' },
-          { label: 'Trending', page: 'trending', match: p => p === '/trending' },
-          { label: 'Sports',   page: 'sports',   match: p => p === '/sports' },
-          { label: 'Explore',  page: 'explore',  match: p => p === '/explore' },
-          { label: 'Outlets',  page: 'outlets',  match: p => p === '/outlets' || p.startsWith('/outlet/') || p === '/rankings' },
+          { label: 'Feed',     href: '/',         match: p => p === '/' },
+          { label: 'Trending', href: '/trending', match: p => p === '/trending' },
+          { label: 'Sports',   href: '/sports',   match: p => p === '/sports' },
+          { label: 'Explore',  href: '/explore',  match: p => p === '/explore' },
+          { label: 'Outlets',  href: '/outlets',  match: p => p === '/outlets' || p.startsWith('/outlet/') || p === '/rankings' },
         ].map(l => (
-          <a
-            key={l.page}
+          <Link
+            key={l.href}
+            href={l.href}
             className={l.match(router.pathname) ? 'active' : undefined}
-            onClick={() => navigate(l.page)}
-          >{l.label}</a>
+          >{l.label}</Link>
         ))}
       </nav>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -104,6 +109,9 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
           <div ref={menuRef} style={{ position: 'relative' }}>
             {/* Avatar button */}
             <button
+              aria-label="Account menu"
+              aria-haspopup="menu"
+              aria-expanded={menuOpen}
               onClick={() => setMenuOpen(o => !o)}
               style={{
                 width: 32, height: 32, borderRadius: '50%', background: 'var(--coral)', color: '#fff',

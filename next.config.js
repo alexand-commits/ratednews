@@ -47,6 +47,9 @@ const nextConfig = {
 
   async redirects() {
     return [
+      // /rankings was a near-duplicate of /outlets (moved here from a page-level
+      // getServerSideProps so it no longer spins up a function per hit).
+      { source: '/rankings', destination: '/outlets', permanent: true },
       // ── Old site: /media-ratings/:slug → /outlet/:slug ──────────────────────
       // Direct slug matches — old and new slugs are identical
       { source: '/media-ratings/bbc-news',               destination: '/outlet/bbc-news',               permanent: true },

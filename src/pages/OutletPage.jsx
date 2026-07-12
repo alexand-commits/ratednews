@@ -151,7 +151,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
         try { setMyRating(JSON.parse(stored)) } catch (_) {}
       }
     }
-  }, [outletId, user])
+  }, [outletId, user?.id])
 
 
   if (!outlet) return null
