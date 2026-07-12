@@ -93,10 +93,14 @@ function itemTitle(item) {
 export function cleanSummary(raw) {
   let s = String(raw || '')
     .replace(/<[^>]*>/g, '')
+    // WordPress syndication footer: "The post X appeared first on Y"
     .replace(/\s*The post\b[\s\S]{0,300}?appeared first on[\s\S]*$/i, '')
-    .replace(/\s*Read More:[\s\S]*$/i, '')
-    .replace(/\s*Read more (?:on|at|here|about)\b[\s\S]*$/i, '')
-    .replace(/\s*Continue reading[\s\S]*$/i, '')
+    // Trailing "Read more…/Continue reading…" ONLY when it's a link stub (a URL
+    // follows before end-of-string). Anchoring to the URL avoids eating real
+    // prose like "…urged readers to read more about vaccine safety." The lazy
+    // [^.!?] stops the match crossing a sentence boundary.
+    .replace(/\s*(?:Read more|Read More|Continue reading)\b[^.!?]*?https?:\/\/\S*\s*$/i, '')
+    // Any remaining bare trailing URL
     .replace(/\s*https?:\/\/\S+\s*$/i, '')
     .replace(/\s*\[…\]\s*$|\s*\[\.\.\.\]\s*$/, '…')
     .trim()

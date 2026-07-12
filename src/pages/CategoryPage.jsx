@@ -33,64 +33,51 @@ export default function CategoryPage({ navigate, goBack, outlets = [] }) {
   const [previews, setPreviews] = useState({}) // category → latest article
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true)
-
-      // Fetch all categorised articles with outlet country for region filter
-      const { data } = await db
-        .from('articles')
-        .select('id, title, category, published_at, outlets(country)')
-        .not('category', 'is', null)
-        .order('published_at', { ascending: false })
-
-      if (!data) { setLoading(false); return }
-
-      // Apply region filter
-      const filtered = region === 'all' ? data : data.filter(a => {
-        const c = a.outlets?.country || ''
-        if (region === 'UK') return c === 'UK'
-        if (region === 'US') return c === 'US'
-        return c !== 'UK' && c !== 'US'
-      })
-
-      // Build counts + pick latest article per category as preview
-      const newCounts = {}
-      const newPreviews = {}
-      for (const a of filtered) {
-        const cat = a.category
-        newCounts[cat] = (newCounts[cat] || 0) + 1
-        if (!newPreviews[cat]) newPreviews[cat] = a // already sorted newest first
+  // One category_overview RPC (per-category count + latest article, region
+  // filtered in SQL) replaces downloading every categorised article and
+  // counting in JS — which both cost egress and truncated (wrongly) at the
+  // 1,000-row cap. Falls back to the old client method if the RPC isn't
+  // present yet (pre-migration).
+  const loadCounts = useCallback(async () => {
+    setLoading(true)
+    const { data, error } = await db.rpc('category_overview', { p_region: region })
+    if (!error && data) {
+      const newCounts = {}, newPreviews = {}
+      for (const row of data) {
+        newCounts[row.category] = Number(row.cnt) || 0
+        newPreviews[row.category] = { id: row.latest_id, title: row.latest_title, category: row.category, published_at: row.latest_published_at }
       }
-
-      setCounts(newCounts)
-      setPreviews(newPreviews)
-      setLoading(false)
+      setCounts(newCounts); setPreviews(newPreviews); setLoading(false)
+      return
     }
-    load()
+    // Fallback: old client-side aggregation
+    const { data: rows } = await db
+      .from('articles')
+      .select('id, title, category, published_at, outlets(country)')
+      .not('category', 'is', null)
+      .order('published_at', { ascending: false })
+    if (!rows) { setLoading(false); return }
+    const filtered = region === 'all' ? rows : rows.filter(a => {
+      const c = a.outlets?.country || ''
+      if (region === 'UK') return c === 'UK'
+      if (region === 'US') return c === 'US'
+      return c !== 'UK' && c !== 'US'
+    })
+    const newCounts = {}, newPreviews = {}
+    for (const a of filtered) {
+      const cat = a.category
+      newCounts[cat] = (newCounts[cat] || 0) + 1
+      if (!newPreviews[cat]) newPreviews[cat] = a
+    }
+    setCounts(newCounts); setPreviews(newPreviews); setLoading(false)
   }, [region])
+
+  useEffect(() => { loadCounts() }, [loadCounts])
 
   const handleRefresh = useCallback(async () => {
-    setCounts({})
-    setPreviews({})
-    setLoading(true)
-    // Toggling region triggers the useEffect — use a small hack to force re-run
-    setRegion(r => r) // same value, but we need a different approach
-    // Directly re-fetch instead
-    const { data } = await db.from('articles').select('id, title, category, published_at, outlets(country)').not('category', 'is', null).order('published_at', { ascending: false })
-    if (data) {
-      const filtered = region === 'all' ? data : data.filter(a => {
-        const c = a.outlets?.country || ''
-        if (region === 'UK') return c === 'UK'
-        if (region === 'US') return c === 'US'
-        return c !== 'UK' && c !== 'US'
-      })
-      const newCounts = {}; const newPreviews = {}
-      for (const a of filtered) { const cat = a.category; newCounts[cat] = (newCounts[cat] || 0) + 1; if (!newPreviews[cat]) newPreviews[cat] = a }
-      setCounts(newCounts); setPreviews(newPreviews)
-    }
-    setLoading(false)
-  }, [region])
+    setCounts({}); setPreviews({})
+    await loadCounts()
+  }, [loadCounts])
 
   const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(handleRefresh)
   const total = Object.values(counts).reduce((s, n) => s + n, 0)

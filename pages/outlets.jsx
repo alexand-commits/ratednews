@@ -2,8 +2,27 @@ import Head from 'next/head'
 import { useAppContext } from './_app'
 import OutletsRankingsPage from '../src/pages/OutletsRankingsPage'
 
-export default function Outlets() {
+// SSR the outlet list so this head-term landing page ("News Outlet Bias
+// Ratings") has real, crawlable content — not a client-fetched skeleton.
+export async function getStaticProps() {
+  try {
+    const { createClient } = await import('@supabase/supabase-js')
+    const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY)
+    const { data } = await supabase
+      .from('outlets')
+      .select('id, name, country, overall_score, logo_url, type, community_score, total_ratings, fair_rate, misleading_rate, clickbait_rate, article_count_30d, parent_outlet_id')
+      .order('overall_score', { ascending: false })
+    return { props: { initialOutlets: data || [] }, revalidate: 3600 }
+  } catch {
+    return { props: { initialOutlets: [] }, revalidate: 3600 }
+  }
+}
+
+export default function Outlets({ initialOutlets = [] }) {
   const { navigate, goBack, allOutlets, outletsLoading, showToast, user, openAuthModal, refreshOutlets, followedOutletIds, toggleFollow } = useAppContext()
+  // Prefer the live context list once it's loaded; fall back to SSR outlets so
+  // crawlers and the first paint aren't empty.
+  const outlets = allOutlets.length ? allOutlets : initialOutlets
 
   return (
     <>
@@ -40,8 +59,8 @@ export default function Outlets() {
         />
       </Head>
       <OutletsRankingsPage
-        outlets={allOutlets}
-        outletsLoading={outletsLoading}
+        outlets={outlets}
+        outletsLoading={outletsLoading && !initialOutlets.length}
         navigate={navigate}
         goBack={goBack}
         showToast={showToast}

@@ -22,6 +22,102 @@ function getInitials(str) {
   return words.slice(0, 2).map(w => w.replace(/[^a-zA-Z]/g, '')[0] || '').join('').toUpperCase() || '?'
 }
 
+// Module-scope so its component identity is stable — defining it inside
+// ArticlePage made React unmount/remount every comment on any parent state
+// change (e.g. a keystroke in a reply box), losing focus and flashing the
+// thread. Dependencies are threaded through a single `ctx` bag.
+function CommentRow({ c, isReply = false, ctx }) {
+  const {
+    replies, replyingTo, userProfiles, userLooks, votedComments, replyInputs,
+    navigate, voteComment, loadReplies, postReply, setReplyingTo, setReplyInputs,
+  } = ctx
+  const hasReplies = !isReply
+  const replyList = replies[c.id] || []
+  const isExpanded = replies[c.id] !== undefined
+  const isReplying = replyingTo === c.id
+  const username    = c.user_id ? (userProfiles[c.user_id] || 'Community member') : 'Community member'
+  const hasHandle   = c.user_id && userProfiles[c.user_id]
+  const initials    = getInitials(username)
+
+  return (
+    <div className={isReply ? 'reply' : 'comment'}>
+      <div className="comment-header">
+        <div className="c-av" style={{
+          background: (c.user_id && userLooks[c.user_id]?.color) || 'var(--purple-light)',
+          color: (c.user_id && userLooks[c.user_id]?.color) ? '#fff' : 'var(--purple)',
+        }}>
+          {(c.user_id && userLooks[c.user_id]?.emoji) || initials}
+        </div>
+        <span
+          className="c-user"
+          style={{ cursor: hasHandle ? 'pointer' : 'default' }}
+          onClick={() => hasHandle && navigate('publicProfile', { userId: c.user_id })}
+        >
+          {username}
+        </span>
+        <span className="c-ts">{timeAgo(c.created_at)}</span>
+      </div>
+      <div className="c-text">{c.body || ''}</div>
+      <div className="c-actions">
+        <button
+          className={`vote-btn${votedComments[`${c.id}-1`] ? ' voted-up' : ''}`}
+          onClick={() => voteComment(c.id, 1)}
+        >
+          ▲ {c.upvotes || 0}
+        </button>
+        <button
+          className={`vote-btn${votedComments[`${c.id}--1`] ? ' voted-down' : ''}`}
+          onClick={() => voteComment(c.id, -1)}
+        >
+          ▼ {c.downvotes || 0}
+        </button>
+        {!isReply && (
+          <button className="reply-btn" onClick={() => {
+            setReplyingTo(isReplying ? null : c.id)
+          }}>
+            {isReplying ? 'Cancel' : 'Reply'}
+          </button>
+        )}
+        {hasReplies && (
+          <button className="reply-btn" style={{ marginLeft: 4, color: 'var(--coral)' }} onClick={() => loadReplies(c.id)}>
+            {isExpanded ? `Hide replies` : `Show replies`}
+          </button>
+        )}
+      </div>
+
+      {isReplying && (
+        <div style={{ display: 'flex', gap: 8, marginTop: 10, paddingLeft: 4 }}>
+          <input
+            className="compose-input"
+            style={{ padding: '6px 10px' }}
+            placeholder={`Reply to comment...`}
+            value={replyInputs[c.id] || ''}
+            onChange={e => setReplyInputs(prev => ({ ...prev, [c.id]: e.target.value }))}
+            onKeyDown={e => e.key === 'Enter' && postReply(c.id)}
+            autoFocus
+          />
+          <button
+            className="btn-primary"
+            style={{ fontSize: 11, padding: '6px 12px', whiteSpace: 'nowrap' }}
+            onClick={() => postReply(c.id)}
+          >
+            Post
+          </button>
+        </div>
+      )}
+
+      {isExpanded && replyList.length > 0 && (
+        <div style={{ marginTop: 8 }}>
+          {replyList.map(r => <CommentRow key={r.id} c={r} isReply ctx={ctx} />)}
+        </div>
+      )}
+      {isExpanded && replyList.length === 0 && (
+        <div style={{ fontSize: 12, color: 'var(--text3)', paddingLeft: 4, marginTop: 8 }}>No replies yet.</div>
+      )}
+    </div>
+  )
+}
+
 export default function ArticlePage({ articleId, allArticles, navigate, goBack, showToast, refreshArticle, user, onLoginClick, isSaved, toggleSave, outlets = [] }) {
   const trendingTopics = useTrendingTopics()
   const [comments, setComments] = useState([])
@@ -254,20 +350,9 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     setReplyingTo(null)
     setReplies(prev => ({ ...prev, [parentId]: [...(prev[parentId] || []), data[0]] }))
     showToast('Reply posted!')
-
-    // Notify the parent commenter (never yourself) — fire-and-forget
-    const parent = comments.find(c => c.id === parentId)
-    if (parent?.user_id && parent.user_id !== user.id) {
-      db.from('notifications').insert({
-        user_id: parent.user_id,
-        actor_id: user.id,
-        type: 'reply',
-        article_id: articleId,
-        article_title: (article?.title || '').slice(0, 120),
-        actor_name: userProfiles[user.id] || user.email?.split('@')[0] || 'A reader',
-        snippet: body.slice(0, 90),
-      }).then(({ error: nErr }) => { if (nErr) console.warn('notify failed', nErr.message) })
-    }
+    // The reply notification is created server-side by the notify_on_reply
+    // trigger (sql/10) — deriving recipient and actor name from the comment so
+    // neither can be spoofed by the client.
   }
 
   async function loadReplies(parentId) {
@@ -334,92 +419,9 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     await db.rpc('delta_comment_vote', { comment_id: commentId, field_name: field, delta: 1 })
   }
 
-  function CommentRow({ c, isReply = false }) {
-    const hasReplies = !isReply
-    const replyList = replies[c.id] || []
-    const isExpanded = replies[c.id] !== undefined
-    const isReplying = replyingTo === c.id
-    const username    = c.user_id ? (userProfiles[c.user_id] || 'Community member') : 'Community member'
-    const hasHandle   = c.user_id && userProfiles[c.user_id]
-    const initials    = getInitials(username)
-
-    return (
-      <div className={isReply ? 'reply' : 'comment'}>
-        <div className="comment-header">
-          <div className="c-av" style={{
-            background: (c.user_id && userLooks[c.user_id]?.color) || 'var(--purple-light)',
-            color: (c.user_id && userLooks[c.user_id]?.color) ? '#fff' : 'var(--purple)',
-          }}>
-            {(c.user_id && userLooks[c.user_id]?.emoji) || initials}
-          </div>
-          <span
-            className="c-user"
-            style={{ cursor: hasHandle ? 'pointer' : 'default' }}
-            onClick={() => hasHandle && navigate('publicProfile', { userId: c.user_id })}
-          >
-            {username}
-          </span>
-          <span className="c-ts">{timeAgo(c.created_at)}</span>
-        </div>
-        <div className="c-text">{c.body || ''}</div>
-        <div className="c-actions">
-          <button
-            className={`vote-btn${votedComments[`${c.id}-1`] ? ' voted-up' : ''}`}
-            onClick={() => voteComment(c.id, 1)}
-          >
-            ▲ {c.upvotes || 0}
-          </button>
-          <button
-            className={`vote-btn${votedComments[`${c.id}--1`] ? ' voted-down' : ''}`}
-            onClick={() => voteComment(c.id, -1)}
-          >
-            ▼ {c.downvotes || 0}
-          </button>
-          {!isReply && (
-            <button className="reply-btn" onClick={() => {
-              setReplyingTo(isReplying ? null : c.id)
-            }}>
-              {isReplying ? 'Cancel' : 'Reply'}
-            </button>
-          )}
-          {hasReplies && (
-            <button className="reply-btn" style={{ marginLeft: 4, color: 'var(--coral)' }} onClick={() => loadReplies(c.id)}>
-              {isExpanded ? `Hide replies` : `Show replies`}
-            </button>
-          )}
-        </div>
-
-        {isReplying && (
-          <div style={{ display: 'flex', gap: 8, marginTop: 10, paddingLeft: 4 }}>
-            <input
-              className="compose-input"
-              style={{ padding: '6px 10px' }}
-              placeholder={`Reply to comment...`}
-              value={replyInputs[c.id] || ''}
-              onChange={e => setReplyInputs(prev => ({ ...prev, [c.id]: e.target.value }))}
-              onKeyDown={e => e.key === 'Enter' && postReply(c.id)}
-              autoFocus
-            />
-            <button
-              className="btn-primary"
-              style={{ fontSize: 11, padding: '6px 12px', whiteSpace: 'nowrap' }}
-              onClick={() => postReply(c.id)}
-            >
-              Post
-            </button>
-          </div>
-        )}
-
-        {isExpanded && replyList.length > 0 && (
-          <div style={{ marginTop: 8 }}>
-            {replyList.map(r => <CommentRow key={r.id} c={r} isReply />)}
-          </div>
-        )}
-        {isExpanded && replyList.length === 0 && (
-          <div style={{ fontSize: 12, color: 'var(--text3)', paddingLeft: 4, marginTop: 8 }}>No replies yet.</div>
-        )}
-      </div>
-    )
+  const commentCtx = {
+    replies, replyingTo, userProfiles, userLooks, votedComments, replyInputs,
+    navigate, voteComment, loadReplies, postReply, setReplyingTo, setReplyInputs,
   }
 
   return (
@@ -603,7 +605,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 <p>No comments yet — be the first to start the discussion!</p>
               </div>
             ) : (
-              sortedComments.map(c => <CommentRow key={c.id} c={c} />)
+              sortedComments.map(c => <CommentRow key={c.id} c={c} ctx={commentCtx} />)
             )}
           </div>
         </div>

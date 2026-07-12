@@ -207,7 +207,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
     Promise.all([
       db.from('profiles').select('username, public_profile, username_changed_at, bio, avatar_color, avatar_emoji').eq('user_id', user.id).maybeSingle(),
       db.from('ratings')
-        .select('*, articles(id, title, category, bias_direction, outlets(name))')
+        .select('*, articles(id, title, category, outlets(name))')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
       db.from('outlet_ratings')
@@ -223,11 +223,11 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
       db.from('saved_articles')
-        .select('*, articles(id, title, published_at, category, ai_summary, outlets(name, country))')
+        .select('*, articles(id, title, published_at, category, summary, outlets(name, country))')
         .eq('user_id', user.id)
         .order('created_at', { ascending: false }),
       db.from('article_views')
-        .select('viewed_at, articles(id, category, bias_direction, outlets(name))')
+        .select('viewed_at, articles(id, category, outlets(name))')
         .eq('user_id', user.id)
         .gte('viewed_at', ninetyDaysAgo)
         .order('viewed_at', { ascending: false }),
@@ -249,7 +249,7 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
         if (ids.length) {
           const { data: fallbackArticles } = await db
             .from('articles')
-            .select('id, title, published_at, category, ai_summary, outlets(name, country)')
+            .select('id, title, published_at, category, summary, outlets(name, country)')
             .in('id', ids)
           if (fallbackArticles) {
             const articleMap = Object.fromEntries(fallbackArticles.map(a => [a.id, a]))
@@ -777,13 +777,13 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                     <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4 }}>
                       {article.outlets?.name || 'Unknown outlet'} · saved {timeAgo(s.created_at)}
                     </div>
-                    <div style={{ fontSize: 14, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: article.ai_summary ? 6 : 0 }}>
+                    <div style={{ fontSize: 14, fontFamily: 'var(--font-playfair), serif', lineHeight: 1.4, marginBottom: article.summary ? 6 : 0 }}>
                       {article.title || 'Article'}
                     </div>
-                    {article.ai_summary && (
-                      <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5, fontStyle: 'italic', marginBottom: 8,
+                    {article.summary && (
+                      <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.5, marginBottom: 8,
                         display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                        {article.ai_summary}
+                        {article.summary}
                       </div>
                     )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

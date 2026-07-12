@@ -15,13 +15,11 @@ export default function Document() {
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="RatedNews" />
-        {/* Fallback OG image for any page that doesn't set its own */}
-        <meta property="og:image"        content="https://www.ratednews.com/api/og?type=brand" />
-        <meta property="og:image:type"   content="image/png" />
-        <meta property="og:image:width"  content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta name="twitter:card"        content="summary_large_image" />
-        <meta name="twitter:image"       content="https://www.ratednews.com/api/og?type=brand" />
+        {/* No fallback og:image here — _document tags can't be deduped by
+            next/head, so a global one double-emitted alongside each page's own
+            card, and some scrapers (LinkedIn/Telegram) take the last (generic)
+            one. Every content page sets its own og:image; error/utility pages
+            don't need a share card. */}
         {/* Preconnect to Supabase — saves DNS+TLS round trip on first data fetch */}
         <link rel="preconnect" href={process.env.VITE_SUPABASE_URL} />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />

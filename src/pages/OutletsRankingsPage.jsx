@@ -197,11 +197,30 @@ export default function OutletsRankingsPage({
   useEffect(() => {
     if (section !== 'leaderboard' || lbLoaded) return
     setLbLoading(true)
-    Promise.all([
-      db.from('ratings').select('user_id'),
-      db.from('outlet_ratings').select('user_id'),
-      db.from('comments').select('user_id'),
-    ]).then(([{ data: ar }, { data: or }, { data: co }]) => {
+
+    async function loadLeaderboard() {
+      // Single aggregate RPC — the old approach downloaded three whole tables
+      // and counted in JS, which truncated (and mis-ranked) past 1,000 rows.
+      const { data, error } = await db.rpc('contributor_leaderboard', { p_limit: 25 })
+      if (!error && data) {
+        setLeaders(data.map((c, i) => ({
+          userId: c.user_id, rank: i + 1,
+          articles: Number(c.articles) || 0,
+          outlets:  Number(c.outlets)  || 0,
+          comments: Number(c.comments) || 0,
+          total:    Number(c.total)    || 0,
+          username: c.username || 'Anonymous',
+          trust:    getTrustLevel(Number(c.total) || 0),
+        })))
+        setLbLoading(false); setLbLoaded(true)
+        return
+      }
+      // Fallback: old client-side aggregation (pre-migration)
+      const [{ data: ar }, { data: or }, { data: co }] = await Promise.all([
+        db.from('ratings').select('user_id'),
+        db.from('outlet_ratings').select('user_id'),
+        db.from('comments').select('user_id'),
+      ])
       const counts = {}
       const inc = (rows, type) => (rows || []).forEach(r => {
         if (!r.user_id) return
@@ -213,13 +232,14 @@ export default function OutletsRankingsPage({
         .map(c => ({ ...c, total: c.articles + c.outlets + c.comments }))
         .sort((a, b) => b.total - a.total).slice(0, 25)
       if (!sorted.length) { setLeaders([]); setLbLoading(false); setLbLoaded(true); return }
-      db.from('profiles').select('user_id, username').in('user_id', sorted.map(c => c.userId)).then(({ data: profiles }) => {
-        const pm = {}
-        ;(profiles || []).forEach(p => { pm[p.user_id] = p.username })
-        setLeaders(sorted.map((c, i) => ({ ...c, rank: i + 1, username: pm[c.userId] || 'Anonymous', trust: getTrustLevel(c.total) })))
-        setLbLoading(false); setLbLoaded(true)
-      })
-    })
+      const { data: profiles } = await db.from('profiles').select('user_id, username').in('user_id', sorted.map(c => c.userId))
+      const pm = {}
+      ;(profiles || []).forEach(p => { pm[p.user_id] = p.username })
+      setLeaders(sorted.map((c, i) => ({ ...c, rank: i + 1, username: pm[c.userId] || 'Anonymous', trust: getTrustLevel(c.total) })))
+      setLbLoading(false); setLbLoaded(true)
+    }
+
+    loadLeaderboard()
   }, [section, lbLoaded])
 
   function toggleCompare(id) {

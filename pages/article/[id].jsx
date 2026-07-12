@@ -27,13 +27,20 @@ export default function ArticleDetail({ article: initialArticle }) {
   // ISR pages can be up to 1h stale — refresh score data client-side so the
   // quality card always reflects the latest accuracy_score, bias, etc.
   const [article, setArticle] = useState(initialArticle)
+  // Navigating article A → B stays on the same dynamic route, so this component
+  // doesn't remount — sync to the new SSR article immediately so Head/title/body
+  // never show A's data under B's URL while the refresh is in flight.
+  useEffect(() => { setArticle(initialArticle) }, [initialArticle])
   useEffect(() => {
     if (!initialArticle?.id) return
+    let cancelled = false
     db.from('articles')
       .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
       .eq('id', initialArticle.id)
       .single()
-      .then(({ data }) => { if (data) setArticle(data) })
+      // Guard against an out-of-order A response landing after we've moved to B.
+      .then(({ data }) => { if (!cancelled && data && data.id === initialArticle.id) setArticle(data) })
+    return () => { cancelled = true }
   }, [initialArticle?.id])
 
   // Track view — sessionStorage dedup so navigating back doesn't double-count

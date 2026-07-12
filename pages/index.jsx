@@ -101,7 +101,12 @@ export default function Feed({ initialArticles, initialCount }) {
       .order('published_at', { ascending: false })
       .range(offset, offset + BATCH - 1)
     if (data?.length) {
-      setArticles(prev => [...prev, ...data])
+      // Ingest runs every 15 min, shifting offsets — filter out ids already
+      // shown so a new article arriving mid-scroll can't duplicate a card.
+      setArticles(prev => {
+        const seen = new Set(prev.map(a => a.id))
+        return [...prev, ...data.filter(a => !seen.has(a.id))]
+      })
       setOffset(o => o + BATCH)
       setHasMore(data.length === BATCH)
     } else {

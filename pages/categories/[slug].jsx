@@ -7,13 +7,16 @@ import { articleSlug } from '../../src/utils/helpers'
 
 const BATCH = 50
 
+// Keep in lockstep with pages/index.jsx ARTICLE_SELECT — the AI-era columns
+// (accuracy_score, bias_score, bias_direction, headline_vote, ai_summary) were
+// dropped with AI scoring; selecting them would break if the columns are ever
+// removed from the DB, and wastes egress until then.
 const ARTICLE_SELECT = [
   'id', 'title', 'published_at', 'outlet_id',
-  'accuracy_score', 'bias_score', 'bias_direction', 'headline_vote',
   'category', 'geographic_scope', 'article_region',
-  'ai_summary', 'summary', 'url', 'image_url',
-  'total_ratings', 'community_score', 'cluster_peers',
-  'outlets(name, country, bias_direction, logo_url, accuracy_score)',
+  'summary', 'url', 'image_url',
+  'total_ratings', 'community_score', 'cluster_id', 'cluster_peers',
+  'outlets(name, country, logo_url)',
   'comments(count)',
 ].join(', ')
 
