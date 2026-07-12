@@ -60,7 +60,7 @@ export default function Feed({ initialArticles, initialCount }) {
         .select(ARTICLE_SELECT)
         .order('published_at', { ascending: false })
         .range(0, BATCH + 40 - 1),
-      db.from('articles').select('*', { count: 'exact', head: true }),
+      db.from('articles').select('*', { count: 'estimated', head: true }),
       // Full-data 24h articles for card rendering when a trending topic is active.
       // 150 rows with all display columns — enough to fill any topic's article list.
       db.from('articles')
@@ -116,7 +116,7 @@ export default function Feed({ initialArticles, initialCount }) {
         .select(ARTICLE_SELECT)
         .order('published_at', { ascending: false })
         .range(0, BATCH + 40 - 1),
-      db.from('articles').select('*', { count: 'exact', head: true }),
+      db.from('articles').select('*', { count: 'estimated', head: true }),
     ])
     setArticles(data || [])
     setTotalCount(count || 0)
@@ -207,7 +207,7 @@ export async function getStaticProps() {
         .select(SSR_SELECT)
         .order('published_at', { ascending: false })
         .range(0, BATCH + 40 - 1),
-      supabase.from('articles').select('*', { count: 'exact', head: true }),
+      supabase.from('articles').select('*', { count: 'estimated', head: true }),
     ])
     // Keep this formula in sync with the 'trending' sort in src/pages/FeedPage.jsx
     const now = Date.now()

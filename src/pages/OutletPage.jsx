@@ -90,6 +90,12 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
     setArticlesLoading(true)
     setBestArticles([])
 
+    // Full outlet row (fresh scores + description/website/rss, which the global
+    // context select omits to keep per-session egress down). Falls back to the
+    // context stub until this resolves.
+    db.from('outlets').select('*').eq('id', outletId).maybeSingle()
+      .then(({ data }) => { if (data) setLiveOutlet(data) })
+
     // Articles — explicit columns to avoid fetching unused/large fields
     db.from('articles')
       .select('id, title, published_at, outlet_id, accuracy_score, bias_direction, headline_vote, category, ai_summary, summary, url, image_url')

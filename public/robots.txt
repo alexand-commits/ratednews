@@ -1,9 +1,11 @@
 User-agent: *
 Allow: /
 
-# Private pages — no SEO value
-Disallow: /profile
-Disallow: /profile/
+# Private/utility routes with no SEO value.
+# Public profiles ARE indexable — privacy is enforced per-page via <meta noindex>.
+Disallow: /api/
+Disallow: /admin
+Disallow: /social
 
 # Sitemap
 Sitemap: https://www.ratednews.com/sitemap.xml
