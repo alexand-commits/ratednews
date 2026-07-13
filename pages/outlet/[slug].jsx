@@ -4,15 +4,17 @@ import { useAppContext } from '../_app'
 import OutletPage from '../../src/pages/OutletPage'
 import { toSlug } from '../../src/utils/navigate'
 
+// Community data only — the fair/misleading/clickbait rates and overall_score
+// were computed by the retired AI pipeline (scripts/aggregate-outlets.mjs, no
+// longer on any cron) and are frozen; putting them on a public share card
+// would misattribute AI-era numbers to readers.
 function outletOgUrl(o) {
   const base = 'https://www.ratednews.com/api/og?type=outlet'
   const p = new URLSearchParams({ outlet: o.name || '' })
-  if (o.overall_score ?? o.accuracy_score) p.set('score', o.overall_score ?? o.accuracy_score)
-  if (o.bias_direction)    p.set('bias',        o.bias_direction)
-  if (o.fair_rate != null) p.set('fair',        Math.round(o.fair_rate))
-  if (o.misleading_rate != null) p.set('misleading', Math.round(o.misleading_rate))
-  if (o.clickbait_rate != null)  p.set('clickbait',  Math.round(o.clickbait_rate))
-  if (o.article_count_30d) p.set('articles',    o.article_count_30d)
+  if (o.total_ratings > 0 && o.community_score > 0) {
+    p.set('score', Math.round(o.community_score))
+    p.set('stars', (o.community_score / 20).toFixed(1))
+  }
   return `${base}&${p.toString()}`
 }
 
@@ -32,13 +34,13 @@ function buildFaq(o) {
       : `${name} hasn't received enough community ratings yet for a reliable score. RatedNews scores come entirely from reader ratings of accuracy, bias and quality — rate ${name} to help build its profile.`,
   })
 
-  const fair = o.fair_rate != null ? Math.round(o.fair_rate) : null
-  const misl = o.misleading_rate != null ? Math.round(o.misleading_rate) : null
+  // NB: no fair_rate/misleading_rate here — those columns are frozen output of
+  // the retired AI pipeline, not reader data. Only claim what readers produce.
   faq.push({
     q: `Is ${name} biased?`,
-    a: fair != null
-      ? `Readers judge ${fair}% of rated ${name} articles as fair coverage${misl != null ? ` and flag ${misl}% as misleading` : ''}. RatedNews doesn't assign a left/right label — bias is measured article by article, by the community.`
-      : `The community is still rating ${name}'s articles for fairness and bias. RatedNews doesn't assign a left/right label — bias is measured article by article, by readers.`,
+    a: stars
+      ? `RatedNews doesn't assign ${name} a left/right label. Readers rate its articles individually for bias and fairness, and those ratings feed the ${stars}/5 community score above — open any rated article to see how readers judged its coverage.`
+      : `RatedNews doesn't assign ${name} a left/right label — readers rate its articles individually for bias and fairness. ${name} is still building its rating profile; rate an article to contribute the first data points.`,
   })
 
   faq.push({

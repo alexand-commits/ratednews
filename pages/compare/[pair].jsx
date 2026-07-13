@@ -109,12 +109,12 @@ export default function ComparePage({ a, b }) {
               <OutletHalf o={b} align="left" />
             </div>
 
+            {/* Community data only — fair/misleading/clickbait rates and the
+                30-day article count were computed by the retired AI pipeline
+                and are frozen; showing them here would misattribute them to
+                readers. Add rows back only for reader-derived aggregates. */}
             <StatRow label="Community score" a={aStars ? Number(aStars) : null} b={bStars ? Number(bStars) : null} suffix="/5" />
             <StatRow label="Reader ratings" a={a.total_ratings || 0} b={b.total_ratings || 0} />
-            <StatRow label="Fair coverage" a={a.fair_rate != null ? Math.round(a.fair_rate) : null} b={b.fair_rate != null ? Math.round(b.fair_rate) : null} suffix="%" />
-            <StatRow label="Flagged misleading" a={a.misleading_rate != null ? Math.round(a.misleading_rate) : null} b={b.misleading_rate != null ? Math.round(b.misleading_rate) : null} higherWins={false} suffix="%" />
-            <StatRow label="Clickbait rate" a={a.clickbait_rate != null ? Math.round(a.clickbait_rate) : null} b={b.clickbait_rate != null ? Math.round(b.clickbait_rate) : null} higherWins={false} suffix="%" />
-            <StatRow label="Articles · 30 days" a={a.article_count_30d || null} b={b.article_count_30d || null} />
 
             {(a.total_ratings || 0) < MIN_RANK_RATINGS || (b.total_ratings || 0) < MIN_RANK_RATINGS ? (
               <p style={{ fontSize: 11, color: 'var(--text3)', margin: '12px 0 0' }}>
