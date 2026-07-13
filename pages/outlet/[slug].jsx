@@ -31,10 +31,14 @@ export default function OutletDetail({ outlet }) {
   return (
     <>
       <Head>
-        <title>{outlet.name} Community Rating & Reviews — RatedNews</title>
+        {/* Title matches the high-intent queries people actually type:
+            "is <outlet> reliable", "is <outlet> biased", "<outlet> bias rating" */}
+        <title>{`Is ${outlet.name} Reliable? Bias & Trust Ratings — RatedNews`}</title>
         <meta
           name="description"
-          content={`See ${outlet.name}'s community rating and reader reviews on RatedNews. Readers rate the outlet for accuracy, bias and quality — plus its latest articles.`}
+          content={outlet.total_ratings > 0
+            ? `Is ${outlet.name} reliable or biased? Readers give it ${(outlet.community_score / 20).toFixed(1)}/5 from ${outlet.total_ratings} community ${outlet.total_ratings === 1 ? 'rating' : 'ratings'} for accuracy, bias and quality. See reviews and its latest articles on RatedNews.`
+            : `Is ${outlet.name} reliable or biased? See how readers rate it for accuracy, bias and quality on RatedNews — community ratings, reviews and its latest articles.`}
         />
         <link rel="canonical" href={`https://www.ratednews.com/outlet/${canonicalSlug}`} />
         <meta property="og:title"       content={`${outlet.name} — Community Rating & Reviews`} />

@@ -50,6 +50,22 @@ const nextConfig = {
       // /rankings was a near-duplicate of /outlets (moved here from a page-level
       // getServerSideProps so it no longer spins up a function per hit).
       { source: '/rankings', destination: '/outlets', permanent: true },
+      // ── Legacy WordPress site cleanup ────────────────────────────────────────
+      // Google still holds old WP URLs (Archives/tag pages, user-agreement, wp-*
+      // internals). 301 them somewhere sensible so they drop out of the index
+      // fast and any residual link equity flows to live pages.
+      { source: '/Archives/:path*',      destination: '/',        permanent: true },
+      { source: '/archives/:path*',      destination: '/',        permanent: true },
+      { source: '/tag/:path*',           destination: '/explore', permanent: true },
+      { source: '/author/:path*',        destination: '/about',   permanent: true },
+      { source: '/user-agreement',       destination: '/about',   permanent: true },
+      { source: '/user-agreement/',      destination: '/about',   permanent: true },
+      { source: '/privacy-policy',       destination: '/about',   permanent: true },
+      { source: '/wp-admin/:path*',      destination: '/',        permanent: true },
+      { source: '/wp-content/:path*',    destination: '/',        permanent: true },
+      { source: '/wp-json/:path*',       destination: '/',        permanent: true },
+      { source: '/feed',                 destination: '/',        permanent: true },
+      { source: '/comments/feed',        destination: '/',        permanent: true },
       // ── Old site: /media-ratings/:slug → /outlet/:slug ──────────────────────
       // Direct slug matches — old and new slugs are identical
       { source: '/media-ratings/bbc-news',               destination: '/outlet/bbc-news',               permanent: true },

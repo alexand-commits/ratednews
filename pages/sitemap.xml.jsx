@@ -93,12 +93,23 @@ export async function getServerSideProps({ res }) {
 
   // Article pages — kept for Google News freshness (they carry NewsArticle
   // schema), but they're thin stubs so they sit below stories/outlets.
-  const articlePages = (articles || []).map(a => ({
-    url:        `https://www.ratednews.com/article/${toArticleSlug(a.title, a.id)}`,
-    priority:   '0.5',
-    changefreq: 'weekly',
-    lastmod:    a.published_at?.slice(0, 10),
-  }))
+  // One URL per cluster: the same headline syndicated across 3+ outlets was
+  // listing 3+ near-duplicate URLs, diluting crawl budget. The newest member
+  // represents the cluster (its story page covers the rest).
+  const seenArticleClusters = new Set()
+  const articlePages = []
+  for (const a of (articles || [])) {
+    if (a.cluster_id) {
+      if (seenArticleClusters.has(a.cluster_id)) continue
+      seenArticleClusters.add(a.cluster_id)
+    }
+    articlePages.push({
+      url:        `https://www.ratednews.com/article/${toArticleSlug(a.title, a.id)}`,
+      priority:   '0.5',
+      changefreq: 'weekly',
+      lastmod:    a.published_at?.slice(0, 10),
+    })
+  }
 
   const sitemap = buildSitemap([...STATIC_PAGES, ...outletPages, ...storyPages, ...articlePages])
 
