@@ -64,6 +64,12 @@ export default function Sidebar({ outlets, navigate, trendingTopics = [], active
         >
           Full rankings →
         </button>
+        <a
+          href="/most-trusted-news-sources"
+          style={{ display: 'block', textAlign: 'center', marginTop: 8, fontSize: 12, fontWeight: 600, color: 'var(--coral)', textDecoration: 'none' }}
+        >
+          🏆 Most trusted sources {new Date().getFullYear()} →
+        </a>
         <div style={{ borderTop: '0.5px solid var(--border)', marginTop: 14, paddingTop: 12, fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>
           Scores come entirely from reader ratings — rate the sources you read to shape them.{' '}
           <a href="/methodology" style={{ color: 'var(--text3)', textDecoration: 'none', whiteSpace: 'nowrap' }}>

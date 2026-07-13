@@ -65,6 +65,21 @@ export default function AboutPage({ navigate, goBack, outlets = [] }) {
           </div>
         </div>
 
+        {/* Live ranking — the natural next click after reading how scoring works */}
+        <a href="/most-trusted-news-sources" style={{ textDecoration: 'none', display: 'block', marginTop: 16 }}>
+          <div style={{
+            background: 'rgba(216,90,48,0.06)', border: '0.5px solid rgba(216,90,48,0.3)',
+            borderRadius: 'var(--radius)', padding: '14px 18px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>🏆 See the live ranking</div>
+              <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>The most trusted news sources of {new Date().getFullYear()}, as rated by readers</div>
+            </div>
+            <span style={{ color: 'var(--coral)', fontWeight: 700 }}>→</span>
+          </div>
+        </a>
+
         {/* Methodology link */}
         <a href="/methodology" style={{ textDecoration: 'none', display: 'block', marginTop: 16 }}>
           <div style={{

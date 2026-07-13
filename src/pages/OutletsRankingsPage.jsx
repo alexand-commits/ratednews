@@ -315,6 +315,23 @@ export default function OutletsRankingsPage({
         {/* ── OUTLETS SECTION ─────────────────────────────────────────────── */}
         {section === 'outlets' && (
           <>
+            {/* Evergreen ranking page — the natural next click for rankings browsers */}
+            <a
+              href="/most-trusted-news-sources"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16,
+                background: 'rgba(216,90,48,0.06)', border: '0.5px solid rgba(216,90,48,0.3)',
+                borderRadius: 'var(--radius)', padding: '11px 16px', textDecoration: 'none',
+              }}
+            >
+              <span style={{ fontSize: 17 }}>🏆</span>
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                The most trusted news sources of {new Date().getFullYear()}
+                <span style={{ fontWeight: 400, color: 'var(--text2)' }}> — the live community ranking</span>
+              </span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--coral)', flexShrink: 0 }}>View →</span>
+            </a>
+
             {/* Summary chip */}
             <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
               <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 80 }}>
