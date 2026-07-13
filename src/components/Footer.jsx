@@ -16,6 +16,7 @@ export default function Footer() {
         </span>
         <Link href="/about" style={link}>About</Link>
         <Link href="/methodology" style={link}>Methodology</Link>
+        <Link href="/most-trusted-news-sources" style={link}>Most trusted sources</Link>
         <button onClick={() => setLegalDoc('privacy')} style={linkBtn}>Privacy</button>
         <button onClick={() => setLegalDoc('terms')} style={linkBtn}>Terms</button>
         <button onClick={() => setLegalDoc('guidelines')} style={linkBtn}>Guidelines</button>

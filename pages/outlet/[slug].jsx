@@ -16,7 +16,40 @@ function outletOgUrl(o) {
   return `${base}&${p.toString()}`
 }
 
-export default function OutletDetail({ outlet }) {
+// FAQ built from live community data — targets the questions people search
+// ("is X reliable", "is X biased"). Same text feeds the visible block and the
+// FAQPage JSON-LD, so schema always matches on-page content.
+function buildFaq(o) {
+  const name  = o.name
+  const stars = o.total_ratings > 0 && o.community_score > 0 ? (o.community_score / 20).toFixed(1) : null
+  const n     = o.total_ratings || 0
+  const faq = []
+
+  faq.push({
+    q: `Is ${name} reliable?`,
+    a: stars
+      ? `RatedNews readers give ${name} ${stars} out of 5 for overall trustworthiness, based on ${n} community ${n === 1 ? 'rating' : 'ratings'} covering accuracy, bias and quality. Scores update continuously as readers rate.`
+      : `${name} hasn't received enough community ratings yet for a reliable score. RatedNews scores come entirely from reader ratings of accuracy, bias and quality — rate ${name} to help build its profile.`,
+  })
+
+  const fair = o.fair_rate != null ? Math.round(o.fair_rate) : null
+  const misl = o.misleading_rate != null ? Math.round(o.misleading_rate) : null
+  faq.push({
+    q: `Is ${name} biased?`,
+    a: fair != null
+      ? `Readers judge ${fair}% of rated ${name} articles as fair coverage${misl != null ? ` and flag ${misl}% as misleading` : ''}. RatedNews doesn't assign a left/right label — bias is measured article by article, by the community.`
+      : `The community is still rating ${name}'s articles for fairness and bias. RatedNews doesn't assign a left/right label — bias is measured article by article, by readers.`,
+  })
+
+  faq.push({
+    q: `How is ${name} rated on RatedNews?`,
+    a: `Every score comes from reader ratings — there is no AI or editorial scoring. Readers rate ${name}'s articles and the outlet itself for accuracy, bias and overall quality, and those ratings roll up into the community score shown on this page.`,
+  })
+
+  return faq
+}
+
+export default function OutletDetail({ outlet, compareTargets = [] }) {
   const router = useRouter()
   const { navigate, goBack, showToast, user, openAuthModal,
           followedOutletIds, toggleFollow, allOutlets } = useAppContext()
@@ -27,6 +60,7 @@ export default function OutletDetail({ outlet }) {
   }
 
   const canonicalSlug = toSlug(outlet.name)
+  const faq = buildFaq(outlet)
 
   return (
     <>
@@ -81,6 +115,20 @@ export default function OutletDetail({ outlet }) {
             } : undefined,
           }).replace(/<\//g, '<\\/')}}
         />
+
+        {/* FAQPage schema — mirrors the visible FAQ block below */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: faq.map(f => ({
+              '@type': 'Question',
+              name: f.q,
+              acceptedAnswer: { '@type': 'Answer', text: f.a },
+            })),
+          }).replace(/<\//g, '<\\/')}}
+        />
       </Head>
       <OutletPage
         outletId={outlet.id}
@@ -93,6 +141,37 @@ export default function OutletDetail({ outlet }) {
         followedOutletIds={followedOutletIds}
         toggleFollow={toggleFollow}
       />
+
+      {/* FAQ + compare links — search-intent content below the app UI */}
+      <div className="container" style={{ maxWidth: 1240, paddingTop: 0 }}>
+        <section style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px 24px', marginBottom: 16 }}>
+          <h2 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 19, margin: '0 0 14px' }}>
+            {outlet.name} — frequently asked
+          </h2>
+          {faq.map(f => (
+            <details key={f.q} style={{ borderTop: '0.5px solid var(--border)', padding: '10px 0' }}>
+              <summary style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}>{f.q}</summary>
+              <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, margin: '8px 0 2px' }}>{f.a}</p>
+            </details>
+          ))}
+        </section>
+
+        {compareTargets.length > 0 && (
+          <section style={{ marginBottom: 24 }}>
+            <div className="section-label" style={{ marginBottom: 8 }}>Compare {outlet.name} with</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {compareTargets.map(o => {
+                const pair = [canonicalSlug, toSlug(o.name)].sort()
+                return (
+                  <a key={o.id} href={`/compare/${pair[0]}-vs-${pair[1]}`} className="pill" style={{ textDecoration: 'none' }}>
+                    {outlet.name} vs {o.name}
+                  </a>
+                )
+              })}
+            </div>
+          </section>
+        )}
+      </div>
     </>
   )
 }
@@ -125,7 +204,7 @@ export async function getStaticProps({ params }) {
 
   // Step 1: fetch only id + name to find the matching slug — avoids loading
   // every column of every outlet just to do a JS-side slug comparison
-  const { data: stubs } = await supabase.from('outlets').select('id, name')
+  const { data: stubs } = await supabase.from('outlets').select('id, name, total_ratings, parent_outlet_id')
   const match = (stubs || []).find(o => toSlug(o.name) === params.slug)
   if (!match) return { notFound: true }
 
@@ -133,8 +212,20 @@ export async function getStaticProps({ params }) {
   const { data: outlet } = await supabase.from('outlets').select('*').eq('id', match.id).single()
   if (!outlet) return { notFound: true }
 
+  // "Compare with" targets, resolved server-side so the /compare/* links are
+  // in the prerendered HTML for crawlers (the client outlet context loads too
+  // late for that). Same-brand outlets (BBC News vs BBC Sport) are excluded —
+  // brand = first word after stripping a leading "The".
+  const brand = name => (name || '').replace(/^The /i, '').split(' ')[0].toLowerCase()
+  const outletBrand = brand(outlet.name)
+  const compareTargets = (stubs || [])
+    .filter(o => !o.parent_outlet_id && o.id !== outlet.id && (o.total_ratings || 0) > 0 && brand(o.name) !== outletBrand)
+    .sort((a, b) => (b.total_ratings || 0) - (a.total_ratings || 0))
+    .slice(0, 4)
+    .map(o => ({ id: o.id, name: o.name }))
+
   return {
-    props: { outlet },
+    props: { outlet, compareTargets },
     revalidate: 3600, // regenerate every hour, matching the ingest schedule
   }
 }

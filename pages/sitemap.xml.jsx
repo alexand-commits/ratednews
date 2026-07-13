@@ -17,6 +17,7 @@ const STATIC_PAGES = [
   { url: 'https://www.ratednews.com/sports',     priority: '0.9', changefreq: 'hourly'  },
   { url: 'https://www.ratednews.com/explore',    priority: '0.7', changefreq: 'daily'   },
   { url: 'https://www.ratednews.com/categories', priority: '0.8', changefreq: 'daily'   },
+  { url: 'https://www.ratednews.com/most-trusted-news-sources', priority: '0.9', changefreq: 'daily' },
   { url: 'https://www.ratednews.com/about',       priority: '0.5', changefreq: 'monthly' },
   { url: 'https://www.ratednews.com/methodology', priority: '0.5', changefreq: 'monthly' },
   ...CATEGORY_SLUGS.map(slug => ({
@@ -61,7 +62,7 @@ export async function getServerSideProps({ res }) {
   const [{ data: outlets }, { data: articles }] = await Promise.all([
     // NB: outlets has no updated_at column — selecting it errored the whole
     // query and silently dropped every outlet page from the sitemap.
-    supabase.from('outlets').select('name').is('parent_outlet_id', null),
+    supabase.from('outlets').select('name, total_ratings').is('parent_outlet_id', null),
     supabase.from('articles')
       .select('id, title, published_at, cluster_id')
       .gte('published_at', since90d)
@@ -74,6 +75,25 @@ export async function getServerSideProps({ res }) {
     priority:   '0.9',
     changefreq: 'daily',
   }))
+
+  // Compare pages — pairs of the 10 most-rated outlets (matches the prebuild
+  // set in pages/compare/[pair].jsx). Alphabetical order is canonical.
+  const topSlugs = (outlets || [])
+    .filter(o => (o.total_ratings || 0) > 0)
+    .sort((a, b) => (b.total_ratings || 0) - (a.total_ratings || 0))
+    .slice(0, 10)
+    .map(o => toSlug(o.name))
+  const comparePages = []
+  for (let i = 0; i < topSlugs.length; i++) {
+    for (let j = i + 1; j < topSlugs.length; j++) {
+      const pair = [topSlugs[i], topSlugs[j]].sort()
+      comparePages.push({
+        url:        `https://www.ratednews.com/compare/${pair[0]}-vs-${pair[1]}`,
+        priority:   '0.7',
+        changefreq: 'weekly',
+      })
+    }
+  }
 
   // Story pages — the unique, evergreen aggregation content (every outlet
   // covering one story). One URL per cluster, keyed on the most-recent
@@ -111,7 +131,7 @@ export async function getServerSideProps({ res }) {
     })
   }
 
-  const sitemap = buildSitemap([...STATIC_PAGES, ...outletPages, ...storyPages, ...articlePages])
+  const sitemap = buildSitemap([...STATIC_PAGES, ...outletPages, ...comparePages, ...storyPages, ...articlePages])
 
   res.setHeader('Content-Type', 'application/xml')
   res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=7200')
