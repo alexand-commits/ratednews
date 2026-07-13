@@ -25,7 +25,7 @@ export default function ArticleDetail({ article: initialArticle }) {
           savedArticleIds, toggleSave, allOutlets } = useAppContext()
 
   // ISR pages can be up to 1h stale — refresh score data client-side so the
-  // quality card always reflects the latest accuracy_score, bias, etc.
+  // quality card always reflects the latest community score and comment count.
   const [article, setArticle] = useState(initialArticle)
   // Navigating article A → B stays on the same dynamic route, so this component
   // doesn't remount — sync to the new SSR article immediately so Head/title/body
@@ -35,7 +35,7 @@ export default function ArticleDetail({ article: initialArticle }) {
     if (!initialArticle?.id) return
     let cancelled = false
     db.from('articles')
-      .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+      .select('*, outlets(name, country, logo_url), comments(count)')
       .eq('id', initialArticle.id)
       .single()
       // Guard against an out-of-order A response landing after we've moved to B.
@@ -284,7 +284,7 @@ export async function getStaticProps({ params }) {
   const pfx = shortMatch[1]
   const { data: article } = await supabase
     .from('articles')
-    .select('*, outlets(name, country, bias_direction, logo_url, accuracy_score), comments(count)')
+    .select('*, outlets(name, country, logo_url), comments(count)')
     .gte('id', `${pfx}-0000-0000-0000-000000000000`)
     .lte('id', `${pfx}-ffff-ffff-ffff-ffffffffffff`)
     .single()

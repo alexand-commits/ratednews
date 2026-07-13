@@ -33,7 +33,7 @@ async function run() {
   // Find articles with a community_score set (manually seeded data)
   const { data: testArticles, error } = await supabase
     .from('articles')
-    .select('id, title, outlet_id, community_score, accuracy_score, outlets(name)')
+    .select('id, title, outlet_id, community_score, outlets(name)')
     .not('community_score', 'is', null)
     .order('community_score', { ascending: false })
 
@@ -46,7 +46,7 @@ async function run() {
 
   console.log(`\n🔍  Found ${testArticles.length} articles with community scores:\n`)
   for (const a of testArticles) {
-    console.log(`   [${a.id.slice(0, 8)}…]  community=${a.community_score}  accuracy=${a.accuracy_score ?? 'null'}`)
+    console.log(`   [${a.id.slice(0, 8)}…]  community=${a.community_score}`)
     console.log(`   └─ "${(a.title || '').slice(0, 70)}"`)
     console.log(`      outlet: ${a.outlets?.name || 'unknown'}\n`)
   }

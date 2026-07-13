@@ -229,7 +229,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
       // Fast path: use pre-computed peer IDs — same source as the feed card count
       const peerIds = article.cluster_peers.map(p => p.id).slice(0, 20)
       db.from('articles')
-        .select('*, outlets(name, bias_direction, logo_url)')
+        .select('*, outlets(name, logo_url)')
         .in('id', peerIds)
         .order('published_at', { ascending: false })
         .then(({ data }) => {
@@ -262,7 +262,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     const orFilter = sigWords.map(k => `title.ilike.%${k}%`).join(',')
     const cutoff = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
     db.from('articles')
-      .select('*, outlets(name, bias_direction, logo_url)')
+      .select('*, outlets(name, logo_url)')
       .neq('outlet_id', article.outlet_id)
       .neq('id', article.id)
       .or(orFilter)
@@ -293,7 +293,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     if (allArticles.find(a => a.id === articleId)) { setFetchedArticle(null); return }
     setFetchedArticle(null)
     db.from('articles')
-      .select('*, outlets(name, country, bias_direction, logo_url), comments(count)')
+      .select('*, outlets(name, country, logo_url), comments(count)')
       .eq('id', articleId)
       .single()
       .then(({ data }) => { if (data) setFetchedArticle(data) })

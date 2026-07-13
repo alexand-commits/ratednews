@@ -873,9 +873,10 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
               </div>
             ) : (
               followedOutlets.map(outlet => {
-                const score = outlet.overall_score || 0
-                const articles30d = outlet.article_count_30d || 0
-                const delta = outlet.accuracy_delta_7d
+                // Community data only — the old AI overall_score/articles-30d/
+                // 7d-delta columns are purged.
+                const rated = (outlet.total_ratings || 0) > 0 && (outlet.community_score || 0) > 0
+                const commStars = rated ? (outlet.community_score / 20).toFixed(1) : null
                 return (
                   <div
                     key={outlet.id}
@@ -888,19 +889,20 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 3 }}>{outlet.name}</div>
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
                         <span style={{ fontSize: 11, color: 'var(--text3)' }}>{outlet.country || 'Global'}</span>
-                        {articles30d > 0 && (
-                          <span style={{ fontSize: 11, color: 'var(--text3)' }}>· {articles30d} articles/30d</span>
-                        )}
-                        {delta !== null && delta !== undefined && (
-                          <span style={{ fontSize: 11, fontWeight: 600, color: delta > 0 ? 'var(--green)' : delta < 0 ? 'var(--red)' : 'var(--text3)' }}>
-                            {delta > 0 ? `↑ +${delta}` : delta < 0 ? `↓ ${delta}` : '→'}
-                          </span>
+                        {rated && (
+                          <span style={{ fontSize: 11, color: 'var(--text3)' }}>· {outlet.total_ratings} reader {outlet.total_ratings === 1 ? 'rating' : 'ratings'}</span>
                         )}
                       </div>
                     </div>
                     <div style={{ textAlign: 'center', flexShrink: 0 }}>
-                      <div style={{ fontSize: 20, fontWeight: 700, color: score >= 70 ? 'var(--green-dark)' : score >= 50 ? 'var(--amber)' : 'var(--red)' }}>{score}</div>
-                      <div style={{ fontSize: 10, color: 'var(--text3)' }}>Trust</div>
+                      {rated ? (
+                        <>
+                          <div style={{ fontSize: 20, fontWeight: 700, color: Number(commStars) >= 3.5 ? 'var(--green-dark)' : Number(commStars) >= 2.5 ? 'var(--amber)' : 'var(--red)' }}>{commStars}</div>
+                          <div style={{ fontSize: 10, color: 'var(--text3)' }}>Community /5</div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: 10, color: 'var(--text3)' }}>Not yet rated</div>
+                      )}
                     </div>
                     <button
                       onClick={e => { e.stopPropagation(); toggleFollow(outlet.id) }}

@@ -10,8 +10,8 @@ export async function getStaticProps() {
     const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY)
     const { data } = await supabase
       .from('outlets')
-      .select('id, name, country, overall_score, logo_url, type, community_score, total_ratings, article_count_30d, parent_outlet_id')
-      .order('overall_score', { ascending: false })
+      .select('id, name, country, logo_url, type, community_score, total_ratings, parent_outlet_id')
+      .order('community_score', { ascending: false, nullsFirst: false })
     return { props: { initialOutlets: data || [] }, revalidate: 3600 }
   } catch {
     return { props: { initialOutlets: [] }, revalidate: 3600 }

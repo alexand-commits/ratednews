@@ -10,7 +10,7 @@
  * accurate count — without guessing from whatever happens to be loaded in memory.
  *
  * cluster_peers shape (stored on every article in a cluster):
- *   [{ id, outlet_id, outlets: { name, bias_direction, accuracy_score } }, ...]
+ *   [{ id, outlet_id, outlets: { name, logo_url } }, ...]
  *   — exactly the fields NewsCard needs for bias dots and article links.
  *
  * Algorithm:
