@@ -1,0 +1,24 @@
+# Social autopilot — triggers /api/social-auto on a schedule.
+# The endpoint generates a trending batch, applies the safety gates, and either
+# publishes (channels set to 'live' in Vercel env) or records a dry-run of what
+# it WOULD publish. All decisions are visible on the /social desk.
+#
+# Requires repo secret SOCIAL_AUTO_SECRET matching the Vercel env var.
+name: Social autopilot
+
+on:
+  schedule:
+    # Every 4 hours, offset to sit ~10 min after an ingest run so the freshest
+    # articles are already clustered.
+    - cron: '10 */4 * * *'
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger autopilot run
+        run: |
+          curl -fsS -m 240 -X POST https://www.ratednews.com/api/social-auto \
+            -H "x-auto-secret: ${{ secrets.SOCIAL_AUTO_SECRET }}" \
+            | head -c 2000

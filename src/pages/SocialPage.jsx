@@ -83,6 +83,40 @@ function PostButton({ platform, text, pollOptions, label, color }) {
   )
 }
 
+// Per-post autopilot verdict chips — shows exactly what the bot would do with
+// this post if a scheduled run picked it up.
+function AutoBadges({ post }) {
+  if (!post.auto) return null
+  const chip = (label, verdict) => {
+    const ok = verdict === 'ok'
+    return (
+      <span
+        title={ok ? `${label}: autopilot may publish this` : `${label}: ${verdict}`}
+        style={{
+          fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+          background: ok ? 'var(--green-light)' : 'var(--bg)',
+          color: ok ? 'var(--green-dark)' : 'var(--text3)',
+          border: `0.5px solid ${ok ? 'transparent' : 'var(--border)'}`,
+        }}
+      >
+        {ok ? `🤖 ${label} auto ✓` : `🖐 ${label}: ${verdict}`}
+      </span>
+    )
+  }
+  return (
+    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center' }}>
+      {chip('X', post.auto.x)}
+      {chip('Bluesky', post.auto.bluesky)}
+      {post.meta && (
+        <span style={{ fontSize: 10, color: 'var(--text3)' }}>
+          {post.meta.outlets} outlets · first {post.meta.first}
+          {post.meta.breaking ? ' · ⚡ breaking' : ''}{post.meta.update ? ' · ↻ update' : ''}
+        </span>
+      )}
+    </div>
+  )
+}
+
 function PostCard({ post }) {
   const meta = TYPE_META[post.type] || { label: post.type || 'Post', emoji: '✳️', color: 'var(--text2)' }
 
@@ -158,6 +192,85 @@ function PostCard({ post }) {
 
       {post.why && (
         <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 10, fontStyle: 'italic' }}>Why: {post.why}</div>
+      )}
+
+      <AutoBadges post={post} />
+    </div>
+  )
+}
+
+// ── Autopilot panel — mode + recent scheduled runs ───────────────────────────
+function AutopilotPanel() {
+  const [state, setState] = useState(null) // {configured, mode, runs} | {error}
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      try {
+        const { data: { session } } = await db.auth.getSession()
+        const res = await fetch('/api/social-auto', {
+          headers: { Authorization: `Bearer ${session?.access_token}` },
+        })
+        const json = await res.json()
+        if (mounted) setState(res.ok ? json : { error: json.error || 'Failed to load' })
+      } catch (e) {
+        if (mounted) setState({ error: e.message })
+      }
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
+
+  const modeChip = (label, mode) => (
+    <span style={{
+      fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+      background: mode === 'live' ? 'var(--green-light)' : 'var(--bg)',
+      color: mode === 'live' ? 'var(--green-dark)' : 'var(--text3)',
+      border: '0.5px solid var(--border)',
+    }}>
+      {label}: {mode === 'live' ? 'LIVE' : 'dry-run'}
+    </span>
+  )
+
+  return (
+    <div className="widget">
+      <div className="widget-title">🤖 Autopilot</div>
+      {!state ? (
+        <div style={{ fontSize: 12, color: 'var(--text3)' }}>Loading…</div>
+      ) : state.error ? (
+        <div style={{ fontSize: 12, color: 'var(--text3)' }}>{state.error}</div>
+      ) : !state.configured ? (
+        <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6 }}>
+          Not configured yet — add <code>SOCIAL_AUTO_SECRET</code> in Vercel and as a GitHub secret to enable scheduled runs.
+        </div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
+            {modeChip('X', state.mode.x)}
+            {modeChip('Bluesky', state.mode.bluesky)}
+            <span style={{ fontSize: 10, color: 'var(--text3)', alignSelf: 'center' }}>every 4h</span>
+          </div>
+          {state.runs.length === 0 ? (
+            <div style={{ fontSize: 12, color: 'var(--text3)' }}>No runs in the last 24h yet.</div>
+          ) : state.runs.slice(0, 5).map((r, i) => (
+            <div key={i} style={{ borderTop: i ? '0.5px solid var(--border)' : 'none', padding: '8px 0', fontSize: 12 }}>
+              <div style={{ color: 'var(--text3)', fontSize: 10, marginBottom: 3 }}>{timeAgo(r.at)}{r.error ? ' · ⚠️ run failed' : ''}</div>
+              {(r.posted || []).map((p, j) => (
+                <div key={'p' + j} style={{ color: 'var(--green-dark)' }}>
+                  ✅ posted to {p.platform}: <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>{p.story}</a>
+                </div>
+              ))}
+              {(r.wouldPost || []).map((p, j) => (
+                <div key={'w' + j} style={{ color: 'var(--text2)' }} title={p.text}>
+                  🔍 would post to {p.platform}: {p.story}
+                </div>
+              ))}
+              {!(r.posted || []).length && !(r.wouldPost || []).length && !r.error && (
+                <div style={{ color: 'var(--text3)' }}>🚫 nothing eligible ({r.note || 'all posts gated'})</div>
+              )}
+            </div>
+          ))}
+        </>
       )}
     </div>
   )
@@ -330,7 +443,7 @@ export default function SocialPage({ user, goBack }) {
             🚀 Social content desk
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>
-            Generate posts from what's trending right now, or compose from your own headlines. Review, tweak, post — nothing goes out automatically.
+            Generate posts from what's trending right now, or compose from your own headlines. Autopilot publishes only gate-passing posts on schedule — everything grave, breaking-thin, polls and contrasts stay yours.
           </p>
         </div>
 
@@ -342,6 +455,7 @@ export default function SocialPage({ user, goBack }) {
 
         {/* Rail — the previous run, so regenerating never destroys good copy */}
         <aside className="sidebar desktop-only">
+          <AutopilotPanel />
           {railRun?.posts?.length ? (
             <div className="widget">
               <div className="widget-title">

@@ -10,6 +10,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
 import { articleSlug } from '../../src/utils/helpers'
+import { evaluateAutoGates } from '../../src/server/social-gates'
 
 const OWNER = 'alexandchow@gmail.com'
 const MODEL = 'claude-sonnet-4-6'
@@ -76,7 +77,7 @@ BLUESKY VARIANT — every non-poll post also gets a short version
 
 Output STRICT JSON only — no markdown, no prose around it:
 {"posts":[
-  {"type":"news|coverage_contrast|poll|media_literacy","platform":"x","story":"<2-4 word story label>","text":"<ready-to-post copy>","short":"<Bluesky version ≤300 chars — omit for polls>","poll_options":["A","B"]?,"why":"<one line>"}
+  {"type":"news|coverage_contrast|poll|media_literacy","platform":"x","story":"<2-4 word story label>","story_index":<the STORY number this post covers, when stories are numbered in the input>,"text":"<ready-to-post copy>","short":"<Bluesky version ≤300 chars — omit for polls>","poll_options":["A","B"]?,"why":"<one line>"}
 ]}`
 
 // ── Trending story selection — same cross-outlet signal as the feed ──────────
@@ -243,9 +244,58 @@ Use "coverage_contrast" INSTEAD of "news" for at most one story, and only if two
 
 Order your posts array by story order — STORY 1 first. Stories are ranked by coverage acceleration, so the first post is the one to publish RIGHT NOW while it's still moving; late-batch stories are context plays. The poll goes last.
 
-Label every post's "story" field. Vary structure across the batch — no shared template, no shared closers.
+Label every post's "story" field and set "story_index" to the STORY number it covers (the poll too). Vary structure across the batch — no shared template, no shared closers.
 
 Return the JSON only.`
+}
+
+// ── Shared generation core — used by the desk handler AND /api/social-auto ───
+// Returns { posts, stories, note? }. Posts are annotated with:
+//   meta — {outlets, breaking, update, category, title, first, newest} from the
+//          story they cover (via story_index)
+//   auto — per-platform gate verdicts ('ok' or blocking reason), so the desk
+//          can show exactly what autopilot would and wouldn't publish.
+export async function generateTrendingBatch(steer = '') {
+  const stories = await trendingStories()
+  if (!stories.length) return { posts: [], stories: [], note: 'No strongly cross-covered stories right now.' }
+
+  const steerBlock = steer
+    ? `\n\nThe owner wants this specific angle/tone — honour it (while keeping the one hard neutrality line intact): "${steer}"`
+    : ''
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  const msg = await client.messages.create({
+    model: MODEL,
+    max_tokens: 5000,
+    system: SYSTEM,
+    messages: [{ role: 'user', content: trendingPrompt(stories) + steerBlock }],
+  })
+  const text = msg.content.filter(b => b.type === 'text').map(b => b.text).join('')
+  const start = text.indexOf('{'), end = text.lastIndexOf('}')
+  if (start === -1 || end === -1) throw new Error('Bad model output')
+  const parsed = JSON.parse(text.slice(start, end + 1))
+  if (!Array.isArray(parsed.posts) || !parsed.posts.length) throw new Error('No posts returned')
+
+  for (const p of parsed.posts) {
+    // Deterministic repair: models miscount characters. If a Bluesky short
+    // busts the hard 300 limit and ends with a link, drop the link.
+    if (typeof p.short === 'string' && p.short.length > 300) {
+      const stripped = p.short.replace(/\s*https?:\/\/\S+\s*$/, '').trim()
+      if (stripped.length <= 300) p.short = stripped
+    }
+    // Attach story metadata + autopilot gate verdicts
+    const s = Number.isInteger(p.story_index) ? stories[p.story_index - 1] : null
+    p.meta = s ? {
+      outlets: s.outlets.size,
+      breaking: !!s.breaking,
+      update: s.update || null,
+      category: s.category || null,
+      title: s.headlines[0]?.title || '',
+      first: ago(s.oldest),
+      newest: ago(s.newest),
+    } : null
+    p.auto = evaluateAutoGates(p, p.meta)
+  }
+  return { posts: parsed.posts, stories }
 }
 
 export default async function handler(req, res) {
@@ -273,15 +323,13 @@ export default async function handler(req, res) {
     : ''
 
   try {
-    let userPrompt
     if (isTrending) {
-      const stories = await trendingStories()
-      if (!stories.length) return res.status(200).json({ posts: [], note: 'No strongly cross-covered stories in the last 36h.' })
-      userPrompt = trendingPrompt(stories) + steerBlock
-    } else {
-      userPrompt = `Here is the headline(s) to work from:\n\n${headlines}${steerBlock}\n\nReturn the JSON only.`
+      const batch = await generateTrendingBatch(steer)
+      return res.status(200).json({ posts: batch.posts, note: batch.note })
     }
 
+    // Headline-compose mode — no story metadata, gates run on content alone
+    const userPrompt = `Here is the headline(s) to work from:\n\n${headlines}${steerBlock}\n\nReturn the JSON only.`
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const msg = await client.messages.create({
       model: MODEL,
@@ -295,15 +343,13 @@ export default async function handler(req, res) {
     const parsed = JSON.parse(text.slice(start, end + 1))
     if (!Array.isArray(parsed.posts) || !parsed.posts.length) throw new Error('No posts returned')
 
-    // Deterministic repair: models miscount characters. If a Bluesky short
-    // busts the hard 300 limit and ends with a link, drop the link — the long
-    // X version carries it, and a linkless post that sends beats one that
-    // gets rejected by the platform.
     for (const p of parsed.posts) {
       if (typeof p.short === 'string' && p.short.length > 300) {
         const stripped = p.short.replace(/\s*https?:\/\/\S+\s*$/, '').trim()
         if (stripped.length <= 300) p.short = stripped
       }
+      p.meta = null
+      p.auto = evaluateAutoGates(p, null)
     }
 
     return res.status(200).json({ posts: parsed.posts })

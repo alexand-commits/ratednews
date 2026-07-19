@@ -40,7 +40,7 @@ function oauthHeader(method, url) {
     .map(k => `${pctEncode(k)}="${pctEncode(params[k])}"`).join(', ')
 }
 
-async function postToX(text, pollOptions) {
+export async function postToX(text, pollOptions) {
   const url = 'https://api.x.com/2/tweets'
   const body = { text }
   if (pollOptions?.length >= 2) {
@@ -78,7 +78,7 @@ function linkFacets(text) {
   return facets
 }
 
-async function postToBluesky(text) {
+export async function postToBluesky(text) {
   const pds = 'https://bsky.social'
   const sess = await fetch(`${pds}/xrpc/com.atproto.server.createSession`, {
     method: 'POST',
