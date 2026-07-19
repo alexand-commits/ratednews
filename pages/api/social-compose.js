@@ -44,7 +44,7 @@ BANNED CONSTRUCTIONS — tired templates, never use them
 - "X outlets, X angles" / "Five outlets, five headlines" or ANY headcount opener.
 - "Same story, different [anything]" openers.
 - Aphoristic sign-offs ("One summit. Very different rooms.").
-- NEVER state a number of outlets/angles/sources you counted yourself — models miscount. The ONLY source count you may mention is the exact figure provided in the input, used verbatim.
+- NEVER mention outlet/source counts in post text — not counted, not quoted from the input. The counts you see are OUR ingest sample, not real-world coverage; "3 outlets covering this" undersells a story the whole press is on. Counts are internal selection metadata only.
 
 CLARITY — the reader is a stranger scrolling fast with ZERO context
 - Name the story explicitly — what happened, who, where — in the first line.
@@ -231,7 +231,7 @@ function trendingPrompt(stories) {
     const lines = c.headlines.slice(0, 6).map(h => `  - ${h.outlet}: "${h.title}"${h.summary ? `\n    detail: ${h.summary}` : ''}`).join('\n')
     const timing = `first covered ${ago(c.oldest)} · latest ${ago(c.newest)}`
     const update = c.update ? ` ↻ UPDATE (this story already ran in a batch ${c.update})` : ''
-    return `STORY ${i + 1}${c.category ? ` (${c.category})` : ''}${c.breaking ? ' ⚡ BREAKING' : ''}${update} — covered by exactly ${c.outlets.size} outlets (the ONLY source count you may quote) — ${timing}:\n${lines}\n  Coverage page (Bluesky "short" variant ONLY — never in the X text): ${c.storyUrl}`
+    return `STORY ${i + 1}${c.category ? ` (${c.category})` : ''}${c.breaking ? ' ⚡ BREAKING' : ''}${update} — ${c.outlets.size} outlets in our sample (INTERNAL signal — never state outlet counts in posts) — ${timing}:\n${lines}\n  Coverage page (Bluesky "short" variant ONLY — never in the X text): ${c.storyUrl}`
   }).join('\n\n')
   const postCount = stories.length + 1
   return `These are the ${stories.length} hottest stories on RatedNews RIGHT NOW, ranked by how fast cross-outlet coverage is accelerating — freshest heat first, not yesterday's totals:
