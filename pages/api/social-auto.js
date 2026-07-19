@@ -21,12 +21,7 @@ import { AUTO_RATE_LIMITS } from '../../src/server/social-gates'
 
 // Story-level approximation of the post gates, used by the cheap pre-check
 // (before any Claude spend). Post-level gates still run after generation.
-const GRAVE_CATEGORIES = new Set(['Conflict', 'Crime'])
-const GRAVE_WORDS = /\b(dead|death|dies|died|dying|kill(?:ed|ing|s)?|murder|shooting|shot|stabb|war|missile|air ?strike|attack|bomb|blast|explosion|crash|disaster|earthquake|flood|wildfire|famine|victim|hostage|terror|massacre|casualt|suicide|overdose|abuse|rape|trafficking)/i
-
 function storyAutoEligible(s, platform) {
-  if (GRAVE_CATEGORIES.has(s.category)) return false
-  if (s.headlines.some(h => GRAVE_WORDS.test(h.title || ''))) return false
   if (s.liveEvent) return false          // in-game state goes stale in transit
   if (s.coreCoverage === false) return false // regional-only — owner's call
   if (platform === 'x' && s.breaking && s.outlets.size < 4) return false
@@ -169,7 +164,7 @@ export default async function handler(req, res) {
       bluesky: !rateCheck('bluesky', runs),
     }
     const coolingIds = recentClusterIds(runs)
-    const candidates = (await trendingStories({ record: false }))
+    const candidates = (await trendingStories({ record: false, lean: true }))
       .filter(s => !coolingIds.has(s.clusterId))
     const trigger =
       (rateOpen.x && candidates.some(s => storyAutoEligible(s, 'x'))) ||
