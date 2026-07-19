@@ -25,6 +25,64 @@ function CopyButton({ text, label = 'Copy' }) {
   )
 }
 
+// Two-tap publish: first tap arms ("Sure?"), second posts. Disarms after 4s.
+// Nothing ships on a single stray click.
+function PostButton({ platform, text, pollOptions, label, color }) {
+  const [state, setState] = useState('idle') // idle | armed | busy | done | error
+  const [url, setUrl]     = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (state !== 'armed') return
+    const t = setTimeout(() => setState('idle'), 4000)
+    return () => clearTimeout(t)
+  }, [state])
+
+  async function fire() {
+    setState('busy'); setError('')
+    try {
+      const { data: { session } } = await db.auth.getSession()
+      const res = await fetch('/api/social-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ platform, text, pollOptions }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Post failed')
+      setUrl(json.url); setState('done')
+    } catch (e) {
+      setError(e.message); setState('error')
+    }
+  }
+
+  if (state === 'done') {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer"
+        style={{ fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 99, background: 'var(--green)', color: '#fff', textDecoration: 'none', flexShrink: 0 }}>
+        ✓ Posted — view
+      </a>
+    )
+  }
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+      {state === 'error' && <span style={{ fontSize: 11, color: 'var(--red)', maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={error}>{error}</span>}
+      <button
+        onClick={() => (state === 'armed' ? fire() : setState('armed'))}
+        disabled={state === 'busy'}
+        style={{
+          fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 99,
+          border: `0.5px solid ${state === 'armed' ? color : 'var(--border)'}`,
+          background: state === 'armed' ? color : 'var(--surface)',
+          color: state === 'armed' ? '#fff' : color,
+          cursor: state === 'busy' ? 'default' : 'pointer', flexShrink: 0,
+        }}
+      >
+        {state === 'busy' ? 'Posting…' : state === 'armed' ? 'Sure? Tap to post' : label}
+      </button>
+    </span>
+  )
+}
+
 function PostCard({ post }) {
   const meta = TYPE_META[post.type] || { label: post.type || 'Post', emoji: '✳️', color: 'var(--text2)' }
 
@@ -41,7 +99,10 @@ function PostCard({ post }) {
           {post.story ? <span style={{ color: 'var(--text2)', fontWeight: 600 }}> · {post.story}</span> : null}
           <span style={{ color: 'var(--text3)', fontWeight: 500 }}> · {post.type === 'poll' ? 'X only (no Bluesky polls)' : 'X'}</span>
         </span>
-        <CopyButton text={copyText} />
+        <span style={{ display: 'inline-flex', gap: 6 }}>
+          <CopyButton text={copyText} />
+          <PostButton platform="x" text={post.text} pollOptions={post.poll_options} label="Post to X" color="var(--coral)" />
+        </span>
       </div>
 
       <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{post.text}</div>
@@ -61,7 +122,12 @@ function PostCard({ post }) {
         <div style={{ marginTop: 12, paddingTop: 12, borderTop: '0.5px solid var(--border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#2E86EA' }}>🦋 Bluesky</span>
-            <CopyButton text={post.short} />
+            <span style={{ display: 'inline-flex', gap: 6 }}>
+              <CopyButton text={post.short} />
+              {post.short.length <= 300 && (
+                <PostButton platform="bluesky" text={post.short} label="Post to Bluesky" color="#2E86EA" />
+              )}
+            </span>
           </div>
           <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{post.short}</div>
           {(() => {
