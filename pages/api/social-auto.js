@@ -267,6 +267,20 @@ export default async function handler(req, res) {
       decisions,
       posted,
       wouldPost,
+      // Full drafts of EVERY generated post — gated ones included. The desk
+      // shows manual-call drafts with their reasons; a gate means "the owner
+      // decides", not "the owner never sees it". Generation was paid for.
+      posts: (batch.posts || []).map((p, i) => ({
+        story: p.story,
+        type: p.type,
+        text: p.text,
+        short: p.short || null,
+        poll_options: p.poll_options || null,
+        why: p.why || null,
+        x: decisions[i]?.x,
+        bluesky: decisions[i]?.bluesky,
+        meta: decisions[i]?.meta || null,
+      })),
     }
     await svc.from('social_drafts').insert({ pack })
     await beatHeart(svc, posted.length ? 'posted' : wouldPost.length ? 'drafted to queue' : 'generated — all gated')
