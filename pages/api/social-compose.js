@@ -101,28 +101,32 @@ async function trendingStories() {
   for (const a of data || []) {
     const name = a.outlets?.name
     if (!name) continue
-    if (!clusters.has(a.cluster_id)) clusters.set(a.cluster_id, { headlines: [], outlets: new Set(), category: a.category, newest: a.published_at, oldest: a.published_at, recentOutlets: 0, storyUrl: `${URL}/story/${articleSlug(a.title, a.id)}` })
+    if (!clusters.has(a.cluster_id)) clusters.set(a.cluster_id, { headlines: [], outlets: new Set(), category: a.category, newest: a.published_at, oldest: a.published_at, storyUrl: `${URL}/story/${articleSlug(a.title, a.id)}` })
     const c = clusters.get(a.cluster_id)
     if (a.published_at < c.oldest) c.oldest = a.published_at
     if (!c.outlets.has(name)) {
       c.outlets.add(name)
       c.headlines.push({ outlet: name, title: a.title, summary: (a.summary || '').slice(0, 220) })
-      // Data is newest-first, so this outlet's first appearance is its newest take.
-      if (now - new Date(a.published_at) < 3 * 60 * 60 * 1000) c.recentOutlets++
     }
   }
 
-  // Heat scoring — velocity over volume. Outlets that covered the story in the
-  // last 3h count 6x a stale outlet, and the whole score decays with the age of
-  // the NEWEST article (same decay shape as the site's feed trend sort). A
-  // 4-outlets-in-an-hour story now beats a 12-outlet day-old one.
+  // Heat = coverage VELOCITY: outlets per hour since first coverage, decayed
+  // by the age of the newest article. A 6-outlet story 40 minutes old (~9/hr,
+  // accelerating NOW) outranks an 18-outlet story 5 hours old (~3.6/hr,
+  // saturated — the timeline has moved on). The floor on firstAgeH stops
+  // 10-minute-old stories dividing by ~zero and swamping everything.
   for (const c of clusters.values()) {
     const newestAgeH = Math.max(0, (now - new Date(c.newest)) / 3600000)
+    const firstAgeH  = Math.max(0.75, (now - new Date(c.oldest)) / 3600000)
     const firstAgeMin = (now - new Date(c.oldest)) / 60000
-    // Breaking: 2+ outlets and the story's FIRST coverage is under 60 min old —
-    // early cross-coverage is signal enough; don't wait for the third outlet.
-    c.breaking = c.outlets.size >= 2 && firstAgeMin <= 60
-    c.heat = (c.recentOutlets * 12 + c.outlets.size * 2 + 1) / Math.pow(newestAgeH + 2, 1.8)
+    const spreadMin   = (new Date(c.newest) - new Date(c.oldest)) / 60000
+    // Breaking: 2+ outlets, first coverage under 60 min old, AND genuine
+    // independent pickup. Two outlets publishing the same minute is a
+    // syndication pair (SMH/The Age etc), not breaking — real cross-outlet
+    // pickup takes minutes to spread. 3+ outlets is inherently independent.
+    const independent = c.outlets.size >= 3 || spreadMin >= 10
+    c.breaking = independent && c.outlets.size >= 2 && firstAgeMin <= 60
+    c.heat = (c.outlets.size / firstAgeH) * 10 / Math.pow(newestAgeH + 1, 1.2)
   }
 
   // One slot per saga: big running stories fragment into several clusters
@@ -184,6 +188,8 @@ Draft ${postCount} posts:
 - Stories marked ⚡ BREAKING are minutes old and still developing: frame them accordingly — present tense, "early reports" hedging where facts may still move, NO definitive casualty figures or outcomes unless every headline agrees. Being early is the point; being wrong isn't.
 - One "poll" post for whichever story has the most genuinely split coverage: ONE line, instantly voteable, no recap, no link (poll_options = two outlet names from that story).
 Use "coverage_contrast" INSTEAD of "news" for at most one story, and only if two of its verbatim headlines clash so hard a stranger would stop scrolling. Never force it.
+
+Order your posts array by story order — STORY 1 first. Stories are ranked by coverage acceleration, so the first post is the one to publish RIGHT NOW while it's still moving; late-batch stories are context plays. The poll goes last.
 
 Label every post's "story" field. Vary structure across the batch — no shared template, no shared closers.
 
