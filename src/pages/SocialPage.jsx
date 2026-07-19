@@ -83,36 +83,15 @@ function PostButton({ platform, text, pollOptions, label, color }) {
   )
 }
 
-// Per-post autopilot verdict chips — shows exactly what the bot would do with
-// this post if a scheduled run picked it up.
-function AutoBadges({ post }) {
-  if (!post.auto) return null
-  const chip = (label, verdict) => {
-    const ok = verdict === 'ok'
-    return (
-      <span
-        title={ok ? `${label}: autopilot may publish this` : `${label}: ${verdict}`}
-        style={{
-          fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-          background: ok ? 'var(--green-light)' : 'var(--bg)',
-          color: ok ? 'var(--green-dark)' : 'var(--text3)',
-          border: `0.5px solid ${ok ? 'transparent' : 'var(--border)'}`,
-        }}
-      >
-        {ok ? `🤖 ${label} auto ✓` : `🖐 ${label}: ${verdict}`}
-      </span>
-    )
-  }
+// Slim editorial-context line — coverage size + timing + state flags.
+function MetaLine({ post }) {
+  if (!post.meta) return null
   return (
-    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8, alignItems: 'center' }}>
-      {chip('X', post.auto.x)}
-      {chip('Bluesky', post.auto.bluesky)}
-      {post.meta && (
-        <span style={{ fontSize: 10, color: 'var(--text3)' }}>
-          {post.meta.outlets} outlets · first {post.meta.first}
-          {post.meta.breaking ? ' · ⚡ breaking' : ''}{post.meta.update ? ' · ↻ update' : ''}
-        </span>
-      )}
+    <div style={{ fontSize: 10, color: 'var(--text3)', marginTop: 8 }}>
+      {post.meta.outlets} outlets · first {post.meta.first}
+      {post.meta.breaking ? ' · ⚡ breaking' : ''}
+      {post.meta.liveEvent ? ' · 🔴 live event' : ''}
+      {post.meta.update ? ' · ↻ update' : ''}
     </div>
   )
 }
@@ -194,7 +173,7 @@ function PostCard({ post }) {
         <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 10, fontStyle: 'italic' }}>Why: {post.why}</div>
       )}
 
-      <AutoBadges post={post} />
+      <MetaLine post={post} />
     </div>
   )
 }
@@ -313,90 +292,6 @@ function AutopilotFeed() {
           })}
         </div>
       </details>
-    </div>
-  )
-}
-
-// ── Autopilot panel — mode + recent scheduled runs ───────────────────────────
-function AutopilotPanel() {
-  const [state, setState] = useState(null) // {configured, mode, runs} | {error}
-
-  useEffect(() => {
-    let mounted = true
-    async function load() {
-      try {
-        const { data: { session } } = await db.auth.getSession()
-        const res = await fetch('/api/social-auto', {
-          headers: { Authorization: `Bearer ${session?.access_token}` },
-        })
-        const json = await res.json()
-        if (mounted) setState(res.ok ? json : { error: json.error || 'Failed to load' })
-      } catch (e) {
-        if (mounted) setState({ error: e.message })
-      }
-    }
-    load()
-    return () => { mounted = false }
-  }, [])
-
-  const modeChip = (label, mode) => (
-    <span style={{
-      fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
-      background: mode === 'live' ? 'var(--green-light)' : 'var(--bg)',
-      color: mode === 'live' ? 'var(--green-dark)' : 'var(--text3)',
-      border: '0.5px solid var(--border)',
-    }}>
-      {label}: {mode === 'live' ? 'LIVE' : 'dry-run'}
-    </span>
-  )
-
-  return (
-    <div className="widget">
-      <div className="widget-title">🤖 Autopilot</div>
-      {!state ? (
-        <div style={{ fontSize: 12, color: 'var(--text3)' }}>Loading…</div>
-      ) : state.error ? (
-        <div style={{ fontSize: 12, color: 'var(--text3)' }}>{state.error}</div>
-      ) : !state.configured ? (
-        <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6 }}>
-          Not configured yet — add <code>SOCIAL_AUTO_SECRET</code> in Vercel and as a GitHub secret to enable scheduled runs.
-        </div>
-      ) : (
-        <>
-          <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
-            {modeChip('X', state.mode.x)}
-            {modeChip('Bluesky', state.mode.bluesky)}
-            <span style={{ fontSize: 10, color: 'var(--text3)', alignSelf: 'center' }}>checks every 15 min</span>
-          </div>
-          {state.runs.length === 0 ? (
-            <div style={{ fontSize: 12, color: 'var(--text3)' }}>No runs in the last 24h yet.</div>
-          ) : state.runs.slice(0, 5).map((r, i) => (
-            <div key={i} style={{ borderTop: i ? '0.5px solid var(--border)' : 'none', padding: '8px 0', fontSize: 12 }}>
-              <div style={{ color: 'var(--text3)', fontSize: 10, marginBottom: 3 }}>{timeAgo(r.at)}{r.error ? ' · ⚠️ run failed' : ''}</div>
-              {(() => {
-                const groups = new Map()
-                for (const p of [...(r.posted || []).map(x => ({ ...x, live: true })), ...(r.wouldPost || [])]) {
-                  if (!groups.has(p.story)) groups.set(p.story, { platforms: [], live: false, url: null })
-                  const g = groups.get(p.story)
-                  g.platforms.push(p.platform === 'x' ? 'X' : 'Bluesky')
-                  if (p.live) g.live = true
-                  if (p.url) g.url = p.url
-                }
-                return [...groups.entries()].map(([story, g], j) => (
-                  <div key={j} style={{ color: g.live ? 'var(--green-dark)' : 'var(--text2)' }}>
-                    {g.live ? '✅ posted' : '🔍 would post'} ({g.platforms.join(' + ')}): {g.url
-                      ? <a href={g.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>{story}</a>
-                      : story}
-                  </div>
-                ))
-              })()}
-              {!(r.posted || []).length && !(r.wouldPost || []).length && !r.error && (
-                <div style={{ color: 'var(--text3)' }}>🚫 nothing eligible ({r.note || 'all posts gated'})</div>
-              )}
-            </div>
-          ))}
-        </>
-      )}
     </div>
   )
 }
@@ -560,7 +455,7 @@ export default function SocialPage({ user, goBack }) {
 
   return (
     <div className="page-content">
-      <div className="container" style={{ maxWidth: 1240 }}>
+      <div className="container" style={{ maxWidth: 860 }}>
         <button className="back-btn" onClick={goBack}>← Back</button>
 
         <div style={{ marginBottom: 20 }}>
@@ -572,33 +467,22 @@ export default function SocialPage({ user, goBack }) {
           </p>
         </div>
 
-        <div className="grid">
-        <div>
         <AutopilotFeed />
         <TrendingGenerator onRun={recordRun} />
-        <Composer onRun={recordRun} />
-        </div>
 
-        {/* Rail — the previous run, so regenerating never destroys good copy */}
-        <aside className="sidebar desktop-only">
-          <AutopilotPanel />
-          {railRun?.posts?.length ? (
-            <div className="widget">
-              <div className="widget-title">
-                Previous run · {railRun.kind === 'trending' ? 'trending' : 'composer'} · {timeAgo(new Date(railRun.at).toISOString())}
-              </div>
+        {/* History — the previous batch, so regenerating never destroys good copy */}
+        {railRun?.posts?.length > 0 && (
+          <details style={{ marginBottom: 24 }}>
+            <summary style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)', cursor: 'pointer', padding: '4px 0' }}>
+              Previous run · {railRun.kind === 'trending' ? 'trending' : 'composer'} · {timeAgo(new Date(railRun.at).toISOString())}
+            </summary>
+            <div style={{ paddingTop: 12 }}>
               {railRun.posts.map((post, i) => <PostCard key={i} post={post} />)}
             </div>
-          ) : (
-            <div className="widget">
-              <div className="widget-title">Previous run</div>
-              <div style={{ fontSize: 12, color: 'var(--text3)', lineHeight: 1.6 }}>
-                Your last batch will appear here when you generate a new one — regenerating never loses the previous copy.
-              </div>
-            </div>
-          )}
-        </aside>
-        </div>
+          </details>
+        )}
+
+        <Composer onRun={recordRun} />
       </div>
     </div>
   )
