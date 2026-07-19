@@ -222,11 +222,16 @@ function AutopilotFeed() {
 
   return (
     <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>📥 Post queue</div>
         <span style={{ fontSize: 11, color: 'var(--text3)' }}>
-          scouted by autopilot every 15 min · you approve, it never posts itself
+          the scout drafts, you decide — it never posts itself
         </span>
+        {state.heartbeat && (
+          <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }} title={state.heartbeat.last_result || ''}>
+            ● last checked {timeAgo(state.heartbeat.at)} · {state.heartbeat.checks_today} check{state.heartbeat.checks_today === 1 ? '' : 's'} today
+          </span>
+        )}
       </div>
       <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>
         Gate-passing drafts land here within ~15 min of a story surging. Two taps to publish; skip anything that doesn't feel right — silence is free.
@@ -234,7 +239,8 @@ function AutopilotFeed() {
 
       {queue.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--text3)', padding: '8px 0' }}>
-          Queue is clear — nothing gate-passing in the last {QUEUE_MAX_AGE_H}h. The scout keeps watching.
+          Queue is clear — nothing has passed the gates in the last {QUEUE_MAX_AGE_H}h.
+          {state.heartbeat ? ` The scout last checked ${timeAgo(state.heartbeat.at)} and keeps watching.` : ' The scout keeps watching.'}
         </div>
       ) : queue.slice(0, 6).map((q, i) => (
         <div key={i} style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 10 }}>

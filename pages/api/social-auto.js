@@ -42,6 +42,30 @@ function svcClient() {
   return createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 }
 
+// One always-current heartbeat row — proves the scout is alive even when
+// every tick finds nothing. Updated in place, never accumulates.
+async function beatHeart(svc, lastResult) {
+  const today = new Date().toISOString().slice(0, 10)
+  const { data: existing } = await svc.from('social_drafts')
+    .select('id, pack').eq('pack->>kind', 'auto_heartbeat').limit(1).maybeSingle()
+  const prev = existing?.pack || {}
+  const pack = {
+    kind: 'auto_heartbeat',
+    at: new Date().toISOString(),
+    date: today,
+    checks_today: prev.date === today ? (prev.checks_today || 0) + 1 : 1,
+    last_result: lastResult,
+  }
+  if (existing) await svc.from('social_drafts').update({ pack }).eq('id', existing.id)
+  else await svc.from('social_drafts').insert({ pack })
+}
+
+async function getHeartbeat(svc) {
+  const { data } = await svc.from('social_drafts')
+    .select('pack').eq('pack->>kind', 'auto_heartbeat').limit(1).maybeSingle()
+  return data?.pack || null
+}
+
 async function recentRuns(svc, limit = 12) {
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
   const { data } = await svc.from('social_drafts')
@@ -108,9 +132,12 @@ export default async function handler(req, res) {
     if (authErr || !user || user.email !== OWNER) return res.status(403).json({ error: 'Forbidden' })
 
     const configured = !!process.env.SOCIAL_AUTO_SECRET
-    const runs = configured && process.env.SUPABASE_SERVICE_ROLE_KEY ? await recentRuns(svcClient()) : []
+    const svcG = configured && process.env.SUPABASE_SERVICE_ROLE_KEY ? svcClient() : null
+    const runs = svcG ? await recentRuns(svcG) : []
+    const heartbeat = svcG ? await getHeartbeat(svcG) : null
     return res.status(200).json({
       configured,
+      heartbeat,
       mode: {
         x:       process.env.AUTO_POST_X === 'live' ? 'live' : 'dry',
         bluesky: process.env.AUTO_POST_BLUESKY === 'live' ? 'live' : 'dry',
@@ -148,9 +175,11 @@ export default async function handler(req, res) {
       (rateOpen.x && candidates.some(s => storyAutoEligible(s, 'x'))) ||
       (rateOpen.bluesky && candidates.some(s => storyAutoEligible(s, 'bluesky')))
     if (!trigger) {
-      // Nothing new and postable — skip silently (no pack logged; the panel
-      // shows real runs, not 96 daily heartbeats).
-      return res.status(200).json({ ok: true, trigger: false, reason: !rateOpen.x && !rateOpen.bluesky ? 'rate limits' : 'no new eligible story' })
+      // Nothing new and postable — no run pack, but the heartbeat proves the
+      // scout checked.
+      const reason = !rateOpen.x && !rateOpen.bluesky ? 'rate limits' : 'no new eligible story'
+      await beatHeart(svc, `checked — ${reason}`)
+      return res.status(200).json({ ok: true, trigger: false, reason })
     }
 
     const batch = await generateTrendingBatch()
@@ -212,6 +241,7 @@ export default async function handler(req, res) {
       wouldPost,
     }
     await svc.from('social_drafts').insert({ pack })
+    await beatHeart(svc, posted.length ? 'posted' : wouldPost.length ? 'drafted to queue' : 'generated — all gated')
     // Prune old auto_run packs alongside the seen_stories prune cadence
     svc.from('social_drafts').delete().eq('pack->>kind', 'auto_run')
       .lt('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()).then(() => {})
