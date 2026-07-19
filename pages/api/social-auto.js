@@ -15,9 +15,24 @@
  *   AUTO_POST_BLUESKY   — 'live' publishes to Bluesky; anything else = dry-run
  */
 import { createClient } from '@supabase/supabase-js'
-import { generateTrendingBatch } from './social-compose'
+import { generateTrendingBatch, trendingStories } from './social-compose'
 import { postToX, postToBluesky } from './social-post'
 import { AUTO_RATE_LIMITS } from '../../src/server/social-gates'
+
+// Story-level approximation of the post gates, used by the cheap pre-check
+// (before any Claude spend). Post-level gates still run after generation.
+const GRAVE_CATEGORIES = new Set(['Conflict', 'Crime'])
+const GRAVE_WORDS = /\b(dead|death|dies|died|dying|kill(?:ed|ing|s)?|murder|shooting|shot|stabb|war|missile|air ?strike|attack|bomb|blast|explosion|crash|disaster|earthquake|flood|wildfire|famine|victim|hostage|terror|massacre|casualt|suicide|overdose|abuse|rape|trafficking)/i
+
+function storyAutoEligible(s, platform) {
+  if (GRAVE_CATEGORIES.has(s.category)) return false
+  if (s.headlines.some(h => GRAVE_WORDS.test(h.title || ''))) return false
+  if (platform === 'x' && s.breaking && s.outlets.size < 4) return false
+  // Only NEW material triggers a run: a story never served before, or a
+  // previously-served story that genuinely escalated (grown). A slow-drip
+  // update isn't worth waking the generator for.
+  return !s.update || s.grown === true
+}
 
 const OWNER = 'alexandchow@gmail.com'
 
@@ -87,6 +102,24 @@ export default async function handler(req, res) {
 
   try {
     const runs = await recentRuns(svc)
+
+    // ── Cheap pre-check (no Claude spend): is there anything NEW worth a run? ─
+    // The cron fires every 15 min for reaction speed; generation only happens
+    // when a rate-open platform has a gate-passing, not-yet-served story.
+    const rateOpen = {
+      x:       !rateCheck('x', runs),
+      bluesky: !rateCheck('bluesky', runs),
+    }
+    const candidates = await trendingStories({ record: false })
+    const trigger =
+      (rateOpen.x && candidates.some(s => storyAutoEligible(s, 'x'))) ||
+      (rateOpen.bluesky && candidates.some(s => storyAutoEligible(s, 'bluesky')))
+    if (!trigger) {
+      // Nothing new and postable — skip silently (no pack logged; the panel
+      // shows real runs, not 96 daily heartbeats).
+      return res.status(200).json({ ok: true, trigger: false, reason: !rateOpen.x && !rateOpen.bluesky ? 'rate limits' : 'no new eligible story' })
+    }
+
     const batch = await generateTrendingBatch()
 
     const decisions = (batch.posts || []).map(p => ({

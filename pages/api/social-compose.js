@@ -81,7 +81,9 @@ Output STRICT JSON only — no markdown, no prose around it:
 ]}`
 
 // ── Trending story selection — same cross-outlet signal as the feed ──────────
-async function trendingStories() {
+// opts.record: log selected stories to run memory (true for real generations;
+// the autopilot's cheap pre-check passes false so a look isn't a "serve").
+export async function trendingStories({ record = true } = {}) {
   const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY)
   // 12h window — yesterday's stories aren't candidates. The old 36h window let
   // day-old stories out-accumulate anything actually breaking.
@@ -187,6 +189,7 @@ async function trendingStories() {
       // (coverage jump) keeps full heat; a slow drip gets demoted so fresh
       // stories outrank re-runs.
       if (!grown) c.heat /= 3
+      c.grown = grown
       c.update = ago(prev.at)
     }
   }
@@ -207,7 +210,7 @@ async function trendingStories() {
   }
 
   // Log this run's stories so the next run knows what's been served.
-  if (svc && selected.length) {
+  if (record && svc && selected.length) {
     const stories = selected.map(c => ({ cluster_id: c.clusterId, tokens: [...c.tokens].slice(0, 40), outlets: c.outlets.size, newest: c.newest }))
     svc.from('social_drafts').insert({ pack: { kind: 'seen_stories', stories } }).then(() => {})
     // Opportunistic prune of memory packs older than 48h

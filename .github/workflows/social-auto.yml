@@ -8,9 +8,11 @@ name: Social autopilot
 
 on:
   schedule:
-    # Every 4 hours, offset to sit ~10 min after an ingest run so the freshest
-    # articles are already clustered.
-    - cron: '10 */4 * * *'
+    # Every 15 min, offset ~7 min past ingest's */15 so fresh articles are
+    # already clustered. Cheap pre-check means most ticks cost nothing —
+    # generation only fires when there's a new, gate-passing story AND a
+    # rate-open platform.
+    - cron: '7,22,37,52 * * * *'
   workflow_dispatch:
 
 jobs:

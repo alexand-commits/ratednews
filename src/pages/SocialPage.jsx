@@ -248,7 +248,7 @@ function AutopilotPanel() {
           <div style={{ display: 'flex', gap: 6, marginBottom: 10, flexWrap: 'wrap' }}>
             {modeChip('X', state.mode.x)}
             {modeChip('Bluesky', state.mode.bluesky)}
-            <span style={{ fontSize: 10, color: 'var(--text3)', alignSelf: 'center' }}>every 4h</span>
+            <span style={{ fontSize: 10, color: 'var(--text3)', alignSelf: 'center' }}>checks every 15 min</span>
           </div>
           {state.runs.length === 0 ? (
             <div style={{ fontSize: 12, color: 'var(--text3)' }}>No runs in the last 24h yet.</div>
