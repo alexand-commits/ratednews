@@ -199,8 +199,9 @@ function PostCard({ post }) {
   )
 }
 
-// ── Autopilot activity feed (main column) — the full picture per run: what it
-// posted / would post (complete text) and everything it refused, with reasons.
+// ── Post queue (main column) — autopilot scouts and drafts; the owner
+// approves with the same two-tap buttons as the generators. Nothing publishes
+// itself: the scout's job ends at the draft.
 function AutopilotFeed() {
   const [state, setState] = useState(null)
 
@@ -220,84 +221,98 @@ function AutopilotFeed() {
 
   if (!state || state.error || !state.configured || !state.runs?.length) return null
 
-  const platformChip = (platform) => (
-    <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 8px', borderRadius: 99, background: platform === 'x' ? 'rgba(216,90,48,0.1)' : 'rgba(46,134,234,0.1)', color: platform === 'x' ? 'var(--coral)' : '#2E86EA' }}>
-      {platform === 'x' ? 'X' : '🦋 Bluesky'}
-    </span>
-  )
+  // Build the queue: newest drafts first, one card per story, last 12h only.
+  const QUEUE_MAX_AGE_H = 12
+  const queue = []
+  const seenStories = new Set()
+  for (const r of state.runs) { // runs arrive newest-first
+    const entries = [...(r.posted || []).map(p => ({ ...p, live: true })), ...(r.wouldPost || [])]
+    const byStory = new Map()
+    for (const p of entries) {
+      if (!byStory.has(p.story)) byStory.set(p.story, { story: p.story, at: r.at, x: null, bluesky: null, url: null, live: false })
+      const g = byStory.get(p.story)
+      g[p.platform] = p.text
+      if (p.live) { g.live = true; g.url = p.url || g.url }
+    }
+    for (const [story, g] of byStory) {
+      if (seenStories.has(story)) continue
+      seenStories.add(story)
+      if ((Date.now() - new Date(g.at)) / 3600000 <= QUEUE_MAX_AGE_H) queue.push(g)
+    }
+  }
 
   return (
     <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 24 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>🤖 Autopilot activity</div>
+        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>📥 Post queue</div>
         <span style={{ fontSize: 11, color: 'var(--text3)' }}>
-          X {state.mode.x === 'live' ? 'LIVE' : 'dry-run'} · Bluesky {state.mode.bluesky === 'live' ? 'LIVE' : 'dry-run'} · checks every 15 min
+          scouted by autopilot every 15 min · you approve, it never posts itself
         </span>
       </div>
       <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>
-        Dry-run simulates live behaviour honestly — rate limits and the 6h story cool-down apply to "would posts" too, so this is what the bot would really do.
+        Gate-passing drafts land here within ~15 min of a story surging. Two taps to publish; skip anything that doesn't feel right — silence is free.
       </div>
 
-      {state.runs.slice(0, 6).map((r, i) => {
-        const gated = (r.decisions || []).filter(d =>
-          d.x !== 'ok' && !String(d.x).startsWith('WOULD POST') && d.x !== 'POSTED' &&
-          d.bluesky !== 'ok' && !String(d.bluesky).startsWith('WOULD POST') && d.bluesky !== 'POSTED')
-        return (
-          <div key={i} style={{ borderTop: '0.5px solid var(--border)', padding: '12px 0' }}>
-            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', marginBottom: 8 }}>
-              {timeAgo(r.at)}{r.error ? ' · ⚠️ run failed' : ''}{r.note ? ` · ${r.note}` : ''}
+      {queue.length === 0 ? (
+        <div style={{ fontSize: 13, color: 'var(--text3)', padding: '8px 0' }}>
+          Queue is clear — nothing gate-passing in the last {QUEUE_MAX_AGE_H}h. The scout keeps watching.
+        </div>
+      ) : queue.slice(0, 6).map((q, i) => (
+        <div key={i} style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--coral)' }}>
+              {q.live ? '✅ posted' : '🕐 drafted'} {timeAgo(q.at)}
+            </span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>· {q.story}</span>
+            {q.url && <a href={q.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--coral)', marginLeft: 'auto' }}>view →</a>}
+          </div>
+
+          {q.x && (
+            <>
+              <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{q.x}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{q.x.length} chars</span>
+                <CopyButton text={q.x} />
+                {!q.live && <PostButton platform="x" text={q.x} label="Post to X · 1.5¢" color="var(--coral)" />}
+              </div>
+            </>
+          )}
+
+          {q.bluesky && (
+            <div style={{ marginTop: q.x ? 12 : 0, paddingTop: q.x ? 12 : 0, borderTop: q.x ? '0.5px solid var(--border)' : 'none' }}>
+              <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: q.x ? 'var(--text2)' : 'var(--text)' }}>{q.bluesky}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: q.bluesky.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{q.bluesky.length} / 300</span>
+                <CopyButton text={q.bluesky} />
+                {!q.live && q.bluesky.length <= 300 && <PostButton platform="bluesky" text={q.bluesky} label="Post to Bluesky" color="#2E86EA" />}
+              </div>
             </div>
+          )}
+        </div>
+      ))}
 
-            {(() => {
-              // Group X + Bluesky actions on the same story into ONE card —
-              // two near-identical variants rendered separately read like
-              // duplicate posts.
-              const entries = [...(r.posted || []).map(p => ({ ...p, live: true })), ...(r.wouldPost || [])]
-              const byStory = new Map()
-              for (const p of entries) {
-                if (!byStory.has(p.story)) byStory.set(p.story, [])
-                byStory.get(p.story).push(p)
-              }
-              return [...byStory.entries()].map(([story, group], j) => {
-                const primary = group.find(p => p.platform === 'x') || group[0]
-                const secondary = group.find(p => p !== primary)
-                const anyLive = group.some(p => p.live)
-                return (
-                  <div key={j} style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: 8 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-                      {group.map((p, k) => <span key={k}>{platformChip(p.platform)}</span>)}
-                      <span style={{ fontSize: 11, fontWeight: 700, color: anyLive ? 'var(--green-dark)' : 'var(--text2)' }}>
-                        {anyLive ? '✅ POSTED' : '🔍 would have posted'}
-                      </span>
-                      <span style={{ fontSize: 11, color: 'var(--text3)' }}>· {story}</span>
-                      {group.filter(p => p.url).map((p, k) => (
-                        <a key={'u' + k} href={p.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--coral)', marginLeft: 'auto' }}>view on {p.platform} →</a>
-                      ))}
-                    </div>
-                    <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{primary.text}</div>
-                    {secondary && secondary.text !== primary.text && (
-                      <div style={{ fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap', color: 'var(--text3)', marginTop: 8, paddingTop: 8, borderTop: '0.5px dashed var(--border)' }}>
-                        {secondary.platform === 'bluesky' ? '🦋 variant: ' : 'X variant: '}{secondary.text}
-                      </div>
-                    )}
-                  </div>
-                )
-              })
-            })()}
-
-            {gated.length > 0 && (
-              <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.7 }}>
+      {/* Decision log — everything the scout declined, and why. Collapsed by default. */}
+      <details style={{ marginTop: 6 }}>
+        <summary style={{ fontSize: 12, fontWeight: 600, color: 'var(--text3)', cursor: 'pointer' }}>
+          Scout decisions — what was skipped and why
+        </summary>
+        <div style={{ paddingTop: 8 }}>
+          {state.runs.slice(0, 6).map((r, i) => {
+            const gated = (r.decisions || []).filter(d =>
+              d.x !== 'ok' && !String(d.x).startsWith('WOULD POST') && d.x !== 'POSTED' &&
+              d.bluesky !== 'ok' && !String(d.bluesky).startsWith('WOULD POST') && d.bluesky !== 'POSTED')
+            if (!gated.length && !r.error && !r.note) return null
+            return (
+              <div key={i} style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.7, borderTop: '0.5px solid var(--border)', padding: '6px 0' }}>
+                <div style={{ fontWeight: 600 }}>{timeAgo(r.at)}{r.error ? ' · ⚠️ run failed' : ''}{r.note ? ` · ${r.note}` : ''}</div>
                 {gated.map((d, j) => (
                   <div key={j}>🖐 {d.story} <span style={{ opacity: 0.8 }}>({d.type})</span> — {d.x === d.bluesky ? d.x : `X: ${d.x} · Bluesky: ${d.bluesky}`}</div>
                 ))}
               </div>
-            )}
-            {!(r.posted || []).length && !(r.wouldPost || []).length && !gated.length && !r.error && (
-              <div style={{ fontSize: 12, color: 'var(--text3)' }}>🚫 nothing eligible this run</div>
-            )}
-          </div>
-        )
-      })}
+            )
+          })}
+        </div>
+      </details>
     </div>
   )
 }
@@ -553,7 +568,7 @@ export default function SocialPage({ user, goBack }) {
             🚀 Social content desk
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>
-            Generate posts from what's trending right now, or compose from your own headlines. Autopilot publishes only gate-passing posts on schedule — everything grave, breaking-thin, polls and contrasts stay yours.
+            The scout drafts gate-passing posts into the queue within ~15 min of a story surging — you approve with two taps. Or generate a batch yourself; either way, nothing publishes without you.
           </p>
         </div>
 
