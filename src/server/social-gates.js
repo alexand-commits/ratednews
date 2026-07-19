@@ -38,6 +38,16 @@ export function evaluateAutoGates(post, meta) {
     return { x: 'sober story — human eyes required', bluesky: 'sober story — human eyes required' }
   }
 
+  // Pipeline-truth gates — block both platforms
+  if (meta?.liveEvent) {
+    return { x: 'live event in progress — preview/result is a manual call', bluesky: 'live event in progress — preview/result is a manual call' }
+  }
+  // Audience gate: no UK/US/international outlet on it → big regionally,
+  // invisible to this account's audience. Owner's judgment, not the bot's.
+  if (meta?.regional) {
+    return { x: 'regional story (no UK/US/intl coverage) — human call', bluesky: 'regional story (no UK/US/intl coverage) — human call' }
+  }
+
   // Platform-specific
   let x = 'ok'
   if (meta?.breaking && (meta.outlets || 0) < 4) x = 'breaking with <4 outlets — too early for autopilot'

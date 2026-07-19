@@ -27,6 +27,8 @@ const GRAVE_WORDS = /\b(dead|death|dies|died|dying|kill(?:ed|ing|s)?|murder|shoo
 function storyAutoEligible(s, platform) {
   if (GRAVE_CATEGORIES.has(s.category)) return false
   if (s.headlines.some(h => GRAVE_WORDS.test(h.title || ''))) return false
+  if (s.liveEvent) return false          // in-game state goes stale in transit
+  if (s.coreCoverage === false) return false // regional-only — owner's call
   if (platform === 'x' && s.breaking && s.outlets.size < 4) return false
   // Only NEW material triggers a run: a story never served before, or a
   // previously-served story that genuinely escalated (grown). A slow-drip

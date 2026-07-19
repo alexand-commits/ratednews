@@ -90,7 +90,7 @@ export async function trendingStories({ record = true } = {}) {
   const since = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
   const { data, error } = await supabase
     .from('articles')
-    .select('id, title, summary, category, published_at, cluster_id, outlets(name)')
+    .select('id, title, summary, category, published_at, cluster_id, outlets(name, country)')
     .not('cluster_id', 'is', null)
     .gte('published_at', since)
     .order('published_at', { ascending: false })
@@ -109,8 +109,23 @@ export async function trendingStories({ record = true } = {}) {
     if (a.published_at < c.oldest) c.oldest = a.published_at
     if (!c.outlets.has(name)) {
       c.outlets.add(name)
+      c.countries = c.countries || new Set()
+      c.countries.add(a.outlets?.country || 'International')
       c.headlines.push({ outlet: name, title: a.title, summary: (a.summary || '').slice(0, 220) })
     }
+  }
+
+  // Story-level signals for the autopilot gates:
+  // - coreCoverage: at least one UK/US/international outlet is on it. A story
+  //   covered ONLY by one country's regional press is real news THERE but
+  //   outside the account's audience — owner's call, never the bot's.
+  // - liveEvent: any headline is live-blog coverage of an in-progress event —
+  //   in-game state is stale before our pipeline can post it.
+  const LIVE_RE = /\blive\b|as it happens|live updates|live blog|liveblog/i
+  const CORE_COUNTRIES = new Set(['UK', 'US', 'International', 'Europe'])
+  for (const c of clusters.values()) {
+    c.coreCoverage = [...(c.countries || [])].some(x => CORE_COUNTRIES.has(x))
+    c.liveEvent = c.headlines.some(h => LIVE_RE.test(h.title || ''))
   }
 
   // Heat = coverage VELOCITY: outlets per hour since first coverage, decayed
@@ -231,7 +246,7 @@ function trendingPrompt(stories) {
     const lines = c.headlines.slice(0, 6).map(h => `  - ${h.outlet}: "${h.title}"${h.summary ? `\n    detail: ${h.summary}` : ''}`).join('\n')
     const timing = `first covered ${ago(c.oldest)} · latest ${ago(c.newest)}`
     const update = c.update ? ` ↻ UPDATE (this story already ran in a batch ${c.update})` : ''
-    return `STORY ${i + 1}${c.category ? ` (${c.category})` : ''}${c.breaking ? ' ⚡ BREAKING' : ''}${update} — ${c.outlets.size} outlets in our sample (INTERNAL signal — never state outlet counts in posts) — ${timing}:\n${lines}\n  Coverage page (Bluesky "short" variant ONLY — never in the X text): ${c.storyUrl}`
+    return `STORY ${i + 1}${c.category ? ` (${c.category})` : ''}${c.breaking ? ' ⚡ BREAKING' : ''}${c.liveEvent ? ' 🔴 LIVE IN PROGRESS' : ''}${update} — ${c.outlets.size} outlets in our sample (INTERNAL signal — never state outlet counts in posts) — ${timing}:\n${lines}\n  Coverage page (Bluesky "short" variant ONLY — never in the X text): ${c.storyUrl}`
   }).join('\n\n')
   const postCount = stories.length + 1
   return `These are the ${stories.length} hottest stories on RatedNews RIGHT NOW, ranked by how fast cross-outlet coverage is accelerating — freshest heat first, not yesterday's totals:
@@ -240,6 +255,7 @@ ${blocks}
 
 Draft ${postCount} posts:
 - One "news" post per story: report the story itself the way a top breaking-news account would — lead with what happened, concrete details from the headlines and summaries, short lines. NO link in the X text (the coverage-page link goes only in the Bluesky "short").
+- Stories marked 🔴 LIVE IN PROGRESS are ongoing events (matches, races, live blogs). NEVER narrate the current in-game state — score, running order, momentum, "on the back foot" — our pipeline runs minutes behind and it will be stale before anyone reads it. Write the durable facts only: kickoff time, stakes, confirmed penalties/lineups/decisions — or the confirmed full-time result if the headlines carry it.
 - Stories marked ⚡ BREAKING are minutes old and still developing: frame them accordingly — present tense, "early reports" hedging where facts may still move, NO definitive casualty figures or outcomes unless every headline agrees. Being early is the point; being wrong isn't.
 - Stories marked ↻ UPDATE already ran as posts in an earlier batch — the reader has seen the story. Write it as an UPDATE the way a breaking-news account follows up: lead with what's NEW since (new numbers, escalation, resolution, official response), reference the story itself in half a sentence at most. Never re-tell it from the top.
 - One "poll" post for whichever story has the most genuinely split coverage: ONE line, instantly voteable, no recap, no link (poll_options = two outlet names from that story).
@@ -294,6 +310,8 @@ export async function generateTrendingBatch(steer = '') {
       update: s.update || null,
       grown: s.grown === true,
       category: s.category || null,
+      regional: s.coreCoverage === false,
+      liveEvent: s.liveEvent === true,
       title: s.headlines[0]?.title || '',
       first: ago(s.oldest),
       newest: ago(s.newest),
