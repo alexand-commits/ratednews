@@ -239,8 +239,8 @@ function AutopilotFeed() {
 
       {queue.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--text3)', padding: '8px 0' }}>
-          Queue is clear — nothing has passed the gates in the last {QUEUE_MAX_AGE_H}h.
-          {state.heartbeat ? ` The scout last checked ${timeAgo(state.heartbeat.at)} and keeps watching.` : ' The scout keeps watching.'}
+          Queue is clear.
+          {state.heartbeat ? ` Last check ${timeAgo(state.heartbeat.at)}: ${state.heartbeat.last_result || 'nothing new'}.` : ' The scout keeps watching.'}
         </div>
       ) : queue.slice(0, 6).map((q, i) => (
         <div key={i} style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 10 }}>
