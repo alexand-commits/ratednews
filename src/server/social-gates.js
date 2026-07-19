@@ -46,7 +46,10 @@ export function evaluateAutoGates(post, meta) {
   return { x, bluesky }
 }
 
+// Draft-mode cadence: these throttle how often the scout DRAFTS (a 4-cent,
+// zero-risk act reviewed by a human) — not a publishing schedule. 60-min gap
+// keeps generation cost bounded; the 6h story cool-down handles repetition.
 export const AUTO_RATE_LIMITS = {
-  x:       { minGapMin: 120, maxPerDay: 3 },
-  bluesky: { minGapMin: 120, maxPerDay: 6 },
+  x:       { minGapMin: 60, maxPerDay: 8 },
+  bluesky: { minGapMin: 60, maxPerDay: 8 },
 }
