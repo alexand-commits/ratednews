@@ -198,7 +198,23 @@ function AutopilotFeed() {
     return () => { mounted = false }
   }, [])
 
+  const [localDismissed, setLocalDismissed] = useState([])
+
   if (!state || state.error || !state.configured || !state.runs?.length) return null
+
+  async function dismiss(story) {
+    setLocalDismissed(prev => [...prev, story]) // optimistic
+    try {
+      const { data: { session } } = await db.auth.getSession()
+      await fetch('/api/social-auto', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ story }),
+      })
+    } catch {}
+  }
+
+  const hidden = new Set([...(state.dismissed || []).map(d => d.story), ...localDismissed])
 
   // Build the queue: newest drafts first, one card per story, last 12h only.
   const QUEUE_MAX_AGE_H = 12
@@ -216,6 +232,7 @@ function AutopilotFeed() {
     for (const [story, g] of byStory) {
       if (seenStories.has(story)) continue
       seenStories.add(story)
+      if (hidden.has(story)) continue
       if ((Date.now() - new Date(g.at)) / 3600000 <= QUEUE_MAX_AGE_H) queue.push(g)
     }
   }
@@ -249,7 +266,16 @@ function AutopilotFeed() {
               {q.live ? '✅ posted' : '🕐 drafted'} {timeAgo(q.at)}
             </span>
             <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>· {q.story}</span>
-            {q.url && <a href={q.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--coral)', marginLeft: 'auto' }}>view →</a>}
+            {q.url && <a href={q.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--coral)' }}>view →</a>}
+            {!q.live && (
+              <button
+                onClick={() => dismiss(q.story)}
+                title="Dismiss — removes this draft from the queue (the story won't be re-drafted)"
+                style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: 'var(--text3)', background: 'none', border: '0.5px solid var(--border)', borderRadius: 99, padding: '2px 10px', cursor: 'pointer' }}
+              >
+                ✕ Dismiss
+              </button>
+            )}
           </div>
 
           {q.x && (
