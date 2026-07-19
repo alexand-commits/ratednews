@@ -56,11 +56,12 @@ LENGTH — concise by default
 
 CTA & links — keep it un-salesy
 - The observation IS the post. A rating nudge is OPTIONAL and, when present, must read as a dry aside — never a marketing sign-off.
-- The best post often has NO link at all. Do NOT end every post with a call to action. Never use boilerplate like "Rate your sources at ${URL}" or "check out" / "head to".
-- If you include a link, drop it plainly on its own — no salesy verb attached. When a story-specific coverage-page link is provided, use THAT, never the bare homepage: it takes the reader straight to the side-by-side coverage the post is about.
+- X posts ("text") contain NO links, NO URLs, EVER. Not the story link, not the homepage — nothing. X suppresses link posts and charges 13x to publish them; the post must stand entirely on its own. Do NOT end with a call to action or boilerplate like "Rate your sources at ${URL}".
+- The story-specific coverage-page link goes ONLY in the Bluesky "short" variant.
 
 BLUESKY VARIANT — every non-poll post also gets a short version
-- "short": the same post rewritten for Bluesky's HARD 300-character limit INCLUDING any link. Over 300 will not send — this is a platform rejection, not a style preference.
+- "short": the same post rewritten for Bluesky's HARD 300-character limit INCLUDING the link. Over 300 will not send — this is a platform rejection, not a style preference.
+- The Bluesky variant SHOULD carry the story's coverage-page link (links are welcome on Bluesky) — drop it plainly on its own line, no salesy verb attached. Use the story-specific link, never the bare homepage.
 - Do the arithmetic: the story links are ~95-100 characters, plus 2 for spacing. With a link, your WORDS get at most 190 characters. If the post can't work in 190 words-characters, DROP THE LINK — a self-contained 280 beats an over-limit 340.
 - Budget shape that fits: one line naming the event, ONE short verbatim headline quote, one clipped observation. That's all 300 allows. Characterise other outlets in 3-4 words or not at all.
 - It must stand alone as a complete post, not read like a cut-down.
@@ -133,14 +134,14 @@ async function trendingStories() {
 function trendingPrompt(stories) {
   const blocks = stories.map((c, i) => {
     const lines = c.headlines.slice(0, 6).map(h => `  - ${h.outlet}: "${h.title}"${h.summary ? `\n    detail: ${h.summary}` : ''}`).join('\n')
-    return `STORY ${i + 1}${c.category ? ` (${c.category})` : ''} — covered by exactly ${c.outlets.size} outlets (the ONLY source count you may quote):\n${lines}\n  Coverage page (use as the link for this story's posts): ${c.storyUrl}`
+    return `STORY ${i + 1}${c.category ? ` (${c.category})` : ''} — covered by exactly ${c.outlets.size} outlets (the ONLY source count you may quote):\n${lines}\n  Coverage page (Bluesky "short" variant ONLY — never in the X text): ${c.storyUrl}`
   }).join('\n\n')
   return `These are the 3 most cross-covered stories on RatedNews RIGHT NOW — they're what the news cycle (and the X/Bluesky timeline) is on today:
 
 ${blocks}
 
 Draft 4 posts:
-- One "news" post per story: report the story itself the way a top breaking-news account would — lead with what happened, concrete details from the headlines and summaries, short lines. The story link goes at the end.
+- One "news" post per story: report the story itself the way a top breaking-news account would — lead with what happened, concrete details from the headlines and summaries, short lines. NO link in the X text (the coverage-page link goes only in the Bluesky "short").
 - One "poll" post for whichever story has the most genuinely split coverage: ONE line, instantly voteable, no recap, no link (poll_options = two outlet names from that story).
 Use "coverage_contrast" INSTEAD of "news" for at most one story, and only if two of its verbatim headlines clash so hard a stranger would stop scrolling. Never force it.
 

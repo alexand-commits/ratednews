@@ -134,6 +134,11 @@ export default async function handler(req, res) {
       if (!process.env.X_API_KEY || !process.env.X_API_SECRET || !process.env.X_ACCESS_TOKEN || !process.env.X_ACCESS_SECRET) {
         return res.status(501).json({ error: 'X keys not configured — add X_API_KEY / X_API_SECRET / X_ACCESS_TOKEN / X_ACCESS_SECRET in Vercel.' })
       }
+      // Hard no-links policy on X: link posts cost 13x ($0.20 vs $0.015) and X
+      // suppresses their reach. Links live on Bluesky.
+      if (/https?:\/\/|www\./i.test(text)) {
+        return res.status(400).json({ error: 'No links on X — X charges 13x for URL posts and buries them. Remove the link (it lives in the Bluesky variant).' })
+      }
       const out = await postToX(text, pollOptions)
       return res.status(200).json(out)
     }

@@ -99,9 +99,15 @@ function PostCard({ post }) {
           {post.story ? <span style={{ color: 'var(--text2)', fontWeight: 600 }}> · {post.story}</span> : null}
           <span style={{ color: 'var(--text3)', fontWeight: 500 }}> · {post.type === 'poll' ? 'X only (no Bluesky polls)' : 'X'}</span>
         </span>
-        <span style={{ display: 'inline-flex', gap: 6 }}>
+        <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
           <CopyButton text={copyText} />
-          <PostButton platform="x" text={post.text} pollOptions={post.poll_options} label="Post to X" color="var(--coral)" />
+          {/https?:\/\/|www\./i.test(post.text) ? (
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--amber, #C98A08)' }} title="X charges 13x for URL posts and buries their reach — links live in the Bluesky variant. Regenerate for linkless X drafts.">
+              🔗 has link — X posting off
+            </span>
+          ) : (
+            <PostButton platform="x" text={post.text} pollOptions={post.poll_options} label="Post to X · 1.5¢" color="var(--coral)" />
+          )}
         </span>
       </div>
 
