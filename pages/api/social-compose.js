@@ -144,24 +144,74 @@ async function trendingStories() {
     }
     return t
   }
+  const overlaps = (a, b) => {
+    let shared = 0
+    for (const w of a) if (b.has(w)) { shared++; if (shared >= 3) return true }
+    return false
+  }
+
+  // ── Run-to-run memory: don't re-serve a story the desk already showed ─────
+  // unless it has genuinely developed. Seen stories from the last 24h live in
+  // social_drafts as {kind:'seen_stories'} packs (service role bypasses RLS).
+  const svc = process.env.SUPABASE_SERVICE_ROLE_KEY
+    ? createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    : null
+  const seen = [] // [{tokens:Set, clusterId, outlets, newest, at}]
+  if (svc) {
+    const seenSince = new Date(now - 24 * 60 * 60 * 1000).toISOString()
+    const { data: packs } = await svc.from('social_drafts')
+      .select('created_at, pack').gte('created_at', seenSince)
+      .order('created_at', { ascending: false }).limit(40)
+    for (const p of packs || []) {
+      if (p.pack?.kind !== 'seen_stories') continue
+      for (const s of p.pack.stories || []) {
+        seen.push({ tokens: new Set(s.tokens || []), clusterId: s.cluster_id, outlets: s.outlets || 0, newest: s.newest, at: p.created_at })
+      }
+    }
+  }
+
+  for (const [clusterId, c] of clusters) {
+    c.clusterId = clusterId
+    c.tokens = sig(c)
+    // Newest-first packs → the first match is this story's latest appearance.
+    const prev = seen.find(s => s.clusterId === clusterId || overlaps(c.tokens, s.tokens))
+    if (!prev) continue
+    const seenAgeH = (now - new Date(prev.at)) / 3600000
+    const hasNewCoverage = c.newest > prev.newest
+    const grown = c.outlets.size - prev.outlets >= 3 || c.outlets.size >= prev.outlets * 1.5
+    if (!hasNewCoverage && seenAgeH < 3) {
+      c.heat = -1 // shown recently, nothing new since — drop it
+    } else {
+      // Story continues: allow it back as an UPDATE. Genuine escalation
+      // (coverage jump) keeps full heat; a slow drip gets demoted so fresh
+      // stories outrank re-runs.
+      if (!grown) c.heat /= 3
+      c.update = ago(prev.at)
+    }
+  }
+
   // Qualify on 3+ outlets as before, OR the breaking tier (2 outlets, <60 min
   // old). Rank purely by heat — velocity with freshness decay.
   const sorted = [...clusters.values()]
-    .filter(c => c.outlets.size >= 3 || c.breaking)
+    .filter(c => (c.outlets.size >= 3 || c.breaking) && c.heat > 0)
     .sort((x, y) => y.heat - x.heat)
   const selected = []
   const tokenSets = []
   for (const c of sorted) {
-    const t = sig(c)
-    const isSameSaga = tokenSets.some(prev => {
-      let shared = 0
-      for (const w of t) if (prev.has(w)) { shared++; if (shared >= 3) return true }
-      return false
-    })
+    const isSameSaga = tokenSets.some(prev => overlaps(c.tokens, prev))
     if (isSameSaga) continue
     selected.push(c)
-    tokenSets.push(t)
+    tokenSets.push(c.tokens)
     if (selected.length === 5) break
+  }
+
+  // Log this run's stories so the next run knows what's been served.
+  if (svc && selected.length) {
+    const stories = selected.map(c => ({ cluster_id: c.clusterId, tokens: [...c.tokens].slice(0, 40), outlets: c.outlets.size, newest: c.newest }))
+    svc.from('social_drafts').insert({ pack: { kind: 'seen_stories', stories } }).then(() => {})
+    // Opportunistic prune of memory packs older than 48h
+    svc.from('social_drafts').delete().eq('pack->>kind', 'seen_stories')
+      .lt('created_at', new Date(now - 48 * 60 * 60 * 1000).toISOString()).then(() => {})
   }
   return selected
 }
@@ -176,7 +226,8 @@ function trendingPrompt(stories) {
   const blocks = stories.map((c, i) => {
     const lines = c.headlines.slice(0, 6).map(h => `  - ${h.outlet}: "${h.title}"${h.summary ? `\n    detail: ${h.summary}` : ''}`).join('\n')
     const timing = `first covered ${ago(c.oldest)} · latest ${ago(c.newest)}`
-    return `STORY ${i + 1}${c.category ? ` (${c.category})` : ''}${c.breaking ? ' ⚡ BREAKING' : ''} — covered by exactly ${c.outlets.size} outlets (the ONLY source count you may quote) — ${timing}:\n${lines}\n  Coverage page (Bluesky "short" variant ONLY — never in the X text): ${c.storyUrl}`
+    const update = c.update ? ` ↻ UPDATE (this story already ran in a batch ${c.update})` : ''
+    return `STORY ${i + 1}${c.category ? ` (${c.category})` : ''}${c.breaking ? ' ⚡ BREAKING' : ''}${update} — covered by exactly ${c.outlets.size} outlets (the ONLY source count you may quote) — ${timing}:\n${lines}\n  Coverage page (Bluesky "short" variant ONLY — never in the X text): ${c.storyUrl}`
   }).join('\n\n')
   const postCount = stories.length + 1
   return `These are the ${stories.length} hottest stories on RatedNews RIGHT NOW, ranked by how fast cross-outlet coverage is accelerating — freshest heat first, not yesterday's totals:
@@ -186,6 +237,7 @@ ${blocks}
 Draft ${postCount} posts:
 - One "news" post per story: report the story itself the way a top breaking-news account would — lead with what happened, concrete details from the headlines and summaries, short lines. NO link in the X text (the coverage-page link goes only in the Bluesky "short").
 - Stories marked ⚡ BREAKING are minutes old and still developing: frame them accordingly — present tense, "early reports" hedging where facts may still move, NO definitive casualty figures or outcomes unless every headline agrees. Being early is the point; being wrong isn't.
+- Stories marked ↻ UPDATE already ran as posts in an earlier batch — the reader has seen the story. Write it as an UPDATE the way a breaking-news account follows up: lead with what's NEW since (new numbers, escalation, resolution, official response), reference the story itself in half a sentence at most. Never re-tell it from the top.
 - One "poll" post for whichever story has the most genuinely split coverage: ONE line, instantly voteable, no recap, no link (poll_options = two outlet names from that story).
 Use "coverage_contrast" INSTEAD of "news" for at most one story, and only if two of its verbatim headlines clash so hard a stranger would stop scrolling. Never force it.
 
