@@ -51,16 +51,45 @@ async function recentRuns(svc, limit = 12) {
   return data || []
 }
 
+// Everything the bot has published — or, in dry-run, WOULD have published.
+// Would-posts count exactly like posts so the dry-run history is a faithful
+// simulation of live behaviour (rate limits, story cool-downs) rather than
+// firing on every trigger.
+function postedLike(runs, platform) {
+  const out = []
+  for (const r of runs) {
+    for (const p of [...(r.pack?.posted || []), ...(r.pack?.wouldPost || [])]) {
+      if (p.platform === platform) out.push({ ...p, at: p.at || r.created_at })
+    }
+  }
+  return out
+}
+
 function rateCheck(platform, runs) {
   const limits = AUTO_RATE_LIMITS[platform]
-  const posted = []
-  for (const r of runs) for (const p of r.pack?.posted || []) if (p.platform === platform) posted.push(p)
+  const posted = postedLike(runs, platform)
   if (posted.length >= limits.maxPerDay) return `daily cap (${limits.maxPerDay}) reached`
   const latest = posted.map(p => new Date(p.at)).sort((a, b) => b - a)[0]
   if (latest && (Date.now() - latest) < limits.minGapMin * 60000) {
     return `min gap ${limits.minGapMin}min not elapsed`
   }
   return null
+}
+
+// Story-level cool-down: the same story may not be auto-picked twice within
+// 6h, updates included — a big development inside that window is exactly the
+// kind of post the owner fires manually from the desk.
+const STORY_COOLDOWN_H = 6
+function recentClusterIds(runs) {
+  const cutoff = Date.now() - STORY_COOLDOWN_H * 3600000
+  const ids = new Set()
+  for (const r of runs) {
+    for (const p of [...(r.pack?.posted || []), ...(r.pack?.wouldPost || [])]) {
+      const at = new Date(p.at || r.created_at)
+      if (at >= cutoff && p.clusterId != null) ids.add(p.clusterId)
+    }
+  }
+  return ids
 }
 
 export default async function handler(req, res) {
@@ -110,7 +139,9 @@ export default async function handler(req, res) {
       x:       !rateCheck('x', runs),
       bluesky: !rateCheck('bluesky', runs),
     }
-    const candidates = await trendingStories({ record: false })
+    const coolingIds = recentClusterIds(runs)
+    const candidates = (await trendingStories({ record: false }))
+      .filter(s => !coolingIds.has(s.clusterId))
     const trigger =
       (rateOpen.x && candidates.some(s => storyAutoEligible(s, 'x'))) ||
       (rateOpen.bluesky && candidates.some(s => storyAutoEligible(s, 'bluesky')))
@@ -133,20 +164,30 @@ export default async function handler(req, res) {
     const posted = []
     const wouldPost = []
 
-    // Per platform: the batch is hottest-first, so the first gate-passing post wins.
+    // Per platform: batch is hottest-first. Skip stories in the 6h cool-down,
+    // prefer a genuinely fresh story over an ↻ update when both pass gates.
     for (const [platform, live, textOf] of [
       ['x',       liveX, p => p.text],
       ['bluesky', liveB, p => p.short],
     ]) {
-      const candidate = (batch.posts || []).find(p => p.auto?.[platform] === 'ok')
+      const eligible = (batch.posts || []).filter(p =>
+        p.auto?.[platform] === 'ok' && !coolingIds.has(p.meta?.clusterId))
+      const candidate = eligible.find(p => !p.meta?.update) || eligible[0]
       if (!candidate) continue
       const rateBlock = rateCheck(platform, runs)
       const d = decisions[batch.posts.indexOf(candidate)]
       if (rateBlock) { d[platform] = `eligible, skipped — ${rateBlock}`; continue }
 
+      const entry = {
+        platform,
+        story: candidate.story,
+        clusterId: candidate.meta?.clusterId ?? null,
+        text: textOf(candidate),
+        at: new Date().toISOString(),
+      }
       if (!live) {
         d[platform] = 'WOULD POST (dry-run)'
-        wouldPost.push({ platform, story: candidate.story, text: textOf(candidate) })
+        wouldPost.push(entry)
         continue
       }
       try {
@@ -154,7 +195,7 @@ export default async function handler(req, res) {
           ? await postToX(textOf(candidate))
           : await postToBluesky(textOf(candidate))
         d[platform] = 'POSTED'
-        posted.push({ platform, story: candidate.story, text: textOf(candidate), url: out.url, at: new Date().toISOString() })
+        posted.push({ ...entry, url: out.url })
       } catch (e) {
         d[platform] = `post failed: ${e.message}`
       }
