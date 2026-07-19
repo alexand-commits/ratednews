@@ -288,9 +288,11 @@ export async function generateTrendingBatch(steer = '') {
     // Attach story metadata + autopilot gate verdicts
     const s = Number.isInteger(p.story_index) ? stories[p.story_index - 1] : null
     p.meta = s ? {
+      clusterId: s.clusterId ?? null,
       outlets: s.outlets.size,
       breaking: !!s.breaking,
       update: s.update || null,
+      grown: s.grown === true,
       category: s.category || null,
       title: s.headlines[0]?.title || '',
       first: ago(s.oldest),

@@ -199,6 +199,86 @@ function PostCard({ post }) {
   )
 }
 
+// ── Autopilot activity feed (main column) — the full picture per run: what it
+// posted / would post (complete text) and everything it refused, with reasons.
+function AutopilotFeed() {
+  const [state, setState] = useState(null)
+
+  useEffect(() => {
+    let mounted = true
+    async function load() {
+      try {
+        const { data: { session } } = await db.auth.getSession()
+        const res = await fetch('/api/social-auto', { headers: { Authorization: `Bearer ${session?.access_token}` } })
+        const json = await res.json()
+        if (mounted) setState(res.ok ? json : { error: json.error || 'Failed to load' })
+      } catch (e) { if (mounted) setState({ error: e.message }) }
+    }
+    load()
+    return () => { mounted = false }
+  }, [])
+
+  if (!state || state.error || !state.configured || !state.runs?.length) return null
+
+  const platformChip = (platform) => (
+    <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 8px', borderRadius: 99, background: platform === 'x' ? 'rgba(216,90,48,0.1)' : 'rgba(46,134,234,0.1)', color: platform === 'x' ? 'var(--coral)' : '#2E86EA' }}>
+      {platform === 'x' ? 'X' : '🦋 Bluesky'}
+    </span>
+  )
+
+  return (
+    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 24 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>🤖 Autopilot activity</div>
+        <span style={{ fontSize: 11, color: 'var(--text3)' }}>
+          X {state.mode.x === 'live' ? 'LIVE' : 'dry-run'} · Bluesky {state.mode.bluesky === 'live' ? 'LIVE' : 'dry-run'} · checks every 15 min
+        </span>
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>
+        Dry-run simulates live behaviour honestly — rate limits and the 6h story cool-down apply to "would posts" too, so this is what the bot would really do.
+      </div>
+
+      {state.runs.slice(0, 6).map((r, i) => {
+        const gated = (r.decisions || []).filter(d =>
+          d.x !== 'ok' && !String(d.x).startsWith('WOULD POST') && d.x !== 'POSTED' &&
+          d.bluesky !== 'ok' && !String(d.bluesky).startsWith('WOULD POST') && d.bluesky !== 'POSTED')
+        return (
+          <div key={i} style={{ borderTop: '0.5px solid var(--border)', padding: '12px 0' }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', marginBottom: 8 }}>
+              {timeAgo(r.at)}{r.error ? ' · ⚠️ run failed' : ''}{r.note ? ` · ${r.note}` : ''}
+            </div>
+
+            {[...(r.posted || []).map(p => ({ ...p, live: true })), ...(r.wouldPost || [])].map((p, j) => (
+              <div key={j} style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                  {platformChip(p.platform)}
+                  <span style={{ fontSize: 11, fontWeight: 700, color: p.live ? 'var(--green-dark)' : 'var(--text2)' }}>
+                    {p.live ? '✅ POSTED' : '🔍 would have posted'}
+                  </span>
+                  <span style={{ fontSize: 11, color: 'var(--text3)' }}>· {p.story}</span>
+                  {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--coral)', marginLeft: 'auto' }}>view →</a>}
+                </div>
+                <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{p.text}</div>
+              </div>
+            ))}
+
+            {gated.length > 0 && (
+              <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.7 }}>
+                {gated.map((d, j) => (
+                  <div key={j}>🖐 {d.story} <span style={{ opacity: 0.8 }}>({d.type})</span> — {d.x === d.bluesky ? d.x : `X: ${d.x} · Bluesky: ${d.bluesky}`}</div>
+                ))}
+              </div>
+            )}
+            {!(r.posted || []).length && !(r.wouldPost || []).length && !gated.length && !r.error && (
+              <div style={{ fontSize: 12, color: 'var(--text3)' }}>🚫 nothing eligible this run</div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Autopilot panel — mode + recent scheduled runs ───────────────────────────
 function AutopilotPanel() {
   const [state, setState] = useState(null) // {configured, mode, runs} | {error}
@@ -449,6 +529,7 @@ export default function SocialPage({ user, goBack }) {
 
         <div className="grid">
         <div>
+        <AutopilotFeed />
         <TrendingGenerator onRun={recordRun} />
         <Composer onRun={recordRun} />
         </div>
