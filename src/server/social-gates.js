@@ -4,16 +4,11 @@
  * annotate desk batches (so the owner can see what WOULD post) and by the
  * /api/social-auto run itself.
  *
- * Philosophy: the machine handles sport/business/tech/politics-as-theatre;
- * anything grave (war, death, disaster, crime) requires human eyes — on the
- * heaviest news days the bot going quiet is correct brand behaviour.
+ * Philosophy: the scout only DRAFTS — a human approves every publish — so
+ * the gates guard pipeline truth (live events go stale in transit) and
+ * audience fit (regional-only stories), not gravity. Sober-story voice rules
+ * live in the generation prompt; the owner is the judgment layer.
  */
-
-const GRAVE_CATEGORIES = new Set(['Conflict', 'Crime'])
-
-// Keyword net for grave stories that live outside the grave categories
-// (an actor's death files under Entertainment; a plane crash under Travel).
-const GRAVE_WORDS = /\b(dead|death|dies|died|dying|kill(?:ed|ing|s)?|murder|shooting|shot|stabb|war|missile|air ?strike|attack|bomb|blast|explosion|crash|disaster|earthquake|flood|wildfire|famine|victim|hostage|terror|massacre|casualt|suicide|overdose|abuse|rape|trafficking)/i
 
 /**
  * @param {object} post  — {type, text, short, story}
@@ -27,15 +22,6 @@ export function evaluateAutoGates(post, meta) {
   }
   if (post.type === 'coverage_contrast') {
     return { x: 'signature format — manual only', bluesky: 'signature format — manual only' }
-  }
-
-  // Gravity gates — block both platforms
-  const scanText = `${post.text || ''} ${post.story || ''} ${meta?.title || ''}`
-  if (meta && GRAVE_CATEGORIES.has(meta.category)) {
-    return { x: `${meta.category} story — human eyes required`, bluesky: `${meta.category} story — human eyes required` }
-  }
-  if (GRAVE_WORDS.test(scanText)) {
-    return { x: 'sober story — human eyes required', bluesky: 'sober story — human eyes required' }
   }
 
   // Pipeline-truth gates — block both platforms

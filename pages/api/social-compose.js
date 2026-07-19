@@ -83,14 +83,18 @@ Output STRICT JSON only — no markdown, no prose around it:
 // ── Trending story selection — same cross-outlet signal as the feed ──────────
 // opts.record: log selected stories to run memory (true for real generations;
 // the autopilot's cheap pre-check passes false so a look isn't a "serve").
-export async function trendingStories({ record = true } = {}) {
+// opts.lean: skip article summaries in the fetch — the autopilot pre-check
+// only needs titles/timing/outlets, and summaries are ~80% of the egress.
+export async function trendingStories({ record = true, lean = false } = {}) {
   const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY)
   // 12h window — yesterday's stories aren't candidates. The old 36h window let
   // day-old stories out-accumulate anything actually breaking.
   const since = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
   const { data, error } = await supabase
     .from('articles')
-    .select('id, title, summary, category, published_at, cluster_id, outlets(name, country)')
+    .select(lean
+      ? 'id, title, category, published_at, cluster_id, outlets(name, country)'
+      : 'id, title, summary, category, published_at, cluster_id, outlets(name, country)')
     .not('cluster_id', 'is', null)
     .gte('published_at', since)
     .order('published_at', { ascending: false })
