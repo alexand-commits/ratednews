@@ -302,6 +302,73 @@ function AutopilotFeed() {
         </div>
       ))}
 
+      {/* Manual-call drafts — fully written, gated for judgment not hidden. */}
+      {(() => {
+        const isActed = v => v === 'ok' || v === 'POSTED' || String(v || '').startsWith('WOULD POST')
+        const manual = []
+        const seen = new Set(seenStories)
+        for (const r of state.runs) {
+          for (const p of r.posts || []) {
+            if (seen.has(p.story) || hidden.has(p.story)) continue
+            if (isActed(p.x) || isActed(p.bluesky)) continue
+            if ((Date.now() - new Date(r.at)) / 3600000 > QUEUE_MAX_AGE_H) continue
+            seen.add(p.story)
+            manual.push({ ...p, at: r.at })
+          }
+        }
+        if (!manual.length) return null
+        return (
+          <div style={{ marginTop: 4, marginBottom: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)', margin: '10px 0 8px' }}>
+              🖐 Your call — drafted, but gated for judgment
+            </div>
+            {manual.slice(0, 5).map((p, i) => (
+              <div key={i} style={{ background: 'var(--bg)', border: '0.5px dashed var(--border2)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text2)' }}>
+                    {(TYPE_META[p.type] || {}).emoji || '✳️'} {p.story}
+                  </span>
+                  <span style={{ fontSize: 10, color: 'var(--amber, #C98A08)', fontWeight: 600 }} title={`X: ${p.x} · Bluesky: ${p.bluesky}`}>
+                    {p.x === p.bluesky ? p.x : `X: ${p.x}`}
+                  </span>
+                  <button
+                    onClick={() => dismiss(p.story)}
+                    style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: 'var(--text3)', background: 'none', border: '0.5px solid var(--border)', borderRadius: 99, padding: '2px 10px', cursor: 'pointer' }}
+                  >
+                    ✕ Dismiss
+                  </button>
+                </div>
+                <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{p.text}</div>
+                {p.poll_options?.length > 0 && (
+                  <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+                    {p.poll_options.map((o, k) => (
+                      <span key={k} style={{ fontSize: 12, padding: '4px 12px', border: '0.5px solid var(--border)', borderRadius: 99, color: 'var(--text2)' }}>{o}</span>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{(p.text || '').length} chars</span>
+                  <CopyButton text={p.text} />
+                  {!/https?:\/\/|www\./i.test(p.text || '') && (
+                    <PostButton platform="x" text={p.text} pollOptions={p.poll_options || undefined} label="Post to X · 1.5¢" color="var(--coral)" />
+                  )}
+                </div>
+                {p.short && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--border)' }}>
+                    <div style={{ fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap', color: 'var(--text2)' }}>{p.short}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: p.short.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{p.short.length} / 300</span>
+                      <CopyButton text={p.short} />
+                      {p.short.length <= 300 && <PostButton platform="bluesky" text={p.short} label="Post to Bluesky" color="#2E86EA" />}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )
+      })()}
+
       {/* Decision log — everything the scout declined, and why. Collapsed by default. */}
       <details style={{ marginTop: 6 }}>
         <summary style={{ fontSize: 12, fontWeight: 600, color: 'var(--text3)', cursor: 'pointer' }}>
