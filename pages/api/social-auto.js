@@ -33,6 +33,27 @@ function storyAutoEligible(s, platform) {
 
 const OWNER = 'alexandchow@gmail.com'
 
+async function ownerAuth(req) {
+  const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
+  if (!token) return null
+  const authClient = createClient(
+    process.env.VITE_SUPABASE_URL,
+    process.env.VITE_SUPABASE_ANON_KEY,
+    { global: { headers: { Authorization: `Bearer ${token}` } } },
+  )
+  const { data: { user }, error } = await authClient.auth.getUser()
+  if (error || !user || user.email !== OWNER) return null
+  return user
+}
+
+// Owner-dismissed queue stories — single in-place row, entries expire with the
+// queue window. A dismissed story stays in the 6h cool-down (rejected ≠ retry).
+async function getDismissedRow(svc) {
+  const { data } = await svc.from('social_drafts')
+    .select('id, pack').eq('pack->>kind', 'queue_dismissed').limit(1).maybeSingle()
+  return data || null
+}
+
 function svcClient() {
   return createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 }
@@ -116,29 +137,41 @@ function recentClusterIds(runs) {
 export default async function handler(req, res) {
   // ── GET: desk panel data (owner auth) ─────────────────────────────────────
   if (req.method === 'GET') {
-    const token = (req.headers.authorization || '').replace('Bearer ', '').trim()
-    if (!token) return res.status(401).json({ error: 'Unauthorized' })
-    const authClient = createClient(
-      process.env.VITE_SUPABASE_URL,
-      process.env.VITE_SUPABASE_ANON_KEY,
-      { global: { headers: { Authorization: `Bearer ${token}` } } },
-    )
-    const { data: { user }, error: authErr } = await authClient.auth.getUser()
-    if (authErr || !user || user.email !== OWNER) return res.status(403).json({ error: 'Forbidden' })
+    if (!(await ownerAuth(req))) return res.status(401).json({ error: 'Unauthorized' })
 
     const configured = !!process.env.SOCIAL_AUTO_SECRET
     const svcG = configured && process.env.SUPABASE_SERVICE_ROLE_KEY ? svcClient() : null
     const runs = svcG ? await recentRuns(svcG) : []
     const heartbeat = svcG ? await getHeartbeat(svcG) : null
+    const dismissed = svcG ? ((await getDismissedRow(svcG))?.pack?.stories || []) : []
     return res.status(200).json({
       configured,
       heartbeat,
+      dismissed,
       mode: {
         x:       process.env.AUTO_POST_X === 'live' ? 'live' : 'dry',
         bluesky: process.env.AUTO_POST_BLUESKY === 'live' ? 'live' : 'dry',
       },
       runs: runs.map(r => ({ at: r.created_at, ...r.pack })),
     })
+  }
+
+  // ── DELETE: dismiss a queue draft (owner auth) ────────────────────────────
+  if (req.method === 'DELETE') {
+    if (!(await ownerAuth(req))) return res.status(401).json({ error: 'Unauthorized' })
+    const story = (req.body?.story || '').toString().slice(0, 200)
+    if (!story) return res.status(400).json({ error: 'Missing story' })
+    const svcD = svcClient()
+    const row = await getDismissedRow(svcD)
+    const cutoff = Date.now() - 24 * 60 * 60 * 1000
+    const stories = [
+      ...((row?.pack?.stories || []).filter(d => new Date(d.at) >= cutoff && d.story !== story)),
+      { story, at: new Date().toISOString() },
+    ]
+    const pack = { kind: 'queue_dismissed', stories }
+    if (row) await svcD.from('social_drafts').update({ pack }).eq('id', row.id)
+    else await svcD.from('social_drafts').insert({ pack })
+    return res.status(200).json({ ok: true })
   }
 
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
