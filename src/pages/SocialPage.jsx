@@ -248,19 +248,42 @@ function AutopilotFeed() {
               {timeAgo(r.at)}{r.error ? ' · ⚠️ run failed' : ''}{r.note ? ` · ${r.note}` : ''}
             </div>
 
-            {[...(r.posted || []).map(p => ({ ...p, live: true })), ...(r.wouldPost || [])].map((p, j) => (
-              <div key={j} style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-                  {platformChip(p.platform)}
-                  <span style={{ fontSize: 11, fontWeight: 700, color: p.live ? 'var(--green-dark)' : 'var(--text2)' }}>
-                    {p.live ? '✅ POSTED' : '🔍 would have posted'}
-                  </span>
-                  <span style={{ fontSize: 11, color: 'var(--text3)' }}>· {p.story}</span>
-                  {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--coral)', marginLeft: 'auto' }}>view →</a>}
-                </div>
-                <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{p.text}</div>
-              </div>
-            ))}
+            {(() => {
+              // Group X + Bluesky actions on the same story into ONE card —
+              // two near-identical variants rendered separately read like
+              // duplicate posts.
+              const entries = [...(r.posted || []).map(p => ({ ...p, live: true })), ...(r.wouldPost || [])]
+              const byStory = new Map()
+              for (const p of entries) {
+                if (!byStory.has(p.story)) byStory.set(p.story, [])
+                byStory.get(p.story).push(p)
+              }
+              return [...byStory.entries()].map(([story, group], j) => {
+                const primary = group.find(p => p.platform === 'x') || group[0]
+                const secondary = group.find(p => p !== primary)
+                const anyLive = group.some(p => p.live)
+                return (
+                  <div key={j} style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+                      {group.map((p, k) => <span key={k}>{platformChip(p.platform)}</span>)}
+                      <span style={{ fontSize: 11, fontWeight: 700, color: anyLive ? 'var(--green-dark)' : 'var(--text2)' }}>
+                        {anyLive ? '✅ POSTED' : '🔍 would have posted'}
+                      </span>
+                      <span style={{ fontSize: 11, color: 'var(--text3)' }}>· {story}</span>
+                      {group.filter(p => p.url).map((p, k) => (
+                        <a key={'u' + k} href={p.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--coral)', marginLeft: 'auto' }}>view on {p.platform} →</a>
+                      ))}
+                    </div>
+                    <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{primary.text}</div>
+                    {secondary && secondary.text !== primary.text && (
+                      <div style={{ fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap', color: 'var(--text3)', marginTop: 8, paddingTop: 8, borderTop: '0.5px dashed var(--border)' }}>
+                        {secondary.platform === 'bluesky' ? '🦋 variant: ' : 'X variant: '}{secondary.text}
+                      </div>
+                    )}
+                  </div>
+                )
+              })
+            })()}
 
             {gated.length > 0 && (
               <div style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.7 }}>
@@ -335,16 +358,23 @@ function AutopilotPanel() {
           ) : state.runs.slice(0, 5).map((r, i) => (
             <div key={i} style={{ borderTop: i ? '0.5px solid var(--border)' : 'none', padding: '8px 0', fontSize: 12 }}>
               <div style={{ color: 'var(--text3)', fontSize: 10, marginBottom: 3 }}>{timeAgo(r.at)}{r.error ? ' · ⚠️ run failed' : ''}</div>
-              {(r.posted || []).map((p, j) => (
-                <div key={'p' + j} style={{ color: 'var(--green-dark)' }}>
-                  ✅ posted to {p.platform}: <a href={p.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>{p.story}</a>
-                </div>
-              ))}
-              {(r.wouldPost || []).map((p, j) => (
-                <div key={'w' + j} style={{ color: 'var(--text2)' }} title={p.text}>
-                  🔍 would post to {p.platform}: {p.story}
-                </div>
-              ))}
+              {(() => {
+                const groups = new Map()
+                for (const p of [...(r.posted || []).map(x => ({ ...x, live: true })), ...(r.wouldPost || [])]) {
+                  if (!groups.has(p.story)) groups.set(p.story, { platforms: [], live: false, url: null })
+                  const g = groups.get(p.story)
+                  g.platforms.push(p.platform === 'x' ? 'X' : 'Bluesky')
+                  if (p.live) g.live = true
+                  if (p.url) g.url = p.url
+                }
+                return [...groups.entries()].map(([story, g], j) => (
+                  <div key={j} style={{ color: g.live ? 'var(--green-dark)' : 'var(--text2)' }}>
+                    {g.live ? '✅ posted' : '🔍 would post'} ({g.platforms.join(' + ')}): {g.url
+                      ? <a href={g.url} target="_blank" rel="noopener noreferrer" style={{ color: 'inherit' }}>{story}</a>
+                      : story}
+                  </div>
+                ))
+              })()}
               {!(r.posted || []).length && !(r.wouldPost || []).length && !r.error && (
                 <div style={{ color: 'var(--text3)' }}>🚫 nothing eligible ({r.note || 'all posts gated'})</div>
               )}
