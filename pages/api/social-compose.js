@@ -2,9 +2,9 @@
  * POST /api/social-compose  (owner-only)
  * On-demand social post generator. Two modes:
  *   { headlines: string, steer?: string } — compose from pasted headlines.
- *   { trending: true, steer?: string }    — server picks the 3 most-covered
- *     stories from the last 36h (cross-outlet clusters) and drafts posts per
- *     story, timed to ride what's hot on X/Bluesky right now.
+ *   { trending: true, steer?: string }    — server picks the 5 hottest (velocity-ranked)
+ *     stories from the last 12h (cross-outlet clusters, recent-coverage velocity
+ *     with freshness decay + a breaking tier) and drafts posts per story.
  * Non-streaming JSON.
  */
 import Anthropic from '@anthropic-ai/sdk'
@@ -82,7 +82,9 @@ Output STRICT JSON only — no markdown, no prose around it:
 // ── Trending story selection — same cross-outlet signal as the feed ──────────
 async function trendingStories() {
   const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY)
-  const since = new Date(Date.now() - 36 * 60 * 60 * 1000).toISOString()
+  // 12h window — yesterday's stories aren't candidates. The old 36h window let
+  // day-old stories out-accumulate anything actually breaking.
+  const since = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString()
   const { data, error } = await supabase
     .from('articles')
     .select('id, title, summary, category, published_at, cluster_id, outlets(name)')
@@ -94,13 +96,33 @@ async function trendingStories() {
 
   // Group by cluster; one headline per distinct outlet — that's the spread.
   // The first article seen per cluster is the newest → use it for the story link.
+  const now = Date.now()
   const clusters = new Map()
   for (const a of data || []) {
     const name = a.outlets?.name
     if (!name) continue
-    if (!clusters.has(a.cluster_id)) clusters.set(a.cluster_id, { headlines: [], outlets: new Set(), category: a.category, newest: a.published_at, storyUrl: `${URL}/story/${articleSlug(a.title, a.id)}` })
+    if (!clusters.has(a.cluster_id)) clusters.set(a.cluster_id, { headlines: [], outlets: new Set(), category: a.category, newest: a.published_at, oldest: a.published_at, recentOutlets: 0, storyUrl: `${URL}/story/${articleSlug(a.title, a.id)}` })
     const c = clusters.get(a.cluster_id)
-    if (!c.outlets.has(name)) { c.outlets.add(name); c.headlines.push({ outlet: name, title: a.title, summary: (a.summary || '').slice(0, 220) }) }
+    if (a.published_at < c.oldest) c.oldest = a.published_at
+    if (!c.outlets.has(name)) {
+      c.outlets.add(name)
+      c.headlines.push({ outlet: name, title: a.title, summary: (a.summary || '').slice(0, 220) })
+      // Data is newest-first, so this outlet's first appearance is its newest take.
+      if (now - new Date(a.published_at) < 3 * 60 * 60 * 1000) c.recentOutlets++
+    }
+  }
+
+  // Heat scoring — velocity over volume. Outlets that covered the story in the
+  // last 3h count 6x a stale outlet, and the whole score decays with the age of
+  // the NEWEST article (same decay shape as the site's feed trend sort). A
+  // 4-outlets-in-an-hour story now beats a 12-outlet day-old one.
+  for (const c of clusters.values()) {
+    const newestAgeH = Math.max(0, (now - new Date(c.newest)) / 3600000)
+    const firstAgeMin = (now - new Date(c.oldest)) / 60000
+    // Breaking: 2+ outlets and the story's FIRST coverage is under 60 min old —
+    // early cross-coverage is signal enough; don't wait for the third outlet.
+    c.breaking = c.outlets.size >= 2 && firstAgeMin <= 60
+    c.heat = (c.recentOutlets * 12 + c.outlets.size * 2 + 1) / Math.pow(newestAgeH + 2, 1.8)
   }
 
   // One slot per saga: big running stories fragment into several clusters
@@ -118,9 +140,11 @@ async function trendingStories() {
     }
     return t
   }
+  // Qualify on 3+ outlets as before, OR the breaking tier (2 outlets, <60 min
+  // old). Rank purely by heat — velocity with freshness decay.
   const sorted = [...clusters.values()]
-    .filter(c => c.outlets.size >= 3)
-    .sort((x, y) => y.outlets.size - x.outlets.size || new Date(y.newest) - new Date(x.newest))
+    .filter(c => c.outlets.size >= 3 || c.breaking)
+    .sort((x, y) => y.heat - x.heat)
   const selected = []
   const tokenSets = []
   for (const c of sorted) {
@@ -133,22 +157,31 @@ async function trendingStories() {
     if (isSameSaga) continue
     selected.push(c)
     tokenSets.push(t)
-    if (selected.length === 3) break
+    if (selected.length === 5) break
   }
   return selected
+}
+
+// "2h ago" / "40m ago" — compact age labels for the prompt and desk UI
+function ago(ts) {
+  const min = Math.max(0, Math.round((Date.now() - new Date(ts)) / 60000))
+  return min < 60 ? `${min}m ago` : `${Math.round(min / 60 * 10) / 10}h ago`
 }
 
 function trendingPrompt(stories) {
   const blocks = stories.map((c, i) => {
     const lines = c.headlines.slice(0, 6).map(h => `  - ${h.outlet}: "${h.title}"${h.summary ? `\n    detail: ${h.summary}` : ''}`).join('\n')
-    return `STORY ${i + 1}${c.category ? ` (${c.category})` : ''} — covered by exactly ${c.outlets.size} outlets (the ONLY source count you may quote):\n${lines}\n  Coverage page (Bluesky "short" variant ONLY — never in the X text): ${c.storyUrl}`
+    const timing = `first covered ${ago(c.oldest)} · latest ${ago(c.newest)}`
+    return `STORY ${i + 1}${c.category ? ` (${c.category})` : ''}${c.breaking ? ' ⚡ BREAKING' : ''} — covered by exactly ${c.outlets.size} outlets (the ONLY source count you may quote) — ${timing}:\n${lines}\n  Coverage page (Bluesky "short" variant ONLY — never in the X text): ${c.storyUrl}`
   }).join('\n\n')
-  return `These are the 3 most cross-covered stories on RatedNews RIGHT NOW — they're what the news cycle (and the X/Bluesky timeline) is on today:
+  const postCount = stories.length + 1
+  return `These are the ${stories.length} hottest stories on RatedNews RIGHT NOW, ranked by how fast cross-outlet coverage is accelerating — freshest heat first, not yesterday's totals:
 
 ${blocks}
 
-Draft 4 posts:
+Draft ${postCount} posts:
 - One "news" post per story: report the story itself the way a top breaking-news account would — lead with what happened, concrete details from the headlines and summaries, short lines. NO link in the X text (the coverage-page link goes only in the Bluesky "short").
+- Stories marked ⚡ BREAKING are minutes old and still developing: frame them accordingly — present tense, "early reports" hedging where facts may still move, NO definitive casualty figures or outcomes unless every headline agrees. Being early is the point; being wrong isn't.
 - One "poll" post for whichever story has the most genuinely split coverage: ONE line, instantly voteable, no recap, no link (poll_options = two outlet names from that story).
 Use "coverage_contrast" INSTEAD of "news" for at most one story, and only if two of its verbatim headlines clash so hard a stranger would stop scrolling. Never force it.
 
@@ -194,7 +227,7 @@ export default async function handler(req, res) {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const msg = await client.messages.create({
       model: MODEL,
-      max_tokens: 3000,
+      max_tokens: 5000,
       system: SYSTEM,
       messages: [{ role: 'user', content: userPrompt }],
     })
