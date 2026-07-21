@@ -114,6 +114,61 @@ function Clash({ ao, aq, bo, bq, foot, k }) {
   )
 }
 
+// Header-level dimension sniff (no image decoder in the edge runtime).
+// Returns null when the format can't be parsed — then we let the image through.
+function imageDims(b, ct) {
+  try {
+    if (ct === 'image/png' && b.length > 24) {
+      return { w: (b[16] << 24 | b[17] << 16 | b[18] << 8 | b[19]) >>> 0, h: (b[20] << 24 | b[21] << 16 | b[22] << 8 | b[23]) >>> 0 }
+    }
+    if (ct === 'image/gif' && b.length > 10) {
+      return { w: b[6] | (b[7] << 8), h: b[8] | (b[9] << 8) }
+    }
+    if ((ct === 'image/jpeg' || ct === 'image/jpg') && b.length > 4) {
+      let i = 2
+      while (i + 9 < b.length) {
+        if (b[i] !== 0xff) { i++; continue }
+        const marker = b[i + 1]
+        if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+          return { h: (b[i + 5] << 8) | b[i + 6], w: (b[i + 7] << 8) | b[i + 8] }
+        }
+        i += 2 + ((b[i + 2] << 8) | b[i + 3])
+      }
+    }
+  } catch { /* fall through */ }
+  return null
+}
+
+// Fetch the story photo ourselves: some CDNs block server fetches without a
+// browser UA, others serve webp via Accept negotiation (Satori can't decode
+// it), and feeds ship ad banners and placeholder pixels as image_url. Any
+// problem → null → the card renders its no-photo layout instead of 500ing.
+async function fetchPhoto(url) {
+  try {
+    const r = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+        Accept: 'image/jpeg,image/png,image/gif;q=0.9,*/*;q=0.1',
+      },
+      signal: AbortSignal.timeout(5000),
+    })
+    if (!r.ok) return null
+    const ct = (r.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
+    if (!['image/jpeg', 'image/jpg', 'image/png', 'image/gif'].includes(ct)) return null
+    const buf = await r.arrayBuffer()
+    // <15KB is a tracking pixel or ad banner, not a news photo; >8MB chokes Satori
+    if (buf.byteLength < 15 * 1024 || buf.byteLength > 8 * 1024 * 1024) return null
+    // Reject banner/thumbnail shapes — a 320x50 ad stretched to 1200x630 is
+    // worse than no photo at all
+    const dim = imageDims(new Uint8Array(buf), ct)
+    if (dim && (dim.w < 400 || dim.h < 250 || dim.w / dim.h > 3 || dim.w / dim.h < 0.7)) return null
+    let bin = ''
+    const b = new Uint8Array(buf)
+    for (let i = 0; i < b.length; i += 8192) bin += String.fromCharCode(...b.subarray(i, i + 8192))
+    return `data:${ct};base64,${btoa(bin)}`
+  } catch { return null }
+}
+
 export default async function handler(req) {
   try {
     const { searchParams: q } = new URL(req.url)
@@ -136,9 +191,10 @@ export default async function handler(req) {
       const img = q.get('img') || null
       // http(s) only, and skip formats Satori can't decode (webp/avif)
       const safeImg = img && /^https?:\/\//.test(img) && !/\.(webp|avif)(\?|$)/i.test(img) ? img : null
+      const photo = safeImg ? await fetchPhoto(safeImg) : null
       const count = parseInt(q.get('count') || '0', 10) || 0
       const ribbon = (q.get('ribbon') || '').slice(0, 16).toUpperCase() || null
-      return new ImageResponse(<Hybrid title={title} img={safeImg} count={count} ribbon={ribbon} k={k} />, size)
+      return new ImageResponse(<Hybrid title={title} img={photo} count={count} ribbon={ribbon} k={k} />, size)
     }
 
     if (type === 'clash') {
