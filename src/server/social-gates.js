@@ -25,27 +25,28 @@ export const BAIT_RE = /\b(shocking (moment|video|footage)|chilling (moment|vide
  * @returns {{x: string, bluesky: string}} — 'ok' or the blocking reason
  */
 export function evaluateAutoGates(post, meta) {
+  const all = reason => ({ x: reason, bluesky: reason, facebook: reason })
   // Format gates — some formats are owner-only by design
   if (post.type === 'poll') {
-    return { x: 'polls are manual-only', bluesky: 'polls are manual-only' }
+    return all('polls are manual-only')
   }
   if (post.type === 'coverage_contrast') {
-    return { x: 'signature format — manual only', bluesky: 'signature format — manual only' }
+    return all('signature format — manual only')
   }
 
   // Pipeline-truth gate — block both platforms (mid-game state is stale
   // before our ~20-min pipeline can deliver it; previews/results are fine)
   if (meta?.liveEvent) {
-    return { x: 'live event in progress — preview/result is a manual call', bluesky: 'live event in progress — preview/result is a manual call' }
+    return all('live event in progress — preview/result is a manual call')
   }
   // Fluff gate: celebrity/royal gossip-grade stories. Broad news is wanted —
   // controversy, tragedy, regional, thin-breaking all flow — but insider-
   // reveals content isn't the brand.
   if (FLUFF_RE.test(`${post.text || ''} ${meta?.title || ''}`)) {
-    return { x: 'gossip-grade fluff — skip', bluesky: 'gossip-grade fluff — skip' }
+    return all('gossip-grade fluff — skip')
   }
   if (BAIT_RE.test(`${post.text || ''} ${meta?.title || ''}`)) {
-    return { x: 'sensational crime-bait — skip', bluesky: 'sensational crime-bait — skip' }
+    return all('sensational crime-bait — skip')
   }
 
   // Platform-specific
@@ -56,13 +57,17 @@ export function evaluateAutoGates(post, meta) {
   if (typeof post.short !== 'string' || !post.short.trim()) bluesky = 'no Bluesky variant'
   else if (post.short.length > 300) bluesky = 'short over 300 chars'
 
-  return { x, bluesky }
+  // Facebook: links welcome, no length worry — only the shared gates above
+  const facebook = 'ok'
+
+  return { x, bluesky, facebook }
 }
 
 // Draft-mode cadence: these throttle how often the scout DRAFTS (a 4-cent,
 // zero-risk act reviewed by a human) — not a publishing schedule. 60-min gap
 // keeps generation cost bounded; the 6h story cool-down handles repetition.
 export const AUTO_RATE_LIMITS = {
-  x:       { minGapMin: 60, maxPerDay: 8 },
-  bluesky: { minGapMin: 60, maxPerDay: 8 },
+  x:        { minGapMin: 60, maxPerDay: 8 },
+  bluesky:  { minGapMin: 60, maxPerDay: 8 },
+  facebook: { minGapMin: 60, maxPerDay: 8 },
 }

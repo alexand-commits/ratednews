@@ -161,6 +161,35 @@ export async function postToBluesky(text, imageUrl, imageAlt = '') {
   return { url: `https://bsky.app/profile/${process.env.BLUESKY_HANDLE}/post/${rkey}` }
 }
 
+// ── Facebook (Graph API, Page posts) ────────────────────────────────────────
+// Free (no per-post charge). Needs a Page + long-lived Page token:
+// FB_PAGE_ID + FB_PAGE_TOKEN in Vercel. Links are welcome — FB renders a
+// preview card from the story page's OG tags.
+export async function postToFacebook(text, imageUrl) {
+  const page = process.env.FB_PAGE_ID
+  const token = process.env.FB_PAGE_TOKEN
+  let url, body
+  if (imageUrl) {
+    url = `https://graph.facebook.com/v21.0/${page}/photos`
+    body = { url: imageUrl, message: text, access_token: token }
+  } else {
+    url = `https://graph.facebook.com/v21.0/${page}/feed`
+    body = { message: text, access_token: token }
+    const link = text.match(/https?:\/\/\S+/)
+    if (link) body.link = link[0]
+  }
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(`Facebook: ${json?.error?.message || `HTTP ${res.status}`}`)
+  const id = json.post_id || json.id
+  if (!id) throw new Error('Facebook: no post id in response')
+  return { url: `https://www.facebook.com/${id}` }
+}
+
 // ── Handler ─────────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -197,6 +226,13 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'No links on X — X charges 13x for URL posts and buries them. Remove the link (it lives in the Bluesky variant).' })
       }
       const out = await postToX(text, pollOptions, imageUrl)
+      return res.status(200).json(out)
+    }
+    if (platform === 'facebook') {
+      if (!process.env.FB_PAGE_ID || !process.env.FB_PAGE_TOKEN) {
+        return res.status(501).json({ error: 'Facebook not configured — add FB_PAGE_ID / FB_PAGE_TOKEN in Vercel.' })
+      }
+      const out = await postToFacebook(text, imageUrl)
       return res.status(200).json(out)
     }
     if (platform === 'bluesky') {
