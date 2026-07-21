@@ -111,6 +111,13 @@ function CardPreview({ url, on, setOn }) {
   )
 }
 
+// Facebook copy: the X text plus the story link — FB welcomes links and
+// renders a preview card from the story page's OG tags.
+function fbText(text, short) {
+  const link = (short || '').match(/https?:\/\/\S+/)
+  return link ? `${text}\n\n${link[0]}` : text
+}
+
 function PostCard({ post }) {
   const meta = TYPE_META[post.type] || { label: post.type || 'Post', emoji: '✳️', color: 'var(--text2)' }
   const [withCard, setWithCard] = useState(true)
@@ -176,6 +183,18 @@ function PostCard({ post }) {
               </div>
             )
           })()}
+        </div>
+      )}
+
+      {!post.poll_options?.length && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 12, paddingTop: 12, borderTop: '0.5px solid var(--border)' }}>
+          <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1877F2' }}>
+            📘 Facebook <span style={{ color: 'var(--text3)', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>· X copy + story link</span>
+          </span>
+          <span style={{ display: 'inline-flex', gap: 6 }}>
+            <CopyButton text={fbText(post.text, post.short)} />
+            <PostButton platform="facebook" text={fbText(post.text, post.short)} imageUrl={cardUrl} imageAlt={cardAlt} label="Post to Facebook" color="#1877F2" />
+          </span>
         </div>
       )}
 
@@ -245,6 +264,16 @@ function QueueItem({ q, dismiss }) {
         </div>
       )}
 
+      {q.facebook && (
+        <div style={{ marginTop: (q.x || q.bluesky) ? 12 : 0, paddingTop: (q.x || q.bluesky) ? 12 : 0, borderTop: (q.x || q.bluesky) ? '0.5px solid var(--border)' : 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1877F2' }}>📘 Facebook</span>
+            <CopyButton text={q.facebook} />
+            {!q.live && <PostButton platform="facebook" text={q.facebook} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Facebook" color="#1877F2" />}
+          </div>
+        </div>
+      )}
+
       <CardPreview url={q.card} on={withCard} setOn={setWithCard} />
     </div>
   )
@@ -295,6 +324,13 @@ function JudgmentItem({ p, dismiss }) {
           </div>
         </div>
       )}
+      {!p.poll_options?.length && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1877F2' }}>📘 Facebook</span>
+          <CopyButton text={fbText(p.text, p.short)} />
+          <PostButton platform="facebook" text={fbText(p.text, p.short)} imageUrl={cardUrl} imageAlt={p.story} label="Post to Facebook" color="#1877F2" />
+        </div>
+      )}
       <CardPreview url={p.card} on={withCard} setOn={setWithCard} />
     </div>
   )
@@ -327,7 +363,7 @@ function AutopilotFeed({ state }) {
     const entries = [...(r.posted || []).map(p => ({ ...p, live: true })), ...(r.wouldPost || [])]
     const byStory = new Map()
     for (const p of entries) {
-      if (!byStory.has(p.story)) byStory.set(p.story, { story: p.story, at: r.at, x: null, bluesky: null, url: null, live: false, card: null, alt: '' })
+      if (!byStory.has(p.story)) byStory.set(p.story, { story: p.story, at: r.at, x: null, bluesky: null, facebook: null, url: null, live: false, card: null, alt: '' })
       const g = byStory.get(p.story)
       g[p.platform] = p.text
       if (p.card) { g.card = p.card; g.alt = p.alt || p.story }

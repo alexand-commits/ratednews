@@ -16,7 +16,7 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { generateTrendingBatch, trendingStories } from './social-compose'
-import { postToX, postToBluesky } from './social-post'
+import { postToX, postToBluesky, postToFacebook } from './social-post'
 import { AUTO_RATE_LIMITS, FLUFF_RE, BAIT_RE } from '../../src/server/social-gates'
 
 // Story-level approximation of the post gates, used by the cheap pre-check
@@ -217,17 +217,18 @@ export default async function handler(req, res) {
     // The cron fires every 15 min for reaction speed; generation only happens
     // when a rate-open platform has a gate-passing, not-yet-served story.
     const rateOpen = {
-      x:       !rateCheck('x', runs),
-      bluesky: !rateCheck('bluesky', runs),
+      x:        !rateCheck('x', runs),
+      bluesky:  !rateCheck('bluesky', runs),
+      facebook: !rateCheck('facebook', runs),
     }
     const coolingIds = recentClusterIds(runs)
     const candidates = (await trendingStories({ record: false, lean: true }))
       .filter(s => !coolingIds.has(s.clusterId))
-    const trigger = (rateOpen.x || rateOpen.bluesky) && candidates.some(s => storyAutoEligible(s))
+    const trigger = (rateOpen.x || rateOpen.bluesky || rateOpen.facebook) && candidates.some(s => storyAutoEligible(s))
     if (!trigger) {
       // Nothing new and postable — no run pack, but the heartbeat proves the
       // scout checked.
-      const reason = !rateOpen.x && !rateOpen.bluesky ? 'rate limits' : 'no new eligible story'
+      const reason = !rateOpen.x && !rateOpen.bluesky && !rateOpen.facebook ? 'rate limits' : 'no new eligible story'
       await beatHeart(svc, `checked — ${reason}`)
       return res.status(200).json({ ok: true, trigger: false, reason })
     }
@@ -240,6 +241,7 @@ export default async function handler(req, res) {
       preview: (p.text || '').slice(0, 140),
       x: p.auto?.x,
       bluesky: p.auto?.bluesky,
+      facebook: p.auto?.facebook,
       meta: p.meta ? { outlets: p.meta.outlets, breaking: p.meta.breaking, update: !!p.meta.update, first: p.meta.first } : null,
     }))
     const posted = []
@@ -249,13 +251,20 @@ export default async function handler(req, res) {
     // passes — a queue card should carry both the X and Bluesky variants.
     // Batch is hottest-first; skip cool-down stories, prefer fresh over ↻.
     const eligible = (batch.posts || []).filter(p =>
-      (p.auto?.x === 'ok' || p.auto?.bluesky === 'ok') && !coolingIds.has(p.meta?.clusterId))
+      (p.auto?.x === 'ok' || p.auto?.bluesky === 'ok' || p.auto?.facebook === 'ok') && !coolingIds.has(p.meta?.clusterId))
     const candidate = eligible.find(p => !p.meta?.update) || eligible[0]
     if (candidate) {
       const d = decisions[batch.posts.indexOf(candidate)]
+      // Facebook variant: the X copy plus the story link (lifted from the
+      // Bluesky short) — FB welcomes links and renders a preview card.
+      const fbTextOf = p => {
+        const link = (p.short || '').match(/https?:\/\/\S+/)
+        return link ? `${p.text}\n\n${link[0]}` : p.text
+      }
       for (const [platform, live, textOf] of [
-        ['x',       liveX, p => p.text],
-        ['bluesky', liveB, p => p.short],
+        ['x',        liveX, p => p.text],
+        ['bluesky',  liveB, p => p.short],
+        ['facebook', false, fbTextOf],
       ]) {
         if (candidate.auto?.[platform] !== 'ok') continue
         const rateBlock = rateCheck(platform, runs)
@@ -277,7 +286,9 @@ export default async function handler(req, res) {
         try {
           const out = platform === 'x'
             ? await postToX(textOf(candidate), undefined, candidate.card || undefined)
-            : await postToBluesky(textOf(candidate), candidate.card || undefined, entry.alt)
+            : platform === 'facebook'
+              ? await postToFacebook(textOf(candidate), candidate.card || undefined)
+              : await postToBluesky(textOf(candidate), candidate.card || undefined, entry.alt)
           d[platform] = 'POSTED'
           posted.push({ ...entry, url: out.url })
         } catch (e) {
@@ -306,6 +317,7 @@ export default async function handler(req, res) {
         why: p.why || null,
         x: decisions[i]?.x,
         bluesky: decisions[i]?.bluesky,
+        facebook: decisions[i]?.facebook,
         meta: decisions[i]?.meta || null,
       })),
     }
