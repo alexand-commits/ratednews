@@ -119,8 +119,13 @@ export async function trendingStories({ record = true, lean = false } = {}) {
       c.headlines.push({ outlet: name, title: a.title, summary: (a.summary || '').slice(0, 220) })
     }
     // Newest-first data → first image seen is the freshest photo for the story.
-    // Skip webp/avif — the card renderer (Satori) can't decode them.
-    if (!c.imageUrl && a.image_url && !/\.(webp|avif)(\?|$)/i.test(a.image_url)) c.imageUrl = a.image_url
+    // Feeds ship entity-mangled URLs and data: placeholders; the card endpoint
+    // re-validates, but don't waste the slot on an obvious dud. Skip webp/avif
+    // — the card renderer (Satori) can't decode them.
+    if (!c.imageUrl && a.image_url) {
+      const u = String(a.image_url).replace(/&amp;/g, '&')
+      if (/^https?:\/\//.test(u) && !/\.(webp|avif)(\?|$)/i.test(u)) c.imageUrl = u
+    }
   }
 
   // Story-level signals for the autopilot gates:
