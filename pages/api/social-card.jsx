@@ -19,10 +19,24 @@ const SE = 'Playfair'
 const SF = 'Inter'
 const CORAL = '#E8724A'
 
-const Brand = ({ size = 34 }) => (
+// The site favicon: dark rounded square, R white / N coral
+const Badge = ({ size = 64 }) => (
+  <div style={{
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+    width: size, height: size, background: '#2C2B29', borderRadius: Math.round(size * 0.19),
+    fontFamily: SE, fontWeight: 700, fontSize: Math.round(size * 0.5),
+  }}>
+    <span style={{ color: '#FFFFFF' }}>R</span>
+    <span style={{ color: '#D85A30' }}>N</span>
+  </div>
+)
+
+// Site wordmark as a domain: rated (cream) news (coral) .com (muted)
+const Domain = ({ size = 24 }) => (
   <span style={{ display: 'flex', fontFamily: SE, fontWeight: 700, fontSize: size }}>
-    <span style={{ color: '#F2F0ED' }}>Rated</span>
-    <span style={{ color: CORAL }}>News</span>
+    <span style={{ color: '#F2F0ED' }}>rated</span>
+    <span style={{ color: CORAL }}>news</span>
+    <span style={{ color: '#B7B2AC' }}>.com</span>
   </span>
 )
 
@@ -38,9 +52,7 @@ function Hybrid({ title, img, count, ribbon, k }) {
       <div style={{ position: 'absolute', top: 0, left: 0, width: W, height: H, display: 'flex', background: 'linear-gradient(180deg, rgba(18,16,15,0.35) 0%, rgba(18,16,15,0.10) 30%, rgba(18,16,15,0.85) 74%, rgba(18,16,15,0.96) 100%)' }} />
       {/* top bar */}
       <div style={{ position: 'absolute', top: z(36), left: z(40), right: z(40), display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', background: 'rgba(24,21,19,0.84)', borderRadius: z(11), padding: `${z(12)}px ${z(22)}px` }}>
-          <Brand size={z(34)} />
-        </div>
+        <Badge size={z(64)} />
         {ribbon ? (
           <div style={{ display: 'flex', fontFamily: SF, fontSize: z(22), fontWeight: 800, letterSpacing: 2.5, color: '#fff', background: '#C0392B', padding: `${z(10)}px ${z(22)}px`, borderRadius: 99 }}>
             {ribbon}
@@ -56,7 +68,7 @@ function Hybrid({ title, img, count, ribbon, k }) {
           <span style={{ fontFamily: SF, fontSize: z(25), fontWeight: 700, color: '#F0B79E' }}>
             {count ? `${count} outlets covering — compare every angle` : 'compare every angle of the story'}
           </span>
-          <span style={{ fontFamily: SF, fontSize: z(23), color: '#D8D4CF' }}>ratednews.com</span>
+          <Domain size={z(24)} />
         </div>
       </div>
     </div>
@@ -90,7 +102,7 @@ function Clash({ ao, aq, bo, bq, foot, k }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: W, height: H, background: '#191715' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: `${z(28)}px ${z(52)}px` }}>
-        <Brand size={z(34)} />
+        <Badge size={z(52)} />
         <span style={{ fontFamily: SF, fontSize: z(22), fontWeight: 800, letterSpacing: 3.5, color: '#8A857E' }}>COVERAGE CHECK</span>
       </div>
       <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
@@ -108,7 +120,7 @@ function Clash({ ao, aq, bo, bq, foot, k }) {
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', padding: `${z(26)}px ${z(52)}px`, borderTop: '2px solid rgba(255,255,255,0.12)' }}>
         <span style={{ fontFamily: SF, fontSize: z(22), color: '#97918A' }}>{foot || 'Two outlets. Two different stories.'}</span>
-        <span style={{ fontFamily: SF, fontSize: z(22), fontWeight: 700, color: CORAL }}>ratednews.com</span>
+        <Domain size={z(23)} />
       </div>
     </div>
   )
