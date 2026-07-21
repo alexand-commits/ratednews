@@ -67,17 +67,19 @@ function Clash({ ao, aq, bo, bq, foot, k }) {
   const W = Math.round(1200 * k), H = Math.round(630 * k)
   const z = n => Math.round(n * k)
   const qSize = z(Math.max(aq.length, bq.length) > 110 ? 34 : 42)
-  const pane = (outlet, quote, coral) => (
+  // Blue pane first (left), warm red second — readers parse the colours as
+  // political lean, and compose puts the more left-leaning outlet in slot A.
+  const pane = (outlet, quote, first) => (
     <div style={{
       display: 'flex', flexDirection: 'column', flex: 1,
       // Extra padding on the seam side keeps quotes clear of the pill
-      padding: coral ? `${z(42)}px ${z(120)}px ${z(46)}px ${z(50)}px` : `${z(42)}px ${z(50)}px ${z(46)}px ${z(120)}px`,
-      background: coral
-        ? 'linear-gradient(160deg, #33221B, #241C18)'
-        : 'linear-gradient(200deg, #1E2732, #191E24)',
+      padding: first ? `${z(42)}px ${z(120)}px ${z(46)}px ${z(50)}px` : `${z(42)}px ${z(50)}px ${z(46)}px ${z(120)}px`,
+      background: first
+        ? 'linear-gradient(160deg, #1E2732, #191E24)'
+        : 'linear-gradient(200deg, #33221B, #241C18)',
       gap: z(20),
     }}>
-      <span style={{ fontFamily: SF, fontSize: z(24), fontWeight: 800, letterSpacing: 2, color: coral ? CORAL : '#7FA8D6' }}>
+      <span style={{ fontFamily: SF, fontSize: z(24), fontWeight: 800, letterSpacing: 2, color: first ? '#7FA8D6' : CORAL }}>
         {outlet.toUpperCase()}
       </span>
       <span style={{ fontFamily: SE, fontSize: qSize, lineHeight: 1.28, color: '#F0EEEA' }}>
