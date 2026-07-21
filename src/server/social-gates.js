@@ -5,10 +5,14 @@
  * /api/social-auto run itself.
  *
  * Philosophy: the scout only DRAFTS — a human approves every publish — so
- * the gates guard pipeline truth (live events go stale in transit) and
- * audience fit (regional-only stories), not gravity. Sober-story voice rules
- * live in the generation prompt; the owner is the judgment layer.
+ * gates are minimal: pipeline truth (live events go stale in transit) and
+ * anti-fluff (gossip-grade content). Everything else — controversy, tragedy,
+ * regional, thin breaking — flows to the owner, who is the judgment layer.
  */
+
+// Gossip signals — deliberately narrow: hard news about these people still
+// flows (a royal policy story has none of these tells).
+export const FLUFF_RE = /\b(insider (reveals|says|claims)|source close to|body language expert|relationship expert|fans (spot|notice|react)|breaks? silence on .{0,30}(romance|relationship|split)|dating rumou?rs|red.carpet look|steps out (with|in)|shows off (her|his)|gently amused)\b/i
 
 /**
  * @param {object} post  — {type, text, short, story}
@@ -24,19 +28,20 @@ export function evaluateAutoGates(post, meta) {
     return { x: 'signature format — manual only', bluesky: 'signature format — manual only' }
   }
 
-  // Pipeline-truth gates — block both platforms
+  // Pipeline-truth gate — block both platforms (mid-game state is stale
+  // before our ~20-min pipeline can deliver it; previews/results are fine)
   if (meta?.liveEvent) {
     return { x: 'live event in progress — preview/result is a manual call', bluesky: 'live event in progress — preview/result is a manual call' }
   }
-  // Audience gate: no UK/US/international outlet on it → big regionally,
-  // invisible to this account's audience. Owner's judgment, not the bot's.
-  if (meta?.regional) {
-    return { x: 'regional story (no UK/US/intl coverage) — human call', bluesky: 'regional story (no UK/US/intl coverage) — human call' }
+  // Fluff gate: celebrity/royal gossip-grade stories. Broad news is wanted —
+  // controversy, tragedy, regional, thin-breaking all flow — but insider-
+  // reveals content isn't the brand.
+  if (FLUFF_RE.test(`${post.text || ''} ${meta?.title || ''}`)) {
+    return { x: 'gossip-grade fluff — skip', bluesky: 'gossip-grade fluff — skip' }
   }
 
   // Platform-specific
   let x = 'ok'
-  if (meta?.breaking && (meta.outlets || 0) < 4) x = 'breaking with <4 outlets — too early for autopilot'
   if (/https?:\/\/|www\./i.test(post.text || '')) x = 'contains link'
 
   let bluesky = 'ok'
