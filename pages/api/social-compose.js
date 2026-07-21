@@ -346,8 +346,6 @@ export async function generateTrendingBatch(steer = '') {
       })
       p.card = `${URL}/api/social-card?${cq}`
     } else if (p.type === 'news' && s?.imageUrl) {
-      // No BREAKING ribbon — too strong an editorial claim to stamp on a card.
-      const ribbon = s.update ? 'UPDATE' : ''
       const hq = new URLSearchParams({
         type: 'hybrid',
         title: (s.headlines[0]?.title || p.story || '').slice(0, 120),
@@ -357,7 +355,6 @@ export async function generateTrendingBatch(steer = '') {
       // story. Show the count only when it impresses; otherwise the card
       // falls back to its generic "compare every angle" line.
       if (s.outlets.size >= 8) hq.set('count', String(s.outlets.size))
-      if (ribbon) hq.set('ribbon', ribbon)
       p.card = `${URL}/api/social-card?${hq}`
     }
   }
