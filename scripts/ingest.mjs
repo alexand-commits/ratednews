@@ -93,6 +93,11 @@ function itemTitle(item) {
 export function cleanSummary(raw) {
   let s = String(raw || '')
     .replace(/<[^>]*>/g, '')
+    // Legal/copyright boilerplate — The Sun ships its full trademark notice as
+    // the RSS description. Cut from © onward only when it reads like a legal
+    // notice, so a stray © credit mid-prose survives.
+    .replace(/\s*©[\s\S]*$/, m =>
+      /registered (office|trademarks?)|rights reserved|trade names|Limited in England/i.test(m) ? '' : m)
     // WordPress syndication footer: "The post X appeared first on Y"
     .replace(/\s*The post\b[\s\S]{0,300}?appeared first on[\s\S]*$/i, '')
     // Trailing "Read more…/Continue reading…" ONLY when it's a link stub (a URL
@@ -104,6 +109,9 @@ export function cleanSummary(raw) {
     .replace(/\s*https?:\/\/\S+\s*$/i, '')
     .replace(/\s*\[…\]\s*$|\s*\[\.\.\.\]\s*$/, '…')
     .trim()
+  // Scraped site-chrome, not prose (The New Yorker's feed ships its footer
+  // nav as the description: "AboutCareersContact…Privacy Policy…")
+  if (/User Agreement|Privacy Policy|Media Kit/i.test(s) && /[a-z][A-Z]/.test(s)) s = ''
   if (s.length > 500) {
     s = s.slice(0, 500)
     const cut = s.lastIndexOf(' ')
