@@ -77,8 +77,9 @@ BLUESKY VARIANT — every non-poll post also gets a short version
 
 Output STRICT JSON only — no markdown, no prose around it:
 {"posts":[
-  {"type":"news|coverage_contrast|poll|media_literacy","platform":"x","story":"<2-4 word story label>","story_index":<the STORY number this post covers, when stories are numbered in the input>,"text":"<ready-to-post copy>","short":"<Bluesky version ≤300 chars — omit for polls>","poll_options":["A","B"]?,"why":"<one line>"}
-]}`
+  {"type":"news|coverage_contrast|poll|media_literacy","platform":"x","story":"<2-4 word story label>","story_index":<the STORY number this post covers, when stories are numbered in the input>,"text":"<ready-to-post copy>","short":"<Bluesky version ≤300 chars — omit for polls>","poll_options":["A","B"]?,"contrast":{"a_outlet":"...","a_headline":"<verbatim>","b_outlet":"...","b_headline":"<verbatim>"}?,"why":"<one line>"}
+]}
+For coverage_contrast posts ONLY, also fill "contrast" with the two clashing VERBATIM headlines and their outlets — they are drawn onto the share card.`
 
 // ── Trending story selection — same cross-outlet signal as the feed ──────────
 // opts.record: log selected stories to run memory (true for real generations;
@@ -94,7 +95,7 @@ export async function trendingStories({ record = true, lean = false } = {}) {
     .from('articles')
     .select(lean
       ? 'id, title, category, published_at, cluster_id, outlets(name, country)'
-      : 'id, title, summary, category, published_at, cluster_id, outlets(name, country)')
+      : 'id, title, summary, image_url, category, published_at, cluster_id, outlets(name, country)')
     .not('cluster_id', 'is', null)
     .gte('published_at', since)
     .order('published_at', { ascending: false })
@@ -117,6 +118,9 @@ export async function trendingStories({ record = true, lean = false } = {}) {
       c.countries.add(a.outlets?.country || 'International')
       c.headlines.push({ outlet: name, title: a.title, summary: (a.summary || '').slice(0, 220) })
     }
+    // Newest-first data → first image seen is the freshest photo for the story.
+    // Skip webp/avif — the card renderer (Satori) can't decode them.
+    if (!c.imageUrl && a.image_url && !/\.(webp|avif)(\?|$)/i.test(a.image_url)) c.imageUrl = a.image_url
   }
 
   // Story-level signals for the autopilot gates:
@@ -321,6 +325,32 @@ export async function generateTrendingBatch(steer = '') {
       newest: ago(s.newest),
     } : null
     p.auto = evaluateAutoGates(p, p.meta)
+
+    // Attach a drawn share card where the post earns one:
+    //  - coverage_contrast → Clash card from the two verbatim headlines
+    //  - news + story photo → Hybrid card (photo + chrome)
+    //  - otherwise (no photo, polls) → text-only
+    p.card = null
+    if (p.type === 'coverage_contrast' && p.contrast?.a_outlet && p.contrast?.a_headline && p.contrast?.b_outlet && p.contrast?.b_headline) {
+      const cq = new URLSearchParams({
+        type: 'clash',
+        ao: p.contrast.a_outlet.slice(0, 40),
+        aq: p.contrast.a_headline.slice(0, 160),
+        bo: p.contrast.b_outlet.slice(0, 40),
+        bq: p.contrast.b_headline.slice(0, 160),
+      })
+      p.card = `${URL}/api/social-card?${cq}`
+    } else if (p.type === 'news' && s?.imageUrl) {
+      const ribbon = s.breaking ? 'BREAKING' : (s.update ? 'UPDATE' : '')
+      const hq = new URLSearchParams({
+        type: 'hybrid',
+        title: (s.headlines[0]?.title || p.story || '').slice(0, 120),
+        img: s.imageUrl,
+        count: String(s.outlets.size),
+      })
+      if (ribbon) hq.set('ribbon', ribbon)
+      p.card = `${URL}/api/social-card?${hq}`
+    }
   }
   return { posts: parsed.posts, stories }
 }

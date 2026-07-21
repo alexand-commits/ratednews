@@ -40,11 +40,43 @@ function oauthHeader(method, url) {
     .map(k => `${pctEncode(k)}="${pctEncode(params[k])}"`).join(', ')
 }
 
-export async function postToX(text, pollOptions) {
+// Fetch an image (our card endpoint or a photo) as bytes for upload.
+async function fetchImageBytes(imageUrl) {
+  const r = await fetch(imageUrl)
+  if (!r.ok) throw new Error(`image fetch failed (${r.status})`)
+  const buf = Buffer.from(await r.arrayBuffer())
+  const type = r.headers.get('content-type') || 'image/png'
+  return { buf, type }
+}
+
+// X v2 media upload (multipart, OAuth 1.0a — body excluded from signature).
+// Defensive about the id field: v2 returns data.id; older shapes differ.
+async function uploadMediaToX(imageUrl) {
+  const { buf, type } = await fetchImageBytes(imageUrl)
+  const url = 'https://api.x.com/2/media/upload'
+  const form = new FormData()
+  form.append('media', new Blob([buf], { type }), 'card.png')
+  form.append('media_category', 'tweet_image')
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: oauthHeader('POST', url) },
+    body: form,
+  })
+  const json = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(`X media: ${json?.detail || json?.errors?.[0]?.message || `HTTP ${res.status}`}`)
+  const id = json?.data?.id || json?.data?.media_key || json?.media_id_string
+  if (!id) throw new Error('X media: no media id in response')
+  return String(id)
+}
+
+export async function postToX(text, pollOptions, imageUrl) {
   const url = 'https://api.x.com/2/tweets'
   const body = { text }
   if (pollOptions?.length >= 2) {
     body.poll = { options: pollOptions.slice(0, 4).map(o => String(o).slice(0, 25)), duration_minutes: 1440 }
+  } else if (imageUrl) {
+    // X forbids media alongside polls — image only on non-poll posts
+    body.media = { media_ids: [await uploadMediaToX(imageUrl)] }
   }
   const res = await fetch(url, {
     method: 'POST',
@@ -78,7 +110,7 @@ function linkFacets(text) {
   return facets
 }
 
-export async function postToBluesky(text) {
+export async function postToBluesky(text, imageUrl, imageAlt = '') {
   const pds = 'https://bsky.social'
   const sess = await fetch(`${pds}/xrpc/com.atproto.server.createSession`, {
     method: 'POST',
@@ -96,6 +128,27 @@ export async function postToBluesky(text) {
   }
   const facets = linkFacets(text)
   if (facets.length) record.facets = facets
+
+  // Optional image embed. Bluesky caps blobs at ~976KB — post without the
+  // image rather than fail the whole post.
+  if (imageUrl) {
+    try {
+      // Our card endpoint supports a scaled variant — Bluesky caps blobs ~976KB
+      const blueskyUrl = imageUrl.includes('/api/social-card?') ? `${imageUrl}&w=900` : imageUrl
+      const { buf, type } = await fetchImageBytes(blueskyUrl)
+      if (buf.length <= 950 * 1024) {
+        const up = await fetch(`${pds}/xrpc/com.atproto.repo.uploadBlob`, {
+          method: 'POST',
+          headers: { 'Content-Type': type, Authorization: `Bearer ${session.accessJwt}` },
+          body: buf,
+        })
+        const upJson = await up.json().catch(() => ({}))
+        if (up.ok && upJson?.blob) {
+          record.embed = { $type: 'app.bsky.embed.images', images: [{ image: upJson.blob, alt: imageAlt.slice(0, 300) }] }
+        }
+      }
+    } catch (e) { console.warn('[social-post] bluesky image skipped:', e.message) }
+  }
 
   const res = await fetch(`${pds}/xrpc/com.atproto.repo.createRecord`, {
     method: 'POST',
@@ -126,6 +179,10 @@ export default async function handler(req, res) {
   const platform = req.body?.platform
   const text = (req.body?.text || '').toString().trim()
   const pollOptions = Array.isArray(req.body?.pollOptions) ? req.body.pollOptions.filter(Boolean) : undefined
+  const rawImage = (req.body?.imageUrl || '').toString().trim()
+  // Only our own card endpoint or https images may be attached
+  const imageUrl = /^https:\/\//.test(rawImage) ? rawImage : undefined
+  const imageAlt = (req.body?.imageAlt || '').toString().slice(0, 300)
   if (!text) return res.status(400).json({ error: 'Nothing to post' })
   if (text.length > 4000) return res.status(400).json({ error: 'Text too long' })
 
@@ -139,7 +196,7 @@ export default async function handler(req, res) {
       if (/https?:\/\/|www\./i.test(text)) {
         return res.status(400).json({ error: 'No links on X — X charges 13x for URL posts and buries them. Remove the link (it lives in the Bluesky variant).' })
       }
-      const out = await postToX(text, pollOptions)
+      const out = await postToX(text, pollOptions, imageUrl)
       return res.status(200).json(out)
     }
     if (platform === 'bluesky') {
@@ -147,7 +204,7 @@ export default async function handler(req, res) {
         return res.status(501).json({ error: 'Bluesky not configured — add BLUESKY_HANDLE / BLUESKY_APP_PASSWORD in Vercel.' })
       }
       if (text.length > 300) return res.status(400).json({ error: `Bluesky caps posts at 300 chars — this is ${text.length}.` })
-      const out = await postToBluesky(text)
+      const out = await postToBluesky(text, imageUrl, imageAlt)
       return res.status(200).json(out)
     }
     return res.status(400).json({ error: 'Unknown platform' })
