@@ -14,6 +14,11 @@
 // flows (a royal policy story has none of these tells).
 export const FLUFF_RE = /\b(insider (reveals|says|claims)|source close to|body language expert|relationship expert|fans (spot|notice|react)|breaks? silence on .{0,30}(romance|relationship|split)|dating rumou?rs|red.carpet look|steps out (with|in)|shows off (her|his)|gently amused)\b/i
 
+// Sensational crime-footage framing — "shocking moment", CCTV-gawking,
+// bodycam voyeurism. A sober report of the same case still flows; the
+// tabloid packaging of it doesn't.
+export const BAIT_RE = /\b(shocking (moment|video|footage)|chilling (moment|video|footage|final)|horror (moment|video|footage)|caught on (camera|cctv|video|tape)|cctv (shows|captures|footage)|bodycam (footage|shows|captures)|dramatic (moment|footage)|moment\b[^.]{0,50}\b(kill(er|er's|ers)?|murder|stabb?|attack)|final moments)\b/i
+
 /**
  * @param {object} post  — {type, text, short, story}
  * @param {object|null} meta — {category, breaking, outlets, title} when known
@@ -38,6 +43,9 @@ export function evaluateAutoGates(post, meta) {
   // reveals content isn't the brand.
   if (FLUFF_RE.test(`${post.text || ''} ${meta?.title || ''}`)) {
     return { x: 'gossip-grade fluff — skip', bluesky: 'gossip-grade fluff — skip' }
+  }
+  if (BAIT_RE.test(`${post.text || ''} ${meta?.title || ''}`)) {
+    return { x: 'sensational crime-bait — skip', bluesky: 'sensational crime-bait — skip' }
   }
 
   // Platform-specific
