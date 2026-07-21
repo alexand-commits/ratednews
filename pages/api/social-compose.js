@@ -79,7 +79,7 @@ Output STRICT JSON only — no markdown, no prose around it:
 {"posts":[
   {"type":"news|coverage_contrast|poll|media_literacy","platform":"x","story":"<2-4 word story label>","story_index":<the STORY number this post covers, when stories are numbered in the input>,"text":"<ready-to-post copy>","short":"<Bluesky version ≤300 chars — omit for polls>","poll_options":["A","B"]?,"contrast":{"a_outlet":"...","a_headline":"<verbatim>","b_outlet":"...","b_headline":"<verbatim>"}?,"why":"<one line>"}
 ]}
-For coverage_contrast posts ONLY, also fill "contrast" with the two clashing VERBATIM headlines and their outlets — they are drawn onto the share card.`
+For coverage_contrast posts ONLY, also fill "contrast" with the two clashing VERBATIM headlines and their outlets — they are drawn onto the share card. The card renders a_outlet in a BLUE pane (left) and b_outlet in a WARM RED pane (right): when the two outlets have an obvious lean split, a_outlet must be the more left-leaning one so the colours don't mislead; when there's no clear split, either order is fine.`
 
 // ── Trending story selection — same cross-outlet signal as the feed ──────────
 // opts.record: log selected stories to run memory (true for real generations;
