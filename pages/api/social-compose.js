@@ -2,7 +2,7 @@
  * POST /api/social-compose  (owner-only)
  * On-demand social post generator. Two modes:
  *   { headlines: string, steer?: string } — compose from pasted headlines.
- *   { trending: true, steer?: string }    — server picks the 5 hottest (velocity-ranked)
+ *   { trending: true, steer?: string }    — server picks the 7 hottest (velocity-ranked)
  *     stories from the last 12h (cross-outlet clusters, recent-coverage velocity
  *     with freshness decay + a breaking tier) and drafts posts per story.
  * Non-streaming JSON.
@@ -225,7 +225,7 @@ export async function trendingStories({ record = true, lean = false } = {}) {
     if (isSameSaga) continue
     selected.push(c)
     tokenSets.push(c.tokens)
-    if (selected.length === 5) break
+    if (selected.length === 7) break
   }
 
   // Log this run's stories so the next run knows what's been served.
@@ -288,7 +288,7 @@ export async function generateTrendingBatch(steer = '') {
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   const msg = await client.messages.create({
     model: MODEL,
-    max_tokens: 5000,
+    max_tokens: 7000,
     system: SYSTEM,
     messages: [{ role: 'user', content: trendingPrompt(stories) + steerBlock }],
   })
@@ -349,9 +349,18 @@ export default async function handler(req, res) {
     ? `\n\nThe owner wants this specific angle/tone — honour it (while keeping the one hard neutrality line intact): "${steer}"`
     : ''
 
+  const saveManualRun = (mode, posts) => {
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY || !posts?.length) return
+    const svc = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    svc.from('social_drafts').insert({ pack: { kind: 'manual_run', mode, posts } }).then(() => {})
+    svc.from('social_drafts').delete().eq('pack->>kind', 'manual_run')
+      .lt('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()).then(() => {})
+  }
+
   try {
     if (isTrending) {
       const batch = await generateTrendingBatch(steer)
+      saveManualRun('trending', batch.posts)
       return res.status(200).json({ posts: batch.posts, note: batch.note })
     }
 
@@ -360,7 +369,7 @@ export default async function handler(req, res) {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
     const msg = await client.messages.create({
       model: MODEL,
-      max_tokens: 5000,
+      max_tokens: 7000,
       system: SYSTEM,
       messages: [{ role: 'user', content: userPrompt }],
     })
@@ -379,6 +388,7 @@ export default async function handler(req, res) {
       p.auto = evaluateAutoGates(p, null)
     }
 
+    saveManualRun('compose', parsed.posts)
     return res.status(200).json({ posts: parsed.posts })
   } catch (err) {
     console.error('[social-compose]', err)

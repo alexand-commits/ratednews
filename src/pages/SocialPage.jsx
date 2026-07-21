@@ -181,26 +181,10 @@ function PostCard({ post }) {
 // ── Post queue (main column) — autopilot scouts and drafts; the owner
 // approves with the same two-tap buttons as the generators. Nothing publishes
 // itself: the scout's job ends at the draft.
-function AutopilotFeed() {
-  const [state, setState] = useState(null)
-
-  useEffect(() => {
-    let mounted = true
-    async function load() {
-      try {
-        const { data: { session } } = await db.auth.getSession()
-        const res = await fetch('/api/social-auto', { headers: { Authorization: `Bearer ${session?.access_token}` } })
-        const json = await res.json()
-        if (mounted) setState(res.ok ? json : { error: json.error || 'Failed to load' })
-      } catch (e) { if (mounted) setState({ error: e.message }) }
-    }
-    load()
-    return () => { mounted = false }
-  }, [])
-
+function AutopilotFeed({ state }) {
   const [localDismissed, setLocalDismissed] = useState([])
 
-  if (!state || state.error || !state.configured || !state.runs?.length) return null
+  if (!state || state.error || !state.configured) return null
 
   async function dismiss(story) {
     setLocalDismissed(prev => [...prev, story]) // optimistic
@@ -217,7 +201,7 @@ function AutopilotFeed() {
   const hidden = new Set([...(state.dismissed || []).map(d => d.story), ...localDismissed])
 
   // Build the queue: newest drafts first, one card per story, last 12h only.
-  const QUEUE_MAX_AGE_H = 12
+  const QUEUE_MAX_AGE_H = 24 * 7 // queue persists until dismissed/posted; runs are kept 7 days
   const queue = []
   const seenStories = new Set()
   for (const r of state.runs) { // runs arrive newest-first
@@ -251,12 +235,12 @@ function AutopilotFeed() {
         )}
       </div>
       <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>
-        Gate-passing drafts land here within ~15 min of a story surging. Two taps to publish; skip anything that doesn't feel right — silence is free.
+        Drafts land here within ~15 min of a story surging and stay until you post or dismiss them. Two taps to publish; ✕ to bin.
       </div>
 
       {queue.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--text3)', padding: '8px 0' }}>
-          Queue is clear.
+          Queue is clear — drafts stay here until you post or dismiss them.
           {state.heartbeat ? ` Last check ${timeAgo(state.heartbeat.at)}: ${state.heartbeat.last_result || 'nothing new'}.` : ' The scout keeps watching.'}
         </div>
       ) : queue.slice(0, 6).map((q, i) => (
@@ -427,7 +411,7 @@ function TrendingGenerator({ onRun }) {
     <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 16 }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>⚡ Generate from trending</div>
       <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
-        Drafts posts for the 5 hottest stories right now — ranked by how fast coverage is accelerating, so you ride the wave instead of chasing it.
+        Drafts posts for the 7 hottest stories right now — ranked by how fast coverage is accelerating, so you ride the wave instead of chasing it.
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <button onClick={generate} disabled={busy} className="nav-pill" style={{ opacity: busy ? 0.55 : 1, cursor: busy ? 'default' : 'pointer' }}>
@@ -523,20 +507,20 @@ function Composer({ onRun }) {
 export default function SocialPage({ user, goBack }) {
   const isOwner = user?.email === OWNER
 
-  // Keep exactly one previous run: the main column shows what you just
-  // generated; the rail shows the batch before it (persisted, so it also
-  // survives a reload). Not a history — one slot.
-  const [railRun, setRailRun] = useState(null)
-  useEffect(() => {
-    try { setRailRun(JSON.parse(localStorage.getItem('rn_social_lastrun') || 'null')) } catch {}
-  }, [])
-  function recordRun(posts, kind) {
+  // Scout + history data — server-side, so it works identically on every
+  // device (mobile posting included; localStorage history kept losing runs).
+  const [scout, setScout] = useState(null)
+  async function loadScout() {
     try {
-      const prev = JSON.parse(localStorage.getItem('rn_social_lastrun') || 'null')
-      if (prev) setRailRun(prev)
-      localStorage.setItem('rn_social_lastrun', JSON.stringify({ posts, kind, at: Date.now() }))
-    } catch {}
+      const { data: { session } } = await db.auth.getSession()
+      const res = await fetch('/api/social-auto', { headers: { Authorization: `Bearer ${session?.access_token}` } })
+      const json = await res.json()
+      setScout(res.ok ? json : { error: json.error || 'Failed to load' })
+    } catch (e) { setScout({ error: e.message }) }
   }
+  useEffect(() => { if (isOwner) loadScout() }, [isOwner])
+  // After a manual generation, refetch so the run lands in server history.
+  const recordRun = () => setTimeout(loadScout, 1500)
 
   if (!isOwner) {
     return (
@@ -566,20 +550,21 @@ export default function SocialPage({ user, goBack }) {
           </p>
         </div>
 
-        <AutopilotFeed />
+        <AutopilotFeed state={scout} />
         <TrendingGenerator onRun={recordRun} />
 
-        {/* History — the previous batch, so regenerating never destroys good copy */}
-        {railRun?.posts?.length > 0 && (
-          <details style={{ marginBottom: 24 }}>
+        {/* History — recent manual batches, server-side so every device sees
+            the same runs. Regenerating never destroys good copy. */}
+        {(scout?.manualRuns || []).map((run, ri) => (
+          <details key={ri} style={{ marginBottom: ri === (scout.manualRuns.length - 1) ? 24 : 8 }}>
             <summary style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)', cursor: 'pointer', padding: '4px 0' }}>
-              Previous run · {railRun.kind === 'trending' ? 'trending' : 'composer'} · {timeAgo(new Date(railRun.at).toISOString())}
+              Previous run · {run.mode === 'trending' ? 'trending' : 'composer'} · {timeAgo(run.at)} · {run.posts.length} posts
             </summary>
             <div style={{ paddingTop: 12 }}>
-              {railRun.posts.map((post, i) => <PostCard key={i} post={post} />)}
+              {run.posts.map((post, i) => <PostCard key={i} post={post} />)}
             </div>
           </details>
-        )}
+        ))}
 
         <Composer onRun={recordRun} />
       </div>

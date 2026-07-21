@@ -17,14 +17,13 @@
 import { createClient } from '@supabase/supabase-js'
 import { generateTrendingBatch, trendingStories } from './social-compose'
 import { postToX, postToBluesky } from './social-post'
-import { AUTO_RATE_LIMITS } from '../../src/server/social-gates'
+import { AUTO_RATE_LIMITS, FLUFF_RE } from '../../src/server/social-gates'
 
 // Story-level approximation of the post gates, used by the cheap pre-check
 // (before any Claude spend). Post-level gates still run after generation.
-function storyAutoEligible(s, platform) {
+function storyAutoEligible(s) {
   if (s.liveEvent) return false          // in-game state goes stale in transit
-  if (s.coreCoverage === false) return false // regional-only — owner's call
-  if (platform === 'x' && s.breaking && s.outlets.size < 4) return false
+  if (s.headlines.some(h => FLUFF_RE.test(h.title || ''))) return false // gossip-grade
   // Only NEW material triggers a run: a story never served before, or a
   // previously-served story that genuinely escalated (grown). A slow-drip
   // update isn't worth waking the generator for.
@@ -82,8 +81,10 @@ async function getHeartbeat(svc) {
   return data?.pack || null
 }
 
-async function recentRuns(svc, limit = 12) {
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+async function recentRuns(svc, limit = 40) {
+  // 7 days — the queue persists until dismissed/posted, so the desk needs
+  // more than a day of drafts. Rate checks filter to 24h internally.
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
   const { data } = await svc.from('social_drafts')
     .select('created_at, pack')
     .eq('pack->>kind', 'auto_run')
@@ -109,7 +110,8 @@ function postedLike(runs, platform) {
 
 function rateCheck(platform, runs) {
   const limits = AUTO_RATE_LIMITS[platform]
-  const posted = postedLike(runs, platform)
+  const dayAgo = Date.now() - 24 * 60 * 60 * 1000
+  const posted = postedLike(runs, platform).filter(p => new Date(p.at) >= dayAgo)
   if (posted.length >= limits.maxPerDay) return `daily cap (${limits.maxPerDay}) reached`
   const latest = posted.map(p => new Date(p.at)).sort((a, b) => b - a)[0]
   if (latest && (Date.now() - latest) < limits.minGapMin * 60000) {
@@ -144,10 +146,21 @@ export default async function handler(req, res) {
     const runs = svcG ? await recentRuns(svcG) : []
     const heartbeat = svcG ? await getHeartbeat(svcG) : null
     const dismissed = svcG ? ((await getDismissedRow(svcG))?.pack?.stories || []) : []
+    let manualRuns = []
+    if (svcG) {
+      const { data: mr } = await svcG.from('social_drafts')
+        .select('created_at, pack')
+        .eq('pack->>kind', 'manual_run')
+        .gte('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
+        .order('created_at', { ascending: false })
+        .limit(5)
+      manualRuns = (mr || []).map(r => ({ at: r.created_at, mode: r.pack.mode, posts: r.pack.posts || [] }))
+    }
     return res.status(200).json({
       configured,
       heartbeat,
       dismissed,
+      manualRuns,
       mode: {
         x:       process.env.AUTO_POST_X === 'live' ? 'live' : 'dry',
         bluesky: process.env.AUTO_POST_BLUESKY === 'live' ? 'live' : 'dry',
@@ -163,7 +176,7 @@ export default async function handler(req, res) {
     if (!story) return res.status(400).json({ error: 'Missing story' })
     const svcD = svcClient()
     const row = await getDismissedRow(svcD)
-    const cutoff = Date.now() - 24 * 60 * 60 * 1000
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000
     const stories = [
       ...((row?.pack?.stories || []).filter(d => new Date(d.at) >= cutoff && d.story !== story)),
       { story, at: new Date().toISOString() },
@@ -199,9 +212,7 @@ export default async function handler(req, res) {
     const coolingIds = recentClusterIds(runs)
     const candidates = (await trendingStories({ record: false, lean: true }))
       .filter(s => !coolingIds.has(s.clusterId))
-    const trigger =
-      (rateOpen.x && candidates.some(s => storyAutoEligible(s, 'x'))) ||
-      (rateOpen.bluesky && candidates.some(s => storyAutoEligible(s, 'bluesky')))
+    const trigger = (rateOpen.x || rateOpen.bluesky) && candidates.some(s => storyAutoEligible(s))
     if (!trigger) {
       // Nothing new and postable — no run pack, but the heartbeat proves the
       // scout checked.
@@ -223,40 +234,42 @@ export default async function handler(req, res) {
     const posted = []
     const wouldPost = []
 
-    // Per platform: batch is hottest-first. Skip stories in the 6h cool-down,
-    // prefer a genuinely fresh story over an ↻ update when both pass gates.
-    for (const [platform, live, textOf] of [
-      ['x',       liveX, p => p.text],
-      ['bluesky', liveB, p => p.short],
-    ]) {
-      const eligible = (batch.posts || []).filter(p =>
-        p.auto?.[platform] === 'ok' && !coolingIds.has(p.meta?.clusterId))
-      const candidate = eligible.find(p => !p.meta?.update) || eligible[0]
-      if (!candidate) continue
-      const rateBlock = rateCheck(platform, runs)
+    // ONE story per drafting run, drafted for EVERY platform whose gate
+    // passes — a queue card should carry both the X and Bluesky variants.
+    // Batch is hottest-first; skip cool-down stories, prefer fresh over ↻.
+    const eligible = (batch.posts || []).filter(p =>
+      (p.auto?.x === 'ok' || p.auto?.bluesky === 'ok') && !coolingIds.has(p.meta?.clusterId))
+    const candidate = eligible.find(p => !p.meta?.update) || eligible[0]
+    if (candidate) {
       const d = decisions[batch.posts.indexOf(candidate)]
-      if (rateBlock) { d[platform] = `eligible, skipped — ${rateBlock}`; continue }
-
-      const entry = {
-        platform,
-        story: candidate.story,
-        clusterId: candidate.meta?.clusterId ?? null,
-        text: textOf(candidate),
-        at: new Date().toISOString(),
-      }
-      if (!live) {
-        d[platform] = 'WOULD POST (dry-run)'
-        wouldPost.push(entry)
-        continue
-      }
-      try {
-        const out = platform === 'x'
-          ? await postToX(textOf(candidate))
-          : await postToBluesky(textOf(candidate))
-        d[platform] = 'POSTED'
-        posted.push({ ...entry, url: out.url })
-      } catch (e) {
-        d[platform] = `post failed: ${e.message}`
+      for (const [platform, live, textOf] of [
+        ['x',       liveX, p => p.text],
+        ['bluesky', liveB, p => p.short],
+      ]) {
+        if (candidate.auto?.[platform] !== 'ok') continue
+        const rateBlock = rateCheck(platform, runs)
+        if (rateBlock) { d[platform] = `eligible, skipped — ${rateBlock}`; continue }
+        const entry = {
+          platform,
+          story: candidate.story,
+          clusterId: candidate.meta?.clusterId ?? null,
+          text: textOf(candidate),
+          at: new Date().toISOString(),
+        }
+        if (!live) {
+          d[platform] = 'WOULD POST (dry-run)'
+          wouldPost.push(entry)
+          continue
+        }
+        try {
+          const out = platform === 'x'
+            ? await postToX(textOf(candidate))
+            : await postToBluesky(textOf(candidate))
+          d[platform] = 'POSTED'
+          posted.push({ ...entry, url: out.url })
+        } catch (e) {
+          d[platform] = `post failed: ${e.message}`
+        }
       }
     }
 
