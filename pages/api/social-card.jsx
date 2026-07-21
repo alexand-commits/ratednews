@@ -66,7 +66,7 @@ function Hybrid({ title, img, count, ribbon, k }) {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid rgba(255,255,255,0.36)', paddingTop: z(18) }}>
           <span style={{ fontFamily: SF, fontSize: z(25), fontWeight: 700, color: '#F0B79E' }}>
-            {count ? `${count} outlets covering — compare every angle` : 'compare every angle of the story'}
+            {count ? `${count} outlets covering — rate the source` : 'compare every angle. rate the source.'}
           </span>
           <Domain size={z(24)} />
         </div>
