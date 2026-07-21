@@ -390,28 +390,6 @@ function AutopilotFeed({ state }) {
         )
       })()}
 
-      {/* Decision log — everything the scout declined, and why. Collapsed by default. */}
-      <details style={{ marginTop: 6 }}>
-        <summary style={{ fontSize: 12, fontWeight: 600, color: 'var(--text3)', cursor: 'pointer' }}>
-          Scout decisions — what was skipped and why
-        </summary>
-        <div style={{ paddingTop: 8 }}>
-          {state.runs.slice(0, 6).map((r, i) => {
-            const gated = (r.decisions || []).filter(d =>
-              d.x !== 'ok' && !String(d.x).startsWith('WOULD POST') && d.x !== 'POSTED' &&
-              d.bluesky !== 'ok' && !String(d.bluesky).startsWith('WOULD POST') && d.bluesky !== 'POSTED')
-            if (!gated.length && !r.error && !r.note) return null
-            return (
-              <div key={i} style={{ fontSize: 11, color: 'var(--text3)', lineHeight: 1.7, borderTop: '0.5px solid var(--border)', padding: '6px 0' }}>
-                <div style={{ fontWeight: 600 }}>{timeAgo(r.at)}{r.error ? ' · ⚠️ run failed' : ''}{r.note ? ` · ${r.note}` : ''}</div>
-                {gated.map((d, j) => (
-                  <div key={j}>🖐 {d.story} <span style={{ opacity: 0.8 }}>({d.type})</span> — {d.x === d.bluesky ? d.x : `X: ${d.x} · Bluesky: ${d.bluesky}`}</div>
-                ))}
-              </div>
-            )
-          })}
-        </div>
-      </details>
     </div>
   )
 }
