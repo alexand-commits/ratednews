@@ -341,13 +341,17 @@ export async function generateTrendingBatch(steer = '') {
       })
       p.card = `${URL}/api/social-card?${cq}`
     } else if (p.type === 'news' && s?.imageUrl) {
-      const ribbon = s.breaking ? 'BREAKING' : (s.update ? 'UPDATE' : '')
+      // No BREAKING ribbon — too strong an editorial claim to stamp on a card.
+      const ribbon = s.update ? 'UPDATE' : ''
       const hq = new URLSearchParams({
         type: 'hybrid',
         title: (s.headlines[0]?.title || p.story || '').slice(0, 120),
         img: s.imageUrl,
-        count: String(s.outlets.size),
       })
+      // We can only count outlets we ingest, so small numbers undersell the
+      // story. Show the count only when it impresses; otherwise the card
+      // falls back to its generic "compare every angle" line.
+      if (s.outlets.size >= 8) hq.set('count', String(s.outlets.size))
       if (ribbon) hq.set('ribbon', ribbon)
       p.card = `${URL}/api/social-card?${hq}`
     }
