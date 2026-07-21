@@ -254,6 +254,8 @@ export default async function handler(req, res) {
           story: candidate.story,
           clusterId: candidate.meta?.clusterId ?? null,
           text: textOf(candidate),
+          card: candidate.card || null,
+          alt: candidate.meta?.title || candidate.story || '',
           at: new Date().toISOString(),
         }
         if (!live) {
@@ -263,8 +265,8 @@ export default async function handler(req, res) {
         }
         try {
           const out = platform === 'x'
-            ? await postToX(textOf(candidate))
-            : await postToBluesky(textOf(candidate))
+            ? await postToX(textOf(candidate), undefined, candidate.card || undefined)
+            : await postToBluesky(textOf(candidate), candidate.card || undefined, entry.alt)
           d[platform] = 'POSTED'
           posted.push({ ...entry, url: out.url })
         } catch (e) {
@@ -289,6 +291,7 @@ export default async function handler(req, res) {
         text: p.text,
         short: p.short || null,
         poll_options: p.poll_options || null,
+        card: p.card || null,
         why: p.why || null,
         x: decisions[i]?.x,
         bluesky: decisions[i]?.bluesky,

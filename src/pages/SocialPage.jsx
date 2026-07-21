@@ -27,7 +27,7 @@ function CopyButton({ text, label = 'Copy' }) {
 
 // Two-tap publish: first tap arms ("Sure?"), second posts. Disarms after 4s.
 // Nothing ships on a single stray click.
-function PostButton({ platform, text, pollOptions, label, color }) {
+function PostButton({ platform, text, pollOptions, imageUrl, imageAlt, label, color }) {
   const [state, setState] = useState('idle') // idle | armed | busy | done | error
   const [url, setUrl]     = useState(null)
   const [error, setError] = useState('')
@@ -45,7 +45,7 @@ function PostButton({ platform, text, pollOptions, label, color }) {
       const res = await fetch('/api/social-post', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ platform, text, pollOptions }),
+        body: JSON.stringify({ platform, text, pollOptions, imageUrl, imageAlt }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Post failed')
@@ -96,8 +96,26 @@ function MetaLine({ post }) {
   )
 }
 
+// Thumbnail of the drawn share card + attach toggle. Default on — the card
+// is an upgrade; the toggle exists for the odd bad photo.
+function CardPreview({ url, on, setOn }) {
+  if (!url) return null
+  return (
+    <div style={{ marginTop: 10 }}>
+      <img src={url} alt="share card preview" style={{ width: '100%', maxWidth: 420, borderRadius: 8, border: '0.5px solid var(--border)', opacity: on ? 1 : 0.35, display: 'block' }} />
+      <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 11, fontWeight: 600, color: 'var(--text2)', cursor: 'pointer' }}>
+        <input type="checkbox" checked={on} onChange={e => setOn(e.target.checked)} />
+        🎴 attach card to post
+      </label>
+    </div>
+  )
+}
+
 function PostCard({ post }) {
   const meta = TYPE_META[post.type] || { label: post.type || 'Post', emoji: '✳️', color: 'var(--text2)' }
+  const [withCard, setWithCard] = useState(true)
+  const cardUrl = withCard && post.card ? post.card : undefined
+  const cardAlt = post.meta?.title || post.story || ''
 
   const copyText = [
     post.text,
@@ -119,7 +137,7 @@ function PostCard({ post }) {
               🔗 has link — X posting off
             </span>
           ) : (
-            <PostButton platform="x" text={post.text} pollOptions={post.poll_options} label="Post to X · 1.5¢" color="var(--coral)" />
+            <PostButton platform="x" text={post.text} pollOptions={post.poll_options} imageUrl={cardUrl} imageAlt={cardAlt} label={post.card ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />
           )}
         </span>
       </div>
@@ -144,7 +162,7 @@ function PostCard({ post }) {
             <span style={{ display: 'inline-flex', gap: 6 }}>
               <CopyButton text={post.short} />
               {post.short.length <= 300 && (
-                <PostButton platform="bluesky" text={post.short} label="Post to Bluesky" color="#2E86EA" />
+                <PostButton platform="bluesky" text={post.short} imageUrl={cardUrl} imageAlt={cardAlt} label="Post to Bluesky" color="#2E86EA" />
               )}
             </span>
           </div>
@@ -174,6 +192,7 @@ function PostCard({ post }) {
       )}
 
       <MetaLine post={post} />
+      <CardPreview url={post.card} on={withCard} setOn={setWithCard} />
     </div>
   )
 }
@@ -181,6 +200,106 @@ function PostCard({ post }) {
 // ── Post queue (main column) — autopilot scouts and drafts; the owner
 // approves with the same two-tap buttons as the generators. Nothing publishes
 // itself: the scout's job ends at the draft.
+// One queue story: both platform variants, card preview + toggle, actions.
+function QueueItem({ q, dismiss }) {
+  const [withCard, setWithCard] = useState(true)
+  const cardUrl = withCard && q.card ? q.card : undefined
+  return (
+    <div style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--coral)' }}>
+          {q.live ? '✅ posted' : '🕐 drafted'} {timeAgo(q.at)}
+        </span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>· {q.story}</span>
+        {q.url && <a href={q.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--coral)' }}>view →</a>}
+        {!q.live && (
+          <button
+            onClick={() => dismiss(q.story)}
+            title="Dismiss — removes this draft from the queue (the story won't be re-drafted)"
+            style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: 'var(--text3)', background: 'none', border: '0.5px solid var(--border)', borderRadius: 99, padding: '2px 10px', cursor: 'pointer' }}
+          >
+            ✕ Dismiss
+          </button>
+        )}
+      </div>
+
+      {q.x && (
+        <>
+          <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{q.x}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{q.x.length} chars</span>
+            <CopyButton text={q.x} />
+            {!q.live && <PostButton platform="x" text={q.x} imageUrl={cardUrl} imageAlt={q.alt} label={q.card ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />}
+          </div>
+        </>
+      )}
+
+      {q.bluesky && (
+        <div style={{ marginTop: q.x ? 12 : 0, paddingTop: q.x ? 12 : 0, borderTop: q.x ? '0.5px solid var(--border)' : 'none' }}>
+          <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: q.x ? 'var(--text2)' : 'var(--text)' }}>{q.bluesky}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: q.bluesky.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{q.bluesky.length} / 300</span>
+            <CopyButton text={q.bluesky} />
+            {!q.live && q.bluesky.length <= 300 && <PostButton platform="bluesky" text={q.bluesky} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Bluesky" color="#2E86EA" />}
+          </div>
+        </div>
+      )}
+
+      <CardPreview url={q.card} on={withCard} setOn={setWithCard} />
+    </div>
+  )
+}
+
+// A gated draft awaiting the owner's judgment — full text, reason, card, actions.
+function JudgmentItem({ p, dismiss }) {
+  const [withCard, setWithCard] = useState(true)
+  const cardUrl = withCard && p.card ? p.card : undefined
+  return (
+    <div style={{ background: 'var(--bg)', border: '0.5px dashed var(--border2)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text2)' }}>
+          {(TYPE_META[p.type] || {}).emoji || '✳️'} {p.story}
+        </span>
+        <span style={{ fontSize: 10, color: 'var(--amber, #C98A08)', fontWeight: 600 }} title={`X: ${p.x} · Bluesky: ${p.bluesky}`}>
+          {p.x === p.bluesky ? p.x : `X: ${p.x}`}
+        </span>
+        <button
+          onClick={() => dismiss(p.story)}
+          style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: 'var(--text3)', background: 'none', border: '0.5px solid var(--border)', borderRadius: 99, padding: '2px 10px', cursor: 'pointer' }}
+        >
+          ✕ Dismiss
+        </button>
+      </div>
+      <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{p.text}</div>
+      {p.poll_options?.length > 0 && (
+        <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
+          {p.poll_options.map((o, k) => (
+            <span key={k} style={{ fontSize: 12, padding: '4px 12px', border: '0.5px solid var(--border)', borderRadius: 99, color: 'var(--text2)' }}>{o}</span>
+          ))}
+        </div>
+      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{(p.text || '').length} chars</span>
+        <CopyButton text={p.text} />
+        {!/https?:\/\/|www\./i.test(p.text || '') && (
+          <PostButton platform="x" text={p.text} pollOptions={p.poll_options || undefined} imageUrl={p.poll_options?.length ? undefined : cardUrl} imageAlt={p.story} label={p.card && !p.poll_options?.length ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />
+        )}
+      </div>
+      {p.short && (
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--border)' }}>
+          <div style={{ fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap', color: 'var(--text2)' }}>{p.short}</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: p.short.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{p.short.length} / 300</span>
+            <CopyButton text={p.short} />
+            {p.short.length <= 300 && <PostButton platform="bluesky" text={p.short} imageUrl={cardUrl} imageAlt={p.story} label="Post to Bluesky" color="#2E86EA" />}
+          </div>
+        </div>
+      )}
+      <CardPreview url={p.card} on={withCard} setOn={setWithCard} />
+    </div>
+  )
+}
+
 function AutopilotFeed({ state }) {
   const [localDismissed, setLocalDismissed] = useState([])
 
@@ -208,9 +327,10 @@ function AutopilotFeed({ state }) {
     const entries = [...(r.posted || []).map(p => ({ ...p, live: true })), ...(r.wouldPost || [])]
     const byStory = new Map()
     for (const p of entries) {
-      if (!byStory.has(p.story)) byStory.set(p.story, { story: p.story, at: r.at, x: null, bluesky: null, url: null, live: false })
+      if (!byStory.has(p.story)) byStory.set(p.story, { story: p.story, at: r.at, x: null, bluesky: null, url: null, live: false, card: null, alt: '' })
       const g = byStory.get(p.story)
       g[p.platform] = p.text
+      if (p.card) { g.card = p.card; g.alt = p.alt || p.story }
       if (p.live) { g.live = true; g.url = p.url || g.url }
     }
     for (const [story, g] of byStory) {
@@ -243,48 +363,7 @@ function AutopilotFeed({ state }) {
           Queue is clear — drafts stay here until you post or dismiss them.
           {state.heartbeat ? ` Last check ${timeAgo(state.heartbeat.at)}: ${state.heartbeat.last_result || 'nothing new'}.` : ' The scout keeps watching.'}
         </div>
-      ) : queue.slice(0, 6).map((q, i) => (
-        <div key={i} style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 10 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--coral)' }}>
-              {q.live ? '✅ posted' : '🕐 drafted'} {timeAgo(q.at)}
-            </span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>· {q.story}</span>
-            {q.url && <a href={q.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--coral)' }}>view →</a>}
-            {!q.live && (
-              <button
-                onClick={() => dismiss(q.story)}
-                title="Dismiss — removes this draft from the queue (the story won't be re-drafted)"
-                style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: 'var(--text3)', background: 'none', border: '0.5px solid var(--border)', borderRadius: 99, padding: '2px 10px', cursor: 'pointer' }}
-              >
-                ✕ Dismiss
-              </button>
-            )}
-          </div>
-
-          {q.x && (
-            <>
-              <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{q.x}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{q.x.length} chars</span>
-                <CopyButton text={q.x} />
-                {!q.live && <PostButton platform="x" text={q.x} label="Post to X · 1.5¢" color="var(--coral)" />}
-              </div>
-            </>
-          )}
-
-          {q.bluesky && (
-            <div style={{ marginTop: q.x ? 12 : 0, paddingTop: q.x ? 12 : 0, borderTop: q.x ? '0.5px solid var(--border)' : 'none' }}>
-              <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: q.x ? 'var(--text2)' : 'var(--text)' }}>{q.bluesky}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 600, color: q.bluesky.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{q.bluesky.length} / 300</span>
-                <CopyButton text={q.bluesky} />
-                {!q.live && q.bluesky.length <= 300 && <PostButton platform="bluesky" text={q.bluesky} label="Post to Bluesky" color="#2E86EA" />}
-              </div>
-            </div>
-          )}
-        </div>
-      ))}
+      ) : queue.slice(0, 8).map((q, i) => <QueueItem key={q.story + i} q={q} dismiss={dismiss} />)}
 
       {/* Manual-call drafts — fully written, gated for judgment not hidden. */}
       {(() => {
@@ -306,49 +385,7 @@ function AutopilotFeed({ state }) {
             <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)', margin: '10px 0 8px' }}>
               🖐 Your call — drafted, but gated for judgment
             </div>
-            {manual.slice(0, 5).map((p, i) => (
-              <div key={i} style={{ background: 'var(--bg)', border: '0.5px dashed var(--border2)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text2)' }}>
-                    {(TYPE_META[p.type] || {}).emoji || '✳️'} {p.story}
-                  </span>
-                  <span style={{ fontSize: 10, color: 'var(--amber, #C98A08)', fontWeight: 600 }} title={`X: ${p.x} · Bluesky: ${p.bluesky}`}>
-                    {p.x === p.bluesky ? p.x : `X: ${p.x}`}
-                  </span>
-                  <button
-                    onClick={() => dismiss(p.story)}
-                    style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: 'var(--text3)', background: 'none', border: '0.5px solid var(--border)', borderRadius: 99, padding: '2px 10px', cursor: 'pointer' }}
-                  >
-                    ✕ Dismiss
-                  </button>
-                </div>
-                <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{p.text}</div>
-                {p.poll_options?.length > 0 && (
-                  <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-                    {p.poll_options.map((o, k) => (
-                      <span key={k} style={{ fontSize: 12, padding: '4px 12px', border: '0.5px solid var(--border)', borderRadius: 99, color: 'var(--text2)' }}>{o}</span>
-                    ))}
-                  </div>
-                )}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{(p.text || '').length} chars</span>
-                  <CopyButton text={p.text} />
-                  {!/https?:\/\/|www\./i.test(p.text || '') && (
-                    <PostButton platform="x" text={p.text} pollOptions={p.poll_options || undefined} label="Post to X · 1.5¢" color="var(--coral)" />
-                  )}
-                </div>
-                {p.short && (
-                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--border)' }}>
-                    <div style={{ fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap', color: 'var(--text2)' }}>{p.short}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: p.short.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{p.short.length} / 300</span>
-                      <CopyButton text={p.short} />
-                      {p.short.length <= 300 && <PostButton platform="bluesky" text={p.short} label="Post to Bluesky" color="#2E86EA" />}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+            {manual.slice(0, 5).map((p, i) => <JudgmentItem key={p.story + i} p={p} dismiss={dismiss} />)}
           </div>
         )
       })()}
