@@ -151,12 +151,12 @@ export default async function handler(req, res) {
     let manualRuns = []
     if (svcG) {
       const { data: mr } = await svcG.from('social_drafts')
-        .select('created_at, pack')
+        .select('id, created_at, pack')
         .eq('pack->>kind', 'manual_run')
         .gte('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
         .order('created_at', { ascending: false })
         .limit(5)
-      manualRuns = (mr || []).map(r => ({ at: r.created_at, mode: r.pack.mode, posts: r.pack.posts || [] }))
+      manualRuns = (mr || []).map(r => ({ id: r.id, at: r.created_at, mode: r.pack.mode, posts: r.pack.posts || [] }))
     }
     return res.status(200).json({
       configured,
@@ -171,9 +171,18 @@ export default async function handler(req, res) {
     })
   }
 
-  // ── DELETE: dismiss a queue draft (owner auth) ────────────────────────────
+  // ── DELETE: dismiss a queue draft, or bin a manual run (owner auth) ───────
   if (req.method === 'DELETE') {
     if (!(await ownerAuth(req))) return res.status(401).json({ error: 'Unauthorized' })
+    const runId = req.body?.runId
+    if (runId) {
+      const svcR = svcClient()
+      // Kind check so this can only ever remove run-history rows
+      const { error: delErr } = await svcR.from('social_drafts')
+        .delete().eq('id', runId).eq('pack->>kind', 'manual_run')
+      if (delErr) return res.status(502).json({ error: delErr.message })
+      return res.status(200).json({ ok: true })
+    }
     const story = (req.body?.story || '').toString().slice(0, 200)
     if (!story) return res.status(400).json({ error: 'Missing story' })
     const svcD = svcClient()
