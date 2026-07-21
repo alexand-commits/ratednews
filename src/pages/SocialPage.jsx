@@ -537,6 +537,19 @@ export default function SocialPage({ user, goBack }) {
   // After a manual generation, refetch so the run lands in server history.
   const recordRun = () => setTimeout(loadScout, 1500)
 
+  async function binRun(runId) {
+    // Optimistic: drop it locally, then delete server-side
+    setScout(s => s ? { ...s, manualRuns: (s.manualRuns || []).filter(r => r.id !== runId) } : s)
+    try {
+      const { data: { session } } = await db.auth.getSession()
+      await fetch('/api/social-auto', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ runId }),
+      })
+    } catch { loadScout() }
+  }
+
   if (!isOwner) {
     return (
       <div className="page-content">
@@ -571,9 +584,17 @@ export default function SocialPage({ user, goBack }) {
         {/* History — recent manual batches, server-side so every device sees
             the same runs. Regenerating never destroys good copy. */}
         {(scout?.manualRuns || []).map((run, ri) => (
-          <details key={ri} style={{ marginBottom: ri === (scout.manualRuns.length - 1) ? 24 : 8 }}>
+          <details key={run.id || ri} style={{ marginBottom: ri === (scout.manualRuns.length - 1) ? 24 : 8 }}>
             <summary style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)', cursor: 'pointer', padding: '4px 0' }}>
               Previous run · {run.mode === 'trending' ? 'trending' : 'composer'} · {timeAgo(run.at)} · {run.posts.length} posts
+              {run.id && (
+                <button
+                  onClick={e => { e.preventDefault(); e.stopPropagation(); binRun(run.id) }}
+                  style={{ marginLeft: 10, fontSize: 11, fontWeight: 600, color: 'var(--text3)', background: 'none', border: '0.5px solid var(--border)', borderRadius: 6, padding: '2px 8px', cursor: 'pointer' }}
+                >
+                  ✕ Bin
+                </button>
+              )}
             </summary>
             <div style={{ paddingTop: 12 }}>
               {run.posts.map((post, i) => <PostCard key={i} post={post} />)}
