@@ -362,8 +362,10 @@ function AutopilotFeed({ state }) {
 
   const hidden = new Set([...(state.dismissed || []).map(d => d.story), ...localDismissed])
 
-  // Build the queue: newest drafts first, one card per story, last 12h only.
-  const QUEUE_MAX_AGE_H = 24 * 7 // queue persists until dismissed/posted; runs are kept 7 days
+  // Build the queue: newest drafts first, one card per story. Trending content
+  // is perishable — a 2h-old surge isn't trending any more, so drafts expire
+  // out of the queue instead of lingering (runs are still kept 7 days).
+  const QUEUE_MAX_AGE_H = 2
   const queue = []
   const seenStories = new Set()
   for (const r of state.runs) { // runs arrive newest-first
@@ -398,12 +400,12 @@ function AutopilotFeed({ state }) {
         )}
       </div>
       <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>
-        Drafts land here within ~15 min of a story surging and stay until you post or dismiss them. Two taps to publish; ✕ to bin.
+        Drafts land here within ~15 min of a story surging and expire after 2 hours — trending doesn't keep. Two taps to publish; ✕ to bin.
       </div>
 
       {queue.length === 0 ? (
         <div style={{ fontSize: 13, color: 'var(--text3)', padding: '8px 0' }}>
-          Queue is clear — drafts stay here until you post or dismiss them.
+          Nothing trending right now — drafts expire after 2 hours, so an empty queue means no story is surging.
           {state.heartbeat ? ` Last check ${timeAgo(state.heartbeat.at)}: ${state.heartbeat.last_result || 'nothing new'}.` : ' The scout keeps watching.'}
         </div>
       ) : queue.slice(0, 8).map((q, i) => <QueueItem key={q.story + i} q={q} dismiss={dismiss} />)}
@@ -644,8 +646,8 @@ export default function SocialPage({ user, goBack }) {
           </p>
         </div>
 
-        <AutopilotFeed state={scout} />
         <TrendingGenerator onRun={recordRun} />
+        <AutopilotFeed state={scout} />
 
         {/* History — recent manual batches, server-side so every device sees
             the same runs. Regenerating never destroys good copy. */}
