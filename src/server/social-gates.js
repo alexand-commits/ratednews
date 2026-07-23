@@ -14,6 +14,12 @@
 // flows (a royal policy story has none of these tells).
 export const FLUFF_RE = /\b(insider (reveals|says|claims)|source close to|body language expert|relationship expert|fans (spot|notice|react)|breaks? silence on .{0,30}(romance|relationship|split)|dating rumou?rs|red.carpet look|steps out (with|in)|shows off (her|his)|gently amused)\b/i
 
+// Advertorial / reader-offer content — giveaways, competitions, voucher
+// promos. Syndicated across a publisher's titles, these game the multi-outlet
+// signal but are never brand content. Titles starting "Win ..." count too.
+export const PROMO_RE = /\b(giveaway|prize draw|chance to win|readers? can win|enter (to win|our competition)|competition to win|win one of|voucher( code)?|discount code|freebie|free bottomless|bottomless brunch)\b/i
+export const isPromo = t => PROMO_RE.test(t || '') || /^win\b/i.test((t || '').trim())
+
 // Sensational crime-footage framing — "shocking moment", CCTV-gawking,
 // bodycam voyeurism. A sober report of the same case still flows; the
 // tabloid packaging of it doesn't.
@@ -47,6 +53,9 @@ export function evaluateAutoGates(post, meta) {
   }
   if (BAIT_RE.test(`${post.text || ''} ${meta?.title || ''}`)) {
     return all('sensational crime-bait — skip')
+  }
+  if (isPromo(meta?.title) || PROMO_RE.test(post.text || '')) {
+    return all('advertorial / giveaway — skip')
   }
 
   // Platform-specific
