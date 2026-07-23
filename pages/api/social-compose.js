@@ -356,7 +356,7 @@ export async function generateTrendingBatch(steer = '') {
       })
       // We can only count outlets we ingest, so small numbers undersell the
       // story. Show the count only when it impresses; otherwise the card
-      // falls back to its generic "compare every angle" line.
+      // falls back to its generic "rate the source." line.
       if (s.outlets.size >= 8) hq.set('count', String(s.outlets.size))
       p.card = `${URL}/api/social-card?${hq}`
     }
