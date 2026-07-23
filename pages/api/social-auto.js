@@ -55,6 +55,15 @@ async function getDismissedRow(svc) {
   return data || null
 }
 
+// Owner-published record — single in-place row, {story, platform, url, at}
+// entries, 7d retention. The desk uses it to mark drafts ✓ Posted so the
+// same draft can't be double-posted from another device or after a refresh.
+async function getPublishedRow(svc) {
+  const { data } = await svc.from('social_drafts')
+    .select('id, pack').eq('pack->>kind', 'published_log').limit(1).maybeSingle()
+  return data || null
+}
+
 function svcClient() {
   return createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 }
@@ -158,10 +167,12 @@ export default async function handler(req, res) {
         .limit(5)
       manualRuns = (mr || []).map(r => ({ id: r.id, at: r.created_at, mode: r.pack.mode, posts: r.pack.posts || [] }))
     }
+    const published = svcG ? ((await getPublishedRow(svcG))?.pack?.entries || []) : []
     return res.status(200).json({
       configured,
       heartbeat,
       dismissed,
+      published,
       manualRuns,
       mode: {
         x:       process.env.AUTO_POST_X === 'live' ? 'live' : 'dry',
@@ -169,6 +180,27 @@ export default async function handler(req, res) {
       },
       runs: runs.map(r => ({ at: r.created_at, ...r.pack })),
     })
+  }
+
+  // ── PUT: record an owner publish (story + platform + url) ─────────────────
+  if (req.method === 'PUT') {
+    if (!(await ownerAuth(req))) return res.status(401).json({ error: 'Unauthorized' })
+    const platform = (req.body?.platform || '').toString().slice(0, 20)
+    const story = (req.body?.story || '').toString().slice(0, 200)
+    const url = (req.body?.url || '').toString().slice(0, 300)
+    if (!platform || !story) return res.status(400).json({ error: 'Missing platform/story' })
+    const svcP = svcClient()
+    const row = await getPublishedRow(svcP)
+    const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000
+    const entries = [
+      ...((row?.pack?.entries || []).filter(e =>
+        new Date(e.at) >= cutoff && !(e.story === story && e.platform === platform))),
+      { story, platform, url, at: new Date().toISOString() },
+    ]
+    const pack = { kind: 'published_log', entries }
+    if (row) await svcP.from('social_drafts').update({ pack }).eq('id', row.id)
+    else await svcP.from('social_drafts').insert({ pack })
+    return res.status(200).json({ ok: true })
   }
 
   // ── DELETE: dismiss a queue draft, or bin a manual run (owner auth) ───────
@@ -267,8 +299,6 @@ export default async function handler(req, res) {
         ['facebook', false, fbTextOf],
       ]) {
         if (candidate.auto?.[platform] !== 'ok') continue
-        const rateBlock = rateCheck(platform, runs)
-        if (rateBlock) { d[platform] = `eligible, skipped — ${rateBlock}`; continue }
         const entry = {
           platform,
           story: candidate.story,

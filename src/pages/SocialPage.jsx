@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, createContext, useContext } from 'react'
 import { db } from '../lib/supabase'
 import { timeAgo } from '../utils/helpers'
 
@@ -27,10 +27,17 @@ function CopyButton({ text, label = 'Copy' }) {
 
 // Two-tap publish: first tap arms ("Sure?"), second posts. Disarms after 4s.
 // Nothing ships on a single stray click.
-function PostButton({ platform, text, pollOptions, imageUrl, imageAlt, label, color }) {
+// Server-backed record of what the owner has published — keyed by
+// platform::story so a draft posted on one device shows ✓ Posted everywhere.
+const Published = createContext({ map: {}, record: () => {} })
+
+function PostButton({ platform, story, text, pollOptions, imageUrl, imageAlt, label, color }) {
   const [state, setState] = useState('idle') // idle | armed | busy | done | error
   const [url, setUrl]     = useState(null)
   const [error, setError] = useState('')
+  const { map: publishedMap, record } = useContext(Published)
+  const pubKey = story ? `${platform}::${story}` : null
+  const prior = pubKey ? publishedMap[pubKey] : null
 
   useEffect(() => {
     if (state !== 'armed') return
@@ -50,18 +57,18 @@ function PostButton({ platform, text, pollOptions, imageUrl, imageAlt, label, co
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Post failed')
       setUrl(json.url); setState('done')
+      if (pubKey) record(platform, story, json.url)
     } catch (e) {
       setError(e.message); setState('error')
     }
   }
 
-  if (state === 'done') {
-    return (
-      <a href={url} target="_blank" rel="noopener noreferrer"
-        style={{ fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 99, background: 'var(--green)', color: '#fff', textDecoration: 'none', flexShrink: 0 }}>
-        ✓ Posted — view
-      </a>
-    )
+  if (state === 'done' || prior) {
+    const href = state === 'done' ? url : prior?.url
+    const chip = { fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 99, background: 'var(--green)', color: '#fff', textDecoration: 'none', flexShrink: 0 }
+    return href
+      ? <a href={href} target="_blank" rel="noopener noreferrer" style={chip}>✓ Posted — view</a>
+      : <span style={chip}>✓ Posted</span>
   }
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -144,7 +151,7 @@ function PostCard({ post }) {
               🔗 has link — X posting off
             </span>
           ) : (
-            <PostButton platform="x" text={post.text} pollOptions={post.poll_options} imageUrl={cardUrl} imageAlt={cardAlt} label={post.card ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />
+            <PostButton platform="x" story={post.story} text={post.text} pollOptions={post.poll_options} imageUrl={cardUrl} imageAlt={cardAlt} label={post.card ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />
           )}
         </span>
       </div>
@@ -169,7 +176,7 @@ function PostCard({ post }) {
             <span style={{ display: 'inline-flex', gap: 6 }}>
               <CopyButton text={post.short} />
               {post.short.length <= 300 && (
-                <PostButton platform="bluesky" text={post.short} imageUrl={cardUrl} imageAlt={cardAlt} label="Post to Bluesky" color="#2E86EA" />
+                <PostButton platform="bluesky" story={post.story} text={post.short} imageUrl={cardUrl} imageAlt={cardAlt} label="Post to Bluesky" color="#2E86EA" />
               )}
             </span>
           </div>
@@ -193,7 +200,7 @@ function PostCard({ post }) {
           </span>
           <span style={{ display: 'inline-flex', gap: 6 }}>
             <CopyButton text={fbText(post.text, post.short)} />
-            <PostButton platform="facebook" text={fbText(post.text, post.short)} imageUrl={cardUrl} imageAlt={cardAlt} label="Post to Facebook" color="#1877F2" />
+            <PostButton platform="facebook" story={post.story} text={fbText(post.text, post.short)} imageUrl={cardUrl} imageAlt={cardAlt} label="Post to Facebook" color="#1877F2" />
           </span>
         </div>
       )}
@@ -248,7 +255,7 @@ function QueueItem({ q, dismiss }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{q.x.length} chars</span>
             <CopyButton text={q.x} />
-            {!q.live && <PostButton platform="x" text={q.x} imageUrl={cardUrl} imageAlt={q.alt} label={q.card ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />}
+            {!q.live && <PostButton platform="x" story={q.story} text={q.x} imageUrl={cardUrl} imageAlt={q.alt} label={q.card ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />}
           </div>
         </>
       )}
@@ -259,7 +266,7 @@ function QueueItem({ q, dismiss }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: q.bluesky.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{q.bluesky.length} / 300</span>
             <CopyButton text={q.bluesky} />
-            {!q.live && q.bluesky.length <= 300 && <PostButton platform="bluesky" text={q.bluesky} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Bluesky" color="#2E86EA" />}
+            {!q.live && q.bluesky.length <= 300 && <PostButton platform="bluesky" story={q.story} text={q.bluesky} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Bluesky" color="#2E86EA" />}
           </div>
         </div>
       )}
@@ -269,7 +276,7 @@ function QueueItem({ q, dismiss }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1877F2' }}>📘 Facebook</span>
             <CopyButton text={q.facebook} />
-            {!q.live && <PostButton platform="facebook" text={q.facebook} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Facebook" color="#1877F2" />}
+            {!q.live && <PostButton platform="facebook" story={q.story} text={q.facebook} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Facebook" color="#1877F2" />}
           </div>
         </div>
       )}
@@ -311,7 +318,7 @@ function JudgmentItem({ p, dismiss }) {
         <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{(p.text || '').length} chars</span>
         <CopyButton text={p.text} />
         {!/https?:\/\/|www\./i.test(p.text || '') && (
-          <PostButton platform="x" text={p.text} pollOptions={p.poll_options || undefined} imageUrl={p.poll_options?.length ? undefined : cardUrl} imageAlt={p.story} label={p.card && !p.poll_options?.length ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />
+          <PostButton platform="x" story={p.story} text={p.text} pollOptions={p.poll_options || undefined} imageUrl={p.poll_options?.length ? undefined : cardUrl} imageAlt={p.story} label={p.card && !p.poll_options?.length ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />
         )}
       </div>
       {p.short && (
@@ -320,7 +327,7 @@ function JudgmentItem({ p, dismiss }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: p.short.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{p.short.length} / 300</span>
             <CopyButton text={p.short} />
-            {p.short.length <= 300 && <PostButton platform="bluesky" text={p.short} imageUrl={cardUrl} imageAlt={p.story} label="Post to Bluesky" color="#2E86EA" />}
+            {p.short.length <= 300 && <PostButton platform="bluesky" story={p.story} text={p.short} imageUrl={cardUrl} imageAlt={p.story} label="Post to Bluesky" color="#2E86EA" />}
           </div>
         </div>
       )}
@@ -328,7 +335,7 @@ function JudgmentItem({ p, dismiss }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
           <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1877F2' }}>📘 Facebook</span>
           <CopyButton text={fbText(p.text, p.short)} />
-          <PostButton platform="facebook" text={fbText(p.text, p.short)} imageUrl={cardUrl} imageAlt={p.story} label="Post to Facebook" color="#1877F2" />
+          <PostButton platform="facebook" story={p.story} text={fbText(p.text, p.short)} imageUrl={cardUrl} imageAlt={p.story} label="Post to Facebook" color="#1877F2" />
         </div>
       )}
       <CardPreview url={p.card} on={withCard} setOn={setWithCard} />
@@ -573,6 +580,28 @@ export default function SocialPage({ user, goBack }) {
   // After a manual generation, refetch so the run lands in server history.
   const recordRun = () => setTimeout(loadScout, 1500)
 
+  // Published map: seeded from the server log, updated optimistically on post
+  const [pubMap, setPubMap] = useState({})
+  useEffect(() => {
+    if (!scout?.published) return
+    setPubMap(prev => {
+      const m = { ...prev }
+      for (const e of scout.published) m[`${e.platform}::${e.story}`] = { url: e.url, at: e.at }
+      return m
+    })
+  }, [scout])
+  async function recordPosted(platform, story, url) {
+    setPubMap(prev => ({ ...prev, [`${platform}::${story}`]: { url } }))
+    try {
+      const { data: { session } } = await db.auth.getSession()
+      await fetch('/api/social-auto', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ platform, story, url }),
+      })
+    } catch {}
+  }
+
   async function binRun(runId) {
     // Optimistic: drop it locally, then delete server-side
     setScout(s => s ? { ...s, manualRuns: (s.manualRuns || []).filter(r => r.id !== runId) } : s)
@@ -601,6 +630,7 @@ export default function SocialPage({ user, goBack }) {
   }
 
   return (
+    <Published.Provider value={{ map: pubMap, record: recordPosted }}>
     <div className="page-content">
       <div className="container" style={{ maxWidth: 860 }}>
         <button className="back-btn" onClick={goBack}>← Back</button>
@@ -641,5 +671,6 @@ export default function SocialPage({ user, goBack }) {
         <Composer onRun={recordRun} />
       </div>
     </div>
+    </Published.Provider>
   )
 }
