@@ -243,7 +243,7 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
             fontSize: 26, fontWeight: 700, color: 'var(--text)',
             margin: 0, fontFamily: 'var(--font-playfair), serif',
           }}>
-            🔥 Trending
+            🔥 Trending News
           </h1>
           {updatedMins !== null && (
             <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>

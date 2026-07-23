@@ -234,7 +234,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         {/* Page heading — mobile only; the active nav tab labels the page on desktop */}
         <div className="hide-desktop" style={{ marginBottom: 20 }}>
           <h1 style={{ fontSize: 26, fontWeight: 700, color: 'var(--text)', margin: 0, marginBottom: 4, fontFamily: 'var(--font-playfair), serif' }}>
-            🔍 Explore
+            🔍 Explore News
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text3)', margin: 0 }}>
             Search every story, or browse by topic across all outlets

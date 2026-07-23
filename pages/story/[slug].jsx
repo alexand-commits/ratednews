@@ -14,7 +14,9 @@ export default function StoryDetail({ story }) {
   const count = story.members?.length || 0
   const ogImage = `https://www.ratednews.com/api/og?type=story&title=${encodeURIComponent((story.title || '').slice(0, 120))}&count=${count}&sources=${encodeURIComponent([...new Set((story.members || []).map(m => m.outlets?.name).filter(Boolean))].slice(0, 4).join('|'))}`
   const title = `${story.title} — ${count} ${count === 1 ? 'source' : 'sources'} covering it | RatedNews`
-  const desc  = `See how ${count} news outlets are covering this story, side by side, on RatedNews. Rate the sources you trust.`
+  const desc  = count >= 8
+    ? `See how ${count} news outlets are covering this story, side by side, on RatedNews. Rate the sources you trust.`
+    : 'See how newsrooms are covering this story, side by side, on RatedNews. Rate the sources you trust.'
   const url   = `https://www.ratednews.com/story/${story.slug}`
 
   const jsonLd = {
@@ -52,7 +54,7 @@ export default function StoryDetail({ story }) {
         {/* Coverage-spread share card — the product's signature moment */}
         <meta name="description" content={desc} />
         <link rel="canonical" href={url} />
-        <meta property="og:title"       content={`${story.title} — ${count} sources covering it`} />
+        <meta property="og:title"       content={count >= 8 ? `${story.title} — ${count} sources covering it` : `${story.title} — coverage compared`} />
         <meta property="og:description" content={desc} />
         <meta property="og:url"         content={url} />
         <meta property="og:type"        content="website" />

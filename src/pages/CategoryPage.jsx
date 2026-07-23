@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import Link from 'next/link'
 import { db } from '../lib/supabase'
 import { timeAgo } from '../utils/helpers'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
@@ -121,10 +122,11 @@ export default function CategoryPage({ navigate, goBack, outlets = [] }) {
             const pct     = total > 0 ? Math.round((count / total) * 100) : 0
 
             return (
-              <button
+              <Link
                 key={c.value}
-                onClick={() => navigate('category', { slug: c.slug })}
+                href={`/categories/${c.slug}`}
                 style={{
+                  display: 'block',
                   background: 'var(--surface)',
                   border: '0.5px solid var(--border)',
                   borderLeft: `3px solid ${c.color}`,
@@ -135,6 +137,7 @@ export default function CategoryPage({ navigate, goBack, outlets = [] }) {
                   transition: 'opacity 0.15s',
                   width: '100%',
                   color: 'var(--text)',
+                  textDecoration: 'none',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: preview ? 10 : 0 }}>
@@ -178,7 +181,7 @@ export default function CategoryPage({ navigate, goBack, outlets = [] }) {
                     {preview.title}
                   </div>
                 )}
-              </button>
+              </Link>
             )
           })}
         </div>

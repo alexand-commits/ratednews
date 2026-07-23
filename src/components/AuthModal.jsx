@@ -30,7 +30,7 @@ export default function AuthModal({ onClose, showToast }) {
     const { error } = await db.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: 'https://ratednews.com' },
+      options: { emailRedirectTo: 'https://www.ratednews.com' },
     })
     setLoading(false)
     if (error) { setMessage({ type: 'error', text: error.message }); return }
@@ -42,7 +42,7 @@ export default function AuthModal({ onClose, showToast }) {
     if (!email) { setMessage({ type: 'error', text: 'Please enter your email address.' }); return }
     setLoading(true); setMessage(null)
     const { error } = await db.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://ratednews.com',
+      redirectTo: 'https://www.ratednews.com',
     })
     setLoading(false)
     if (error) { setMessage({ type: 'error', text: error.message }); return }

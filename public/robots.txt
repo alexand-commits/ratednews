@@ -3,6 +3,8 @@ Allow: /
 
 # Private/utility routes with no SEO value.
 # Public profiles ARE indexable — privacy is enforced per-page via <meta noindex>.
+Allow: /api/og
+Allow: /api/bias-card
 Disallow: /api/
 Disallow: /admin
 Disallow: /social

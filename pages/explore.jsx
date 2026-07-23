@@ -16,6 +16,9 @@ export default function Explore() {
         <meta property="og:url"         content="https://www.ratednews.com/explore" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/api/og?type=brand" />
+        <meta property="og:image:type"  content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="Explore — Search News by Topic | RatedNews" />
         <meta name="twitter:description" content="Search every news story across 200+ outlets by topic, person or event." />

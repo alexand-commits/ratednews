@@ -198,7 +198,7 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
               fontSize: 26, fontWeight: 700, margin: 0,
               fontFamily: 'var(--font-playfair), serif', color: 'var(--text)',
             }}>
-              ⚽ Sports
+              ⚽ Sports News
             </h1>
             {updatedMins !== null && (
               <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 500 }}>
