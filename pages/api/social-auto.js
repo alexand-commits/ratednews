@@ -17,7 +17,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { generateTrendingBatch, trendingStories } from './social-compose'
 import { postToX, postToBluesky, postToFacebook } from './social-post'
-import { AUTO_RATE_LIMITS, FLUFF_RE, BAIT_RE } from '../../src/server/social-gates'
+import { AUTO_RATE_LIMITS, FLUFF_RE, BAIT_RE, isPromo } from '../../src/server/social-gates'
 
 // Story-level approximation of the post gates, used by the cheap pre-check
 // (before any Claude spend). Post-level gates still run after generation.
@@ -25,6 +25,7 @@ function storyAutoEligible(s) {
   if (s.liveEvent) return false          // in-game state goes stale in transit
   if (s.headlines.some(h => FLUFF_RE.test(h.title || ''))) return false // gossip-grade
   if (s.headlines.some(h => BAIT_RE.test(h.title || ''))) return false  // crime-footage bait
+  if (s.headlines.some(h => isPromo(h.title))) return false             // advertorial/giveaway
   if (s.outlets.size < 3) return false   // 2 outlets is too thin a signal to queue
   // Only NEW material triggers a run: a story never served before, or a
   // previously-served story that genuinely escalated (grown). A slow-drip

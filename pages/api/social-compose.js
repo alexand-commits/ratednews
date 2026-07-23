@@ -10,7 +10,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { createClient } from '@supabase/supabase-js'
 import { articleSlug } from '../../src/utils/helpers'
-import { evaluateAutoGates } from '../../src/server/social-gates'
+import { evaluateAutoGates, isPromo } from '../../src/server/social-gates'
 
 const OWNER = 'alexandchow@gmail.com'
 const MODEL = 'claude-sonnet-4-6'
@@ -226,6 +226,9 @@ export async function trendingStories({ record = true, lean = false } = {}) {
   // old). Rank purely by heat — velocity with freshness decay.
   const sorted = [...clusters.values()]
     .filter(c => (c.outlets.size >= 3 || c.breaking) && c.heat > 0)
+    // Advertorial giveaways syndicate across one publisher's titles and fake
+    // a coverage surge — never editorial, never selected (manual runs included)
+    .filter(c => !c.headlines.some(h => isPromo(h.title)))
     .sort((x, y) => y.heat - x.heat)
   const selected = []
   const tokenSets = []
