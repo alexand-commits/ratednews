@@ -376,7 +376,7 @@ function BrandCard() {
             background: SURFACE, border: `1px solid ${LINE}`, borderRadius: 18,
             padding: '26px 28px', gap: 18,
           }}>
-            <span style={{ color: TEXT3, fontFamily: SF, fontSize: 13, fontWeight: 700, letterSpacing: 2 }}>ONE STORY · EVERY ANGLE</span>
+            <span style={{ color: TEXT3, fontFamily: SF, fontSize: 13, fontWeight: 700, letterSpacing: 2 }}>ONE STORY · EVERY SOURCE</span>
             {rows.map((r, i) => (
               <div key={String(i)} style={{ display: 'flex', flexDirection: 'column', gap: 9, paddingBottom: i < rows.length - 1 ? 18 : 0, borderBottom: i < rows.length - 1 ? `1px solid ${LINE}` : 'none' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -442,7 +442,7 @@ function StoryCard({ title, count, sources }) {
           ))}
           {Number(count) > names.length && (
             <span style={{ display: 'flex', color: TEXT3, fontFamily: SF, fontSize: 18, marginLeft: 25 }}>
-              +{Number(count) - names.length} more outlets — compare every angle
+              +{Number(count) - names.length} more outlets — rate the source
             </span>
           )}
         </div>
