@@ -40,6 +40,16 @@ function oauthHeader(method, url) {
     .map(k => `${pctEncode(k)}="${pctEncode(params[k])}"`).join(', ')
 }
 
+// Pull the first URL out of post text. FB demotes root posts with external
+// links and Bluesky link posts under-engage, so both publish the text clean
+// and attach the link as a first comment / threaded reply instead.
+function splitLink(text) {
+  const m = (text || '').match(/https?:\/\/\S+/)
+  if (!m) return { clean: text, link: null }
+  const clean = text.replace(m[0], '').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim()
+  return { clean, link: m[0] }
+}
+
 // Fetch an image (our card endpoint or a photo) as bytes for upload.
 async function fetchImageBytes(imageUrl) {
   const r = await fetch(imageUrl)
@@ -120,13 +130,14 @@ export async function postToBluesky(text, imageUrl, imageAlt = '') {
   const session = await sess.json().catch(() => ({}))
   if (!sess.ok) throw new Error(`Bluesky login: ${session?.message || `HTTP ${sess.status}`}`)
 
+  const { clean, link } = splitLink(text)
   const record = {
     $type: 'app.bsky.feed.post',
-    text,
+    text: clean,
     createdAt: new Date().toISOString(),
     langs: ['en'],
   }
-  const facets = linkFacets(text)
+  const facets = linkFacets(clean)
   if (facets.length) record.facets = facets
 
   // Optional image embed. Bluesky caps blobs at ~976KB — post without the
@@ -157,6 +168,27 @@ export async function postToBluesky(text, imageUrl, imageAlt = '') {
   })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(`Bluesky: ${json?.message || `HTTP ${res.status}`}`)
+  // Story link as a threaded reply from our own account
+  if (link && json.uri && json.cid) {
+    try {
+      const replyRecord = {
+        $type: 'app.bsky.feed.post',
+        text: link,
+        createdAt: new Date().toISOString(),
+        langs: ['en'],
+        facets: linkFacets(link),
+        reply: {
+          root:   { uri: json.uri, cid: json.cid },
+          parent: { uri: json.uri, cid: json.cid },
+        },
+      }
+      await fetch(`${pds}/xrpc/com.atproto.repo.createRecord`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.accessJwt}` },
+        body: JSON.stringify({ repo: session.did, collection: 'app.bsky.feed.post', record: replyRecord }),
+      })
+    } catch (e) { console.warn('[social-post] bluesky link reply failed:', e.message) }
+  }
   const rkey = (json.uri || '').split('/').pop()
   return { url: `https://bsky.app/profile/${process.env.BLUESKY_HANDLE}/post/${rkey}` }
 }
@@ -168,15 +200,14 @@ export async function postToBluesky(text, imageUrl, imageAlt = '') {
 export async function postToFacebook(text, imageUrl) {
   const page = process.env.FB_PAGE_ID
   const token = process.env.FB_PAGE_TOKEN
+  const { clean, link } = splitLink(text)
   let url, body
   if (imageUrl) {
     url = `https://graph.facebook.com/v21.0/${page}/photos`
-    body = { url: imageUrl, message: text, access_token: token }
+    body = { url: imageUrl, message: clean, access_token: token }
   } else {
     url = `https://graph.facebook.com/v21.0/${page}/feed`
-    body = { message: text, access_token: token }
-    const link = text.match(/https?:\/\/\S+/)
-    if (link) body.link = link[0]
+    body = { message: clean, access_token: token }
   }
   const res = await fetch(url, {
     method: 'POST',
@@ -187,6 +218,17 @@ export async function postToFacebook(text, imageUrl) {
   if (!res.ok) throw new Error(`Facebook: ${json?.error?.message || `HTTP ${res.status}`}`)
   const id = json.post_id || json.id
   if (!id) throw new Error('Facebook: no post id in response')
+  // Story link as the first comment — reach for the root, clicks in the thread.
+  // The post succeeded; a comment failure shouldn't fail the call.
+  if (link) {
+    try {
+      await fetch(`https://graph.facebook.com/v21.0/${id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: link, access_token: token }),
+      })
+    } catch (e) { console.warn('[social-post] fb link comment failed:', e.message) }
+  }
   return { url: `https://www.facebook.com/${id}` }
 }
 
