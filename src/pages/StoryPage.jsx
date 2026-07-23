@@ -4,6 +4,7 @@ import OutletLogo from '../components/OutletLogo'
 import { OutletTrustRateInline } from '../components/OutletTrustRate'
 import { articleSlug, timeAgo, outletColor } from '../utils/helpers'
 import { db } from '../lib/supabase'
+import { toSlug } from '../utils/navigate'
 import Sidebar from '../components/Sidebar'
 import { useTrendingTopics } from '../hooks/useTrendingTopics'
 
@@ -71,12 +72,12 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
               <div key={m.id} style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                   <OutletLogo name={o.name || 'X'} size={26} borderRadius={6} />
-                  <span
-                    onClick={() => navigate('outlet', { outletId: m.outlet_id })}
-                    style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', cursor: 'pointer' }}
+                  <Link
+                    href={`/outlet/${toSlug(o.name || '')}`}
+                    style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }}
                   >
                     {o.name || 'Unknown'}
-                  </span>
+                  </Link>
                   {com > 0 && (
                     <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--green-dark)' }}>{(com / 20).toFixed(1)}★ trust</span>
                   )}

@@ -102,7 +102,6 @@ const nextConfig = {
       { source: '/media-reviews/:slug*',                 destination: '/outlets',                       permanent: true },
 
       // ── Old site: archive and section pages → homepage ───────────────────────
-      { source: '/Archives/:path*',                      destination: '/',                              permanent: true },
       { source: '/all-news',                             destination: '/',                              permanent: true },
       { source: '/all-news/',                            destination: '/',                              permanent: true },
       { source: '/egypt',                                destination: '/',                              permanent: true },

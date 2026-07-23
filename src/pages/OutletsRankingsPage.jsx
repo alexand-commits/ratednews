@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { scoreColor, isRankEligible, MIN_RANK_RATINGS } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import { db } from '../lib/supabase'
+import { toSlug } from '../utils/navigate'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 import DigestSignup from '../components/DigestSignup'
 
@@ -287,7 +289,7 @@ export default function OutletsRankingsPage({
         <div className="hide-desktop" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <div>
             <h1 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 26, fontWeight: 700, marginBottom: 4 }}>
-              📡 Outlets
+              📡 News Outlet Ratings
             </h1>
             <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, maxWidth: 480 }}>
               {parentCount} outlets ranked by community ratings.{' '}
@@ -465,7 +467,11 @@ export default function OutletsRankingsPage({
                         <OutletLogo name={o.name} size={36} borderRadius={9} />
 
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 2 }}>{o.name}</div>
+                          <Link
+                            href={`/outlet/${toSlug(o.name)}`}
+                            onClick={e => { if (compareMode) e.preventDefault(); else e.stopPropagation() }}
+                            style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 2, color: 'inherit', textDecoration: 'none' }}
+                          >{o.name}</Link>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.country || 'International'}</span>
                             {o.total_ratings > 0 && <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.total_ratings} {o.total_ratings === 1 ? 'rating' : 'ratings'}</span>}

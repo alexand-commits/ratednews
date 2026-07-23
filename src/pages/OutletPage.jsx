@@ -294,7 +294,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
         <div className="outlet-hero" style={{ borderLeft: '3px solid var(--coral)' }}>
           <OutletLogo name={outlet.name} size={64} borderRadius={14} />
           <div className="outlet-hero-info">
-            <div className="outlet-hero-name">{outlet.name}</div>
+            <h1 className="outlet-hero-name" style={{ margin: 0 }}>{outlet.name}</h1>
             <div className="outlet-meta-chips">
               <span className="meta-chip"><span>🌍</span>{outlet.country || 'Unknown'}</span>
               <span className="meta-chip">{outlet.type || 'News outlet'}</span>

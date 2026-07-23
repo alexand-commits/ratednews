@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { db } from '../lib/supabase'
+import { toSlug } from '../utils/navigate'
 import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import OutletTrustRate from '../components/OutletTrustRate'
@@ -436,12 +437,12 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
           <div className="article-outlet-row">
             <OutletLogo name={outlet.name || ''} size={32} borderRadius={8} />
             <div>
-              <div
-                style={{ fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
-                onClick={() => navigate('outlet', { outletId: article.outlet_id })}
+              <Link
+                href={`/outlet/${toSlug(outlet.name || '')}`}
+                style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none' }}
               >
                 {outlet.name || ''}
-              </div>
+              </Link>
               <div style={{ fontSize: 11, color: 'var(--text2)' }}>{outlet.country || ''} · {timeAgo(article.published_at)}</div>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
