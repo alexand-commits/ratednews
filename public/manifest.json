@@ -1,7 +1,7 @@
 {
   "name": "RatedNews",
   "short_name": "RatedNews",
-  "description": "Community-rated news from 200+ outlets — readers rate every article and outlet for accuracy, bias and quality. Trust the source, not just the story.",
+  "description": "Community-rated news from 200+ outlets — readers rate every article and outlet for accuracy, bias and quality. Rate the source.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#201E1C",

@@ -23,7 +23,7 @@ export default function Footer() {
         <button onClick={() => setLegalDoc('guidelines')} style={linkBtn}>Guidelines</button>
         <a href="mailto:info@ratednews.com" style={link}>Contact</a>
         <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>
-          Trust the source, not just the story
+          Rate the source.
         </span>
       </div>
       {legalDoc && <LegalModal doc={legalDoc} onClose={() => setLegalDoc(null)} />}
