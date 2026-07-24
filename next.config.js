@@ -55,6 +55,15 @@ const nextConfig = {
       // internals). 301 them somewhere sensible so they drop out of the index
       // fast and any residual link equity flows to live pages.
       { source: '/Archives/:path*',      destination: '/',        permanent: true },
+      // Date-based WP post permalinks (/2021/06/post-title) — the largest
+      // legacy class in Search Console's not-found report
+      { source: '/:year(\\d{4})/:month(\\d{2})/:slug*', destination: '/', permanent: true },
+      { source: '/category/:path*',      destination: '/categories', permanent: true },
+      { source: '/page/:n(\\d+)',        destination: '/',        permanent: true },
+      { source: '/rankings/:path*',      destination: '/outlets', permanent: true },
+      { source: '/about-us',             destination: '/about',   permanent: true },
+      { source: '/contact',              destination: '/about',   permanent: true },
+      { source: '/news/:path*',          destination: '/',        permanent: true },
       { source: '/archives/:path*',      destination: '/',        permanent: true },
       { source: '/tag/:path*',           destination: '/explore', permanent: true },
       { source: '/author/:path*',        destination: '/about',   permanent: true },
