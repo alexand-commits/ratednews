@@ -109,10 +109,10 @@ function CardPreview({ url, on, setOn }) {
   if (!url) return null
   return (
     <div style={{ marginTop: 10 }}>
-      <img src={url} alt="share card preview" style={{ width: '100%', maxWidth: 420, borderRadius: 8, border: '0.5px solid var(--border)', opacity: on ? 1 : 0.35, display: 'block' }} />
+      <img src={url} alt="post image preview" style={{ width: '100%', maxWidth: 420, borderRadius: 8, border: '0.5px solid var(--border)', opacity: on ? 1 : 0.35, display: 'block' }} />
       <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 6, fontSize: 11, fontWeight: 600, color: 'var(--text2)', cursor: 'pointer' }}>
         <input type="checkbox" checked={on} onChange={e => setOn(e.target.checked)} />
-        🎴 attach card to post
+        🖼 attach image to post
       </label>
     </div>
   )

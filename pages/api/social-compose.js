@@ -119,12 +119,11 @@ export async function trendingStories({ record = true, lean = false } = {}) {
       c.headlines.push({ outlet: name, title: a.title, summary: (a.summary || '').slice(0, 220) })
     }
     // Newest-first data → first image seen is the freshest photo for the story.
-    // Feeds ship entity-mangled URLs and data: placeholders; the card endpoint
-    // re-validates, but don't waste the slot on an obvious dud. Skip webp/avif
-    // — the card renderer (Satori) can't decode them.
+    // Feeds ship entity-mangled URLs and data: placeholders — https only.
+    // (webp is fine now: photos attach raw, no Satori decode in the path.)
     if (!c.imageUrl && a.image_url) {
       const u = String(a.image_url).replace(/&amp;/g, '&')
-      if (/^https?:\/\//.test(u) && !/\.(webp|avif)(\?|$)/i.test(u)) c.imageUrl = u
+      if (/^https?:\/\//.test(u)) c.imageUrl = u
     }
   }
 
@@ -349,16 +348,11 @@ export async function generateTrendingBatch(steer = '') {
       })
       p.card = `${URL}/api/social-card?${cq}`
     } else if (p.type === 'news' && s?.imageUrl) {
-      const hq = new URLSearchParams({
-        type: 'hybrid',
-        title: (s.headlines[0]?.title || p.story || '').slice(0, 120),
-        img: s.imageUrl,
-      })
-      // We can only count outlets we ingest, so small numbers undersell the
-      // story. Show the count only when it impresses; otherwise the card
-      // falls back to its generic "rate the source." line.
-      if (s.outlets.size >= 8) hq.set('count', String(s.outlets.size))
-      p.card = `${URL}/api/social-card?${hq}`
+      // Raw story photo, unedited. The branded hybrid overlay duplicated the
+      // post text and stamped our wordmark on outlets' photos — a native
+      // photo reads better in-feed and drops the ownership claim. The Clash
+      // card stays branded: that one is our own graphic.
+      p.card = s.imageUrl
     }
   }
   return { posts: parsed.posts, stories }
