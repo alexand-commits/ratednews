@@ -44,6 +44,8 @@ const OUTLET_DOMAINS = {
   'Time':                     'time.com',
   'USA Today':                'usatoday.com',
   'The Daily Beast':          'thedailybeast.com',
+  'CTV News':                 'ctvnews.ca',
+  'Middle East Eye':          'middleeasteye.net',
   'Wall Street Journal':      'wsj.com',
   'Bloomberg':                'bloomberg.com',
   'New York Post':            'nypost.com',
