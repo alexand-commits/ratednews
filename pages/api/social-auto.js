@@ -275,6 +275,7 @@ export default async function handler(req, res) {
       x: p.auto?.x,
       bluesky: p.auto?.bluesky,
       facebook: p.auto?.facebook,
+      pulse: p.pulse ?? null,
       meta: p.meta ? { outlets: p.meta.outlets, breaking: p.meta.breaking, update: !!p.meta.update, first: p.meta.first } : null,
     }))
     const posted = []
@@ -283,8 +284,14 @@ export default async function handler(req, res) {
     // ONE story per drafting run, drafted for EVERY platform whose gate
     // passes — a queue card should carry both the X and Bluesky variants.
     // Batch is hottest-first; skip cool-down stories, prefer fresh over ↻.
-    const eligible = (batch.posts || []).filter(p =>
-      (p.auto?.x === 'ok' || p.auto?.bluesky === 'ok' || p.auto?.facebook === 'ok') && !coolingIds.has(p.meta?.clusterId))
+    // Queue bar: pulse >= 7. Gate-passing but socially inert drafts stay in
+    // "Your call" — the owner can still post them, the scout won't push them.
+    const eligible = (batch.posts || [])
+      .filter(p =>
+        (p.auto?.x === 'ok' || p.auto?.bluesky === 'ok' || p.auto?.facebook === 'ok') &&
+        !coolingIds.has(p.meta?.clusterId) &&
+        (p.pulse ?? 7) >= 7)
+      .sort((a, b) => (b.pulse ?? 0) - (a.pulse ?? 0))
     const candidate = eligible.find(p => !p.meta?.update) || eligible[0]
     if (candidate) {
       const d = decisions[batch.posts.indexOf(candidate)]
@@ -303,6 +310,7 @@ export default async function handler(req, res) {
         const entry = {
           platform,
           story: candidate.story,
+          pulse: candidate.pulse ?? null,
           clusterId: candidate.meta?.clusterId ?? null,
           text: textOf(candidate),
           card: candidate.card || null,
@@ -349,11 +357,12 @@ export default async function handler(req, res) {
         x: decisions[i]?.x,
         bluesky: decisions[i]?.bluesky,
         facebook: decisions[i]?.facebook,
+        pulse: p.pulse ?? null,
         meta: decisions[i]?.meta || null,
       })),
     }
     await svc.from('social_drafts').insert({ pack })
-    await beatHeart(svc, posted.length ? 'posted' : wouldPost.length ? 'drafted to queue' : 'generated — all gated')
+    await beatHeart(svc, posted.length ? 'posted' : wouldPost.length ? 'drafted to queue' : 'generated — nothing cleared the pulse bar')
     // Prune old auto_run packs alongside the seen_stories prune cadence
     svc.from('social_drafts').delete().eq('pack->>kind', 'auto_run')
       .lt('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()).then(() => {})

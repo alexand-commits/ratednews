@@ -125,6 +125,14 @@ function fbText(text, short) {
   return link ? `${text}\n\n${link[0]}` : text
 }
 
+// Highest predicted engagement first; polls stay last.
+function sortByPulse(posts) {
+  return [...posts].sort((a, b) => {
+    if ((a.type === 'poll') !== (b.type === 'poll')) return a.type === 'poll' ? 1 : -1
+    return (b.pulse ?? 0) - (a.pulse ?? 0)
+  })
+}
+
 function PostCard({ post }) {
   const meta = TYPE_META[post.type] || { label: post.type || 'Post', emoji: '✳️', color: 'var(--text2)' }
   const [withCard, setWithCard] = useState(true)
@@ -143,6 +151,14 @@ function PostCard({ post }) {
           {meta.emoji} {meta.label}
           {post.story ? <span style={{ color: 'var(--text2)', fontWeight: 600 }}> · {post.story}</span> : null}
           <span style={{ color: 'var(--text3)', fontWeight: 500 }}> · {post.type === 'poll' ? 'X only (no Bluesky polls)' : 'X'}</span>
+          {Number.isFinite(post.pulse) && (
+            <span
+              title={post.pulse_why || ''}
+              style={{ marginLeft: 8, fontWeight: 700, color: post.pulse >= 8 ? 'var(--coral)' : post.pulse >= 6 ? 'var(--amber, #C98A08)' : 'var(--text3)' }}
+            >
+              {post.pulse >= 8 ? '🔥 ' : ''}pulse {post.pulse}/10
+            </span>
+          )}
         </span>
         <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
           <CopyButton text={copyText} />
@@ -237,6 +253,11 @@ function QueueItem({ q, dismiss }) {
           {q.live ? '✅ posted' : '🕐 drafted'} {timeAgo(q.at)}
         </span>
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>· {q.story}</span>
+        {Number.isFinite(q.pulse) && (
+          <span style={{ fontSize: 11, fontWeight: 700, color: q.pulse >= 8 ? 'var(--coral)' : 'var(--amber, #C98A08)' }}>
+            {q.pulse >= 8 ? '🔥 ' : ''}pulse {q.pulse}/10
+          </span>
+        )}
         {q.url && <a href={q.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--coral)' }}>view →</a>}
         {!q.live && (
           <button
@@ -296,6 +317,11 @@ function JudgmentItem({ p, dismiss }) {
         <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text2)' }}>
           {(TYPE_META[p.type] || {}).emoji || '✳️'} {p.story}
         </span>
+        {Number.isFinite(p.pulse) && (
+          <span style={{ fontSize: 10, fontWeight: 700, color: p.pulse >= 8 ? 'var(--coral)' : p.pulse >= 6 ? 'var(--amber, #C98A08)' : 'var(--text3)' }}>
+            pulse {p.pulse}/10
+          </span>
+        )}
         <span style={{ fontSize: 10, color: 'var(--amber, #C98A08)', fontWeight: 600 }} title={`X: ${p.x} · Bluesky: ${p.bluesky}`}>
           {p.x === p.bluesky ? p.x : `X: ${p.x}`}
         </span>
@@ -372,7 +398,7 @@ function AutopilotFeed({ state }) {
     const entries = [...(r.posted || []).map(p => ({ ...p, live: true })), ...(r.wouldPost || [])]
     const byStory = new Map()
     for (const p of entries) {
-      if (!byStory.has(p.story)) byStory.set(p.story, { story: p.story, at: r.at, x: null, bluesky: null, facebook: null, url: null, live: false, card: null, alt: '' })
+      if (!byStory.has(p.story)) byStory.set(p.story, { story: p.story, at: r.at, x: null, bluesky: null, facebook: null, url: null, live: false, card: null, alt: '', pulse: p.pulse ?? null })
       const g = byStory.get(p.story)
       g[p.platform] = p.text
       if (p.card) { g.card = p.card; g.alt = p.alt || p.story }
@@ -457,7 +483,7 @@ function TrendingGenerator({ onRun }) {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Generation failed')
-      setPosts(json.posts || [])
+      setPosts(sortByPulse(json.posts || []))
       if (json.note) setNote(json.note)
       if (json.posts?.length) onRun?.(json.posts, 'trending')
     } catch (e) {
@@ -511,7 +537,7 @@ function Composer({ onRun }) {
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Generation failed')
-      setPosts(json.posts || [])
+      setPosts(sortByPulse(json.posts || []))
       if (json.posts?.length) onRun?.(json.posts, 'compose')
     } catch (e) {
       setError(e.message || 'Something went wrong')

@@ -75,9 +75,14 @@ BLUESKY VARIANT — every non-poll post also gets a short version
 - It must stand alone as a complete post, not read like a cut-down.
 - Polls are X-only (Bluesky has no polls) — omit "short" for poll posts.
 
+PULSE SCORE — every post gets an honest shareability rating
+- "pulse": 1-10, your honest read of a STRANGER's likelihood to stop scrolling for this post. Not importance — stop-scrolling potential. 9-10: jaw-drop, everyone screenshots it. 7-8: solid scroll-stopper — surprise, absurdity, stakes you feel instantly, a wild visual. 5-6: interesting if it's your topic. 3-4: institutionally important, socially inert (procedural politics, sanctions packages, appointments). 1-2: filler.
+- Score the POST as written, not the topic's worthiness. Most hard news is honestly a 3-5 — do NOT inflate. A batch where everything scores 7+ is a failed calibration.
+- "pulse_why": 5-12 words on what earns (or caps) the score.
+
 Output STRICT JSON only — no markdown, no prose around it:
 {"posts":[
-  {"type":"news|coverage_contrast|poll|media_literacy","platform":"x","story":"<2-4 word story label>","story_index":<the STORY number this post covers, when stories are numbered in the input>,"text":"<ready-to-post copy>","short":"<Bluesky version ≤300 chars — omit for polls>","poll_options":["A","B"]?,"contrast":{"a_outlet":"...","a_headline":"<verbatim>","b_outlet":"...","b_headline":"<verbatim>"}?,"why":"<one line>"}
+  {"type":"news|coverage_contrast|poll|media_literacy","platform":"x","story":"<2-4 word story label>","story_index":<the STORY number this post covers, when stories are numbered in the input>,"text":"<ready-to-post copy>","short":"<Bluesky version ≤300 chars — omit for polls>","poll_options":["A","B"]?,"contrast":{"a_outlet":"...","a_headline":"<verbatim>","b_outlet":"...","b_headline":"<verbatim>"}?,"pulse":<1-10>,"pulse_why":"<why>","why":"<one line>"}
 ]}
 For coverage_contrast posts ONLY, also fill "contrast" with the two clashing VERBATIM headlines and their outlets — they are drawn onto the share card. The card renders a_outlet in a BLUE pane (left) and b_outlet in a WARM RED pane (right): when the two outlets have an obvious lean split, a_outlet must be the more left-leaning one so the colours don't mislead; when there's no clear split, either order is fine.`
 
@@ -229,6 +234,10 @@ export async function trendingStories({ record = true, lean = false } = {}) {
     // a coverage surge — never editorial, never selected (manual runs included)
     .filter(c => !c.headlines.some(h => isPromo(h.title)))
     .sort((x, y) => y.heat - x.heat)
+  // 5 velocity picks + up to 13 wildcard candidates. Press velocity finds
+  // institutionally important stories; shareable stories (surprise, absurdity,
+  // felt stakes) often sit further down the board. The model sees the wider
+  // pool and picks 2 wildcards purely for stop-scrolling potential.
   const selected = []
   const tokenSets = []
   for (const c of sorted) {
@@ -236,12 +245,13 @@ export async function trendingStories({ record = true, lean = false } = {}) {
     if (isSameSaga) continue
     selected.push(c)
     tokenSets.push(c.tokens)
-    if (selected.length === 7) break
+    if (selected.length === 18) break
   }
 
-  // Log this run's stories so the next run knows what's been served.
+  // Log this run's stories so the next run knows what's been served — the 5
+  // velocity picks only: unwritten wildcards must stay eligible next run.
   if (record && svc && selected.length) {
-    const stories = selected.map(c => ({ cluster_id: c.clusterId, tokens: [...c.tokens].slice(0, 40), outlets: c.outlets.size, newest: c.newest }))
+    const stories = selected.slice(0, 5).map(c => ({ cluster_id: c.clusterId, tokens: [...c.tokens].slice(0, 40), outlets: c.outlets.size, newest: c.newest }))
     svc.from('social_drafts').insert({ pack: { kind: 'seen_stories', stories } }).then(() => {})
     // Opportunistic prune of memory packs older than 48h
     svc.from('social_drafts').delete().eq('pack->>kind', 'seen_stories')
@@ -257,26 +267,38 @@ function ago(ts) {
 }
 
 function trendingPrompt(stories) {
-  const blocks = stories.map((c, i) => {
+  const CORE = Math.min(5, stories.length)
+  const block = (c, i) => {
     const lines = c.headlines.slice(0, 6).map(h => `  - ${h.outlet}: "${h.title}"${h.summary ? `\n    detail: ${h.summary}` : ''}`).join('\n')
     const timing = `first covered ${ago(c.oldest)} · latest ${ago(c.newest)}`
     const update = c.update ? ` ↻ UPDATE (this story already ran in a batch ${c.update})` : ''
     return `STORY ${i + 1}${c.category ? ` (${c.category})` : ''}${c.breaking ? ' ⚡ BREAKING' : ''}${c.liveEvent ? ' 🔴 LIVE IN PROGRESS' : ''}${update} — ${c.outlets.size} outlets in our sample (INTERNAL signal — never state outlet counts in posts) — ${timing}:\n${lines}\n  Coverage page (Bluesky "short" variant ONLY — never in the X text): ${c.storyUrl}`
-  }).join('\n\n')
-  const postCount = stories.length + 1
-  return `These are the ${stories.length} hottest stories on RatedNews RIGHT NOW, ranked by how fast cross-outlet coverage is accelerating — freshest heat first, not yesterday's totals:
+  }
+  const coreBlocks = stories.slice(0, CORE).map(block).join('\n\n')
+  const wild = stories.slice(CORE)
+  const wildBlocks = wild.map((c, j) => block(c, CORE + j)).join('\n\n')
+  const wildCount = wild.length ? Math.min(2, wild.length) : 0
+  const postCount = CORE + wildCount + 1
+  const wildSection = wild.length ? `
 
-${blocks}
+WILDCARD CANDIDATES — stories ${CORE + 1}-${stories.length}, lower press velocity but possibly higher social pull:
 
-Draft ${postCount} posts:
-- One "news" post per story: report the story itself the way a top breaking-news account would — lead with what happened, concrete details from the headlines and summaries, short lines. NO link in the X text (the coverage-page link goes only in the Bluesky "short").
+${wildBlocks}
+
+From the wildcards, pick the ${wildCount === 1 ? 'ONE story' : 'TWO stories'} with the highest genuine stop-scrolling potential (surprise, absurdity, felt stakes, a wild visual — NOT importance) and write a "news" post for ${wildCount === 1 ? 'it' : 'each'}. Skip the rest entirely.` : ''
+  return `These are the ${CORE} hottest stories on RatedNews RIGHT NOW, ranked by how fast cross-outlet coverage is accelerating — freshest heat first, not yesterday's totals:
+
+${coreBlocks}${wildSection}
+
+Draft ${postCount} posts (${CORE} velocity picks${wildCount ? ` + ${wildCount} wildcard${wildCount > 1 ? 's' : ''}` : ''} + 1 poll):
+- One "news" post per velocity-pick story: report the story itself the way a top breaking-news account would — lead with what happened, concrete details from the headlines and summaries, short lines. NO link in the X text (the coverage-page link goes only in the Bluesky "short").
 - Stories marked 🔴 LIVE IN PROGRESS are ongoing events (matches, races, live blogs). NEVER narrate the current in-game state — score, running order, momentum, "on the back foot" — our pipeline runs minutes behind and it will be stale before anyone reads it. Write the durable facts only: kickoff time, stakes, confirmed penalties/lineups/decisions — or the confirmed full-time result if the headlines carry it.
 - Stories marked ⚡ BREAKING are minutes old and still developing: frame them accordingly — present tense, "early reports" hedging where facts may still move, NO definitive casualty figures or outcomes unless every headline agrees. Being early is the point; being wrong isn't.
 - Stories marked ↻ UPDATE already ran as posts in an earlier batch — the reader has seen the story. Write it as an UPDATE the way a breaking-news account follows up: lead with what's NEW since (new numbers, escalation, resolution, official response), reference the story itself in half a sentence at most. Never re-tell it from the top.
-- One "poll" post for whichever story has the most genuinely split coverage: ONE line, instantly voteable, no recap, no link (poll_options = two outlet names from that story).
+- One "poll" post for whichever WRITTEN story has the most genuinely split coverage: ONE line, instantly voteable, no recap, no link (poll_options = two outlet names from that story).
 Use "coverage_contrast" INSTEAD of "news" for at most one story, and only if two of its verbatim headlines clash so hard a stranger would stop scrolling. Never force it.
 
-Order your posts array by story order — STORY 1 first. Stories are ranked by coverage acceleration, so the first post is the one to publish RIGHT NOW while it's still moving; late-batch stories are context plays. The poll goes last.
+Order your posts array by story order — STORY 1 first, wildcards after the velocity picks. Stories are ranked by coverage acceleration, so the first post is the one to publish RIGHT NOW while it's still moving; late-batch stories are context plays. The poll goes last.
 
 Label every post's "story" field and set "story_index" to the STORY number it covers (the poll too). Vary structure across the batch — no shared template, no shared closers.
 
@@ -310,6 +332,8 @@ export async function generateTrendingBatch(steer = '') {
   if (!Array.isArray(parsed.posts) || !parsed.posts.length) throw new Error('No posts returned')
 
   for (const p of parsed.posts) {
+    // Clamp the shareability score to sane bounds
+    p.pulse = Number.isFinite(+p.pulse) ? Math.max(1, Math.min(10, Math.round(+p.pulse))) : null
     // Deterministic repair: models miscount characters. If a Bluesky short
     // busts the hard 300 limit and ends with a link, drop the link.
     if (typeof p.short === 'string' && p.short.length > 300) {
