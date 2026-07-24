@@ -357,7 +357,7 @@ function BrandCard() {
           <Logo size={72} />
           <div style={{ display: 'flex', width: 320, height: 3, background: 'rgba(216,90,48,0.55)', marginTop: 22, marginBottom: 30 }} />
           <div style={{ display: 'flex', color: TEXT1, fontFamily: SE, fontSize: 46, fontWeight: 700, lineHeight: 1.18 }}>
-            Trust the source, not just the story
+            Rate the source.
           </div>
           <div style={{ display: 'flex', color: TEXT2, fontFamily: SF, fontSize: 24, marginTop: 22 }}>
             Community-rated news from 200+ outlets
@@ -448,7 +448,7 @@ function StoryCard({ title, count, sources }) {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 40 }}>
           <span style={{ color: TEXT4, fontSize: 16, fontFamily: SF }}>ratednews.com</span>
-          <span style={{ color: TEXT3, fontSize: 15, fontFamily: SF }}>Trust the source, not just the story</span>
+          <span style={{ color: TEXT3, fontSize: 15, fontFamily: SF }}>Rate the source.</span>
         </div>
       </div>
     </Shell>

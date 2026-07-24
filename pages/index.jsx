@@ -132,10 +132,10 @@ export default function Feed({ initialArticles, initialCount }) {
   return (
     <>
       <Head>
-        <title>RatedNews — Trust the source, not just the story</title>
+        <title>RatedNews — Rate the source</title>
         <meta name="description" content="A community-rated news aggregator pulling top stories from 200+ outlets including BBC, CNN, Fox News and The Guardian. Readers rate every article and outlet for accuracy, bias and quality — updated continuously." />
         <link rel="canonical" href="https://www.ratednews.com/" />
-        <meta property="og:title"       content="RatedNews — Trust the source, not just the story" />
+        <meta property="og:title"       content="RatedNews — Rate the source" />
         <meta property="og:description" content="Community-rated news from 200+ outlets. Readers rate accuracy, bias and quality — updated continuously." />
         <meta property="og:url"         content="https://www.ratednews.com/" />
         <meta property="og:type"        content="website" />
@@ -144,7 +144,7 @@ export default function Feed({ initialArticles, initialCount }) {
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
-        <meta name="twitter:title"      content="RatedNews — Trust the source, not just the story" />
+        <meta name="twitter:title"      content="RatedNews — Rate the source" />
         <meta name="twitter:description" content="Community-rated news from 200+ outlets. Readers rate accuracy, bias and quality — updated continuously." />
         <meta name="twitter:image"      content="https://www.ratednews.com/api/og?type=brand" />
         <script
