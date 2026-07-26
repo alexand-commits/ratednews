@@ -263,6 +263,7 @@ const OUTLET_DOMAINS = {
   'The Oregonian':             'oregonlive.com',
   'Dutch News':                'dutchnews.nl',
   'Minnesota Star Tribune':    'startribune.com',
+  'The Local':                'thelocal.com',
   'The Local France':          'thelocal.fr',
   'The Local Germany':         'thelocal.de',
   // July 2026 global round 2
