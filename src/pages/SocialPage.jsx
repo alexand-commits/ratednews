@@ -715,7 +715,7 @@ export default function SocialPage({ user, goBack }) {
   return (
     <Published.Provider value={{ map: pubMap, record: recordPosted }}>
     <div className="page-content">
-      <div className="container" style={{ maxWidth: 860 }}>
+      <div className="container" style={{ maxWidth: 1280 }}>
         <button className="back-btn" onClick={goBack}>← Back</button>
 
         <div style={{ marginBottom: 20 }}>
@@ -727,31 +727,42 @@ export default function SocialPage({ user, goBack }) {
           </p>
         </div>
 
-        <TrendingGenerator onRun={recordRun} />
-        <AutopilotFeed state={scout} />
+        <div className="grid-desk">
+          <div>
+            <TrendingGenerator onRun={recordRun} />
+            <AutopilotFeed state={scout} />
+            <Composer onRun={recordRun} />
+          </div>
 
-        {/* History — recent manual batches, server-side so every device sees
-            the same runs. Regenerating never destroys good copy. */}
-        {(scout?.manualRuns || []).map((run, ri) => (
-          <details key={run.id || ri} style={{ marginBottom: ri === (scout.manualRuns.length - 1) ? 24 : 8 }}>
-            <summary style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)', cursor: 'pointer', padding: '4px 0' }}>
-              Previous run · {run.mode === 'trending' ? 'trending' : 'composer'} · {timeAgo(run.at)} · {run.posts.length} posts
-              {run.id && (
-                <button
-                  onClick={e => { e.preventDefault(); e.stopPropagation(); binRun(run.id) }}
-                  style={{ marginLeft: 10, fontSize: 11, fontWeight: 600, color: 'var(--text3)', background: 'none', border: '0.5px solid var(--border)', borderRadius: 6, padding: '2px 8px', cursor: 'pointer' }}
-                >
-                  ✕ Bin
-                </button>
-              )}
-            </summary>
-            <div style={{ paddingTop: 12 }}>
-              {run.posts.map((post, i) => <PostCard key={i} post={post} />)}
+          {/* Previous runs — always visible on the right rail (desktop), below
+              the desk on mobile. Server-side, so every device sees the same. */}
+          <div className="sidebar">
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>
+              Previous runs
             </div>
-          </details>
-        ))}
-
-        <Composer onRun={recordRun} />
+            {(scout?.manualRuns || []).length === 0 && (
+              <div style={{ fontSize: 12, color: 'var(--text3)' }}>No runs in the last 48h.</div>
+            )}
+            {(scout?.manualRuns || []).map((run, ri) => (
+              <div key={run.id || ri} style={{ marginBottom: 20 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>
+                    {run.mode === 'trending' ? 'trending' : 'composer'} · {timeAgo(run.at)} · {run.posts.length} posts
+                  </span>
+                  {run.id && (
+                    <button
+                      onClick={() => binRun(run.id)}
+                      style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: 'var(--text3)', background: 'none', border: '0.5px solid var(--border)', borderRadius: 6, padding: '2px 8px', cursor: 'pointer' }}
+                    >
+                      ✕ Bin
+                    </button>
+                  )}
+                </div>
+                {run.posts.map((post, i) => <PostCard key={i} post={post} />)}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
     </Published.Provider>
