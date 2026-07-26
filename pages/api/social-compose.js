@@ -123,12 +123,16 @@ export async function trendingStories({ record = true, lean = false } = {}) {
       c.countries.add(a.outlets?.country || 'International')
       c.headlines.push({ outlet: name, title: a.title, summary: (a.summary || '').slice(0, 220) })
     }
-    // Newest-first data → first image seen is the freshest photo for the story.
-    // Feeds ship entity-mangled URLs and data: placeholders — https only.
-    // (webp is fine now: photos attach raw, no Satori decode in the path.)
-    if (!c.imageUrl && a.image_url) {
+    // Newest-first data → collect every member's photo (deduped, capped) so
+    // the desk can cycle when the first one is unusable. Feeds ship entity-
+    // mangled URLs and data: placeholders — https only.
+    if (a.image_url) {
       const u = String(a.image_url).replace(/&amp;/g, '&')
-      if (/^https?:\/\//.test(u)) c.imageUrl = u
+      if (/^https?:\/\//.test(u)) {
+        c.imageUrls = c.imageUrls || []
+        if (c.imageUrls.length < 8 && !c.imageUrls.includes(u)) c.imageUrls.push(u)
+        if (!c.imageUrl) c.imageUrl = u
+      }
     }
   }
 
@@ -380,6 +384,8 @@ export async function generateTrendingBatch(steer = '') {
       // photo reads better in-feed and drops the ownership claim. The Clash
       // card stays branded: that one is our own graphic.
       p.card = s.imageUrl
+      // Every cluster photo — the desk cycles these when the first is a dud
+      p.images = s.imageUrls || [s.imageUrl]
     }
   }
   return { posts: parsed.posts, stories }

@@ -314,6 +314,7 @@ export default async function handler(req, res) {
           clusterId: candidate.meta?.clusterId ?? null,
           text: textOf(candidate),
           card: candidate.card || null,
+          images: candidate.images || null,
           alt: candidate.meta?.title || candidate.story || '',
           at: new Date().toISOString(),
         }
@@ -353,6 +354,7 @@ export default async function handler(req, res) {
         short: p.short || null,
         poll_options: p.poll_options || null,
         card: p.card || null,
+        images: p.images || null,
         why: p.why || null,
         x: decisions[i]?.x,
         bluesky: decisions[i]?.bluesky,
