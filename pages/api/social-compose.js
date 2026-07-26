@@ -255,7 +255,7 @@ export async function trendingStories({ record = true, lean = false } = {}) {
   // Log this run's stories so the next run knows what's been served — the 5
   // velocity picks only: unwritten wildcards must stay eligible next run.
   if (record && svc && selected.length) {
-    const stories = selected.slice(0, 5).map(c => ({ cluster_id: c.clusterId, tokens: [...c.tokens].slice(0, 40), outlets: c.outlets.size, newest: c.newest }))
+    const stories = selected.slice(0, 6).map(c => ({ cluster_id: c.clusterId, tokens: [...c.tokens].slice(0, 40), outlets: c.outlets.size, newest: c.newest }))
     svc.from('social_drafts').insert({ pack: { kind: 'seen_stories', stories } }).then(() => {})
     // Opportunistic prune of memory packs older than 48h
     svc.from('social_drafts').delete().eq('pack->>kind', 'seen_stories')
@@ -271,7 +271,7 @@ function ago(ts) {
 }
 
 function trendingPrompt(stories) {
-  const CORE = Math.min(5, stories.length)
+  const CORE = Math.min(6, stories.length)
   const block = (c, i, lean = false) => {
     // Wildcard candidates get a lean block (3 headlines, first summary only) —
     // enough to judge and write from, ~40% less input = faster generations
@@ -285,7 +285,7 @@ function trendingPrompt(stories) {
   const wild = stories.slice(CORE)
   const wildBlocks = wild.map((c, j) => block(c, CORE + j, true)).join('\n\n')
   const wildCount = wild.length ? Math.min(2, wild.length) : 0
-  const postCount = CORE + wildCount + 1
+  const postCount = CORE + wildCount
   const wildSection = wild.length ? `
 
 WILDCARD CANDIDATES — stories ${CORE + 1}-${stories.length}, lower press velocity but possibly higher social pull:
@@ -297,17 +297,16 @@ From the wildcards, pick the ${wildCount === 1 ? 'ONE story' : 'TWO stories'} wi
 
 ${coreBlocks}${wildSection}
 
-Draft ${postCount} posts (${CORE} velocity picks${wildCount ? ` + ${wildCount} wildcard${wildCount > 1 ? 's' : ''}` : ''} + 1 poll):
+Draft ${postCount} posts (${CORE} velocity picks${wildCount ? ` + ${wildCount} wildcard${wildCount > 1 ? 's' : ''}` : ''}):
 - One "news" post per velocity-pick story: report the story itself the way a top breaking-news account would — lead with what happened, concrete details from the headlines and summaries, short lines. NO link in the X text (the coverage-page link goes only in the Bluesky "short").
 - Stories marked 🔴 LIVE IN PROGRESS are ongoing events (matches, races, live blogs). NEVER narrate the current in-game state — score, running order, momentum, "on the back foot" — our pipeline runs minutes behind and it will be stale before anyone reads it. Write the durable facts only: kickoff time, stakes, confirmed penalties/lineups/decisions — or the confirmed full-time result if the headlines carry it.
 - Stories marked ⚡ BREAKING are minutes old and still developing: frame them accordingly — present tense, "early reports" hedging where facts may still move, NO definitive casualty figures or outcomes unless every headline agrees. Being early is the point; being wrong isn't.
 - Stories marked ↻ UPDATE already ran as posts in an earlier batch — the reader has seen the story. Write it as an UPDATE the way a breaking-news account follows up: lead with what's NEW since (new numbers, escalation, resolution, official response), reference the story itself in half a sentence at most. Never re-tell it from the top.
-- One "poll" post for whichever WRITTEN story has the most genuinely split coverage: ONE line, instantly voteable, no recap, no link (poll_options = two outlet names from that story).
 Use "coverage_contrast" INSTEAD of "news" for at most one story, and only if two of its verbatim headlines clash so hard a stranger would stop scrolling. Never force it.
 
-Order your posts array by story order — STORY 1 first, wildcards after the velocity picks. Stories are ranked by coverage acceleration, so the first post is the one to publish RIGHT NOW while it's still moving; late-batch stories are context plays. The poll goes last.
+Order your posts array by story order — STORY 1 first, wildcards after the velocity picks. Stories are ranked by coverage acceleration, so the first post is the one to publish RIGHT NOW while it's still moving; late-batch stories are context plays.
 
-Label every post's "story" field and set "story_index" to the STORY number it covers (the poll too). Vary structure across the batch — no shared template, no shared closers.
+Label every post's "story" field and set "story_index" to the STORY number it covers. Vary structure across the batch — no shared template, no shared closers.
 
 Return the JSON only.`
 }
