@@ -109,6 +109,14 @@ img, video, iframe, embed, object { max-width: 100%; }
    track when a child has overflow-x:auto content wider than the screen */
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 24px; }
 .grid > * { min-width: 0; }
+/* Social desk: wider right rail so post cards read comfortably */
+.grid-desk { display: grid; grid-template-columns: minmax(0, 1fr) 400px; gap: 24px; }
+.grid-desk > * { min-width: 0; }
+@media (max-width: 1023px) { .grid-desk { grid-template-columns: minmax(0, 1fr); } }
+@media (min-width: 1024px) {
+  .grid-desk > .sidebar { position: sticky; top: 68px; align-self: flex-start; max-height: calc(100vh - 84px); overflow-y: auto; scrollbar-width: none; }
+  .grid-desk > .sidebar::-webkit-scrollbar { display: none; }
+}
 @media (max-width: 768px) {
   .container { padding: 16px; }
   .grid { grid-template-columns: minmax(0, 1fr); }
