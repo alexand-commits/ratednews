@@ -1,11 +1,14 @@
 import React from 'react'
+import Link from 'next/link'
 import OutletLogo from './OutletLogo'
+import { useTrendingStories } from '../hooks/useTrendingStories'
 import RatingDots from './RatingDots'
 import { isRankEligible } from '../utils/helpers'
 import { track } from '../utils/track'
 import DigestSignup from './DigestSignup'
 
 export default function Sidebar({ outlets, navigate, trendingTopics = [], activeTopic = null, onTopic }) {
+  const trendingStories = useTrendingStories()
   const top5 = outlets
     .filter(isRankEligible)
     .sort((a, b) => (b.community_score || 0) - (a.community_score || 0))
@@ -13,32 +16,31 @@ export default function Sidebar({ outlets, navigate, trendingTopics = [], active
 
   return (
     <div className="sidebar">
-      {/* Trending topics — desktop only (mobile keeps the inline chips above the feed) */}
-      {trendingTopics.length > 0 && onTopic && (
+      {/* Trending stories — the same coverage-velocity signal as /trending,
+          rendered as real story links. Replaced the token-frequency topic
+          pills, which surfaced context-free fragments with no destination. */}
+      {trendingStories.length > 0 && (
         <div className="widget sidebar-trending">
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-            <div className="widget-title">🔥 Trending · 24h</div>
-            {activeTopic && (
-              <button
-                onClick={() => onTopic(activeTopic)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--coral)', padding: 0 }}
-              >✕ Clear</button>
-            )}
-          </div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-            {trendingTopics.map(topic => {
-              const isActive = activeTopic === topic
-              return (
-                <button
-                  key={topic}
-                  onClick={() => { track('topic_tap', { topic }); onTopic(topic) }}
-                  className={`pill pill-topic${isActive ? ' active' : ''}`}
-                  style={{ fontSize: 11.5, padding: '4px 11px' }}
-                >
-                  🔍 {topic}
-                </button>
-              )
-            })}
+          <div className="widget-title">🔥 Trending · 24h</div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {trendingStories.map((t, i) => (
+              <Link
+                key={t.slug}
+                href={`/story/${t.slug}`}
+                onClick={() => track('trending_story_tap', { slug: t.slug })}
+                style={{
+                  display: 'block', padding: '9px 0', textDecoration: 'none',
+                  borderTop: i === 0 ? 'none' : '0.5px solid var(--border)',
+                }}
+              >
+                <span style={{ display: 'block', fontSize: 13, fontWeight: 600, lineHeight: 1.4, color: 'var(--text)', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
+                  {t.title}
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text3)' }}>
+                  {t.outlets} sources covering
+                </span>
+              </Link>
+            ))}
           </div>
         </div>
       )}
