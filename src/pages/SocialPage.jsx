@@ -552,7 +552,7 @@ function TrendingGenerator({ onRun }) {
     <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 16 }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>⚡ Generate from trending</div>
       <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
-        Drafts posts for the 7 hottest stories right now — ranked by how fast coverage is accelerating, so you ride the wave instead of chasing it.
+        Drafts posts for 8 stories — the 6 hottest by coverage acceleration plus 2 wildcards picked for pure shareability.
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <button onClick={generate} disabled={busy} className="nav-pill" style={{ opacity: busy ? 0.55 : 1, cursor: busy ? 'default' : 'pointer' }}>
