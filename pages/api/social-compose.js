@@ -268,15 +268,18 @@ function ago(ts) {
 
 function trendingPrompt(stories) {
   const CORE = Math.min(5, stories.length)
-  const block = (c, i) => {
-    const lines = c.headlines.slice(0, 6).map(h => `  - ${h.outlet}: "${h.title}"${h.summary ? `\n    detail: ${h.summary}` : ''}`).join('\n')
+  const block = (c, i, lean = false) => {
+    // Wildcard candidates get a lean block (3 headlines, first summary only) —
+    // enough to judge and write from, ~40% less input = faster generations
+    const heads = c.headlines.slice(0, lean ? 3 : 6)
+    const lines = heads.map((h, j) => `  - ${h.outlet}: "${h.title}"${h.summary && (!lean || j === 0) ? `\n    detail: ${h.summary}` : ''}`).join('\n')
     const timing = `first covered ${ago(c.oldest)} · latest ${ago(c.newest)}`
     const update = c.update ? ` ↻ UPDATE (this story already ran in a batch ${c.update})` : ''
     return `STORY ${i + 1}${c.category ? ` (${c.category})` : ''}${c.breaking ? ' ⚡ BREAKING' : ''}${c.liveEvent ? ' 🔴 LIVE IN PROGRESS' : ''}${update} — ${c.outlets.size} outlets in our sample (INTERNAL signal — never state outlet counts in posts) — ${timing}:\n${lines}\n  Coverage page (Bluesky "short" variant ONLY — never in the X text): ${c.storyUrl}`
   }
   const coreBlocks = stories.slice(0, CORE).map(block).join('\n\n')
   const wild = stories.slice(CORE)
-  const wildBlocks = wild.map((c, j) => block(c, CORE + j)).join('\n\n')
+  const wildBlocks = wild.map((c, j) => block(c, CORE + j, true)).join('\n\n')
   const wildCount = wild.length ? Math.min(2, wild.length) : 0
   const postCount = CORE + wildCount + 1
   const wildSection = wild.length ? `

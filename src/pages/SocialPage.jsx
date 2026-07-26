@@ -471,9 +471,28 @@ function TrendingGenerator({ onRun }) {
   const [error, setError] = useState('')
   const [note, setNote]   = useState('')
 
+  // Generation takes 40-90s. Mobile browsers kill long fetches on screen-lock
+  // or a network blip — but the SERVER finishes and saves the run regardless.
+  // On a dropped connection, poll manual-run history for the completed batch
+  // instead of surfacing a false error.
+  async function recoverRun(startedAt) {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      await new Promise(r => setTimeout(r, 15000))
+      try {
+        const { data: { session } } = await db.auth.getSession()
+        const res = await fetch('/api/social-auto', { headers: { Authorization: `Bearer ${session?.access_token}` } })
+        const json = await res.json()
+        const run = (json.manualRuns || []).find(r => new Date(r.at) >= startedAt)
+        if (run?.posts?.length) return run.posts
+      } catch { /* keep polling */ }
+    }
+    return null
+  }
+
   async function generate() {
     if (busy) return
     setBusy(true); setError(''); setNote(''); setPosts(null)
+    const startedAt = new Date(Date.now() - 5000)
     try {
       const { data: { session } } = await db.auth.getSession()
       const res = await fetch('/api/social-compose', {
@@ -487,7 +506,23 @@ function TrendingGenerator({ onRun }) {
       if (json.note) setNote(json.note)
       if (json.posts?.length) onRun?.(json.posts, 'trending')
     } catch (e) {
-      setError(e.message || 'Something went wrong')
+      // Server-reported errors are real; connection-level failures may mean
+      // the run completed without us — check before showing an error.
+      const serverError = /Generation failed|Unauthorized|Forbidden|headline/i.test(e.message || '')
+      if (serverError) {
+        setError(e.message)
+      } else {
+        setError('Connection dropped mid-generation — checking whether the run completed…')
+        const recovered = await recoverRun(startedAt)
+        if (recovered) {
+          setPosts(sortByPulse(recovered))
+          setError('')
+          setNote('Recovered — your connection dropped but the generation completed.')
+          onRun?.(recovered, 'trending')
+        } else {
+          setError('Connection dropped. If the run completed server-side it will appear under Previous runs shortly — pull to refresh before regenerating.')
+        }
+      }
     } finally {
       setBusy(false)
     }
