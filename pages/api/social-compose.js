@@ -297,12 +297,12 @@ From the wildcards, pick the ${wildCount === 1 ? 'ONE story' : 'TWO stories'} wi
 
 ${coreBlocks}${wildSection}
 
-Draft ${postCount} posts (${CORE} velocity picks${wildCount ? ` + ${wildCount} wildcard${wildCount > 1 ? 's' : ''}` : ''}):
+Draft ${postCount} posts (${CORE} velocity picks${wildCount ? ` + ${wildCount} wildcard${wildCount > 1 ? 's' : ''}` : ''}; +1 more only if a coverage_contrast companion is earned):
 - One "news" post per velocity-pick story: report the story itself the way a top breaking-news account would — lead with what happened, concrete details from the headlines and summaries, short lines. NO link in the X text (the coverage-page link goes only in the Bluesky "short").
 - Stories marked 🔴 LIVE IN PROGRESS are ongoing events (matches, races, live blogs). NEVER narrate the current in-game state — score, running order, momentum, "on the back foot" — our pipeline runs minutes behind and it will be stale before anyone reads it. Write the durable facts only: kickoff time, stakes, confirmed penalties/lineups/decisions — or the confirmed full-time result if the headlines carry it.
 - Stories marked ⚡ BREAKING are minutes old and still developing: frame them accordingly — present tense, "early reports" hedging where facts may still move, NO definitive casualty figures or outcomes unless every headline agrees. Being early is the point; being wrong isn't.
 - Stories marked ↻ UPDATE already ran as posts in an earlier batch — the reader has seen the story. Write it as an UPDATE the way a breaking-news account follows up: lead with what's NEW since (new numbers, escalation, resolution, official response), reference the story itself in half a sentence at most. Never re-tell it from the top.
-Use "coverage_contrast" INSTEAD of "news" for at most one story, and only if two of its verbatim headlines clash so hard a stranger would stop scrolling. Never force it.
+For AT MOST one story: if two of its verbatim headlines clash so hard a stranger would stop scrolling, ALSO write a "coverage_contrast" post for it — IN ADDITION to its "news" post, same story_index. Two posts, one story; the owner publishes whichever lands harder, and each gets its own honest pulse. If the clash isn't that strong, skip the contrast entirely — the news post carries the story. Never force it.
 
 Order your posts array by story order — STORY 1 first, wildcards after the velocity picks. Stories are ranked by coverage acceleration, so the first post is the one to publish RIGHT NOW while it's still moving; late-batch stories are context plays.
 

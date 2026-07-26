@@ -463,10 +463,13 @@ function AutopilotFeed({ state }) {
         const seen = new Set(seenStories)
         for (const r of state.runs) {
           for (const p of r.posts || []) {
-            if (seen.has(p.story) || hidden.has(p.story)) continue
+            // Contrast posts and their news twins share a story label — key on
+            // story+type so both variants can surface for the owner's pick.
+            const key = `${p.story}::${p.type}`
+            if (seen.has(key) || hidden.has(p.story)) continue
             if (isActed(p.x) || isActed(p.bluesky)) continue
             if ((Date.now() - new Date(r.at)) / 3600000 > QUEUE_MAX_AGE_H) continue
-            seen.add(p.story)
+            seen.add(key)
             manual.push({ ...p, at: r.at })
           }
         }
