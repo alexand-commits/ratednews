@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import OutletLogo from '../components/OutletLogo'
 import { OutletTrustRateInline } from '../components/OutletTrustRate'
 import { articleSlug, timeAgo, outletColor } from '../utils/helpers'
@@ -12,6 +13,7 @@ import { useTrendingTopics } from '../hooks/useTrendingTopics'
 // The differentiator surfaced as a first-class, shareable page: "this story,
 // N sources, here's each one — and rate the ones you trust in one tap."
 export default function StoryPage({ story, navigate, goBack, user, onLoginClick, showToast, outlets = [] }) {
+  const [heroFailed, setHeroFailed] = React.useState(false)
   const trendingTopics = useTrendingTopics()
   const members = story?.members || []
   const count   = members.length
@@ -58,6 +60,25 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
             Compare how each outlet is covering it — and rate the sources you trust.
           </p>
         </div>
+
+        {/* Hero photo — the anchor article's image, same treatment as the feed */}
+        {story.image && !heroFailed && (
+          <div style={{
+            position: 'relative', width: '100%', height: 'clamp(200px, 34vw, 380px)',
+            borderRadius: 'var(--radius)', overflow: 'hidden',
+            background: 'var(--bg2)', marginBottom: 22,
+          }}>
+            <Image
+              src={story.image}
+              alt={story.title}
+              fill
+              priority
+              sizes="(max-width: 900px) 100vw, 860px"
+              style={{ objectFit: 'cover' }}
+              onError={() => setHeroFailed(true)}
+            />
+          </div>
+        )}
 
         <div className="grid">
         <div>
