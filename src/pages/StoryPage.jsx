@@ -61,27 +61,28 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
           </p>
         </div>
 
-        {/* Hero photo — the anchor article's image, same treatment as the feed */}
+
+        <div className="grid">
+        <div>
+
+        {/* Hero photo — main column only, aligned with the sidebar top */}
         {story.image && !heroFailed && (
           <div style={{
-            position: 'relative', width: '100%', height: 'clamp(200px, 34vw, 380px)',
+            position: 'relative', width: '100%', height: 'clamp(180px, 28vw, 320px)',
             borderRadius: 'var(--radius)', overflow: 'hidden',
-            background: 'var(--bg2)', marginBottom: 22,
+            background: 'var(--bg2)', marginBottom: 16,
           }}>
             <Image
               src={story.image}
               alt={story.title}
               fill
               priority
-              sizes="(max-width: 900px) 100vw, 860px"
+              sizes="(max-width: 900px) 100vw, 640px"
               style={{ objectFit: 'cover' }}
               onError={() => setHeroFailed(true)}
             />
           </div>
         )}
-
-        <div className="grid">
-        <div>
 
         {/* Coverage list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
