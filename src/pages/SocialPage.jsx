@@ -28,15 +28,29 @@ function CopyButton({ text, label = 'Copy' }) {
 // Two-tap publish: first tap arms ("Sure?"), second posts. Disarms after 4s.
 // Nothing ships on a single stray click.
 // Server-backed record of what the owner has published — keyed by
-// platform::story so a draft posted on one device shows ✓ Posted everywhere.
+// platform::story#texthash so a draft posted on one device shows ✓ Posted
+// everywhere. The story label alone collided: a contrast post and its news
+// twin share a label by design, and recurring sagas get the same short label
+// across runs — so posting one draft lit ✓ Posted on every lookalike for 7
+// days. Hashing the exact text pins the record to THIS draft; the same draft
+// still matches across devices (same text → same key).
 const Published = createContext({ map: {}, record: () => {} })
+
+function draftKey(story, text) {
+  if (!story) return null
+  let h = 5381
+  const t = text || ''
+  for (let i = 0; i < t.length; i++) h = ((h * 33) ^ t.charCodeAt(i)) >>> 0
+  return `${story}#${h.toString(36)}`
+}
 
 function PostButton({ platform, story, text, pollOptions, imageUrl, imageAlt, label, color }) {
   const [state, setState] = useState('idle') // idle | armed | busy | done | error
   const [url, setUrl]     = useState(null)
   const [error, setError] = useState('')
   const { map: publishedMap, record } = useContext(Published)
-  const pubKey = story ? `${platform}::${story}` : null
+  const storyKey = draftKey(story, text)
+  const pubKey = storyKey ? `${platform}::${storyKey}` : null
   const prior = pubKey ? publishedMap[pubKey] : null
 
   useEffect(() => {
@@ -57,7 +71,7 @@ function PostButton({ platform, story, text, pollOptions, imageUrl, imageAlt, la
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Post failed')
       setUrl(json.url); setState('done')
-      if (pubKey) record(platform, story, json.url)
+      if (pubKey) record(platform, storyKey, json.url)
     } catch (e) {
       setError(e.message); setState('error')
     }

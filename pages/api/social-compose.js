@@ -97,7 +97,7 @@ For coverage_contrast posts ONLY, also fill "contrast" with the two clashing VER
 // the autopilot's cheap pre-check passes false so a look isn't a "serve").
 // opts.lean: skip article summaries in the fetch — the autopilot pre-check
 // only needs titles/timing/outlets, and summaries are ~80% of the egress.
-export async function trendingStories({ record = true, lean = false } = {}) {
+export async function trendingStories({ lean = false } = {}) {
   const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY)
   // 12h window — yesterday's stories aren't candidates. The old 36h window let
   // day-old stories out-accumulate anything actually breaking.
@@ -222,10 +222,12 @@ export async function trendingStories({ record = true, lean = false } = {}) {
     const prev = seen.find(s => s.clusterId === clusterId || overlaps(c.tokens, s.tokens))
     if (!prev) continue
     const seenAgeH = (now - new Date(prev.at)) / 3600000
-    const hasNewCoverage = c.newest > prev.newest
     const grown = c.outlets.size - prev.outlets >= 3 || c.outlets.size >= prev.outlets * 1.5
-    if (!hasNewCoverage && seenAgeH < 3) {
-      c.heat = -1 // shown recently, nothing new since — drop it
+    if (seenAgeH < 3 && !grown) {
+      // Served within 3h and coverage hasn't genuinely grown — drop it. The old
+      // bar ("has any newer article") was no bar at all: busy clusters gain an
+      // article every ingest tick, so big stories re-served every single run.
+      c.heat = -1
     } else {
       // Story continues: allow it back as an UPDATE. Genuine escalation
       // (coverage jump) keeps full heat; a slow drip gets demoted so fresh
@@ -258,16 +260,32 @@ export async function trendingStories({ record = true, lean = false } = {}) {
     if (selected.length === 18) break
   }
 
-  // Log this run's stories so the next run knows what's been served — the 5
-  // velocity picks only: unwritten wildcards must stay eligible next run.
-  if (record && svc && selected.length) {
-    const stories = selected.slice(0, 6).map(c => ({ cluster_id: c.clusterId, tokens: [...c.tokens].slice(0, 40), outlets: c.outlets.size, newest: c.newest }))
-    svc.from('social_drafts').insert({ pack: { kind: 'seen_stories', stories } }).then(() => {})
-    // Opportunistic prune of memory packs older than 48h
-    svc.from('social_drafts').delete().eq('pack->>kind', 'seen_stories')
-      .lt('created_at', new Date(now - 48 * 60 * 60 * 1000).toISOString()).then(() => {})
-  }
+  // NOTE: seen-story recording moved to generateTrendingBatch — recording at
+  // selection time burned the pool when the model call then failed (a retry
+  // minutes later suppressed the very stories the owner never saw), and it
+  // couldn't know which wildcards the model actually wrote.
   return selected
+}
+
+// Log served stories so the next run knows: the velocity picks plus every
+// story the model actually wrote a post for (chosen wildcards included —
+// unwritten wildcard candidates stay eligible next run).
+async function recordSeenStories(stories, posts) {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return
+  const svc = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  const CORE = Math.min(6, stories.length)
+  const served = new Map()
+  for (const s of stories.slice(0, CORE)) served.set(s.clusterId, s)
+  for (const p of posts) {
+    const s = Number.isInteger(p.story_index) ? stories[p.story_index - 1] : null
+    if (s) served.set(s.clusterId, s)
+  }
+  if (!served.size) return
+  const packStories = [...served.values()].map(s => ({ cluster_id: s.clusterId, tokens: [...s.tokens].slice(0, 40), outlets: s.outlets.size, newest: s.newest }))
+  await svc.from('social_drafts').insert({ pack: { kind: 'seen_stories', stories: packStories } })
+  // Opportunistic prune of memory packs older than 48h
+  await svc.from('social_drafts').delete().eq('pack->>kind', 'seen_stories')
+    .lt('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString())
 }
 
 // "2h ago" / "40m ago" — compact age labels for the prompt and desk UI
@@ -393,6 +411,10 @@ export async function generateTrendingBatch(steer = '') {
       p.images = s.imageUrls || [s.imageUrl]
     }
   }
+
+  // Generation succeeded — NOW mark these stories served (velocity picks +
+  // the wildcards the model chose). Failures never burn the pool.
+  await recordSeenStories(stories, parsed.posts)
   return { posts: parsed.posts, stories }
 }
 
