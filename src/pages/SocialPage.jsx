@@ -36,6 +36,22 @@ function CopyButton({ text, label = 'Copy' }) {
 // still matches across devices (same text → same key).
 const Published = createContext({ map: {}, record: () => {} })
 
+// "14:32" — clock time in the viewer's timezone, shown next to relative ages
+// so runs and drafts can be pinned to an actual moment.
+const clock = ts => ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
+
+// The scout cron fires at :07, :22, :37, :52 — the earliest a draft can land
+// is the first tick at/after the rate window opens (generation adds a minute
+// or two, hence the "~" wherever this is shown).
+function nextScoutTick(after = Date.now()) {
+  const d = new Date(after)
+  d.setSeconds(0, 0)
+  const next = [7, 22, 37, 52].find(t => t > d.getMinutes())
+  if (next != null) d.setMinutes(next)
+  else { d.setHours(d.getHours() + 1); d.setMinutes(7) }
+  return d
+}
+
 function draftKey(story, text) {
   if (!story) return null
   let h = 5381
@@ -281,7 +297,7 @@ function QueueItem({ q, dismiss }) {
     <div style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--coral)' }}>
-          {q.live ? '✅ posted' : '🕐 drafted'} {timeAgo(q.at)}
+          {q.live ? '✅ posted' : '🕐 drafted'} {clock(q.at)} · {timeAgo(q.at)}
         </span>
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>· {q.story}</span>
         {Number.isFinite(q.pulse) && (
@@ -446,6 +462,13 @@ function AutopilotFeed({ state }) {
     }
   }
 
+  // When could the next draft realistically land? A queue run needs at least
+  // one platform's rate window open, then the next cron tick to find a story
+  // surging. Windows come from the server (same maths as the real gate).
+  const windows = state.nextWindow ? Object.values(state.nextWindow) : []
+  const rateLimited = windows.length > 0 && windows.every(Boolean)
+  const eta = nextScoutTick(rateLimited ? Math.min(...windows.map(w => +new Date(w))) : Date.now())
+
   return (
     <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 24 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
@@ -460,7 +483,10 @@ function AutopilotFeed({ state }) {
         )}
       </div>
       <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>
-        Drafts land here within ~15 min of a story surging and expire after 2 hours — trending doesn't keep. Two taps to publish; ✕ to bin.
+        Drafts land here within ~15 min of a story surging and expire after 2 hours — trending doesn't keep. Two taps to publish; ✕ to bin.{' '}
+        {rateLimited
+          ? <strong>Rate-limited right now — earliest next draft ~{clock(eta)}.</strong>
+          : <>Next scout pass ~{clock(eta)} — a draft drops if a story is surging.</>}
       </div>
 
       {queue.length === 0 ? (
@@ -764,7 +790,7 @@ export default function SocialPage({ user, goBack }) {
               <div key={run.id || ri} style={{ marginBottom: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>
-                    {run.mode === 'trending' ? 'trending' : 'composer'} · {timeAgo(run.at)} · {run.posts.length} posts
+                    {run.mode === 'trending' ? 'trending' : 'composer'} · {clock(run.at)} · {timeAgo(run.at)} · {run.posts.length} posts
                   </span>
                   {run.id && (
                     <button

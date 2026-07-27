@@ -132,6 +132,21 @@ function rateCheck(platform, runs) {
   return null
 }
 
+// When each platform's auto rate window reopens — null = open now. Same maths
+// as rateCheck, but returns the timestamp so the desk can show an honest
+// "earliest next draft" time instead of leaving the owner guessing.
+function rateOpenAt(platform, runs) {
+  const limits = AUTO_RATE_LIMITS[platform]
+  const dayAgo = Date.now() - 24 * 60 * 60 * 1000
+  const posted = postedLike(runs, platform)
+    .filter(p => new Date(p.at) >= dayAgo)
+    .sort((a, b) => new Date(b.at) - new Date(a.at))
+  let t = 0
+  if (posted.length >= limits.maxPerDay) t = +new Date(posted[limits.maxPerDay - 1].at) + 24 * 60 * 60 * 1000
+  if (posted[0]) t = Math.max(t, +new Date(posted[0].at) + limits.minGapMin * 60000)
+  return t > Date.now() ? new Date(t).toISOString() : null
+}
+
 // Story-level cool-down: the same story may not be auto-picked twice within
 // 6h, updates included — a big development inside that window is exactly the
 // kind of post the owner fires manually from the desk.
@@ -175,6 +190,11 @@ export default async function handler(req, res) {
       dismissed,
       published,
       manualRuns,
+      nextWindow: svcG ? {
+        x:        rateOpenAt('x', runs),
+        bluesky:  rateOpenAt('bluesky', runs),
+        facebook: rateOpenAt('facebook', runs),
+      } : null,
       mode: {
         x:       process.env.AUTO_POST_X === 'live' ? 'live' : 'dry',
         bluesky: process.env.AUTO_POST_BLUESKY === 'live' ? 'live' : 'dry',
