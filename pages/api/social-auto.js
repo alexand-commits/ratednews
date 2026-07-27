@@ -255,7 +255,7 @@ export default async function handler(req, res) {
       facebook: !rateCheck('facebook', runs),
     }
     const coolingIds = recentClusterIds(runs)
-    const candidates = (await trendingStories({ record: false, lean: true }))
+    const candidates = (await trendingStories({ lean: true }))
       .filter(s => !coolingIds.has(s.clusterId))
     const trigger = (rateOpen.x || rateOpen.bluesky || rateOpen.facebook) && candidates.some(s => storyAutoEligible(s))
     if (!trigger) {
