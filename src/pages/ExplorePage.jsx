@@ -38,8 +38,26 @@ const REGIONS = [
   { value: 'Americas',   label: 'Americas'     },
 ]
 
+// Render-time breakpoint check (matches the 1024px CSS grid breakpoint).
+// The digest (desktop) and flat list (mobile) used to BOTH render and rely on
+// CSS visibility — that put ~430 cards / 9k DOM nodes on every load and made
+// scrolling sluggish. Render only the active branch instead.
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(false)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const update = () => setIsDesktop(mq.matches)
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+  return isDesktop
+}
+
 export default function ExplorePage({ navigate, outlets = [] }) {
+  const isDesktop = useIsDesktop()
   const [search, setSearch]           = useState('')
+  const [mobileVisible, setMobileVisible] = useState(60)
   const [searchFocused, setSearchFocused] = useState(false)
   const [searchHistory, setSearchHistory] = useState(() => {
     try { return JSON.parse(localStorage.getItem('rn_searchHistory') || '[]') } catch { return [] }
@@ -380,7 +398,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
             ) : category === 'all' ? (
               <>
                 {/* Desktop: category digest — the section front */}
-                <div className="desktop-only" style={{ flexDirection: 'column', gap: 30 }}>
+                {isDesktop && <div className="desktop-only" style={{ flexDirection: 'column', gap: 30 }}>
                   {digest.length === 0 ? (
                     <div className="empty-state"><p>No stories match these filters yet.</p></div>
                   ) : digest.map(sec => (
@@ -403,17 +421,18 @@ export default function ExplorePage({ navigate, outlets = [] }) {
                             index={i}
                             navigate={navigate}
                             onClick={() => navigate('article', { articleId: a.id, title: a.title })}
-                            relatedArticles={a.cluster_peers || []}
+                            relatedArticles={a.cluster_peers || undefined}
                             compact
                           />
                         ))}
                       </div>
                     </section>
                   ))}
-                </div>
+                </div>}
 
-                {/* Mobile: flat latest list (unchanged behaviour) */}
-                <div className="hide-desktop">
+                {/* Mobile: flat latest list, rendered incrementally — the full
+                    ~370-card list in one go is what made scrolling drag */}
+                {!isDesktop && <div className="hide-desktop">
                   <div className="section-label" style={{ marginBottom: 10 }}>
                     Latest across all outlets
                     {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
@@ -422,19 +441,28 @@ export default function ExplorePage({ navigate, outlets = [] }) {
                     <div className="empty-state"><p>No stories match these filters yet.</p></div>
                   ) : (
                     <div className="feed">
-                      {browseFeed.map((a, i) => (
+                      {browseFeed.slice(0, mobileVisible).map((a, i) => (
                         <NewsCard
                           key={a.id}
                           article={a}
                           index={i}
                           navigate={navigate}
                           onClick={() => navigate('article', { articleId: a.id, title: a.title })}
-                          relatedArticles={a.cluster_peers || []}
+                          relatedArticles={a.cluster_peers || undefined}
                         />
                       ))}
+                      {browseFeed.length > mobileVisible && (
+                        <button
+                          className="btn-outline"
+                          style={{ width: '100%', marginTop: 4, fontSize: 13 }}
+                          onClick={() => setMobileVisible(v => v + 60)}
+                        >
+                          Show more ({browseFeed.length - mobileVisible} more)
+                        </button>
+                      )}
                     </div>
                   )}
-                </div>
+                </div>}
               </>
             ) : (
               <>
@@ -460,7 +488,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
                         index={i}
                         navigate={navigate}
                         onClick={() => navigate('article', { articleId: a.id, title: a.title })}
-                        relatedArticles={a.cluster_peers || []}
+                        relatedArticles={a.cluster_peers || undefined}
                       />
                     ))}
                   </div>

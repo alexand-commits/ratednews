@@ -7,7 +7,10 @@ import RatingDots from './RatingDots'
 import OutletLogo from './OutletLogo'
 
 
-export default function NewsCard({ article, index, onClick, navigate, relatedArticles = [], compact = false }) {
+// Memoised: long feeds re-render for reasons unrelated to the cards (search
+// placeholder ticks, filter state) — with stable article/peers references the
+// diff bails out per card instead of reconciling hundreds of subtrees.
+function NewsCard({ article, index, onClick, navigate, relatedArticles = [], compact = false }) {
   const [imgFailed, setImgFailed] = useState(false)
 
   const outlet = article.outlets || {}
@@ -137,3 +140,5 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
     </div>
   )
 }
+
+export default React.memo(NewsCard)
