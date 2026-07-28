@@ -142,6 +142,60 @@ export async function trendingStories({ lean = false } = {}) {
     }
   }
 
+  // Significant-token machinery — used for fragment pooling and saga/seen
+  // matching. Lightly stemmed (stakes→stake, plans→plan): exact-match overlap
+  // kept same-story headlines apart.
+  const STOP = new Set(['the','a','an','in','on','at','to','for','of','and','or','is','are','was','were','says','say','said','after','as','with','by','from','over','into','its','his','her','their','will','have','has','had','been','be','but','not','this','that','than','then'])
+  const stemw = w => {
+    if (w.length > 4) {
+      if (w.endsWith('ies')) return w.slice(0, -3) + 'y'
+      if (/(ses|xes|zes|ches|shes)$/.test(w)) return w.slice(0, -2)
+      if (w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1)
+    }
+    return w
+  }
+  const sig = c => {
+    const t = new Set()
+    for (const h of c.headlines) {
+      for (const w of (h.title || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)) {
+        if (w.length > 3 && !STOP.has(w)) t.add(stemw(w))
+      }
+    }
+    return t
+  }
+  const overlaps = (a, b, need = 3) => {
+    let shared = 0
+    for (const w of a) if (b.has(w)) { shared++; if (shared >= need) return true }
+    return false
+  }
+  for (const [clusterId, c] of clusters) { c.clusterId = clusterId; c.tokens = sig(c) }
+
+  // ── Fragment pooling ───────────────────────────────────────────────────────
+  // The clusterer splits one story across several clusters when headlines are
+  // editorially rewritten (the Infantino stake-sale story spent 2h as eight
+  // 1-2-outlet fragments — invisible to a board that ranks clusters). Pool
+  // same-story clusters into the biggest one BEFORE ranking, so fragmented
+  // coverage counts as the single surging story it really is.
+  const merged = []
+  for (const c of [...clusters.values()].sort((x, y) => y.outlets.size - x.outlets.size)) {
+    const host = merged.find(m => overlaps(c.tokens, m.tokens))
+    if (!host) { merged.push(c); continue }
+    for (const h of c.headlines) {
+      if (!host.outlets.has(h.outlet)) { host.outlets.add(h.outlet); host.headlines.push(h) }
+    }
+    for (const u of c.imageUrls || []) {
+      host.imageUrls = host.imageUrls || []
+      if (host.imageUrls.length < 8 && !host.imageUrls.includes(u)) host.imageUrls.push(u)
+      if (!host.imageUrl) host.imageUrl = u
+    }
+    // NOTE: host.tokens is deliberately NOT extended with the fragment's
+    // tokens — every fragment must overlap the host directly, or pooling
+    // chains unrelated stories together (star, not transitive closure).
+    for (const k of c.countries || []) (host.countries = host.countries || new Set()).add(k)
+    if (c.oldest < host.oldest) host.oldest = c.oldest
+    if (c.newest > host.newest) host.newest = c.newest
+  }
+
   // Story-level signals for the autopilot gates:
   // - coreCoverage: at least one UK/US/international outlet is on it. A story
   //   covered ONLY by one country's regional press is real news THERE but
@@ -150,7 +204,7 @@ export async function trendingStories({ lean = false } = {}) {
   //   in-game state is stale before our pipeline can post it.
   const LIVE_RE = /\blive\b|as it happens|live updates|live blog|liveblog/i
   const CORE_COUNTRIES = new Set(['UK', 'US', 'International', 'Europe'])
-  for (const c of clusters.values()) {
+  for (const c of merged) {
     c.coreCoverage = [...(c.countries || [])].some(x => CORE_COUNTRIES.has(x))
     c.liveEvent = c.headlines.some(h => LIVE_RE.test(h.title || ''))
   }
@@ -160,7 +214,7 @@ export async function trendingStories({ lean = false } = {}) {
   // accelerating NOW) outranks an 18-outlet story 5 hours old (~3.6/hr,
   // saturated — the timeline has moved on). The floor on firstAgeH stops
   // 10-minute-old stories dividing by ~zero and swamping everything.
-  for (const c of clusters.values()) {
+  for (const c of merged) {
     const newestAgeH = Math.max(0, (now - new Date(c.newest)) / 3600000)
     const firstAgeH  = Math.max(0.75, (now - new Date(c.oldest)) / 3600000)
     const firstAgeMin = (now - new Date(c.oldest)) / 60000
@@ -172,27 +226,6 @@ export async function trendingStories({ lean = false } = {}) {
     const independent = c.outlets.size >= 3 || spreadMin >= 10
     c.breaking = independent && c.outlets.size >= 2 && firstAgeMin <= 60
     c.heat = (c.outlets.size / firstAgeH) * 10 / Math.pow(newestAgeH + 1, 1.2)
-  }
-
-  // One slot per saga: big running stories fragment into several clusters
-  // (the ban, the phone call, the appeal…) and would otherwise fill every
-  // slot. Collapse clusters sharing 3+ significant title tokens — the saga
-  // keeps one slot (its highest-coverage development), the rest go to
-  // genuinely different stories.
-  const STOP = new Set(['the','a','an','in','on','at','to','for','of','and','or','is','are','was','were','says','say','said','after','as','with','by','from','over','into','its','his','her','their','will','have','has','had','been','be','but','not','this','that','than','then'])
-  const sig = c => {
-    const t = new Set()
-    for (const h of c.headlines) {
-      for (const w of (h.title || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/)) {
-        if (w.length > 3 && !STOP.has(w)) t.add(w)
-      }
-    }
-    return t
-  }
-  const overlaps = (a, b) => {
-    let shared = 0
-    for (const w of a) if (b.has(w)) { shared++; if (shared >= 3) return true }
-    return false
   }
 
   // ── Run-to-run memory: don't re-serve a story the desk already showed ─────
@@ -215,11 +248,12 @@ export async function trendingStories({ lean = false } = {}) {
     }
   }
 
-  for (const [clusterId, c] of clusters) {
-    c.clusterId = clusterId
-    c.tokens = sig(c)
+  for (const c of merged) {
     // Newest-first packs → the first match is this story's latest appearance.
-    const prev = seen.find(s => s.clusterId === clusterId || overlaps(c.tokens, s.tokens))
+    // 4-token bar here (vs 3 for fragment pooling): a running character shares
+    // gianni/infantino/fifa/world across genuinely different stories — a NEW
+    // story about a familiar entity must not be suppressed as a rerun.
+    const prev = seen.find(s => s.clusterId === c.clusterId || overlaps(c.tokens, s.tokens, 4))
     if (!prev) continue
     const seenAgeH = (now - new Date(prev.at)) / 3600000
     const grown = c.outlets.size - prev.outlets >= 3 || c.outlets.size >= prev.outlets * 1.5
@@ -240,25 +274,19 @@ export async function trendingStories({ lean = false } = {}) {
 
   // Qualify on 3+ outlets as before, OR the breaking tier (2 outlets, <60 min
   // old). Rank purely by heat — velocity with freshness decay.
-  const sorted = [...clusters.values()]
+  const sorted = merged
     .filter(c => (c.outlets.size >= 3 || c.breaking) && c.heat > 0)
     // Advertorial giveaways syndicate across one publisher's titles and fake
     // a coverage surge — never editorial, never selected (manual runs included)
     .filter(c => !c.headlines.some(h => isPromo(h.title)))
     .sort((x, y) => y.heat - x.heat)
-  // 5 velocity picks + up to 13 wildcard candidates. Press velocity finds
+  // 6 velocity picks + up to 12 wildcard candidates. Press velocity finds
   // institutionally important stories; shareable stories (surprise, absurdity,
   // felt stakes) often sit further down the board. The model sees the wider
   // pool and picks 2 wildcards purely for stop-scrolling potential.
-  const selected = []
-  const tokenSets = []
-  for (const c of sorted) {
-    const isSameSaga = tokenSets.some(prev => overlaps(c.tokens, prev))
-    if (isSameSaga) continue
-    selected.push(c)
-    tokenSets.push(c.tokens)
-    if (selected.length === 18) break
-  }
+  // (Fragment pooling above already collapsed same-story clusters, so the
+  // board is one slot per story by construction.)
+  const selected = sorted.slice(0, 18)
 
   // NOTE: seen-story recording moved to generateTrendingBatch — recording at
   // selection time burned the pool when the model call then failed (a retry
