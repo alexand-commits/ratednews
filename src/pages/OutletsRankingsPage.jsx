@@ -5,6 +5,7 @@ import OutletLogo from '../components/OutletLogo'
 import { db } from '../lib/supabase'
 import { toSlug } from '../utils/navigate'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
+import { useMediaQuery } from '../hooks/useMediaQuery'
 import DigestSignup from '../components/DigestSignup'
 
 // ── Constants ────────────────────────────────────────────────────────────────
@@ -183,6 +184,7 @@ export default function OutletsRankingsPage({
   outlets, outletsLoading, navigate, goBack, showToast, user, onLoginClick,
   onRefresh, followedOutletIds = new Set(), toggleFollow,
 }) {
+  const isWide = useMediaQuery('(min-width: 640px)')
   const [section,     setSection]     = useState('outlets')
   const [tab,         setTab]         = useState('community')
   const [region,      setRegion]      = useState('all')
@@ -453,45 +455,51 @@ export default function OutletsRankingsPage({
                       className="row-hover"
                       onClick={() => compareMode ? toggleCompare(o.id) : navigate('outlet', { outletId: o.id })}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '15px 18px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: isWide ? 14 : 10, padding: isWide ? '15px 18px' : '12px 12px' }}>
                         {compareMode ? (
                           <div style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, border: `2px solid ${isSelected ? 'var(--coral)' : 'var(--border)'}`, background: isSelected ? 'var(--coral)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {isSelected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
                           </div>
                         ) : (
-                          <span style={{ fontSize: isTop3 ? 16 : 13, fontWeight: isTop3 ? 700 : 400, color: i === 0 ? '#b8860b' : i === 1 ? '#888' : i === 2 ? '#a0522d' : 'var(--text3)', width: 30, flexShrink: 0, textAlign: 'center' }}>
+                          <span style={{ fontSize: isTop3 ? (isWide ? 16 : 14) : (isWide ? 13 : 12), fontWeight: isTop3 ? 700 : 400, color: i === 0 ? '#b8860b' : i === 1 ? '#888' : i === 2 ? '#a0522d' : 'var(--text3)', width: isWide ? 30 : 22, flexShrink: 0, textAlign: 'center' }}>
                             {isTop3 && i === 0 ? '🥇' : isTop3 && i === 1 ? '🥈' : isTop3 && i === 2 ? '🥉' : eligibleRow ? i + 1 : '—'}
                           </span>
                         )}
 
-                        <OutletLogo name={o.name} size={44} borderRadius={10} />
+                        <OutletLogo name={o.name} size={isWide ? 44 : 36} borderRadius={isWide ? 10 : 9} />
 
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <Link
                             href={`/outlet/${toSlug(o.name)}`}
                             onClick={e => { if (compareMode) e.preventDefault(); else e.stopPropagation() }}
-                            style={{ display: 'block', fontSize: 16, fontWeight: 600, marginBottom: 3, color: 'inherit', textDecoration: 'none' }}
+                            style={{ display: 'block', fontSize: isWide ? 16 : 14.5, fontWeight: 600, marginBottom: isWide ? 3 : 2, color: 'inherit', textDecoration: 'none' }}
                           >{o.name}</Link>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 12, color: 'var(--text3)' }}>{o.country || 'International'}</span>
-                            {o.total_ratings > 0 && <span style={{ fontSize: 12, color: 'var(--text3)' }}>{o.total_ratings} {o.total_ratings === 1 ? 'rating' : 'ratings'}</span>}
+                            <span style={{ fontSize: isWide ? 12 : 11, color: 'var(--text3)' }}>{o.country || 'International'}</span>
+                            {o.total_ratings > 0 && <span style={{ fontSize: isWide ? 12 : 11, color: 'var(--text3)' }}>{o.total_ratings} {o.total_ratings === 1 ? 'rating' : 'ratings'}</span>}
                           </div>
                         </div>
 
-                        <div style={{ width: 110, flexShrink: 0 }}>
-                          <div className="rank-bar-bg">
-                            <div className="rank-bar-fill" style={{ width: `${barWidth}%`, background: tab === 'community' ? 'var(--green)' : 'var(--coral)' }} />
-                          </div>
-                          <div style={{ fontSize: 12, textAlign: 'right', marginTop: 3, color: isProvisional ? 'var(--text3)' : tab === 'community' ? 'var(--green-dark)' : 'var(--text2)', fontWeight: 600 }}>
+                        {/* Narrow screens drop the decorative bar — the number
+                            carries the score, and the name gets the room back */}
+                        <div style={{ width: isWide ? 110 : 'auto', flexShrink: 0 }}>
+                          {isWide && (
+                            <div className="rank-bar-bg">
+                              <div className="rank-bar-fill" style={{ width: `${barWidth}%`, background: tab === 'community' ? 'var(--green)' : 'var(--coral)' }} />
+                            </div>
+                          )}
+                          <div style={{ fontSize: isWide ? 12 : 12.5, textAlign: 'right', marginTop: isWide ? 3 : 0, color: isProvisional ? 'var(--text3)' : tab === 'community' ? 'var(--green-dark)' : 'var(--text2)', fontWeight: 600 }}>
                             {isProvisional
-                              ? `${tab === 'community' && score > 0 ? (score / 20).toFixed(1) + ' · ' : ''}provisional`
+                              ? (isWide
+                                  ? `${tab === 'community' && score > 0 ? (score / 20).toFixed(1) + ' · ' : ''}provisional`
+                                  : tab === 'community' && score > 0 ? `${(score / 20).toFixed(1)}*` : '—')
                               : tab === 'community' && score > 0 ? (score / 20).toFixed(1) : score || '—'}
                           </div>
                         </div>
 
                         <button
                           onClick={e => { e.stopPropagation(); if (!user) { onLoginClick(); return } toggleFollow(o.id) }}
-                          style={{ fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 20, border: followedOutletIds.has(o.id) ? '1px solid var(--border)' : '1px solid var(--coral)', background: followedOutletIds.has(o.id) ? 'var(--bg)' : 'rgba(216,90,48,0.08)', color: followedOutletIds.has(o.id) ? 'var(--text3)' : 'var(--coral)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+                          style={{ fontSize: 11, fontWeight: 600, padding: isWide ? '4px 12px' : '3px 9px', borderRadius: 20, border: followedOutletIds.has(o.id) ? '1px solid var(--border)' : '1px solid var(--coral)', background: followedOutletIds.has(o.id) ? 'var(--bg)' : 'rgba(216,90,48,0.08)', color: followedOutletIds.has(o.id) ? 'var(--text3)' : 'var(--coral)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
                         >
                           {followedOutletIds.has(o.id) ? '✓ Following' : '+ Follow'}
                         </button>
