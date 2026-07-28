@@ -107,7 +107,7 @@ export async function getStaticProps({ params }) {
   // Resolve the anchor article from its 8-char short id (UUID range query)
   const { data: anchor } = await supabase
     .from('articles')
-    .select('id, title, url, published_at, outlet_id, cluster_id, image_url, community_score, total_ratings, outlets(name, logo_url, country)')
+    .select('id, title, url, summary, published_at, outlet_id, cluster_id, image_url, community_score, total_ratings, outlets(name, logo_url, country, parent_outlet_id)')
     .gte('id', `${pfx}-0000-0000-0000-000000000000`)
     .lte('id', `${pfx}-ffff-ffff-ffff-ffffffffffff`)
     .single()
@@ -125,19 +125,27 @@ export async function getStaticProps({ params }) {
   if (anchor.cluster_id) {
     const { data: cluster } = await supabase
       .from('articles')
-      .select('id, title, url, published_at, outlet_id, image_url, community_score, total_ratings, outlets(name, logo_url, country)')
+      .select('id, title, url, summary, published_at, outlet_id, image_url, community_score, total_ratings, outlets(name, logo_url, country, parent_outlet_id)')
       .eq('cluster_id', anchor.cluster_id)
       .order('published_at', { ascending: false })
     if (cluster && cluster.length) {
-      // De-dupe by outlet (one take per outlet), anchor first
+      // De-dupe by PUBLISHER, not feed — post-consolidation BBC Sport and BBC
+      // News are separate outlets under one parent brand; one take per brand
+      // keeps the "N sources" claim honest. Anchor first, then newest.
       const seen = new Set()
       members = []
       for (const a of [anchor, ...cluster]) {
-        if (seen.has(a.outlet_id)) continue
-        seen.add(a.outlet_id)
+        const pub = a.outlets?.parent_outlet_id || a.outlet_id
+        if (seen.has(pub)) continue
+        seen.add(pub)
         members.push(a)
       }
     }
+  }
+  // Trim summaries for the page payload — cards clamp to two lines anyway
+  for (const a of members) {
+    if (a.summary) a.summary = String(a.summary).slice(0, 320)
+    if (a.outlets) delete a.outlets.parent_outlet_id
   }
 
   const story = {

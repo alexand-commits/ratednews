@@ -793,7 +793,7 @@ function isSyndicated(item, outletName) {
   // flagged the outlet's ENTIRE feed as syndicated.
   const norm = s => s.toLowerCase().replace(/\.(co\.uk|com|org|net|co|uk|de|fr|es|it|ie|au|ca|in)\b/g, '').replace(/[^a-z0-9]/g, '')
   // Initialisms Google uses that share no substring with the outlet name
-  const ALIASES = { wallstreetjournal: ['wsj'], newyorktimes: ['nyt'] }
+  const ALIASES = { wallstreetjournal: ['wsj'], newyorktimes: ['nyt'], itvnews: ['itvx'] }
   const a = norm(src), b = norm(outletName)
   if (!a || !b) return false
   // Loose match tolerates "Yahoo!" vs "Yahoo Sports", "USA TODAY Sports" vs "USA Today"
