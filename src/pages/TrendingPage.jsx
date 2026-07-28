@@ -3,7 +3,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
-import { computeTrendingTopics } from '../utils/topics'
 import Sidebar from '../components/Sidebar'
 
 function RankedRow({ a, rank, isLast, navigate }) {
@@ -204,7 +203,6 @@ function HeroCard({ hero, navigate }) {
 export default function TrendingPage({ articles, generatedAt, navigate, goBack, onRefresh, outlets = [] }) {
   // Rail topics — shared engine over the trending pool; taps jump to the
   // homepage feed filtered to that topic
-  const trendingTopics = useMemo(() => computeTrendingTopics(articles || []), [articles])
   const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
 
   const updatedMins = generatedAt
@@ -291,7 +289,6 @@ export default function TrendingPage({ articles, generatedAt, navigate, goBack, 
       <Sidebar
         outlets={outlets}
         navigate={navigate}
-        trendingTopics={trendingTopics}
         onTopic={topic => navigate('feed', { topic })}
       />
       </div>

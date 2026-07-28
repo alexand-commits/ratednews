@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { db } from '../lib/supabase'
 import { track } from '../utils/track'
 import { timeAgo, articleSlug } from '../utils/helpers'
-import { computeTrendingTopics } from '../utils/topics'
+import TrendingStoriesWidget from '../components/TrendingStoriesWidget'
 import OutletLogo from '../components/OutletLogo'
 import NewsCard from '../components/NewsCard'
 import DigestSignup from '../components/DigestSignup'
@@ -81,19 +81,6 @@ export default function ExplorePage({ navigate, outlets = [] }) {
       .order('published_at', { ascending: false })
       .limit(400)
       .then(({ data }) => { setFeedPool(data || []); setFeedLoading(false) })
-  }, [])
-
-  // Lightweight 24h pool for topic extraction — title+outlet_id only
-  // (~100 bytes/row), same shape the homepage feeds the shared extractor.
-  const [topicsSource, setTopicsSource] = useState([])
-  useEffect(() => {
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    db.from('articles')
-      .select('title, outlet_id')
-      .gte('published_at', cutoff)
-      .order('published_at', { ascending: false })
-      .limit(1000)
-      .then(({ data }) => setTopicsSource(data || []))
   }, [])
 
   // Region = the outlet's home region ("UK" means stories from UK outlets —
@@ -184,7 +171,6 @@ export default function ExplorePage({ navigate, outlets = [] }) {
   // Trending topics — shared phrase-first extraction (same engine as the
   // homepage chips). Clicking one feeds the full-text search, so topics are a
   // one-tap route into "every story about X".
-  const trendingTopics = useMemo(() => computeTrendingTopics(topicsSource), [topicsSource])
 
   // Debounced search
   useEffect(() => {
@@ -356,17 +342,9 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         {!isSearchActive && (
           <>
             {/* Mobile discovery — the desktop hub owns these ≥1024px */}
-            {trendingTopics.length > 0 && (
-              <div className="filter-bar hide-desktop" style={{ marginTop: 16, marginBottom: 8 }}>
-                {trendingTopics.slice(0, 8).map(topic => (
-                  <button
-                    key={topic}
-                    className="pill pill-topic"
-                    onClick={() => setSearch(topic)}
-                  >🔍 {topic}</button>
-                ))}
-              </div>
-            )}
+            <div className="hide-desktop" style={{ marginTop: 16, marginBottom: 8 }}>
+              <TrendingStoriesWidget variant="inline" title="🔥 Trending now" />
+            </div>
 
             {/* Region — same editions as desktop */}
             <div className="filter-bar hide-desktop" style={{ marginBottom: 8 }}>
@@ -495,24 +473,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
 
         {/* ── Rail — topics lead (like every other page's rail), filters follow ── */}
         <aside className="sidebar desktop-only" style={{ marginTop: 38 }}>
-          {trendingTopics.length > 0 && (
-            <div className="widget">
-              <div className="widget-title">🔥 Trending topics</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {trendingTopics.slice(0, 8).map(topic => (
-                  <button
-                    key={topic}
-                    className="pill pill-topic"
-                    onClick={() => setSearch(topic)}
-                    style={{ fontSize: 11.5, padding: '4px 11px' }}
-                  >🔍 {topic}</button>
-                ))}
-              </div>
-              <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 10, lineHeight: 1.5 }}>
-                Tap a topic to search every story about it.
-              </div>
-            </div>
-          )}
+          <TrendingStoriesWidget />
 
           <div className="widget">
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>

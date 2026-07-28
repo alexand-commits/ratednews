@@ -4,9 +4,9 @@ import { db } from '../lib/supabase'
 import { toSlug } from '../utils/navigate'
 import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
+import TrendingStoriesWidget from '../components/TrendingStoriesWidget'
 import OutletTrustRate from '../components/OutletTrustRate'
 import Sidebar from '../components/Sidebar'
-import { useTrendingTopics } from '../hooks/useTrendingTopics'
 
 // Extract meaningful initials from a username or email — avoids numbers/symbols
 function getInitials(str) {
@@ -120,7 +120,6 @@ function CommentRow({ c, isReply = false, ctx }) {
 }
 
 export default function ArticlePage({ articleId, allArticles, navigate, goBack, showToast, refreshArticle, user, onLoginClick, isSaved, toggleSave, outlets = [] }) {
-  const trendingTopics = useTrendingTopics()
   const [comments, setComments] = useState([])
   const [commentInput, setCommentInput] = useState('')
   const [commentSort, setCommentSort] = useState('top')
@@ -550,22 +549,9 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
         </div>
 
         {/* Mobile topic exit-ramp — the rail's trending widget is desktop-only */}
-        {trendingTopics.length > 0 && (
-          <div className="hide-desktop" style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 8 }}>
-              🔥 Trending now
-            </div>
-            <div className="filter-bar" style={{ marginBottom: 0 }}>
-              {trendingTopics.slice(0, 8).map(topic => (
-                <button
-                  key={topic}
-                  className="pill pill-topic"
-                  onClick={() => navigate('feed', { topic })}
-                >🔍 {topic}</button>
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="hide-desktop" style={{ marginBottom: 16 }}>
+          <TrendingStoriesWidget variant="inline" title="🔥 Trending now" />
+        </div>
 
         {/* Comments */}
         <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
@@ -615,7 +601,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
         <Sidebar
           outlets={outlets}
           navigate={navigate}
-          trendingTopics={trendingTopics}
           onTopic={topic => navigate('feed', { topic })}
         />
         </div>
