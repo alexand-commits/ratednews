@@ -21,8 +21,8 @@ function RankedRow({ a, rank, isLast, navigate }) {
       style={{
         display: 'flex',
         alignItems: 'flex-start',
-        gap: 12,
-        padding: '12px 16px',
+        gap: 14,
+        padding: '16px 16px',
         borderBottom: !isLast ? '0.5px solid var(--border)' : 'none',
       }}
     >
@@ -52,16 +52,17 @@ function RankedRow({ a, rank, isLast, navigate }) {
           onClick={e => e.stopPropagation()}
         >
           <div style={{
-            fontSize: 13, fontWeight: 600, color: 'var(--text)',
-            lineHeight: 1.4, marginBottom: 5,
+            fontFamily: 'var(--font-playfair), serif',
+            fontSize: 16, fontWeight: 500, color: 'var(--text)',
+            lineHeight: 1.35, marginBottom: 6,
           }}>
             {a.title}
           </div>
         </Link>
         {(a.summary) && (
           <div style={{
-            fontSize: 12, color: 'var(--text2)', lineHeight: 1.55,
-            marginBottom: 6,
+            fontSize: 13, color: 'var(--text2)', lineHeight: 1.55,
+            marginBottom: 7,
             display: '-webkit-box',
             WebkitLineClamp: 2,
             WebkitBoxOrient: 'vertical',
@@ -95,15 +96,15 @@ function RankedRow({ a, rank, isLast, navigate }) {
       {/* Thumbnail */}
       {hasImage && (
         <div style={{
-          position: 'relative', width: 72, height: 72, flexShrink: 0,
-          borderRadius: 8, overflow: 'hidden', background: 'var(--bg2)',
+          position: 'relative', width: 92, height: 92, flexShrink: 0,
+          borderRadius: 10, overflow: 'hidden', background: 'var(--bg2)',
           marginTop: 2,
         }}>
           <Image
             src={a.image_url}
             alt=""
             fill
-            sizes="72px"
+            sizes="92px"
             style={{ objectFit: 'cover' }}
             unoptimized
             onError={() => setImgFailed(true)}
