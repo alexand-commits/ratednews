@@ -258,6 +258,11 @@ img, video, iframe, embed, object { max-width: 100%; }
   .grid > .sidebar { position: sticky; top: 68px; align-self: flex-start; max-height: calc(100vh - 84px); overflow-y: auto; scrollbar-width: none; }
   .grid > .sidebar::-webkit-scrollbar { display: none; }
 }
+/* Offscreen cards skip layout+paint entirely — long feeds scroll at the cost
+   of only the visible viewport. The intrinsic-size hint keeps the scrollbar
+   from jumping as cards enter the viewport. */
+.feed .news-card, .feed--grid-plain .news-card { content-visibility: auto; contain-intrinsic-size: auto 150px; }
+
 /* Trending topics live inline above the feed on mobile, in the sidebar on desktop */
 .sidebar-trending { display: none; }
 /* Generic desktop/mobile visibility helpers (1024px breakpoint, matching the grid) */
