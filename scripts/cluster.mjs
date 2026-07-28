@@ -14,11 +14,20 @@
  *   — exactly the fields NewsCard needs for bias dots and article links.
  *
  * Algorithm:
- *   1. Fetch all scored articles from the last CLUSTER_WINDOW_HOURS
- *   2. Extract significant words from each title (4+ chars, not stop words)
- *   3. Greedy clustering: for each unassigned article, find all others with
- *      ≥ MIN_OVERLAP significant word overlap from a different outlet
- *   4. Assign a shared cluster_id UUID to every member of each cluster
+ *   1. Fetch all articles from the last CLUSTER_WINDOW_HOURS
+ *   2. Extract significant words from each title (4+ chars, not stop words,
+ *      lightly stemmed so stakes/stake and plans/plan count as one word)
+ *   3. Anchor-star clustering: each cluster is an anchor article plus every
+ *      article sharing ≥ MIN_OVERLAP significant words WITH THE ANCHOR, then
+ *      a one-hop rescue pass attaches remaining orphans to the cluster of an
+ *      article they overlap (against a snapshot — no chains). Full transitive
+ *      union-find was tried and collapsed 5k unrelated articles into one blob;
+ *      the old greedy pass permanently claimed articles for whichever cluster
+ *      saw them first, orphaning even identical Reuters/CNA headlines.
+ *   4. Components with 2+ distinct outlets become clusters; each reuses the
+ *      cluster_id most of its members already carry (stable across runs —
+ *      fresh UUIDs every run silently defeated the social scout's per-story
+ *      cool-down and seen-memory, which match on cluster_id)
  *   5. Write cluster_id + cluster_peers to all clustered articles
  *   6. Clear cluster_id / cluster_peers on articles in the window that
  *      didn't make it into any cluster (stale data cleanup)
@@ -56,9 +65,21 @@ const STOP = new Set([
   'amid','about','into','new','first','second','just','also','more',
 ])
 
+// Light stemming — just plural forms. Exact-match overlap kept same-story
+// headlines apart ("plan to sell stakes" vs "plans stake sale" shared only
+// one word). Deliberately shallow: no -ing/-ed stripping, which over-merges.
+function stem(w) {
+  if (w.length > 4) {
+    if (w.endsWith('ies')) return w.slice(0, -3) + 'y'
+    if (/(ses|xes|zes|ches|shes)$/.test(w)) return w.slice(0, -2)
+    if (w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1)
+  }
+  return w
+}
+
 function sigWords(title) {
   return [...new Set(
-    (title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !STOP.has(w))
+    (title || '').toLowerCase().split(/\W+/).filter(w => w.length > 3 && !STOP.has(w)).map(stem)
   )]
 }
 
@@ -71,16 +92,24 @@ async function main() {
   // Fetch all articles in the window with outlet info.
   // (No accuracy_score filter — AI scoring was removed; clustering is title-word
   //  overlap only, so it works on every ingested article.)
-  const { data: articles, error } = await supabase
-    .from('articles')
-    .select('id, title, outlet_id, outlets(name, logo_url)')
-    .gte('published_at', cutoff)
-    .order('published_at', { ascending: false })
-    .limit(5000)
-
-  if (error) {
-    console.error('Failed to fetch articles:', error.message)
-    process.exit(1)
+  // Paginated fetch — Supabase caps every response at 1000 rows regardless of
+  // .limit(), and the window holds ~28k articles. The old single fetch saw
+  // only the newest ~2.5 HOURS: a story's early articles scrolled out of the
+  // window before the coverage wave arrived and could never join its cluster.
+  const articles = []
+  for (let from = 0; from < 40000; from += 1000) {
+    const { data: page, error } = await supabase
+      .from('articles')
+      .select('id, title, outlet_id, cluster_id, outlets(name, logo_url)')
+      .gte('published_at', cutoff)
+      .order('published_at', { ascending: false })
+      .range(from, from + 999)
+    if (error) {
+      console.error('Failed to fetch articles:', error.message)
+      process.exit(1)
+    }
+    articles.push(...(page || []))
+    if (!page || page.length < 1000) break
   }
 
   console.log(`Fetched ${articles.length} articles from last ${CLUSTER_WINDOW_HOURS}h\n`)
@@ -91,37 +120,81 @@ async function main() {
     words: new Set(sigWords(a.title)),
   }))
 
-  // ── Greedy clustering ──────────────────────────────────────────────────────
-  const assigned  = new Set()   // pool indices already in a cluster
-  const clusters  = []          // [{ clusterId, members: [article, ...] }]
+  // ── Union-find clustering ──────────────────────────────────────────────────
+  // Inverted token index → only articles sharing at least one word are compared
+  const index = new Map()
+  pool.forEach((a, i) => {
+    for (const w of a.words) {
+      if (!index.has(w)) index.set(w, [])
+      index.get(w).push(i)
+    }
+  })
 
+  // Words this common in a 72h window ("trump", "police") carry no story
+  // identity — skip them when generating candidate pairs, both for precision
+  // and to keep the pairing loop O(rare-word matches) instead of O(n²).
+  const TOKEN_CAP = 250
+
+  const sharedCounts = (i, skipAssigned, assigned) => {
+    const m = new Map() // candidate index → overlapping word count
+    for (const w of pool[i].words) {
+      const post = index.get(w)
+      if (post.length > TOKEN_CAP) continue
+      for (const j of post) {
+        if (j === i) continue
+        if (skipAssigned && assigned.has(j)) continue
+        m.set(j, (m.get(j) || 0) + 1)
+      }
+    }
+    return m
+  }
+
+  // Main pass: anchor stars. Every member overlaps the anchor directly.
+  const assigned = new Map() // pool index → clustersRaw index
+  const clustersRaw = []     // [{ memberIdx: [pool indices] }]
   for (let i = 0; i < pool.length; i++) {
     if (assigned.has(i)) continue
-    const primary = pool[i]
-    if (primary.words.size < 2) continue
-
-    // Collect candidate indices first — don't mark assigned until cluster is confirmed valid.
-    // Previously, assigned.add(j) fired inside the inner loop even when primary turned out
-    // to be a singleton, permanently excluding those candidates from future clusters.
-    const candidateIndices = []
-
-    for (let j = 0; j < pool.length; j++) {
-      if (i === j || assigned.has(j)) continue
-      const candidate = pool[j]
-      // Must be a different outlet
-      if (candidate.outlet_id === primary.outlet_id) continue
-      const overlap = [...candidate.words].filter(w => primary.words.has(w)).length
-      if (overlap >= MIN_OVERLAP) candidateIndices.push(j)
+    const counts = sharedCounts(i, true, assigned)
+    const memberIdx = []
+    for (const [j, n] of counts) {
+      if (n >= MIN_OVERLAP && pool[j].outlet_id !== pool[i].outlet_id) memberIdx.push(j)
     }
-
-    if (candidateIndices.length < 1) continue   // singleton — not a cluster
-
-    // Cluster is valid — now mark everyone as assigned
-    assigned.add(i)
-    candidateIndices.forEach(j => assigned.add(j))
-    const members = [primary, ...candidateIndices.map(j => pool[j])]
-    clusters.push({ clusterId: randomUUID(), members })
+    if (!memberIdx.length) continue // singleton — not a cluster
+    const cn = clustersRaw.length
+    clustersRaw.push({ memberIdx: [i, ...memberIdx] })
+    assigned.set(i, cn)
+    memberIdx.forEach(j => assigned.set(j, cn))
   }
+
+  // Rescue pass: orphans overlapping an already-clustered article join its
+  // cluster. Matched against a snapshot of the main pass, so a rescued
+  // article can't pull in further orphans — one hop, no chains.
+  const snapshot = new Map(assigned)
+  for (let i = 0; i < pool.length; i++) {
+    if (snapshot.has(i)) continue
+    const counts = sharedCounts(i, false, snapshot)
+    let best = null, bestN = 0
+    for (const [j, n] of counts) {
+      if (n >= MIN_OVERLAP && snapshot.has(j) && n > bestN) { best = j; bestN = n }
+    }
+    if (best != null) clustersRaw[snapshot.get(best)].memberIdx.push(i)
+  }
+
+  const components = clustersRaw
+    .map(c => c.memberIdx.map(ix => pool[ix]))
+    .filter(ms => new Set(ms.map(m => m.outlet_id)).size >= 2)
+    .sort((a, b) => b.length - a.length)
+
+  // Stable ids: reuse the cluster_id most members already carry (biggest
+  // component wins a contested id; the rest mint fresh UUIDs).
+  const usedIds = new Set()
+  const clusters = components.map(members => {
+    const counts = new Map()
+    for (const m of members) if (m.cluster_id) counts.set(m.cluster_id, (counts.get(m.cluster_id) || 0) + 1)
+    const clusterId = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(e => e[0]).find(id => !usedIds.has(id)) || randomUUID()
+    usedIds.add(clusterId)
+    return { clusterId, members }
+  })
 
   const clusteredCount = clusters.reduce((s, c) => s + c.members.length, 0)
   console.log(`Found ${clusters.length} clusters spanning ${clusteredCount} articles\n`)
@@ -131,6 +204,14 @@ async function main() {
   const clusterUpdates = []
 
   for (const { clusterId, members } of clusters) {
+    // Only rewrite clusters whose membership actually changed — with the full
+    // 72h window in play, rewriting every member of every cluster would be
+    // ~25k rows per 15-min cron run for mostly identical data.
+    const changed = members.some(m => m.cluster_id !== clusterId)
+    if (!changed) {
+      members.forEach(m => clusteredIds.add(m.id))
+      continue
+    }
     for (const member of members) {
       // "N sources" should mean publishers, not feeds — post-flattening,
       // BBC World + BBC Politics are separate outlets but one publisher.
@@ -153,6 +234,7 @@ async function main() {
           seenPubs.add(k)
           return true
         })
+        .slice(0, 40) // bound the JSONB payload — unbounded peer arrays on big clusters blew batch statement timeouts
         .map(m => ({
           id:        m.id,
           outlet_id: m.outlet_id,
@@ -168,8 +250,9 @@ async function main() {
   }
 
   // Articles in the window that are NOT in any cluster — clear stale data
+  // (only where a stale cluster_id is actually set; blank rows stay untouched)
   const clearUpdates = articles
-    .filter(a => !clusteredIds.has(a.id))
+    .filter(a => !clusteredIds.has(a.id) && a.cluster_id)
     .map(a => ({ id: a.id, cluster_id: null, cluster_peers: [] }))
 
   const allUpdates = [...clusterUpdates, ...clearUpdates]
