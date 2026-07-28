@@ -1,4 +1,4 @@
-import React, { useState, useEffect, createContext, useContext } from 'react'
+import React, { useState, useEffect, useRef, createContext, useContext } from 'react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Script from 'next/script'
@@ -202,11 +202,29 @@ export default function App({ Component, pageProps }) {
     setTimeout(() => setToast(t => ({ ...t, visible: false })), 2500)
   }
 
+  // ── In-app history depth — powers goBack ────────────────────────────────
+  // history.state?.idx is a react-router field; Next's pages router never sets
+  // it, so the old `idx > 0` check was always false and EVERY back button
+  // pushed home instead of going back. Count forward navigations ourselves:
+  // +1 per in-app push, -1 when a popstate (browser/app back) completes.
+  const navDepth = useRef(0)
+  const popNav   = useRef(false)
+  useEffect(() => {
+    router.beforePopState(() => { popNav.current = true; return true })
+    const onComplete = () => {
+      if (popNav.current) { popNav.current = false; navDepth.current = Math.max(0, navDepth.current - 1) }
+      else navDepth.current += 1
+    }
+    router.events.on('routeChangeComplete', onComplete)
+    return () => { router.events.off('routeChangeComplete', onComplete); router.beforePopState(() => true) }
+  }, [])
+
   const user     = session?.user || null
   const navigate = createNavigate(router, allOutlets)
   const goBack   = () => {
-    // If this is the first page in session history, going back would exit the app
-    if (typeof window !== 'undefined' && window.history.state?.idx > 0) {
+    // Real in-app history behind us → genuinely go back; otherwise (direct
+    // landing, reload) fall back to home rather than exiting the site.
+    if (typeof window !== 'undefined' && navDepth.current > 0) {
       router.back()
     } else {
       router.push('/')
@@ -242,6 +260,7 @@ export default function App({ Component, pageProps }) {
       <div className={`${playfair.variable} ${lato.variable}`} style={{ fontFamily: 'var(--font-lato), sans-serif' }}>
       <Header
         navigate={navigate}
+        goBack={goBack}
         isDark={isDark}
         toggleTheme={() => setIsDark(d => !d)}
         user={user}

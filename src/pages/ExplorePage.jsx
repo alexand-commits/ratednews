@@ -408,7 +408,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
                   ) : digest.map(sec => (
                     <section key={sec.value}>
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
-                        <h2 style={{ margin: 0, fontFamily: 'var(--font-playfair), serif', fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>
+                        <h2 style={{ margin: 0, fontFamily: 'var(--font-playfair), serif', fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>
                           {sec.emoji} {sec.label}
                           {region !== 'all' && <span style={{ fontWeight: 400, fontSize: 14, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
                         </h2>
@@ -462,7 +462,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
               <>
                 {/* Deep category view */}
                 <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <h2 style={{ margin: 0, fontFamily: 'var(--font-playfair), serif', fontSize: 20, fontWeight: 700, color: 'var(--text)' }}>
+                  <h2 style={{ margin: 0, fontFamily: 'var(--font-playfair), serif', fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>
                     {CATEGORIES.find(c => c.value === category)?.emoji} {category}
                     {region !== 'all' && <span style={{ fontWeight: 400, fontSize: 14, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
                   </h2>

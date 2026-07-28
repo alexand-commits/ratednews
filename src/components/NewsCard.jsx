@@ -86,15 +86,15 @@ export default function NewsCard({ article, index, onClick, navigate, relatedArt
         {hasImage && (
           <div style={{
             position: 'relative',
-            width: compact ? 52 : 80, height: compact ? 52 : 80, flexShrink: 0,
-            borderRadius: 8, overflow: 'hidden',
+            width: compact ? 52 : 92, height: compact ? 52 : 92, flexShrink: 0,
+            borderRadius: 10, overflow: 'hidden',
             background: 'var(--bg2)',
           }}>
             <Image
               src={article.image_url}
               alt={article.title}
               fill
-              sizes={compact ? '52px' : '80px'}
+              sizes={compact ? '52px' : '92px'}
               style={{ objectFit: 'cover' }}
               priority={index < 2}
               unoptimized
