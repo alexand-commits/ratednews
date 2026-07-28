@@ -125,7 +125,7 @@ export async function getStaticProps({ params }) {
   if (anchor.cluster_id) {
     const { data: cluster } = await supabase
       .from('articles')
-      .select('id, title, url, published_at, outlet_id, community_score, total_ratings, outlets(name, logo_url, country)')
+      .select('id, title, url, published_at, outlet_id, image_url, community_score, total_ratings, outlets(name, logo_url, country)')
       .eq('cluster_id', anchor.cluster_id)
       .order('published_at', { ascending: false })
     if (cluster && cluster.length) {
@@ -144,7 +144,9 @@ export async function getStaticProps({ params }) {
     anchorId: anchor.id,
     slug: canonical,
     title: anchor.title,
-    image: anchor.image_url || null,
+    // Hero: anchor's photo, else the first member that has one — an anchor
+    // without a photo was blanking the hero even on well-photographed stories
+    image: anchor.image_url || members.find(a => a.image_url)?.image_url || null,
     members,
   }
 
