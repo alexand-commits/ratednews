@@ -359,10 +359,6 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         {/* ── Discovery content (no search) ── */}
         {!isSearchActive && (
           <>
-            {/* Mobile discovery — the desktop hub owns these ≥1024px */}
-            <div className="hide-desktop" style={{ marginTop: 16, marginBottom: 8 }}>
-              <TrendingStoriesWidget variant="inline" title="🔥 Trending now" />
-            </div>
 
             {/* Region — same editions as desktop */}
             <div className="filter-bar hide-desktop" style={{ marginBottom: 8 }}>
@@ -462,6 +458,10 @@ export default function ExplorePage({ navigate, outlets = [] }) {
                       )}
                     </div>
                   )}
+                  {/* Trending exit-ramp — bottom of the list, not above it */}
+                  <div style={{ marginTop: 28 }}>
+                    <TrendingStoriesWidget variant="inline" title="🔥 Trending now" />
+                  </div>
                 </div>}
               </>
             ) : (
