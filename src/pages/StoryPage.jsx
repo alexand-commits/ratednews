@@ -19,6 +19,11 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
   const count   = members.length
   const [myRatings, setMyRatings] = useState({})
 
+  // Coverage timeline: who broke it, how long it's been running, how fresh
+  const dated   = members.filter(m => m.published_at && !isNaN(new Date(m.published_at)))
+  const firstM  = dated.length ? dated.reduce((a, b) => new Date(a.published_at) <= new Date(b.published_at) ? a : b) : null
+  const newestM = dated.length ? dated.reduce((a, b) => new Date(a.published_at) >= new Date(b.published_at) ? a : b) : null
+
   // Load the user's existing trust ratings for the covering outlets
   useEffect(() => {
     if (!user) { setMyRatings({}); return }
@@ -57,6 +62,9 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
             {story.title}
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text3)' }}>
+            {firstM && count > 1 && (
+              <>First covered {timeAgo(firstM.published_at)} · latest take {timeAgo(newestM.published_at)}. </>
+            )}
             Compare how each outlet is covering it — and rate the sources you trust.
           </p>
         </div>
@@ -103,12 +111,25 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
                   {com > 0 && (
                     <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--green-dark)' }}>{(com / 20).toFixed(1)}★ trust</span>
                   )}
+                  {count > 1 && firstM && m.id === firstM.id && (
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--coral)', background: 'rgba(216,90,48,0.08)', border: '0.5px solid rgba(216,90,48,0.25)', borderRadius: 20, padding: '1px 8px', whiteSpace: 'nowrap' }}>
+                      🏁 first to report
+                    </span>
+                  )}
                   <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>{timeAgo(m.published_at)}</span>
                 </div>
 
                 <Link href={`/article/${slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                  <div className="news-headline" style={{ fontSize: 16, marginBottom: 10 }}>{m.title}</div>
+                  <div className="news-headline" style={{ fontSize: 16, marginBottom: m.summary ? 6 : 10 }}>{m.title}</div>
                 </Link>
+                {m.summary && (
+                  <div style={{
+                    fontSize: 13, color: 'var(--text2)', lineHeight: 1.55, marginBottom: 10,
+                    display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+                  }}>
+                    {m.summary}
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', borderTop: '0.5px solid var(--divider)', paddingTop: 10 }}>
                   <span style={{ fontSize: 11, color: myRatings[m.outlet_id] ? 'var(--green-dark)' : 'var(--text3)', fontWeight: 500 }}>
