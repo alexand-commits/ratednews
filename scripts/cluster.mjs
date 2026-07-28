@@ -207,7 +207,9 @@ async function main() {
     // Only rewrite clusters whose membership actually changed — with the full
     // 72h window in play, rewriting every member of every cluster would be
     // ~25k rows per 15-min cron run for mostly identical data.
-    const changed = members.some(m => m.cluster_id !== clusterId)
+    // FORCE_REWRITE=1 bypasses the guard (one-off cleanup when peer arrays
+    // have gone stale — e.g. a member left but the survivors' ids didn't move).
+    const changed = process.env.FORCE_REWRITE === '1' || members.some(m => m.cluster_id !== clusterId)
     if (!changed) {
       members.forEach(m => clusteredIds.add(m.id))
       continue
