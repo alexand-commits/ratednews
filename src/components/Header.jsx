@@ -16,7 +16,7 @@ function getTrustLevel(total) {
   return           { label: 'New Member',              emoji: '👋', color: '#9E9B95' }
 }
 
-export default function Header({ navigate, isDark, toggleTheme, user, onLoginClick, onSignOut }) {
+export default function Header({ navigate, goBack, isDark, toggleTheme, user, onLoginClick, onSignOut }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [stats, setStats]       = useState(null)
   const menuRef = useRef(null)
@@ -69,7 +69,7 @@ export default function Header({ navigate, isDark, toggleTheme, user, onLoginCli
         {showBack && (
           <button
             className="header-back mobile-only"
-            onClick={() => (window.history.length > 1 ? router.back() : navigate('feed'))}
+            onClick={() => (goBack ? goBack() : navigate('feed'))}
             aria-label="Back"
           >←</button>
         )}
