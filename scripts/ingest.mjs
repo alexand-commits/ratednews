@@ -84,7 +84,13 @@ function itemTitle(item) {
   const t = item.title
   if (typeof t === 'string') return t.trim()
   if (typeof t === 'number') return String(t)
-  if (t && typeof t === 'object' && typeof t._ === 'string') return t._.trim()
+  if (t && typeof t === 'object') {
+    if (typeof t._ === 'string') return t._.trim()
+    // Some feeds nest an <a> element inside <title> (The Daily Star) — the
+    // parser turns that into {a:[{_:text,$:{href}}]}; take the anchor text.
+    const a = Array.isArray(t.a) ? t.a[0] : t.a
+    if (a && typeof a._ === 'string') return a._.trim()
+  }
   return ''
 }
 
@@ -782,11 +788,18 @@ function isSyndicated(item, outletName) {
   const raw = item.rssSource
   const src = typeof raw === 'string' ? raw : (raw?._ ?? raw?.title ?? '')
   if (!src || typeof src !== 'string') return false
-  const norm = s => s.toLowerCase().replace(/[^a-z0-9]/g, '')
+  // Domain suffixes stripped first: Google names some sources by domain
+  // ("lbc.co.uk"), which never substring-matched "LBC News" and silently
+  // flagged the outlet's ENTIRE feed as syndicated.
+  const norm = s => s.toLowerCase().replace(/\.(co\.uk|com|org|net|co|uk|de|fr|es|it|ie|au|ca|in)\b/g, '').replace(/[^a-z0-9]/g, '')
+  // Initialisms Google uses that share no substring with the outlet name
+  const ALIASES = { wallstreetjournal: ['wsj'], newyorktimes: ['nyt'] }
   const a = norm(src), b = norm(outletName)
   if (!a || !b) return false
   // Loose match tolerates "Yahoo!" vs "Yahoo Sports", "USA TODAY Sports" vs "USA Today"
-  return !(a.includes(b) || b.includes(a))
+  if (a.includes(b) || b.includes(a)) return false
+  if ((ALIASES[b] || []).some(x => a === x || a.includes(x))) return false
+  return true
 }
 
 // Rough non-English heuristic — if >40% of chars are non-ASCII, skip
@@ -963,12 +976,21 @@ async function ingestOutlet(outlet) {
     .sort((a, b) => (new Date(b.isoDate || b.pubDate || 0) || 0) - (new Date(a.isoDate || a.pubDate || 0) || 0))
     .slice(0, runCap)
   let inserted = 0, skipped = 0, errors = 0
+  // Per-reason skip counts — printed in INGEST_ONLY debug runs so a
+  // zero-ingest outlet can be diagnosed instead of guessed at.
+  const why = { old: 0, syndicated: 0, short: 0, nonEnglish: 0, junk: 0, longTitle: 0, dupe: 0, noUrl: 0 }
 
   // Atom feeds (Jacobin, Daily Star) put the article URL in <id>, which
   // rss-parser exposes as `id`, not `link` — fall back to it when it's a URL.
+  // Trim before testing: Daily Mail/CBS Sports/The Local wrap the link in
+  // newlines+tabs ("\n\thttps://…"), which silently failed startsWith('http')
+  // and made whole outlets ingest zero for weeks.
   const itemUrl = i => {
-    const u = i.link || i.guid || i.id
-    return typeof u === 'string' && u.startsWith('http') ? u : null
+    for (const u of [i.link, i.guid, i.id]) {
+      const s = typeof u === 'string' ? u.trim() : null
+      if (s && s.startsWith('http')) return s
+    }
+    return null
   }
 
   const urls   = items.map(itemUrl).filter(Boolean)
@@ -985,14 +1007,14 @@ async function ingestOutlet(outlet) {
   for (const item of items) {
     const url   = itemUrl(item)
     const title = cleanTitle(itemTitle(item), outlet.name)
-    if (!url || !title) continue
-    if (isTooOld(item.pubDate, outlet.name)) { skipped++; continue }
-    if (isSyndicated(item, outlet.name))     { skipped++; continue }
-    if (isTooShort(title))                   { skipped++; continue }
-    if (isLikelyNonEnglish(title))           { skipped++; continue }
-    if (isJunk(title))                       { skipped++; continue }
-    if (isTitleTooLong(title, outlet.name))  { skipped++; continue }
-    if (existingUrls.has(url) || existingTitles.has(title)) { skipped++; continue }
+    if (!url || !title) { why.noUrl++; continue }
+    if (isTooOld(item.pubDate, outlet.name)) { skipped++; why.old++; continue }
+    if (isSyndicated(item, outlet.name))     { skipped++; why.syndicated++; continue }
+    if (isTooShort(title))                   { skipped++; why.short++; continue }
+    if (isLikelyNonEnglish(title))           { skipped++; why.nonEnglish++; continue }
+    if (isJunk(title))                       { skipped++; why.junk++; continue }
+    if (isTitleTooLong(title, outlet.name))  { skipped++; why.longTitle++; continue }
+    if (existingUrls.has(url) || existingTitles.has(title)) { skipped++; why.dupe++; continue }
 
     const rssSummary = extractSummary(item)
     const summary    = await enrichSummary(url, rssSummary)
@@ -1022,6 +1044,10 @@ async function ingestOutlet(outlet) {
     }
   }
 
+  if (process.env.INGEST_ONLY) {
+    const active = Object.entries(why).filter(([, n]) => n > 0).map(([k, n]) => `${k}:${n}`).join(' ')
+    console.log(`    🔬 ${outlet.name} — feed items: ${feed.items.length}, taken: ${items.length}${active ? ' — skips → ' + active : ''}`)
+  }
   return { inserted, skipped, errors }
 }
 
@@ -1039,14 +1065,19 @@ async function main() {
     process.exit(1)
   }
 
-  console.log(`Found ${outlets.length} outlets with RSS feeds\n`)
+  // Debug: INGEST_ONLY="Daily Mail,Time" node scripts/ingest.mjs runs only the
+  // named outlets (exact name, case-insensitive) with per-reason skip logging.
+  const only = (process.env.INGEST_ONLY || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+  const pool = only.length ? outlets.filter(o => only.includes(o.name.toLowerCase())) : outlets
+
+  console.log(`Found ${outlets.length} outlets with RSS feeds${only.length ? ` — INGEST_ONLY narrows to ${pool.length}` : ''}\n`)
 
   let totalInserted = 0
 
   // 280+ feeds serially is ~7 min/run; a small worker pool keeps the run well
   // inside the 15-min cron window as the outlet list grows.
   const CONCURRENCY = 6
-  const queue = [...outlets]
+  const queue = [...pool]
   async function worker() {
     while (queue.length) {
       const outlet = queue.shift()
