@@ -421,13 +421,13 @@ export default function OutletsRankingsPage({
               {outletsLoading ? (
                 [0,1,2,3,4,5,6,7].map(i => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 18px', borderBottom: i < 7 ? '0.5px solid var(--border)' : 'none' }}>
-                    <div className="skeleton-shimmer" style={{ width: 26, height: 14, borderRadius: 4, flexShrink: 0, background: 'var(--border)' }} />
-                    <div className="skeleton-shimmer" style={{ width: 38, height: 38, borderRadius: 10, flexShrink: 0, background: 'var(--border)' }} />
+                    <div className="skeleton-shimmer" style={{ width: 30, height: 14, borderRadius: 4, flexShrink: 0, background: 'var(--border)' }} />
+                    <div className="skeleton-shimmer" style={{ width: 44, height: 44, borderRadius: 10, flexShrink: 0, background: 'var(--border)' }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div className="skeleton-line skeleton-shimmer" style={{ width: '55%', height: 13, marginBottom: 6 }} />
-                      <div className="skeleton-line skeleton-shimmer" style={{ width: '30%', height: 10 }} />
+                      <div className="skeleton-line skeleton-shimmer" style={{ width: '55%', height: 15, marginBottom: 6 }} />
+                      <div className="skeleton-line skeleton-shimmer" style={{ width: '30%', height: 11 }} />
                     </div>
-                    <div style={{ width: 100, flexShrink: 0 }}>
+                    <div style={{ width: 110, flexShrink: 0 }}>
                       <div className="skeleton-shimmer" style={{ height: 6, borderRadius: 3, background: 'var(--border)' }} />
                     </div>
                   </div>
@@ -453,36 +453,36 @@ export default function OutletsRankingsPage({
                       className="row-hover"
                       onClick={() => compareMode ? toggleCompare(o.id) : navigate('outlet', { outletId: o.id })}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 18px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '15px 18px' }}>
                         {compareMode ? (
                           <div style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, border: `2px solid ${isSelected ? 'var(--coral)' : 'var(--border)'}`, background: isSelected ? 'var(--coral)' : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {isSelected && <span style={{ color: '#fff', fontSize: 11, fontWeight: 700 }}>✓</span>}
                           </div>
                         ) : (
-                          <span style={{ fontSize: isTop3 ? 15 : 12, fontWeight: isTop3 ? 700 : 400, color: i === 0 ? '#b8860b' : i === 1 ? '#888' : i === 2 ? '#a0522d' : 'var(--text3)', width: 26, flexShrink: 0, textAlign: 'center' }}>
+                          <span style={{ fontSize: isTop3 ? 16 : 13, fontWeight: isTop3 ? 700 : 400, color: i === 0 ? '#b8860b' : i === 1 ? '#888' : i === 2 ? '#a0522d' : 'var(--text3)', width: 30, flexShrink: 0, textAlign: 'center' }}>
                             {isTop3 && i === 0 ? '🥇' : isTop3 && i === 1 ? '🥈' : isTop3 && i === 2 ? '🥉' : eligibleRow ? i + 1 : '—'}
                           </span>
                         )}
 
-                        <OutletLogo name={o.name} size={36} borderRadius={9} />
+                        <OutletLogo name={o.name} size={44} borderRadius={10} />
 
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <Link
                             href={`/outlet/${toSlug(o.name)}`}
                             onClick={e => { if (compareMode) e.preventDefault(); else e.stopPropagation() }}
-                            style={{ display: 'block', fontSize: 14, fontWeight: 500, marginBottom: 2, color: 'inherit', textDecoration: 'none' }}
+                            style={{ display: 'block', fontSize: 16, fontWeight: 600, marginBottom: 3, color: 'inherit', textDecoration: 'none' }}
                           >{o.name}</Link>
                           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                            <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.country || 'International'}</span>
-                            {o.total_ratings > 0 && <span style={{ fontSize: 11, color: 'var(--text3)' }}>{o.total_ratings} {o.total_ratings === 1 ? 'rating' : 'ratings'}</span>}
+                            <span style={{ fontSize: 12, color: 'var(--text3)' }}>{o.country || 'International'}</span>
+                            {o.total_ratings > 0 && <span style={{ fontSize: 12, color: 'var(--text3)' }}>{o.total_ratings} {o.total_ratings === 1 ? 'rating' : 'ratings'}</span>}
                           </div>
                         </div>
 
-                        <div style={{ width: 90, flexShrink: 0 }}>
+                        <div style={{ width: 110, flexShrink: 0 }}>
                           <div className="rank-bar-bg">
                             <div className="rank-bar-fill" style={{ width: `${barWidth}%`, background: tab === 'community' ? 'var(--green)' : 'var(--coral)' }} />
                           </div>
-                          <div style={{ fontSize: 11, textAlign: 'right', marginTop: 3, color: isProvisional ? 'var(--text3)' : tab === 'community' ? 'var(--green-dark)' : 'var(--text2)', fontWeight: 600 }}>
+                          <div style={{ fontSize: 12, textAlign: 'right', marginTop: 3, color: isProvisional ? 'var(--text3)' : tab === 'community' ? 'var(--green-dark)' : 'var(--text2)', fontWeight: 600 }}>
                             {isProvisional
                               ? `${tab === 'community' && score > 0 ? (score / 20).toFixed(1) + ' · ' : ''}provisional`
                               : tab === 'community' && score > 0 ? (score / 20).toFixed(1) : score || '—'}
@@ -491,7 +491,7 @@ export default function OutletsRankingsPage({
 
                         <button
                           onClick={e => { e.stopPropagation(); if (!user) { onLoginClick(); return } toggleFollow(o.id) }}
-                          style={{ fontSize: 10, fontWeight: 600, padding: '3px 10px', borderRadius: 20, border: followedOutletIds.has(o.id) ? '1px solid var(--border)' : '1px solid var(--coral)', background: followedOutletIds.has(o.id) ? 'var(--bg)' : 'rgba(216,90,48,0.08)', color: followedOutletIds.has(o.id) ? 'var(--text3)' : 'var(--coral)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
+                          style={{ fontSize: 11, fontWeight: 600, padding: '4px 12px', borderRadius: 20, border: followedOutletIds.has(o.id) ? '1px solid var(--border)' : '1px solid var(--coral)', background: followedOutletIds.has(o.id) ? 'var(--bg)' : 'rgba(216,90,48,0.08)', color: followedOutletIds.has(o.id) ? 'var(--text3)' : 'var(--coral)', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}
                         >
                           {followedOutletIds.has(o.id) ? '✓ Following' : '+ Follow'}
                         </button>
