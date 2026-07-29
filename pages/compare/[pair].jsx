@@ -55,19 +55,19 @@ export default function ComparePage({ a, b }) {
   const url   = `https://www.ratednews.com/compare/${toSlug(a.name)}-vs-${toSlug(b.name)}`
   const title = `${a.name} vs ${b.name}: Which Is More Trusted? — RatedNews`
   const desc  = bothRated
-    ? `${a.name} scores ${aStars}/5 and ${b.name} scores ${bStars}/5 from reader ratings on RatedNews. Compare their accuracy, bias and quality side by side.`
-    : `Compare ${a.name} and ${b.name} side by side — community ratings for accuracy, bias and quality on RatedNews.`
+    ? `${a.name} scores ${aStars}/5 and ${b.name} scores ${bStars}/5 from reader ratings on RatedNews. Compare their community trust scores side by side.`
+    : `Compare ${a.name} and ${b.name} side by side — community trust ratings on RatedNews.`
 
   const faq = [
     {
       q: `Which is more reliable, ${a.name} or ${b.name}?`,
       a: leader
         ? `Based on reader ratings, ${leader.name} currently leads with ${stars(leader)}/5 (${a.name}: ${aStars}/5 from ${a.total_ratings} ratings; ${b.name}: ${bStars}/5 from ${b.total_ratings} ratings). Scores update continuously as the community rates.`
-        : `Both outlets are still building their community rating profile on RatedNews. Scores come entirely from reader ratings of accuracy, bias and quality — rate either outlet to shape the comparison.`,
+        : `Both outlets are still building their community rating profile on RatedNews. Scores come entirely from reader trust ratings — rate either outlet to shape the comparison.`,
     },
     {
       q: `How are ${a.name} and ${b.name} rated?`,
-      a: `Every score on RatedNews comes from reader ratings — no AI, no editorial scoring. Readers rate each outlet's articles and the outlets themselves for accuracy, bias and overall quality.`,
+      a: `Every score on RatedNews comes from reader ratings — no AI, no editorial scoring. Readers rate the outlets they read for overall trustworthiness, and scores update continuously.`,
     },
   ]
 
