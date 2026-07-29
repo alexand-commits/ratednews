@@ -17,8 +17,8 @@ export default function MostTrusted({ ranked, provisionalCount, generatedAt }) {
   const year = new Date(generatedAt).getFullYear()
   const title = `Most Trusted News Sources ${year} — Ranked by Readers | RatedNews`
   const desc  = ranked.length
-    ? `The most trusted news outlets of ${year}, ranked by reader ratings for accuracy, bias and quality. ${ranked[0].name} currently leads with ${stars(ranked[0])}/5. Live community rankings, no AI.`
-    : `News outlets ranked by reader ratings for accuracy, bias and quality. Live community rankings on RatedNews.`
+    ? `The most trusted news outlets of ${year}, ranked by reader trust ratings. ${ranked[0].name} currently leads with ${stars(ranked[0])}/5. Live community rankings, no AI.`
+    : `News outlets ranked by reader trust ratings. Live community rankings on RatedNews.`
   const url = 'https://www.ratednews.com/most-trusted-news-sources'
 
   const itemListLd = {
@@ -38,16 +38,16 @@ export default function MostTrusted({ ranked, provisionalCount, generatedAt }) {
     {
       q: `What is the most trusted news source in ${year}?`,
       a: ranked.length
-        ? `Based on RatedNews reader ratings, ${ranked[0].name} currently holds the top community score at ${stars(ranked[0])}/5${ranked[1] ? `, followed by ${ranked[1].name} (${stars(ranked[1])}/5)` : ''}. The ranking updates continuously as readers rate outlets for accuracy, bias and quality.`
+        ? `Based on RatedNews reader ratings, ${ranked[0].name} currently holds the top community score at ${stars(ranked[0])}/5${ranked[1] ? `, followed by ${ranked[1].name} (${stars(ranked[1])}/5)` : ''}. The ranking updates continuously as readers rate outlets.`
         : `The ranking is being built by reader ratings right now — outlets need ${MIN_RANK_RATINGS}+ ratings to qualify.`,
     },
     {
       q: 'How is this ranking calculated?',
-      a: `Entirely from reader ratings — no AI scoring, no editorial picks, no funding influence. Readers rate outlets and their articles for accuracy, bias and overall quality; an outlet needs at least ${MIN_RANK_RATINGS} ratings to hold a ranked position.`,
+      a: `Entirely from reader ratings — no AI scoring, no editorial picks, no funding influence. Readers rate the outlets they read for overall trustworthiness; an outlet needs at least ${MIN_RANK_RATINGS} ratings to hold a ranked position.`,
     },
     {
       q: 'Which news sources are least biased?',
-      a: `RatedNews measures bias article by article through reader ratings rather than assigning outlets a fixed left/right label. The outlets above combine high accuracy ratings with high fair-coverage rates — see each outlet's page for its fairness breakdown.`,
+      a: `RatedNews doesn't assign outlets fixed left/right labels — rankings measure overall reader trust, not political position. The outlets above are the ones readers currently rate most trustworthy; open any outlet's page to see its score and rate it yourself.`,
     },
   ]
 
@@ -86,7 +86,7 @@ export default function MostTrusted({ ranked, provisionalCount, generatedAt }) {
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.6, margin: '0 0 6px' }}>
             News outlets ranked by readers — not by an algorithm, an editor or a funder. Every score
-            below comes from community ratings of accuracy, bias and quality, and updates continuously
+            below comes from community trust ratings, and updates continuously
             as readers rate.
           </p>
           <p style={{ fontSize: 12, color: 'var(--text3)', margin: '0 0 20px' }}>

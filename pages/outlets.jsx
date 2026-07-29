@@ -27,10 +27,10 @@ export default function Outlets({ initialOutlets = [] }) {
   return (
     <>
       <Head>
-        <title>News Outlet Bias Ratings — BBC, CNN, Fox News & More — RatedNews</title>
-        <meta name="description" content="Browse community ratings for 200+ major news outlets including BBC, CNN, Fox News, The Guardian and Wall Street Journal. See which outlets readers trust most for accuracy, bias and quality." />
+        <title>News Outlet Ratings — Which Sources Do Readers Trust? — RatedNews</title>
+        <meta name="description" content="Browse community trust ratings for 250+ major news outlets including BBC, CNN, Fox News, The Guardian and Wall Street Journal — ranked by readers, not algorithms. No left/right labels, just reader trust." />
         <link rel="canonical" href="https://www.ratednews.com/outlets" />
-        <meta property="og:title"       content="News Outlet Bias Ratings — BBC, CNN, Fox News & More — RatedNews" />
+        <meta property="og:title"       content="News Outlet Ratings — Which Sources Do Readers Trust? — RatedNews" />
         <meta property="og:description" content="Browse community ratings for 200+ major news outlets — see which readers trust most." />
         <meta property="og:url"         content="https://www.ratednews.com/outlets" />
         <meta property="og:type"        content="website" />

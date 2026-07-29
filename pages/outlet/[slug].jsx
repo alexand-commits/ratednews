@@ -30,8 +30,8 @@ function buildFaq(o) {
   faq.push({
     q: `Is ${name} reliable?`,
     a: stars
-      ? `RatedNews readers give ${name} ${stars} out of 5 for overall trustworthiness, based on ${n} community ${n === 1 ? 'rating' : 'ratings'} covering accuracy, bias and quality. Scores update continuously as readers rate.`
-      : `${name} hasn't received enough community ratings yet for a reliable score. RatedNews scores come entirely from reader ratings of accuracy, bias and quality — rate ${name} to help build its profile.`,
+      ? `RatedNews readers give ${name} ${stars} out of 5 for overall trustworthiness, based on ${n} community ${n === 1 ? 'rating' : 'ratings'} of overall trustworthiness. Scores update continuously as readers rate.`
+      : `${name} hasn't received enough community ratings yet for a reliable score. RatedNews scores come entirely from reader trust ratings — rate ${name} to help build its profile.`,
   })
 
   // NB: no fair_rate/misleading_rate here — those columns are frozen output of
@@ -39,13 +39,13 @@ function buildFaq(o) {
   faq.push({
     q: `Is ${name} biased?`,
     a: stars
-      ? `RatedNews doesn't assign ${name} a left/right label. Readers rate its articles individually for bias and fairness, and those ratings feed the ${stars}/5 community score above — open any rated article to see how readers judged its coverage.`
-      : `RatedNews doesn't assign ${name} a left/right label — readers rate its articles individually for bias and fairness. ${name} is still building its rating profile; rate an article to contribute the first data points.`,
+      ? `RatedNews doesn't assign ${name} a left/right label. Its ${stars}/5 score measures overall reader trust, not political position — readers judge for themselves, outlet by outlet, whether coverage deserves their trust.`
+      : `RatedNews doesn't assign ${name} a left/right label — scores measure overall reader trust, not political position. ${name} is still building its rating profile; rate it to contribute the first data points.`,
   })
 
   faq.push({
     q: `How is ${name} rated on RatedNews?`,
-    a: `Every score comes from reader ratings — there is no AI or editorial scoring. Readers rate ${name}'s articles and the outlet itself for accuracy, bias and overall quality, and those ratings roll up into the community score shown on this page.`,
+    a: `Every score comes from reader ratings — there is no AI or editorial scoring. Readers rate ${name}'s overall trustworthiness with a one-tap star rating, and those ratings roll up into the community score shown on this page.`,
   })
 
   return faq
@@ -69,7 +69,7 @@ export default function OutletDetail({ outlet, compareTargets = [] }) {
       <Head>
         {/* Title matches the high-intent queries people actually type:
             "is <outlet> reliable", "is <outlet> biased", "<outlet> bias rating" */}
-        <title>{`Is ${outlet.name} Reliable? Bias & Trust Ratings — RatedNews`}</title>
+        <title>{`Is ${outlet.name} Reliable? Community Trust Ratings — RatedNews`}</title>
         <meta
           name="description"
           content={outlet.total_ratings > 0
