@@ -548,11 +548,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
         </div>
 
-        {/* Mobile topic exit-ramp — the rail's trending widget is desktop-only */}
-        <div className="hide-desktop" style={{ marginBottom: 16 }}>
-          <TrendingStoriesWidget variant="inline" title="🔥 Trending now" />
-        </div>
-
         {/* Comments */}
         <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: 20 }}>
           <div style={{ fontSize: 14, fontWeight: 500, marginBottom: 14 }}>
@@ -595,6 +590,13 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               sortedComments.map(c => <CommentRow key={c.id} c={c} ctx={commentCtx} />)
             )}
           </div>
+        </div>
+
+        {/* Mobile trending exit-ramp — LAST: the reader has read, rated and
+            seen the discussion; only then do we point them onward. The rail's
+            trending widget covers desktop. */}
+        <div className="hide-desktop" style={{ marginTop: 20 }}>
+          <TrendingStoriesWidget variant="inline" title="🔥 Trending now" />
         </div>
         </div>
 
