@@ -363,6 +363,29 @@ Label every post's "story" field and set "story_index" to the STORY number it co
 Return the JSON only.`
 }
 
+// ── Real-engagement calibration ──────────────────────────────────────────────
+// The feedback loop: /api/social-metrics stores actual like/repost/reply
+// counts for published posts. The prompt shows the model its recent winners
+// and duds so pulse scores and framing calibrate against reality instead of
+// guessing forever. Silent no-op until enough measured posts exist.
+async function performanceBlock() {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return ''
+  try {
+    const svc = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    const { data } = await svc.from('social_drafts')
+      .select('pack').eq('pack->>kind', 'post_metrics').limit(1).maybeSingle()
+    const measured = (data?.pack?.entries || [])
+      .filter(e => e.likes != null && e.preview)
+      .map(e => ({ ...e, score: (e.likes || 0) + 2 * (e.reposts || 0) + (e.replies || 0) }))
+      .sort((a, b) => b.score - a.score)
+    if (measured.length < 4) return ''
+    const line = e => `- [predicted pulse ${e.pulse ?? '?'} → got ${e.likes}♥ ${e.reposts}↻ ${e.replies}💬 on ${e.platform}] "${e.preview.slice(0, 160)}"`
+    const winners = measured.slice(0, 3).map(line).join('\n')
+    const duds = measured.slice(-3).filter(e => !measured.slice(0, 3).includes(e)).map(line).join('\n')
+    return `\n\nREAL ENGAGEMENT ON RECENT POSTS (calibrate your pulse scores against these outcomes; notice what framing worked and what died — do not copy the stories, learn from the deltas):\nWINNERS:\n${winners}${duds ? `\nDUDS:\n${duds}` : ''}`
+  } catch { return '' }
+}
+
 // ── Shared generation core — used by the desk handler AND /api/social-auto ───
 // Returns { posts, stories, note? }. Posts are annotated with:
 //   meta — {outlets, breaking, update, category, title, first, newest} from the
@@ -376,12 +399,13 @@ export async function generateTrendingBatch(steer = '') {
   const steerBlock = steer
     ? `\n\nThe owner wants this specific angle/tone — honour it (while keeping the one hard neutrality line intact): "${steer}"`
     : ''
+  const perfBlock = await performanceBlock()
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
   const msg = await client.messages.create({
     model: MODEL,
     max_tokens: 7000,
     system: SYSTEM,
-    messages: [{ role: 'user', content: trendingPrompt(stories) + steerBlock }],
+    messages: [{ role: 'user', content: trendingPrompt(stories) + perfBlock + steerBlock }],
   })
   const text = msg.content.filter(b => b.type === 'text').map(b => b.text).join('')
   const start = text.indexOf('{'), end = text.lastIndexOf('}')

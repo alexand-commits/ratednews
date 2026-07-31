@@ -60,7 +60,7 @@ function draftKey(story, text) {
   return `${story}#${h.toString(36)}`
 }
 
-function PostButton({ platform, story, text, pollOptions, imageUrl, imageAlt, label, color }) {
+function PostButton({ platform, story, text, pollOptions, imageUrl, imageAlt, label, color, pulse }) {
   const [state, setState] = useState('idle') // idle | armed | busy | done | error
   const [url, setUrl]     = useState(null)
   const [error, setError] = useState('')
@@ -87,7 +87,7 @@ function PostButton({ platform, story, text, pollOptions, imageUrl, imageAlt, la
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Post failed')
       setUrl(json.url); setState('done')
-      if (pubKey) record(platform, storyKey, json.url)
+      if (pubKey) record(platform, storyKey, json.url, pulse, (text || '').slice(0, 200))
     } catch (e) {
       setError(e.message); setState('error')
     }
@@ -279,7 +279,7 @@ function PostCard({ post }) {
               🔗 has link — X posting off
             </span>
           ) : (
-            <PostButton platform="x" story={post.story} text={post.text} pollOptions={post.poll_options} imageUrl={cardUrl} imageAlt={cardAlt} label={post.card ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />
+            <PostButton platform="x" story={post.story} pulse={post.pulse} text={post.text} pollOptions={post.poll_options} imageUrl={cardUrl} imageAlt={cardAlt} label={post.card ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />
           )}
         </span>
       </div>
@@ -304,7 +304,7 @@ function PostCard({ post }) {
             <span style={{ display: 'inline-flex', gap: 6 }}>
               <CopyButton text={post.short} />
               {post.short.length <= 300 && (
-                <PostButton platform="bluesky" story={post.story} text={post.short} imageUrl={cardUrl} imageAlt={cardAlt} label="Post to Bluesky" color="#2E86EA" />
+                <PostButton platform="bluesky" story={post.story} pulse={post.pulse} text={post.short} imageUrl={cardUrl} imageAlt={cardAlt} label="Post to Bluesky" color="#2E86EA" />
               )}
             </span>
           </div>
@@ -328,7 +328,7 @@ function PostCard({ post }) {
           </span>
           <span style={{ display: 'inline-flex', gap: 6 }}>
             <CopyButton text={fbText(post.text, post.short)} />
-            <PostButton platform="facebook" story={post.story} text={fbText(post.text, post.short)} imageUrl={cardUrl} imageAlt={cardAlt} label="Post to Facebook" color="#1877F2" />
+            <PostButton platform="facebook" story={post.story} pulse={post.pulse} text={fbText(post.text, post.short)} imageUrl={cardUrl} imageAlt={cardAlt} label="Post to Facebook" color="#1877F2" />
           </span>
         </div>
       )}
@@ -391,7 +391,7 @@ function QueueItem({ q, dismiss }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{q.x.length} chars</span>
             <CopyButton text={q.x} />
-            {!q.live && <PostButton platform="x" story={q.story} text={q.x} imageUrl={cardUrl} imageAlt={q.alt} label={q.card ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />}
+            {!q.live && <PostButton platform="x" story={q.story} pulse={q.pulse} text={q.x} imageUrl={cardUrl} imageAlt={q.alt} label={q.card ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />}
           </div>
         </>
       )}
@@ -402,7 +402,7 @@ function QueueItem({ q, dismiss }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: q.bluesky.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{q.bluesky.length} / 300</span>
             <CopyButton text={q.bluesky} />
-            {!q.live && q.bluesky.length <= 300 && <PostButton platform="bluesky" story={q.story} text={q.bluesky} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Bluesky" color="#2E86EA" />}
+            {!q.live && q.bluesky.length <= 300 && <PostButton platform="bluesky" story={q.story} pulse={q.pulse} text={q.bluesky} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Bluesky" color="#2E86EA" />}
           </div>
         </div>
       )}
@@ -412,7 +412,7 @@ function QueueItem({ q, dismiss }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1877F2' }}>📘 Facebook</span>
             <CopyButton text={q.facebook} />
-            {!q.live && <PostButton platform="facebook" story={q.story} text={q.facebook} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Facebook" color="#1877F2" />}
+            {!q.live && <PostButton platform="facebook" story={q.story} pulse={q.pulse} text={q.facebook} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Facebook" color="#1877F2" />}
           </div>
         </div>
       )}
@@ -462,7 +462,7 @@ function JudgmentItem({ p, dismiss }) {
         <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{(p.text || '').length} chars</span>
         <CopyButton text={p.text} />
         {!/https?:\/\/|www\./i.test(p.text || '') && (
-          <PostButton platform="x" story={p.story} text={p.text} pollOptions={p.poll_options || undefined} imageUrl={p.poll_options?.length ? undefined : cardUrl} imageAlt={p.story} label={p.card && !p.poll_options?.length ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />
+          <PostButton platform="x" story={p.story} pulse={p.pulse} text={p.text} pollOptions={p.poll_options || undefined} imageUrl={p.poll_options?.length ? undefined : cardUrl} imageAlt={p.story} label={p.card && !p.poll_options?.length ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />
         )}
       </div>
       {p.short && (
@@ -471,7 +471,7 @@ function JudgmentItem({ p, dismiss }) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
             <span style={{ fontSize: 11, fontWeight: 600, color: p.short.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{p.short.length} / 300</span>
             <CopyButton text={p.short} />
-            {p.short.length <= 300 && <PostButton platform="bluesky" story={p.story} text={p.short} imageUrl={cardUrl} imageAlt={p.story} label="Post to Bluesky" color="#2E86EA" />}
+            {p.short.length <= 300 && <PostButton platform="bluesky" story={p.story} pulse={p.pulse} text={p.short} imageUrl={cardUrl} imageAlt={p.story} label="Post to Bluesky" color="#2E86EA" />}
           </div>
         </div>
       )}
@@ -479,7 +479,7 @@ function JudgmentItem({ p, dismiss }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
           <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1877F2' }}>📘 Facebook</span>
           <CopyButton text={fbText(p.text, p.short)} />
-          <PostButton platform="facebook" story={p.story} text={fbText(p.text, p.short)} imageUrl={cardUrl} imageAlt={p.story} label="Post to Facebook" color="#1877F2" />
+          <PostButton platform="facebook" story={p.story} pulse={p.pulse} text={fbText(p.text, p.short)} imageUrl={cardUrl} imageAlt={p.story} label="Post to Facebook" color="#1877F2" />
         </div>
       )}
       <CardPreview url={p.card} images={p.images} idx={imgIdx} setIdx={setImgIdx} on={withCard} setOn={setWithCard} custom={customPhoto} setCustom={setCustomPhoto} />
@@ -785,14 +785,14 @@ export default function SocialPage({ user, goBack }) {
       return m
     })
   }, [scout])
-  async function recordPosted(platform, story, url) {
+  async function recordPosted(platform, story, url, pulse = null, preview = '') {
     setPubMap(prev => ({ ...prev, [`${platform}::${story}`]: { url } }))
     try {
       const { data: { session } } = await db.auth.getSession()
       await fetch('/api/social-auto', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ platform, story, url }),
+        body: JSON.stringify({ platform, story, url, pulse, preview }),
       })
     } catch {}
   }
@@ -849,6 +849,39 @@ export default function SocialPage({ user, goBack }) {
           {/* Previous runs — always visible on the right rail (desktop), below
               the desk on mobile. Server-side, so every device sees the same. */}
           <div className="sidebar">
+            {/* Predicted vs actual — the feedback loop made visible. Metrics
+                refresh every 6h (Bluesky + FB free reads; X reads are billed,
+                so X posts list without numbers). */}
+            {(scout?.metrics || []).length > 0 && (
+              <div style={{ marginBottom: 24 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 6 }}>
+                  📈 Performance · 7d
+                </div>
+                {[...scout.metrics]
+                  .sort((a, b) => new Date(b.at) - new Date(a.at))
+                  .slice(0, 10)
+                  .map((m, i) => (
+                    <a
+                      key={(m.url || '') + i}
+                      href={m.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'block', padding: '7px 0', borderTop: i === 0 ? 'none' : '0.5px solid var(--border)', textDecoration: 'none' }}
+                    >
+                      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {m.platform === 'x' ? '𝕏' : m.platform === 'bluesky' ? '🦋' : '📘'} {(m.story || '').split('#')[0]}
+                      </div>
+                      <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 2 }}>
+                        {m.likes != null
+                          ? <>{m.likes}♥ {m.reposts}↻ {m.replies}💬{Number.isFinite(m.pulse) ? <> · predicted {m.pulse}/10</> : null}</>
+                          : 'metrics n/a on X'}
+                        {' · '}{timeAgo(m.at)}
+                      </div>
+                    </a>
+                  ))}
+              </div>
+            )}
+
             <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>
               Previous runs
             </div>

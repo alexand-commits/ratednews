@@ -184,11 +184,16 @@ export default async function handler(req, res) {
       manualRuns = (mr || []).map(r => ({ id: r.id, at: r.created_at, mode: r.pack.mode, posts: r.pack.posts || [] }))
     }
     const published = svcG ? ((await getPublishedRow(svcG))?.pack?.entries || []) : []
+    // Engagement metrics — refreshed by /api/social-metrics on its own cron
+    const metricsRow = svcG ? await svcG.from('social_drafts')
+      .select('pack').eq('pack->>kind', 'post_metrics').limit(1).maybeSingle() : null
+    const metrics = metricsRow?.data?.pack?.entries || []
     return res.status(200).json({
       configured,
       heartbeat,
       dismissed,
       published,
+      metrics,
       manualRuns,
       nextWindow: svcG ? {
         x:        rateOpenAt('x', runs),
@@ -213,10 +218,14 @@ export default async function handler(req, res) {
     const svcP = svcClient()
     const row = await getPublishedRow(svcP)
     const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000
+    // pulse + preview ride along so the metrics loop can show predicted vs
+    // actual and feed real winners/losers back into the compose prompt.
+    const pulse = Number.isFinite(+req.body?.pulse) ? Math.round(+req.body.pulse) : null
+    const preview = (req.body?.preview || '').toString().slice(0, 220)
     const entries = [
       ...((row?.pack?.entries || []).filter(e =>
         new Date(e.at) >= cutoff && !(e.story === story && e.platform === platform))),
-      { story, platform, url, at: new Date().toISOString() },
+      { story, platform, url, at: new Date().toISOString(), pulse, preview },
     ]
     const pack = { kind: 'published_log', entries }
     if (row) await svcP.from('social_drafts').update({ pack }).eq('id', row.id)
@@ -287,6 +296,30 @@ export default async function handler(req, res) {
     }
 
     const batch = await generateTrendingBatch()
+
+    // Owner phone alert (ntfy.sh) — only for drafts worth interrupting for:
+    // pulse ≥ 8 or breaking-tier, with at least one gate-passing platform.
+    // The pipeline drafts within ~15 min of a surge; this closes the last
+    // latency gap, the owner not knowing a hot draft landed.
+    if (process.env.NTFY_TOPIC) {
+      const hot = (batch.posts || []).filter(p =>
+        (p.auto?.x === 'ok' || p.auto?.bluesky === 'ok' || p.auto?.facebook === 'ok') &&
+        ((p.pulse ?? 0) >= 8 || p.meta?.breaking))
+      if (hot.length) {
+        try {
+          await fetch(`https://ntfy.sh/${process.env.NTFY_TOPIC}`, {
+            method: 'POST',
+            headers: {
+              Title: `${hot.length} hot draft${hot.length > 1 ? 's' : ''} on the desk`,
+              Click: 'https://www.ratednews.com/social',
+              Priority: 'high',
+              Tags: 'fire',
+            },
+            body: hot.slice(0, 3).map(p => `${p.pulse ?? '—'}/10${p.meta?.breaking ? ' ⚡' : ''} · ${p.story}`).join('\n'),
+          })
+        } catch (e) { console.warn('[social-auto] ntfy alert failed:', e.message) }
+      }
+    }
 
     const decisions = (batch.posts || []).map(p => ({
       story: p.story,
