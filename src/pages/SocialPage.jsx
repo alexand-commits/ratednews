@@ -136,25 +136,91 @@ function MetaLine({ post }) {
 // Thumbnail + attach toggle + cycler. Default on — the image is an upgrade;
 // the toggle covers the odd bad photo, the cycler swaps in another cluster
 // member's photo when the first is unusable or low quality.
-function CardPreview({ url, images, idx = 0, setIdx, on, setOn }) {
+// Client-side compress for owner-uploaded photos: phone shots → ≤1600px JPEG,
+// retried smaller if the base64 payload would push the API's 4MB body cap.
+// These sizes also clear Bluesky's ~976KB blob cap comfortably.
+async function fileToJpegDataUrl(file) {
+  const objectUrl = URL.createObjectURL(file)
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image()
+      i.onload = () => resolve(i)
+      i.onerror = () => reject(new Error('unreadable image'))
+      i.src = objectUrl
+    })
+    const compress = (maxDim, q) => {
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
+      const c = document.createElement('canvas')
+      c.width = Math.max(1, Math.round(img.width * scale))
+      c.height = Math.max(1, Math.round(img.height * scale))
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height)
+      return c.toDataURL('image/jpeg', q)
+    }
+    let out = compress(1600, 0.85)
+    if (out.length > 2_500_000) out = compress(1280, 0.78)
+    return out
+  } finally {
+    URL.revokeObjectURL(objectUrl)
+  }
+}
+
+function CardPreview({ url, images, idx = 0, setIdx, on, setOn, custom, setCustom }) {
+  const fileRef = React.useRef(null)
   const pool = images?.length ? images : url ? [url] : []
-  if (!pool.length) return null
-  const current = pool[Math.min(idx, pool.length - 1)]
+  const current = custom || (pool.length ? pool[Math.min(idx, pool.length - 1)] : null)
+  if (!current && !setCustom) return null
+
+  async function pick(e) {
+    const f = e.target.files?.[0]
+    e.target.value = '' // same file can be re-picked after remove
+    if (!f) return
+    try {
+      setCustom(await fileToJpegDataUrl(f))
+      setOn?.(true)
+    } catch { /* unreadable file — leave state as-is */ }
+  }
+
   return (
     <div style={{ marginTop: 10 }}>
-      <img src={current} alt="post image preview" style={{ width: '100%', maxWidth: 420, borderRadius: 8, border: '0.5px solid var(--border)', opacity: on ? 1 : 0.35, display: 'block' }} />
+      {current && (
+        <img src={current} alt="post image preview" style={{ width: '100%', maxWidth: 420, borderRadius: 8, border: '0.5px solid var(--border)', opacity: on ? 1 : 0.35, display: 'block' }} />
+      )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 6, flexWrap: 'wrap' }}>
-        <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: 'var(--text2)', cursor: 'pointer' }}>
-          <input type="checkbox" checked={on} onChange={e => setOn(e.target.checked)} />
-          🖼 attach image to post
-        </label>
-        {pool.length > 1 && setIdx && (
+        {current && (
+          <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 11, fontWeight: 600, color: 'var(--text2)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={on} onChange={e => setOn(e.target.checked)} />
+            🖼 attach image to post
+          </label>
+        )}
+        {!custom && pool.length > 1 && setIdx && (
           <button
             onClick={() => setIdx((idx + 1) % pool.length)}
             style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99, border: '0.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text2)', cursor: 'pointer' }}
           >
             ↻ next image · {Math.min(idx, pool.length - 1) + 1}/{pool.length}
           </button>
+        )}
+        {setCustom && (
+          <>
+            <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={pick} />
+            <button
+              onClick={() => fileRef.current?.click()}
+              style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99, border: '0.5px solid var(--border)', background: 'var(--surface)', color: 'var(--text2)', cursor: 'pointer' }}
+            >
+              📷 {custom ? 'replace photo' : 'use my own photo'}
+            </button>
+            {custom && (
+              <>
+                <button
+                  onClick={() => setCustom(null)}
+                  style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 99, border: '0.5px solid var(--border)', background: 'none', color: 'var(--text3)', cursor: 'pointer' }}
+                >
+                  ✕ back to story photos
+                </button>
+                <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--green-dark, #3E7C4F)' }}>your photo — posts on all platforms</span>
+              </>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -180,8 +246,9 @@ function PostCard({ post }) {
   const meta = TYPE_META[post.type] || { label: post.type || 'Post', emoji: '✳️', color: 'var(--text2)' }
   const [withCard, setWithCard] = useState(true)
   const [imgIdx, setImgIdx] = useState(0)
+  const [customPhoto, setCustomPhoto] = useState(null) // owner-uploaded photo overrides the story pool
   const pool = post.images?.length ? post.images : post.card ? [post.card] : []
-  const cardUrl = withCard && pool.length ? pool[Math.min(imgIdx, pool.length - 1)] : undefined
+  const cardUrl = withCard ? (customPhoto || (pool.length ? pool[Math.min(imgIdx, pool.length - 1)] : undefined)) : undefined
   const cardAlt = post.meta?.title || post.story || ''
 
   const copyText = [
@@ -279,7 +346,7 @@ function PostCard({ post }) {
       )}
 
       <MetaLine post={post} />
-      <CardPreview url={post.card} images={post.images} idx={imgIdx} setIdx={setImgIdx} on={withCard} setOn={setWithCard} />
+      <CardPreview url={post.card} images={post.images} idx={imgIdx} setIdx={setImgIdx} on={withCard} setOn={setWithCard} custom={customPhoto} setCustom={setCustomPhoto} />
     </div>
   )
 }
@@ -291,8 +358,9 @@ function PostCard({ post }) {
 function QueueItem({ q, dismiss }) {
   const [withCard, setWithCard] = useState(true)
   const [imgIdx, setImgIdx] = useState(0)
+  const [customPhoto, setCustomPhoto] = useState(null) // owner-uploaded photo overrides the story pool
   const pool = q.images?.length ? q.images : q.card ? [q.card] : []
-  const cardUrl = withCard && pool.length ? pool[Math.min(imgIdx, pool.length - 1)] : undefined
+  const cardUrl = withCard ? (customPhoto || (pool.length ? pool[Math.min(imgIdx, pool.length - 1)] : undefined)) : undefined
   return (
     <div style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
@@ -349,7 +417,7 @@ function QueueItem({ q, dismiss }) {
         </div>
       )}
 
-      <CardPreview url={q.card} images={q.images} idx={imgIdx} setIdx={setImgIdx} on={withCard} setOn={setWithCard} />
+      <CardPreview url={q.card} images={q.images} idx={imgIdx} setIdx={setImgIdx} on={withCard} setOn={setWithCard} custom={customPhoto} setCustom={setCustomPhoto} />
     </div>
   )
 }
@@ -358,8 +426,9 @@ function QueueItem({ q, dismiss }) {
 function JudgmentItem({ p, dismiss }) {
   const [withCard, setWithCard] = useState(true)
   const [imgIdx, setImgIdx] = useState(0)
+  const [customPhoto, setCustomPhoto] = useState(null) // owner-uploaded photo overrides the story pool
   const pool = p.images?.length ? p.images : p.card ? [p.card] : []
-  const cardUrl = withCard && pool.length ? pool[Math.min(imgIdx, pool.length - 1)] : undefined
+  const cardUrl = withCard ? (customPhoto || (pool.length ? pool[Math.min(imgIdx, pool.length - 1)] : undefined)) : undefined
   return (
     <div style={{ background: 'var(--bg)', border: '0.5px dashed var(--border2)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
@@ -413,7 +482,7 @@ function JudgmentItem({ p, dismiss }) {
           <PostButton platform="facebook" story={p.story} text={fbText(p.text, p.short)} imageUrl={cardUrl} imageAlt={p.story} label="Post to Facebook" color="#1877F2" />
         </div>
       )}
-      <CardPreview url={p.card} images={p.images} idx={imgIdx} setIdx={setImgIdx} on={withCard} setOn={setWithCard} />
+      <CardPreview url={p.card} images={p.images} idx={imgIdx} setIdx={setImgIdx} on={withCard} setOn={setWithCard} custom={customPhoto} setCustom={setCustomPhoto} />
     </div>
   )
 }

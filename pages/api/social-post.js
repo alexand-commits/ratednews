@@ -50,8 +50,15 @@ function splitLink(text) {
   return { clean, link: m[0] }
 }
 
-// Fetch an image (our card endpoint or a photo) as bytes for upload.
+// Fetch an image (our card endpoint, a photo URL, or an owner-uploaded
+// data: URL from the desk's photo picker) as bytes for upload.
 async function fetchImageBytes(imageUrl) {
+  if (imageUrl.startsWith('data:')) {
+    const m = imageUrl.match(/^data:([^;,]+)?(;base64)?,(.*)$/s)
+    if (!m) throw new Error('bad data URL')
+    const buf = m[2] ? Buffer.from(m[3], 'base64') : Buffer.from(decodeURIComponent(m[3]))
+    return { buf, type: m[1] || 'image/jpeg' }
+  }
   const r = await fetch(imageUrl)
   if (!r.ok) throw new Error(`image fetch failed (${r.status})`)
   const buf = Buffer.from(await r.arrayBuffer())
@@ -201,19 +208,29 @@ export async function postToFacebook(text, imageUrl) {
   const page = process.env.FB_PAGE_ID
   const token = process.env.FB_PAGE_TOKEN
   const { clean, link } = splitLink(text)
-  let url, body
-  if (imageUrl) {
-    url = `https://graph.facebook.com/v21.0/${page}/photos`
-    body = { url: imageUrl, message: clean, access_token: token }
+  let res
+  if (imageUrl && imageUrl.startsWith('data:')) {
+    // Owner-uploaded photo — Graph's `url` param needs a public URL, so
+    // data URLs go up as multipart `source` bytes instead.
+    const { buf, type } = await fetchImageBytes(imageUrl)
+    const form = new FormData()
+    form.append('source', new Blob([buf], { type }), 'photo.jpg')
+    form.append('message', clean)
+    form.append('access_token', token)
+    res = await fetch(`https://graph.facebook.com/v21.0/${page}/photos`, { method: 'POST', body: form })
   } else {
-    url = `https://graph.facebook.com/v21.0/${page}/feed`
-    body = { message: clean, access_token: token }
+    const url = imageUrl
+      ? `https://graph.facebook.com/v21.0/${page}/photos`
+      : `https://graph.facebook.com/v21.0/${page}/feed`
+    const body = imageUrl
+      ? { url: imageUrl, message: clean, access_token: token }
+      : { message: clean, access_token: token }
+    res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
   }
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(`Facebook: ${json?.error?.message || `HTTP ${res.status}`}`)
   const id = json.post_id || json.id
@@ -233,6 +250,11 @@ export async function postToFacebook(text, imageUrl) {
 }
 
 // ── Handler ─────────────────────────────────────────────────────────────────
+// Owner-uploaded photos arrive as base64 data URLs — the desk compresses
+// client-side to stay well under this, but the default 1MB cap would reject
+// any real photo.
+export const config = { api: { bodyParser: { sizeLimit: '4mb' } } }
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
