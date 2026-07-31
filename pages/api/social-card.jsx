@@ -126,6 +126,52 @@ function Clash({ ao, aq, bo, bq, foot, k }) {
   )
 }
 
+// Stat card — the Coverage Report's branded chart. OUR data, OUR graphic
+// (unlike news photos there's no ownership question here). Horizontal bars,
+// site palette, numbers exactly as supplied — the renderer never invents.
+function Stat({ title, rows, foot, kicker, k }) {
+  const W = Math.round(1200 * k), H = Math.round(630 * k)
+  const z = n => Math.round(n * k)
+  const max = Math.max(...rows.map(r => r[1]), 1)
+  const dense = rows.length > 5
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', width: W, height: H, background: '#191715', padding: `${z(34)}px ${z(52)}px ${z(24)}px` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Badge size={z(52)} />
+        <span style={{ fontFamily: SF, fontSize: z(22), fontWeight: 800, letterSpacing: 3.5, color: '#8A857E' }}>{kicker}</span>
+      </div>
+      <div style={{ display: 'flex', fontFamily: SE, fontSize: z(title.length > 55 ? 38 : 46), lineHeight: 1.15, fontWeight: 700, color: '#FBFAF8', marginTop: z(24), marginBottom: z(10) }}>
+        {title}
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center', gap: z(dense ? 13 : 20) }}>
+        {rows.map(([label, value], i) => (
+          <div key={i} style={{ display: 'flex', alignItems: 'center', gap: z(18) }}>
+            <span style={{ display: 'flex', width: z(280), justifyContent: 'flex-end', fontFamily: SF, fontSize: z(dense ? 22 : 25), fontWeight: 700, color: '#CFCBC5' }}>
+              {label}
+            </span>
+            <div style={{ display: 'flex', flex: 1, alignItems: 'center', gap: z(14) }}>
+              <div style={{
+                display: 'flex',
+                width: Math.max(z(10), Math.round(z(640) * value / max)),
+                height: z(dense ? 26 : 32),
+                background: i === 0 ? CORAL : 'rgba(216,90,48,0.45)',
+                borderRadius: z(6),
+              }} />
+              <span style={{ fontFamily: SF, fontSize: z(dense ? 23 : 27), fontWeight: 800, color: i === 0 ? '#F0B79E' : '#B7B2AC' }}>
+                {value}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '2px solid rgba(255,255,255,0.12)', paddingTop: z(18), marginTop: z(8) }}>
+        <span style={{ fontFamily: SF, fontSize: z(21), color: '#97918A' }}>{foot || 'counted in headlines we index — rate the source'}</span>
+        <Domain size={z(23)} />
+      </div>
+    </div>
+  )
+}
+
 // Header-level dimension sniff (no image decoder in the edge runtime).
 // Returns null when the format can't be parsed — then we let the image through.
 function imageDims(b, ct) {
@@ -217,6 +263,19 @@ export default async function handler(req) {
       if (!ao || !aq || !bo || !bq) return new Response('Missing contrast params', { status: 400 })
       const foot = (q.get('foot') || '').slice(0, 90)
       return new ImageResponse(<Clash ao={ao} aq={aq} bo={bo} bq={bq} foot={foot} k={k} />, size)
+    }
+
+    if (type === 'stat') {
+      const title = (q.get('title') || '').slice(0, 90)
+      let rows = []
+      try { rows = JSON.parse(q.get('rows') || '[]') } catch {}
+      rows = (Array.isArray(rows) ? rows : []).slice(0, 7)
+        .map(r => [String(r?.[0] ?? '').slice(0, 28), Math.max(0, Math.round(+r?.[1] || 0))])
+        .filter(r => r[0])
+      if (!title || rows.length < 2) return new Response('Missing stat params', { status: 400 })
+      const foot = (q.get('foot') || '').slice(0, 110)
+      const kicker = ((q.get('kicker') || 'THE COVERAGE REPORT').slice(0, 30)).toUpperCase()
+      return new ImageResponse(<Stat title={title} rows={rows} foot={foot} kicker={kicker} k={k} />, size)
     }
 
     return new Response('Unknown type', { status: 400 })

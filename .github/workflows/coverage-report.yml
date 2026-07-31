@@ -1,0 +1,30 @@
+# Weekly Coverage Report — computes the language/framing/attention pack that
+# powers /coverage-report and the desk's "📊 Coverage Report" generator.
+# Counting is deliberately dumb (word-boundary regex over headlines) so every
+# published number is auditable — see scripts/coverage-report.mjs.
+name: Coverage report
+
+on:
+  schedule:
+    # Monday 05:40 UTC — fresh data before the week's first desk session
+    - cron: '40 5 * * 1'
+  workflow_dispatch:
+
+jobs:
+  compute:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.npm
+          key: npm-${{ hashFiles('package-lock.json') }}
+      - run: npm ci
+      - name: Compute coverage report
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node scripts/coverage-report.mjs
