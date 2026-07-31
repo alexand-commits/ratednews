@@ -2,8 +2,8 @@ import React, { useState, useMemo } from 'react'
 import NewsCard from '../components/NewsCard'
 import OutletLogo from '../components/OutletLogo'
 import RatingDots from '../components/RatingDots'
-import { timeAgo } from '../utils/helpers'
-import { computeTrendingTopics } from '../utils/topics'
+import { timeAgo, articleSlug } from '../utils/helpers'
+import TrendingStoriesWidget from '../components/TrendingStoriesWidget'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 import DigestSignup from '../components/DigestSignup'
 
@@ -116,7 +116,6 @@ const SORTS = [
 export default function SportsPage({ articles, generatedAt, navigate, goBack, onRefresh, outlets = [] }) {
   const [activeSport, setActiveSport] = useState('all')
   const [sort, setSort]               = useState('trending')
-  const [activeTopic, setActiveTopic] = useState(null)
   const { indicator: pullIndicator, handlers: pullHandlers } = usePullToRefresh(onRefresh)
 
   const updatedMins = generatedAt
@@ -126,14 +125,41 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
   // Attach sport type to each article client-side
   const tagged = (articles || []).map(a => ({ ...a, _sportType: detectSportType(a) }))
 
-  // Trending sport topics — same shared engine as home/Explore, fed the
-  // sports-only pool. Chips filter this feed client-side by title match.
-  const trendingTopics = useMemo(() => computeTrendingTopics(articles || []), [articles])
+  // Sport-scoped trending stories — the same coverage-velocity signal as the
+  // global rail widget, computed from this page's own sports pool so the rail
+  // surfaces sport stories, not whatever tops global news.
+  const sportTrending = useMemo(() => {
+    const clusters = new Map()
+    for (const a of articles || []) {
+      if (!a.cluster_id) continue
+      let c = clusters.get(a.cluster_id)
+      if (!c) { c = { anchor: a, outletIds: new Set(), newest: a.published_at, oldest: a.published_at }; clusters.set(a.cluster_id, c) }
+      c.outletIds.add(a.outlet_id)
+      if (a.published_at < c.oldest) c.oldest = a.published_at
+      if (a.published_at > c.newest) c.newest = a.published_at
+    }
+    const now = Date.now()
+    return [...clusters.values()]
+      .map(c => {
+        // cluster_peers counts publishers beyond this page's pool — use the bigger signal
+        const outletCount = Math.max(c.outletIds.size, (c.anchor.cluster_peers?.length || 0) + 1)
+        const firstAgeH  = Math.max(0.75, (now - new Date(c.oldest)) / 3600000)
+        const newestAgeH = Math.max(0, (now - new Date(c.newest)) / 3600000)
+        return {
+          title: c.anchor.title,
+          slug: articleSlug(c.anchor.title, c.anchor.id),
+          outlets: outletCount,
+          heat: (outletCount / firstAgeH) * 10 / Math.pow(newestAgeH + 1, 1.2),
+        }
+      })
+      .filter(c => c.outlets >= 3)
+      .sort((a, b) => b.heat - a.heat)
+      .slice(0, 6)
+  }, [articles])
 
-  const bySport = (activeSport === 'all'
+  const bySport = activeSport === 'all'
     ? tagged
     : tagged.filter(a => a._sportType === activeSport)
-  ).filter(a => !activeTopic || (a.title || '').toLowerCase().includes(activeTopic.toLowerCase()))
 
   // Same sorts as the homepage feed. 'Top stories' uses the shared trend
   // formula (keep in sync with FeedPage / pages/index.jsx) + cluster dedup;
@@ -241,18 +267,9 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
 
         <div className="grid">
           <div>
-            {activeTopic && (
-              <div className="section-label" style={{ marginBottom: 10 }}>
-                {activeTopic}
-                <button
-                  onClick={() => setActiveTopic(null)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, color: 'var(--coral)', marginLeft: 10, padding: 0 }}
-                >✕ clear</button>
-              </div>
-            )}
             {filtered.length === 0 ? (
               <div className="empty-state">
-                <p>No {activeTopic || activeSport} stories available yet.</p>
+                <p>No {activeSport} stories available yet.</p>
               </div>
             ) : (
               <div className="feed feed--grid">
@@ -272,29 +289,7 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
 
           {/* Sports rail — trending sport topics + dedicated sports outlets */}
           <aside className="sidebar">
-            {trendingTopics.length > 0 && (
-              <div className="widget sidebar-trending">
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                  <div className="widget-title">🔥 Trending in sport</div>
-                  {activeTopic && (
-                    <button
-                      onClick={() => setActiveTopic(null)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--coral)', padding: 0 }}
-                    >✕ Clear</button>
-                  )}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
-                  {trendingTopics.slice(0, 10).map(topic => (
-                    <button
-                      key={topic}
-                      className={`pill pill-topic${activeTopic === topic ? ' active' : ''}`}
-                      onClick={() => setActiveTopic(activeTopic === topic ? null : topic)}
-                      style={{ fontSize: 11.5, padding: '4px 11px' }}
-                    >🔍 {topic}</button>
-                  ))}
-                </div>
-              </div>
-            )}
+            <TrendingStoriesWidget stories={sportTrending} title="🔥 Trending in sport" />
 
             {sportsOutlets.length > 0 && (
               <div className="widget">
