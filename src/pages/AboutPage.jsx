@@ -15,7 +15,7 @@ export default function AboutPage({ navigate, goBack, outlets = [] }) {
             How RatedNews works
           </h1>
           <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.7 }}>
-            RatedNews is a community-powered news aggregator. We pull articles from 200+ outlets and let readers rate what they read.
+            RatedNews is a community-powered news aggregator. We pull articles from 250+ outlets and let readers rate what they read.
             Every score you see comes from the community — no AI scoring.
           </p>
         </div>
@@ -28,7 +28,7 @@ export default function AboutPage({ navigate, goBack, outlets = [] }) {
           <div className="section-label" style={{ marginBottom: 12 }}>The process</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {[
-              { icon: '📡', step: '1. Ingestion', desc: 'Headlines are gathered continuously from 200+ news outlets spanning the US, UK and international press.' },
+              { icon: '📡', step: '1. Ingestion', desc: 'Headlines are gathered continuously from 250+ news outlets spanning the US, UK and international press.' },
               { icon: '👥', step: '2. Community rating', desc: 'Readers rate the news outlets they trust with a 1–5 rating. Every score on the site comes from these community ratings.' },
               { icon: '📊', step: '3. Outlet scoring', desc: 'Outlet scores are the average star rating across all reader ratings, expressed out of 100. The rating count is always shown so you can judge the sample size.' },
             ].map(s => (
@@ -61,7 +61,7 @@ export default function AboutPage({ navigate, goBack, outlets = [] }) {
         {/* Disclaimer */}
         <div style={{ background: 'var(--bg2)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 20px', marginTop: 8 }}>
           <div style={{ fontSize: 12, color: 'var(--text2)', lineHeight: 1.6 }}>
-            <strong style={{ color: 'var(--text)' }}>Note:</strong> Community scores reflect reader perception, not independently verified fact. "Accurate" means the reader found the article credible based on what they know. Treat scores as collective signals, not verdicts.
+            <strong style={{ color: 'var(--text)' }}>Note:</strong> Community scores reflect reader perception, not independently verified fact. A high trust score means readers find the outlet credible — it is not a fact-check. Treat scores as collective signals, not verdicts.
           </div>
         </div>
 

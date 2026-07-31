@@ -437,7 +437,7 @@ export default function FeedPage({
       <div className="container" style={{ maxWidth: 1240, paddingTop: 14 }}>
 
         {/* SEO/a11y page heading — the feed itself is the visible UI. */}
-        <h1 className="sr-only">RatedNews — community-rated news from 200+ outlets</h1>
+        <h1 className="sr-only">RatedNews — community-rated news from 250+ outlets</h1>
 
         {/* Feed views — one row: Top stories / Latest / My feed.
             'Top stories' and 'Latest' are the all-outlets feed with the two
