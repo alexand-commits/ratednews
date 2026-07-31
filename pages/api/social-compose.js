@@ -418,10 +418,12 @@ export async function generateCoverageBatch(steer = '') {
     ? rep.framing.map(f => `- Story "${f.story}" (${f.totalOutlets} outlets): ${f.usage.map(u => `${u.outlets} outlets said "${u.label}" (${u.sample.join(', ')})`).join(' · ')}`).join('\n')
     : 'none met the threshold this week'
   const att = rep.attention
+  // NOTE: first-to-report stays on the public page only — as a standalone
+  // social claim it's a list of near-tied numbers, and wire syndication makes
+  // "fastest outlet" a shakier headline than the page's methodology context.
   const attLines = [
     `- Biggest story: "${att.biggest?.story}" — ${att.biggest?.outlets} outlets covered it`,
-    `- ${att.singleOutletStories} stories were covered by only ONE outlet`,
-    `- First to report (5+ outlet stories, ≥5 min clear lead, ${att.qualifyingStories} qualifying stories): ${att.firstToReport.map(f => `${f.outlet} ${f.wins}`).join(', ')}`,
+    `- ${att.singleOutletStories} stories were covered by only ONE outlet (out of ${att.totalStories} total stories)`,
   ].join('\n')
 
   const prompt = `You are drafting THE COVERAGE REPORT — data posts only RatedNews can publish, computed from ${rep.corpus.headlines.toLocaleString()} headlines indexed this week across ${rep.corpus.outlets} feeds.
@@ -437,7 +439,9 @@ ${framing}
 ATTENTION:
 ${attLines}
 
-Draft 4-6 posts, each with "type":"coverage_data". Pick the most striking, defensible facts. House rules for this format:
+Draft 3-5 posts, each with "type":"coverage_data". Fewer, better: a post only earns its slot if its central fact would stop a stranger mid-scroll — if a fact needs context to feel surprising, it isn't a post. House rules for this format:
+- ONE striking fact per post, plus at most ONE comparison point. Never a list of four or five numbers — readers retain one number, maybe two. Put rankings in the "chart" instead and let the text carry only the headline fact.
+- No methodology hedging inside the post ("measured on stories where...", "in our sample") — the corpus phrase "in headlines we indexed this week" and the report link carry the caveats. State the fact cleanly or don't state it.
 - Counts, never conclusions. State the number and the corpus ("in headlines we indexed this week"); NEVER say or imply WHY an outlet's count is high, never call any outlet biased, obsessed, or agenda-driven. The reader draws conclusions; we publish arithmetic.
 - Symmetry: if you cite one outlet's count, give at least one comparison point from the data.
 - Week-over-week claims: ONLY where the data marks the change citable, expressed as the supplied multiple (\"3.3x last week's rate\") — never quote per-1k units, never build a comparison from raw totals, and if usage barely moved, don't mention last week at all.
