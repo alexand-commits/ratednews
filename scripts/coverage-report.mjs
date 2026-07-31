@@ -139,7 +139,6 @@ function attention(rows) {
   let biggest = null
   let singleOutletStories = 0
   const firstWins = new Map()
-  const pickupLags = []
   for (const c of clusters.values()) {
     const byTime = c.members.slice().sort((a, b) => new Date(a.published_at) - new Date(b.published_at))
     const brands = new Set(byTime.map(m => brandOf(m.outlets?.name)))
@@ -152,14 +151,12 @@ function attention(rows) {
       // Pickup lag: first article → first article from a DIFFERENT publisher
       const second = byTime.find(m => brandOf(m.outlets?.name) !== firstBrand)
       const gapMins = second ? (new Date(second.published_at) - new Date(byTime[0].published_at)) / 60000 : null
-      if (gapMins != null) pickupLags.push(gapMins)
       // A "first to report" win needs a ≥5 min clear lead — wire syndication
       // republishes with the agency's original timestamp, so near-simultaneous
       // firsts say nothing about who actually broke the story.
       if (gapMins != null && gapMins >= 5) firstWins.set(firstBrand, (firstWins.get(firstBrand) || 0) + 1)
     }
   }
-  pickupLags.sort((a, b) => a - b)
   return {
     totalStories: clusters.size,
     biggest,
@@ -167,7 +164,6 @@ function attention(rows) {
     firstToReport: [...firstWins.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)
       .map(([outlet, wins]) => ({ outlet, wins })),
     qualifyingStories: [...firstWins.values()].reduce((s, n) => s + n, 0),
-    medianPickupMins: pickupLags.length ? Math.round(pickupLags[Math.floor(pickupLags.length / 2)]) : null,
   }
 }
 
@@ -208,7 +204,7 @@ async function main() {
     console.log(`${g.group}: '${top.term}' ${top.total} headlines (prev ${top.prevTotal}) — top: ${top.topOutlets.slice(0, 3).map(o => `${o.outlet} ${o.count}`).join(', ')}`)
   }
   console.log(`framing splits found: ${report.framing.length}`)
-  console.log(`first-to-report: ${report.attention.firstToReport.slice(0, 3).map(f => `${f.outlet} ${f.wins}`).join(', ')} of ${report.attention.qualifyingStories} stories · median pickup ${report.attention.medianPickupMins}m`)
+  console.log(`first-to-report: ${report.attention.firstToReport.slice(0, 3).map(f => `${f.outlet} ${f.wins}`).join(', ')} of ${report.attention.qualifyingStories} stories`)
 }
 
 main().then(() => process.exit(0)).catch(err => { console.error('Fatal:', err); process.exit(1) })

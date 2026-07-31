@@ -399,9 +399,19 @@ export async function generateCoverageBatch(steer = '') {
   const rep = data?.pack
   if (!rep) return { posts: [], note: 'No coverage report computed yet — it runs Monday mornings.' }
 
+  // Week-over-week as a human multiple, corpus-growth-adjusted — and only
+  // when the move is big enough to mean something. Per-1k rates are for the
+  // maths, never for the reader.
+  const wowOf = t => {
+    if (!t.prevRate) return 'no prior-week comparison available'
+    const ratio = t.rate / t.prevRate
+    if (ratio >= 1.5) return `UP ${ratio >= 3 ? Math.round(ratio * 10) / 10 : Math.round(ratio * 10) / 10}x last week's rate (corpus-adjusted) — citable`
+    if (ratio <= 0.67) return `DOWN to ${Math.round(ratio * 100)}% of last week's rate (corpus-adjusted) — citable`
+    return 'little changed vs last week — do NOT make a week-over-week claim from this'
+  }
   const lang = rep.language.map(g =>
     `${g.group}:\n` + g.terms.map(t =>
-      `  "${t.term}": ${t.total} headlines this week (prior week ${t.prevTotal}; per-1k-headline rate ${t.rate} vs ${t.prevRate}) — top outlets: ${t.topOutlets.slice(0, 5).map(o => `${o.outlet} ${o.count}`).join(', ') || 'none'}`
+      `  "${t.term}": ${t.total} headlines this week — weekly change: ${wowOf(t)} — top outlets: ${t.topOutlets.slice(0, 5).map(o => `${o.outlet} ${o.count}`).join(', ') || 'none'}`
     ).join('\n')
   ).join('\n')
   const framing = rep.framing.length
@@ -412,7 +422,6 @@ export async function generateCoverageBatch(steer = '') {
     `- Biggest story: "${att.biggest?.story}" — ${att.biggest?.outlets} outlets covered it`,
     `- ${att.singleOutletStories} stories were covered by only ONE outlet`,
     `- First to report (5+ outlet stories, ≥5 min clear lead, ${att.qualifyingStories} qualifying stories): ${att.firstToReport.map(f => `${f.outlet} ${f.wins}`).join(', ')}`,
-    `- Median pickup lag (first outlet → second outlet): ${att.medianPickupMins} minutes`,
   ].join('\n')
 
   const prompt = `You are drafting THE COVERAGE REPORT — data posts only RatedNews can publish, computed from ${rep.corpus.headlines.toLocaleString()} headlines indexed this week across ${rep.corpus.outlets} feeds.
@@ -431,7 +440,7 @@ ${attLines}
 Draft 4-6 posts, each with "type":"coverage_data". Pick the most striking, defensible facts. House rules for this format:
 - Counts, never conclusions. State the number and the corpus ("in headlines we indexed this week"); NEVER say or imply WHY an outlet's count is high, never call any outlet biased, obsessed, or agenda-driven. The reader draws conclusions; we publish arithmetic.
 - Symmetry: if you cite one outlet's count, give at least one comparison point from the data.
-- Week-over-week claims must use the per-1k rates, not raw totals (the feed roster grew this week).
+- Week-over-week claims: ONLY where the data marks the change citable, expressed as the supplied multiple (\"3.3x last week's rate\") — never quote per-1k units, never build a comparison from raw totals, and if usage barely moved, don't mention last week at all.
 - Plain declarative voice. No hashtags, no emoji spam (one is fine), no exclamation marks.
 - Each post: "text" (X, NO links), "short" (Bluesky ≤300 chars, end with https://www.ratednews.com/coverage-report), "story" (short label), "pulse" 1-10 + "pulse_why".
 - Where a post is built on a ranking or comparison of 2-6 numbers, ALSO include "chart": {"title": "<max 80 chars>", "rows": [["<outlet or term>", <number>], ...], "foot": "<corpus line, max 100 chars>"} using ONLY numbers from the data. Skip chart otherwise.${steer ? `\n\nThe owner wants this angle: "${steer}"` : ''}

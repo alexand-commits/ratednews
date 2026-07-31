@@ -76,9 +76,12 @@ export default function CoverageReport({ report }) {
                         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
                           <span style={{ fontSize: 15, fontWeight: 700 }}>“{t.term}”</span>
                           <span style={{ fontSize: 13, color: 'var(--text2)' }}>{t.total.toLocaleString()} headlines</span>
-                          <span style={{ fontSize: 12, color: t.rate > t.prevRate ? 'var(--coral)' : 'var(--text3)' }}>
-                            {t.prevRate > 0 ? `${t.rate > t.prevRate ? '▲' : '▼'} ${t.rate}/1k vs ${t.prevRate}/1k last week` : `${t.rate} per 1k headlines`}
-                          </span>
+                          {t.prevRate > 0 && (() => {
+                            const ratio = t.rate / t.prevRate
+                            if (ratio >= 1.5) return <span style={{ fontSize: 12, color: 'var(--coral)' }}>▲ {Math.round(ratio * 10) / 10}× last week's rate</span>
+                            if (ratio <= 0.67) return <span style={{ fontSize: 12, color: 'var(--text3)' }}>▼ down to {Math.round(ratio * 100)}% of last week</span>
+                            return <span style={{ fontSize: 12, color: 'var(--text3)' }}>≈ level with last week</span>
+                          })()}
                         </div>
                         {t.topOutlets.length > 0 && (
                           <div style={{ marginTop: 6 }}>
@@ -115,9 +118,6 @@ export default function CoverageReport({ report }) {
                 <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', fontSize: 14, lineHeight: 1.8, color: 'var(--text2)' }}>
                   <div>📌 Biggest story: <strong style={{ color: 'var(--text)' }}>{report.attention.biggest?.story}</strong> — {report.attention.biggest?.outlets} outlets.</div>
                   <div>🕳 <strong style={{ color: 'var(--text)' }}>{report.attention.singleOutletStories.toLocaleString()}</strong> stories were covered by only one outlet.</div>
-                  {report.attention.medianPickupMins != null && (
-                    <div>⏱ Median pickup lag on multi-outlet stories: <strong style={{ color: 'var(--text)' }}>{report.attention.medianPickupMins} minutes</strong> from first report to second outlet.</div>
-                  )}
                 </div>
                 {report.attention.firstToReport.length > 0 && (
                   <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', marginTop: 12 }}>
@@ -137,7 +137,7 @@ export default function CoverageReport({ report }) {
                     Counts cover <strong>headlines</strong> we indexed from {report.corpus.outlets} public RSS feeds over the 7 days shown — not full article text.
                     A headline counts once per term (word-boundary match, case-insensitive), no matter how often the term repeats in it.
                     Section feeds are merged into their parent brand (BBC Sport counts as BBC).
-                    Week-over-week comparisons use rates per 1,000 headlines, because the set of feeds we index grows over time.
+                    Week-over-week changes are computed on rates per 1,000 indexed headlines (so growth in our own feed roster doesn't masquerade as a trend) and shown as multiples.
                     “First to report” counts stories covered by 5+ outlets where one outlet's article preceded every other outlet's by at least 5 minutes — wire syndication makes closer calls meaningless.
                     Tracked terms are chosen to cover competing vocabulary for the same subjects across the political spectrum.
                   </p>
