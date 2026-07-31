@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import Head from 'next/head'
 import Link from 'next/link'
 
@@ -10,14 +11,78 @@ import Link from 'next/link'
 
 const fmtDate = iso => new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
 
-function Bar({ label, value, max, first }) {
+function Bar({ label, value, max, first, onClick, active }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '5px 0' }}>
-      <span style={{ width: 170, flexShrink: 0, textAlign: 'right', fontSize: 13, fontWeight: 600, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+    <div
+      onClick={onClick}
+      title={onClick ? `Show ${label}'s matching headlines` : undefined}
+      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '5px 0', cursor: onClick ? 'pointer' : 'default', background: active ? 'rgba(216,90,48,0.07)' : 'none', borderRadius: 6 }}
+    >
+      <span style={{ width: 170, flexShrink: 0, textAlign: 'right', fontSize: 13, fontWeight: 600, color: active ? 'var(--coral)' : 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ width: `${Math.max(2, Math.round(value / max * 100))}%`, maxWidth: '82%', height: 14, background: first ? 'var(--coral)' : 'rgba(216,90,48,0.4)', borderRadius: 4 }} />
         <span style={{ fontSize: 13, fontWeight: 700, color: first ? 'var(--coral)' : 'var(--text3)' }}>{value}</span>
       </div>
+    </div>
+  )
+}
+
+// Click-to-audit: every published count expands into the exact headlines
+// behind it. The counting is dumb regex on purpose — this is where that
+// pays off: any reader who doubts a number can read the receipts.
+function TermBlock({ t }) {
+  const [open, setOpen] = useState(false)
+  const [outletFilter, setOutletFilter] = useState(null)
+  const heads = t.headlines || []
+  const shown = outletFilter ? heads.filter(h => h.o === outletFilter) : heads
+  const capped = t.total > heads.length
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: 15, fontWeight: 700 }}>“{t.term}”</span>
+        <span style={{ fontSize: 13, color: 'var(--text2)' }}>{t.total.toLocaleString()} headlines</span>
+        {t.prevRate > 0 && (() => {
+          const ratio = t.rate / t.prevRate
+          if (ratio >= 1.5) return <span style={{ fontSize: 12, color: 'var(--coral)' }}>▲ {Math.round(ratio * 10) / 10}× last week's rate</span>
+          if (ratio <= 0.67) return <span style={{ fontSize: 12, color: 'var(--text3)' }}>▼ down to {Math.round(ratio * 100)}% of last week</span>
+          return <span style={{ fontSize: 12, color: 'var(--text3)' }}>≈ level with last week</span>
+        })()}
+        {heads.length > 0 && (
+          <button
+            onClick={() => { setOpen(o => !o); setOutletFilter(null) }}
+            style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--coral)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            {open ? '▾ hide the headlines' : '▸ audit: see the headlines'}
+          </button>
+        )}
+      </div>
+      {t.topOutlets.length > 0 && (
+        <div style={{ marginTop: 6 }}>
+          {t.topOutlets.slice(0, 5).map((o, i) => (
+            <Bar
+              key={o.outlet} label={o.outlet} value={o.count} max={t.topOutlets[0].count} first={i === 0}
+              active={open && outletFilter === o.outlet}
+              onClick={heads.length ? () => { setOpen(true); setOutletFilter(f => f === o.outlet ? null : o.outlet) } : undefined}
+            />
+          ))}
+        </div>
+      )}
+      {open && (
+        <div style={{ marginTop: 8, maxHeight: 260, overflowY: 'auto', border: '0.5px solid var(--border)', borderRadius: 8, padding: '8px 12px', background: 'var(--bg)' }}>
+          <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 6 }}>
+            {outletFilter ? `${shown.length} from ${outletFilter}` : `${shown.length} headlines`}
+            {capped && !outletFilter ? ` (newest ${heads.length} of ${t.total})` : ''}
+            {outletFilter && <button onClick={() => setOutletFilter(null)} style={{ marginLeft: 8, fontSize: 11, color: 'var(--coral)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>✕ all outlets</button>}
+          </div>
+          {shown.map((h, i) => (
+            <div key={i} style={{ fontSize: 12.5, lineHeight: 1.5, padding: '4px 0', borderTop: i === 0 ? 'none' : '0.5px solid var(--divider, var(--border))', color: 'var(--text2)' }}>
+              <span style={{ color: 'var(--text3)' }}>{fmtDate(h.d)}</span>
+              {' · '}<strong style={{ color: 'var(--text)' }}>{h.o}</strong>
+              {' — '}{h.t}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -71,27 +136,7 @@ export default function CoverageReport({ report }) {
                 {report.language.map(g => (
                   <div key={g.group} style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 12 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text3)', marginBottom: 10 }}>{g.group}</div>
-                    {g.terms.map(t => (
-                      <div key={t.term} style={{ marginBottom: 12 }}>
-                        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: 15, fontWeight: 700 }}>“{t.term}”</span>
-                          <span style={{ fontSize: 13, color: 'var(--text2)' }}>{t.total.toLocaleString()} headlines</span>
-                          {t.prevRate > 0 && (() => {
-                            const ratio = t.rate / t.prevRate
-                            if (ratio >= 1.5) return <span style={{ fontSize: 12, color: 'var(--coral)' }}>▲ {Math.round(ratio * 10) / 10}× last week's rate</span>
-                            if (ratio <= 0.67) return <span style={{ fontSize: 12, color: 'var(--text3)' }}>▼ down to {Math.round(ratio * 100)}% of last week</span>
-                            return <span style={{ fontSize: 12, color: 'var(--text3)' }}>≈ level with last week</span>
-                          })()}
-                        </div>
-                        {t.topOutlets.length > 0 && (
-                          <div style={{ marginTop: 6 }}>
-                            {t.topOutlets.slice(0, 5).map((o, i) => (
-                              <Bar key={o.outlet} label={o.outlet} value={o.count} max={t.topOutlets[0].count} first={i === 0} />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                    {g.terms.map(t => <TermBlock key={t.term} t={t} />)}
                   </div>
                 ))}
               </Section>

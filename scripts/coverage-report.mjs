@@ -61,21 +61,25 @@ function brandOf(name) {
 }
 
 function languageWatch(rows, prevRows) {
-  const count = (pool, re) => {
+  const count = (pool, re, keepMatches = false) => {
     const byBrand = new Map()
+    const matches = []
     let total = 0
     for (const r of pool) {
       if (!re.test(r.title || '')) continue
       total++
       const b = brandOf(r.outlets?.name)
       byBrand.set(b, (byBrand.get(b) || 0) + 1)
+      if (keepMatches) matches.push({ t: (r.title || '').slice(0, 140), o: b, d: r.published_at })
     }
-    return { total, byBrand }
+    // Newest first, capped — the audit trail behind every published count
+    matches.sort((a, b) => (a.d < b.d ? 1 : -1))
+    return { total, byBrand, matches: matches.slice(0, 150) }
   }
   return WATCH_GROUPS.map(g => ({
     group: g.group,
     terms: g.variants.map(v => {
-      const now = count(rows, v.re)
+      const now = count(rows, v.re, true)
       const prev = count(prevRows, v.re)
       return {
         term: v.label,
@@ -87,6 +91,7 @@ function languageWatch(rows, prevRows) {
         prevRate: prevRows.length ? +(prev.total / prevRows.length * 1000).toFixed(2) : 0,
         topOutlets: [...now.byBrand.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)
           .map(([outlet, n]) => ({ outlet, count: n })),
+        headlines: now.matches, // click-to-audit on /coverage-report
       }
     }).sort((a, b) => b.total - a.total),
   }))
