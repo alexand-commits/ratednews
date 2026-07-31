@@ -31,7 +31,7 @@ export default function Outlets({ initialOutlets = [] }) {
         <meta name="description" content="Browse community trust ratings for 250+ major news outlets including BBC, CNN, Fox News, The Guardian and Wall Street Journal — ranked by readers, not algorithms. No left/right labels, just reader trust." />
         <link rel="canonical" href="https://www.ratednews.com/outlets" />
         <meta property="og:title"       content="News Outlet Ratings — Which Sources Do Readers Trust? — RatedNews" />
-        <meta property="og:description" content="Browse community ratings for 200+ major news outlets — see which readers trust most." />
+        <meta property="og:description" content="Browse community ratings for 250+ major news outlets — see which readers trust most." />
         <meta property="og:url"         content="https://www.ratednews.com/outlets" />
         <meta property="og:type"        content="website" />
         <meta property="og:image"       content="https://www.ratednews.com/api/og?type=brand" />
@@ -40,7 +40,7 @@ export default function Outlets({ initialOutlets = [] }) {
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"       content="summary_large_image" />
         <meta name="twitter:title"      content="News Outlet Bias Ratings — RatedNews" />
-        <meta name="twitter:description" content="Community ratings for 200+ major news outlets — updated continuously." />
+        <meta name="twitter:description" content="Community ratings for 250+ major news outlets — updated continuously." />
         <meta name="twitter:image"      content="https://www.ratednews.com/api/og?type=brand" />
         <script
           type="application/ld+json"
@@ -48,7 +48,7 @@ export default function Outlets({ initialOutlets = [] }) {
             '@context': 'https://schema.org',
             '@type': 'CollectionPage',
             name: 'News Outlet Bias & Quality Ratings — RatedNews',
-            description: 'Browse community ratings for 200+ major news outlets including BBC, CNN, Fox News, The Guardian and Wall Street Journal.',
+            description: 'Browse community ratings for 250+ major news outlets including BBC, CNN, Fox News, The Guardian and Wall Street Journal.',
             url: 'https://www.ratednews.com/outlets',
             publisher: {
               '@type': 'Organization',

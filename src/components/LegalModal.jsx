@@ -70,7 +70,7 @@ To exercise any of these rights, email info@ratednews.com. We will respond withi
 
 const TERMS = {
   title: 'Terms of Service',
-  updated: '5 May 2025',
+  updated: '31 July 2026',
   sections: [
     {
       heading: 'Acceptance',
@@ -78,9 +78,9 @@ const TERMS = {
     },
     {
       heading: 'What RatedNews is',
-      body: `RatedNews is a news aggregation service that indexes publicly available RSS feeds and applies AI-generated scores to article headlines and summaries. It also allows registered users to submit community ratings for news outlets.
+      body: `RatedNews is a news aggregation service that indexes publicly available RSS feeds and lets registered users submit community ratings for news outlets. Every score on the Service is calculated from these reader ratings — RatedNews does not apply AI or editorial scoring to news content.
 
-Scores are algorithmic signals, not editorial verdicts. They reflect patterns in language and framing and should not be treated as definitive fact-checks or endorsements.`,
+Scores are aggregated reader opinions, not editorial verdicts, and should not be treated as definitive fact-checks or endorsements.`,
     },
     {
       heading: 'Your account',
@@ -106,7 +106,7 @@ User-submitted ratings are licensed to RatedNews on a non-exclusive, royalty-fre
     },
     {
       heading: 'Disclaimers',
-      body: `The Service is provided "as is" without warranty of any kind. AI-generated scores are experimental signals based on publicly available text. They may contain errors, reflect model biases, or be inconsistent across similar articles.
+      body: `The Service is provided "as is" without warranty of any kind. Community scores are aggregated reader opinions. They may not represent the broader public, can be affected by the composition of the rating audience, and may change at any time as new ratings arrive.
 
 RatedNews does not employ journalists, verify facts independently, or endorse the content of any linked publication. Always exercise your own judgement when consuming news.`,
     },
@@ -131,7 +131,7 @@ RatedNews does not employ journalists, verify facts independently, or endorse th
 
 const GUIDELINES = {
   title: 'Community Guidelines',
-  updated: '5 May 2025',
+  updated: '31 July 2026',
   sections: [
     {
       heading: 'The spirit of RatedNews',
@@ -146,7 +146,7 @@ const GUIDELINES = {
 • Are their headlines fair and proportionate?
 • Do they clearly distinguish news from opinion?
 
-Rate the journalism, not the politics. A left-leaning outlet can be accurate. A right-leaning outlet can produce quality journalism. Partisan intensity is a separate score for a reason.`,
+Rate the journalism, not the politics. A left-leaning outlet can be accurate. A right-leaning outlet can produce quality journalism. Rate whether you trust the reporting — not whether you share the outlet's politics.`,
     },
     {
       heading: 'What we will not tolerate',
@@ -163,7 +163,7 @@ Rate the journalism, not the politics. A left-leaning outlet can be accurate. A 
     },
     {
       heading: 'Score integrity',
-      body: `To protect against early manipulation, community ratings carry limited weight until an outlet accumulates 5 or more votes. At 20+ votes the community score reaches full weight. This means a handful of bad-faith ratings cannot meaningfully skew an outlet's overall score.`,
+      body: `To protect against early manipulation, an outlet needs at least 3 community ratings before it holds a ranked position — below that, its score displays as provisional. Rating counts are shown wherever scores appear, so a score built on a handful of votes is always visible as such.`,
     },
     {
       heading: 'These guidelines evolve',
