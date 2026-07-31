@@ -1,0 +1,21 @@
+# Engagement metrics — refreshes real like/repost/reply counts for every
+# post in the 7-day published log (Bluesky + Facebook; both free to read).
+# Powers the desk's predicted-vs-actual panel and the compose prompt's
+# winners/losers calibration block.
+name: Social metrics
+
+on:
+  schedule:
+    # Every 6h, offset from the other crons
+    - cron: '19 1,7,13,19 * * *'
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Refresh post metrics
+        run: |
+          curl -fsS -m 120 -X POST https://www.ratednews.com/api/social-metrics \
+            -H "x-auto-secret: ${{ secrets.SOCIAL_AUTO_SECRET }}" \
+            | head -c 500
