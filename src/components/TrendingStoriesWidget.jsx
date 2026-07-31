@@ -8,8 +8,11 @@ import { track } from '../utils/track'
 // pills, which surfaced context-free fragments ("Islamic", "Heritage List")
 // with no real destination. variant 'widget' is the standard rail card;
 // 'inline' renders bare for mobile ramps inside existing containers.
-export default function TrendingStoriesWidget({ variant = 'widget', title = '🔥 Trending · 24h', limit = 6 }) {
-  const stories = useTrendingStories()
+// `stories` overrides the global feed with a caller-computed list (e.g. the
+// sports page passes sport-only clusters) — same shape: {slug, title, outlets}.
+export default function TrendingStoriesWidget({ variant = 'widget', title = '🔥 Trending · 24h', limit = 6, stories: storiesProp = null }) {
+  const globalStories = useTrendingStories()
+  const stories = storiesProp ?? globalStories
   if (!stories.length) return null
 
   const list = (
