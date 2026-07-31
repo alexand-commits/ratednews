@@ -72,9 +72,11 @@ function languageWatch(rows, prevRows) {
       byBrand.set(b, (byBrand.get(b) || 0) + 1)
       if (keepMatches) matches.push({ t: (r.title || '').slice(0, 140), o: b, d: r.published_at })
     }
-    // Newest first, capped — the audit trail behind every published count
+    // Newest first, UNCAPPED (safety ceiling only) — if the bar says an
+    // outlet had 32, the audit list must show all 32. A receipts list that
+    // doesn't sum to the published count reads as a hole, not a feature.
     matches.sort((a, b) => (a.d < b.d ? 1 : -1))
-    return { total, byBrand, matches: matches.slice(0, 150) }
+    return { total, byBrand, matches: matches.slice(0, 1200) }
   }
   return WATCH_GROUPS.map(g => ({
     group: g.group,
