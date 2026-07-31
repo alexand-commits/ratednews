@@ -6,6 +6,7 @@ const OWNER = 'alexandchow@gmail.com'
 
 const TYPE_META = {
   news:              { label: 'News post',        emoji: '📰', color: 'var(--text2)' },
+  coverage_data:     { label: 'Coverage data',   emoji: '📊', color: 'var(--green-dark)' },
   coverage_contrast: { label: 'Coverage contrast', emoji: '🪞', color: 'var(--coral)' },
   coverage_spread: { label: 'Coverage spread', emoji: '🪞', color: 'var(--coral)' },
   poll:            { label: 'Poll',            emoji: '🗳️', color: 'var(--blue)' },
@@ -685,6 +686,64 @@ function TrendingGenerator({ onRun }) {
   )
 }
 
+// The Coverage Report generator — data posts only RatedNews can make,
+// drafted from the weekly language/framing/attention pack. Numbers come from
+// the auditable compute script; the model only writes around them.
+function CoverageGenerator({ onRun }) {
+  const [posts, setPosts] = useState(null)
+  const [busy, setBusy]   = useState(false)
+  const [error, setError] = useState('')
+  const [note, setNote]   = useState('')
+
+  async function generate() {
+    if (busy) return
+    setBusy(true); setError(''); setNote(''); setPosts(null)
+    try {
+      const { data: { session } } = await db.auth.getSession()
+      const res = await fetch('/api/social-compose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ coverage: true }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Generation failed')
+      setPosts(sortByPulse(json.posts || []))
+      if (json.note) setNote(json.note)
+      if (json.posts?.length) onRun?.(json.posts, 'coverage')
+    } catch (e) {
+      setError(e.message?.includes('Failed to fetch')
+        ? 'Connection dropped. If the run completed it will appear under Previous runs shortly.'
+        : (e.message || 'Something went wrong'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 16 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>📊 Coverage Report</div>
+      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
+        Data posts only RatedNews can make — tracked language, same-story framing splits, first-to-report — from this week's indexed headlines. Charts render as branded cards.
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <button onClick={generate} disabled={busy} className="nav-pill" style={{ opacity: busy ? 0.55 : 1, cursor: busy ? 'default' : 'pointer' }}>
+          {busy ? 'Crunching the week…' : 'Draft data posts'}
+        </button>
+        {error && <span style={{ fontSize: 12, color: 'var(--red)' }}>{error}</span>}
+      </div>
+
+      {posts && posts.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          {posts.map((post, i) => <PostCard key={i} post={post} />)}
+        </div>
+      )}
+      {posts && posts.length === 0 && (
+        <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 12 }}>{note || 'No coverage report available yet.'}</div>
+      )}
+    </div>
+  )
+}
+
 function Composer({ onRun }) {
   const [input, setInput]     = useState('')
   const [steer, setSteer]     = useState('')
@@ -842,6 +901,7 @@ export default function SocialPage({ user, goBack }) {
         <div className="grid-desk">
           <div>
             <TrendingGenerator onRun={recordRun} />
+            <CoverageGenerator onRun={recordRun} />
             <AutopilotFeed state={scout} />
             <Composer onRun={recordRun} />
           </div>
@@ -892,7 +952,7 @@ export default function SocialPage({ user, goBack }) {
               <div key={run.id || ri} style={{ marginBottom: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>
-                    {run.mode === 'trending' ? 'trending' : 'composer'} · {clock(run.at)} · {timeAgo(run.at)} · {run.posts.length} posts
+                    {run.mode === 'trending' ? 'trending' : run.mode === 'coverage' ? '📊 coverage' : 'composer'} · {clock(run.at)} · {timeAgo(run.at)} · {run.posts.length} posts
                   </span>
                   {run.id && (
                     <button

@@ -386,6 +386,94 @@ async function performanceBlock() {
   } catch { return '' }
 }
 
+// ── Coverage Report generation — posts only RatedNews can make ──────────────
+// Drafts from the weekly coverage_report pack (scripts/coverage-report.mjs):
+// language watch, framing splits, attention stats. HARD RULE: every number in
+// a post must appear verbatim in the supplied data — the counting stays in
+// the auditable script, the model only writes around it.
+export async function generateCoverageBatch(steer = '') {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return { posts: [], note: 'Not configured.' }
+  const svc = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  const { data } = await svc.from('social_drafts')
+    .select('pack').eq('pack->>kind', 'coverage_report').limit(1).maybeSingle()
+  const rep = data?.pack
+  if (!rep) return { posts: [], note: 'No coverage report computed yet — it runs Monday mornings.' }
+
+  const lang = rep.language.map(g =>
+    `${g.group}:\n` + g.terms.map(t =>
+      `  "${t.term}": ${t.total} headlines this week (prior week ${t.prevTotal}; per-1k-headline rate ${t.rate} vs ${t.prevRate}) — top outlets: ${t.topOutlets.slice(0, 5).map(o => `${o.outlet} ${o.count}`).join(', ') || 'none'}`
+    ).join('\n')
+  ).join('\n')
+  const framing = rep.framing.length
+    ? rep.framing.map(f => `- Story "${f.story}" (${f.totalOutlets} outlets): ${f.usage.map(u => `${u.outlets} outlets said "${u.label}" (${u.sample.join(', ')})`).join(' · ')}`).join('\n')
+    : 'none met the threshold this week'
+  const att = rep.attention
+  const attLines = [
+    `- Biggest story: "${att.biggest?.story}" — ${att.biggest?.outlets} outlets covered it`,
+    `- ${att.singleOutletStories} stories were covered by only ONE outlet`,
+    `- First to report (5+ outlet stories, ≥5 min clear lead, ${att.qualifyingStories} qualifying stories): ${att.firstToReport.map(f => `${f.outlet} ${f.wins}`).join(', ')}`,
+    `- Median pickup lag (first outlet → second outlet): ${att.medianPickupMins} minutes`,
+  ].join('\n')
+
+  const prompt = `You are drafting THE COVERAGE REPORT — data posts only RatedNews can publish, computed from ${rep.corpus.headlines.toLocaleString()} headlines indexed this week across ${rep.corpus.outlets} feeds.
+
+THE DATA (the ONLY numbers you may use — every figure in your posts must appear verbatim below; if a number is not here, the sentence does not get written):
+
+LANGUAGE WATCH — headlines containing each term:
+${lang}
+
+SAME STORY, DIFFERENT WORDS (from clustered coverage of single stories):
+${framing}
+
+ATTENTION:
+${attLines}
+
+Draft 4-6 posts, each with "type":"coverage_data". Pick the most striking, defensible facts. House rules for this format:
+- Counts, never conclusions. State the number and the corpus ("in headlines we indexed this week"); NEVER say or imply WHY an outlet's count is high, never call any outlet biased, obsessed, or agenda-driven. The reader draws conclusions; we publish arithmetic.
+- Symmetry: if you cite one outlet's count, give at least one comparison point from the data.
+- Week-over-week claims must use the per-1k rates, not raw totals (the feed roster grew this week).
+- Plain declarative voice. No hashtags, no emoji spam (one is fine), no exclamation marks.
+- Each post: "text" (X, NO links), "short" (Bluesky ≤300 chars, end with https://www.ratednews.com/coverage-report), "story" (short label), "pulse" 1-10 + "pulse_why".
+- Where a post is built on a ranking or comparison of 2-6 numbers, ALSO include "chart": {"title": "<max 80 chars>", "rows": [["<outlet or term>", <number>], ...], "foot": "<corpus line, max 100 chars>"} using ONLY numbers from the data. Skip chart otherwise.${steer ? `\n\nThe owner wants this angle: "${steer}"` : ''}
+
+Return JSON only: {"posts":[...]}`
+
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  const msg = await client.messages.create({
+    model: MODEL,
+    max_tokens: 7000,
+    system: SYSTEM,
+    messages: [{ role: 'user', content: prompt }],
+  })
+  const text = msg.content.filter(b => b.type === 'text').map(b => b.text).join('')
+  const start = text.indexOf('{'), end = text.lastIndexOf('}')
+  if (start === -1 || end === -1) throw new Error('Bad model output')
+  const parsed = JSON.parse(text.slice(start, end + 1))
+  if (!Array.isArray(parsed.posts) || !parsed.posts.length) throw new Error('No posts returned')
+
+  for (const p of parsed.posts) {
+    p.type = 'coverage_data'
+    p.pulse = Number.isFinite(+p.pulse) ? Math.max(1, Math.min(10, Math.round(+p.pulse))) : null
+    if (typeof p.short === 'string' && p.short.length > 300) {
+      const stripped = p.short.replace(/\s*https?:\/\/\S+\s*$/, '').trim()
+      if (stripped.length <= 300) p.short = stripped
+    }
+    p.meta = null
+    p.auto = evaluateAutoGates(p, null)
+    p.card = null
+    if (p.chart?.title && Array.isArray(p.chart.rows) && p.chart.rows.length >= 2) {
+      const cq = new URLSearchParams({
+        type: 'stat',
+        title: String(p.chart.title).slice(0, 90),
+        rows: JSON.stringify(p.chart.rows.slice(0, 7)),
+        foot: String(p.chart.foot || '').slice(0, 110),
+      })
+      p.card = `${URL}/api/social-card?${cq}`
+    }
+  }
+  return { posts: parsed.posts, generatedAt: rep.generatedAt }
+}
+
 // ── Shared generation core — used by the desk handler AND /api/social-auto ───
 // Returns { posts, stories, note? }. Posts are annotated with:
 //   meta — {outlets, breaking, update, category, title, first, newest} from the
@@ -485,9 +573,10 @@ export default async function handler(req, res) {
   if (authErr || !user || user.email !== OWNER) return res.status(403).json({ error: 'Forbidden' })
 
   const isTrending = req.body?.trending === true
+  const isCoverage = req.body?.coverage === true
   const headlines  = (req.body?.headlines || '').toString().trim()
   const steer      = (req.body?.steer || '').toString().trim().slice(0, 300)
-  if (!isTrending && !headlines) return res.status(400).json({ error: 'Paste at least one headline.' })
+  if (!isTrending && !isCoverage && !headlines) return res.status(400).json({ error: 'Paste at least one headline.' })
   if (headlines.length > 4000) return res.status(400).json({ error: 'Too much text — trim it down.' })
 
   const steerBlock = steer
@@ -507,6 +596,12 @@ export default async function handler(req, res) {
       const batch = await generateTrendingBatch(steer)
       saveManualRun('trending', batch.posts)
       return res.status(200).json({ posts: batch.posts, note: batch.note })
+    }
+
+    if (isCoverage) {
+      const batch = await generateCoverageBatch(steer)
+      saveManualRun('coverage', batch.posts)
+      return res.status(200).json({ posts: batch.posts, note: batch.note, dataFrom: batch.generatedAt })
     }
 
     // Headline-compose mode — no story metadata, gates run on content alone

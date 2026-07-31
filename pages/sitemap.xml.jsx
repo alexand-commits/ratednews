@@ -18,6 +18,7 @@ const STATIC_PAGES = [
   { url: 'https://www.ratednews.com/explore',    priority: '0.7', changefreq: 'daily'   },
   { url: 'https://www.ratednews.com/categories', priority: '0.8', changefreq: 'daily'   },
   { url: 'https://www.ratednews.com/most-trusted-news-sources', priority: '0.9', changefreq: 'daily' },
+  { url: 'https://www.ratednews.com/coverage-report', priority: '0.7', changefreq: 'weekly' },
   { url: 'https://www.ratednews.com/about',       priority: '0.5', changefreq: 'monthly' },
   { url: 'https://www.ratednews.com/methodology', priority: '0.5', changefreq: 'monthly' },
   ...CATEGORY_SLUGS.map(slug => ({
