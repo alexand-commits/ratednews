@@ -4,22 +4,7 @@ import { db } from '../lib/supabase'
 import { timeAgo } from '../utils/helpers'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 import Sidebar from '../components/Sidebar'
-
-const CATEGORIES = [
-  { value: 'Politics',       slug: 'politics',       emoji: '🏛',  label: 'Politics',       color: '#4B6FBF' },
-  { value: 'Business',       slug: 'business',       emoji: '📈',  label: 'Business',       color: '#2E8B57' },
-  { value: 'Sport',          slug: 'sport',          emoji: '⚽',  label: 'Sport',          color: '#E84B4B' },
-  { value: 'Tech',           slug: 'tech',           emoji: '💻',  label: 'Tech',           color: '#7C5CBF' },
-  { value: 'Science',        slug: 'science',        emoji: '🔬',  label: 'Science',        color: '#2196F3' },
-  { value: 'Health',         slug: 'health',         emoji: '🏥',  label: 'Health',         color: '#D84B8A' },
-  { value: 'Environment',    slug: 'environment',    emoji: '🌱',  label: 'Environment',    color: '#4CAF50' },
-  { value: 'Entertainment',  slug: 'entertainment',  emoji: '🎬',  label: 'Entertainment',  color: '#FF9800' },
-  { value: 'Crime',          slug: 'crime',          emoji: '🔍',  label: 'Crime',          color: '#795548' },
-  { value: 'Travel',         slug: 'travel',         emoji: '✈️',  label: 'Travel',         color: '#00ACC1' },
-  { value: 'Education',      slug: 'education',      emoji: '🎓',  label: 'Education',      color: '#D85A30' },
-  { value: 'Conflict',       slug: 'conflict',       emoji: '⚔️',  label: 'Conflict',       color: '#757575' },
-  { value: 'World',          slug: 'world',          emoji: '🌍',  label: 'World',          color: '#009688' },
-]
+import { CATEGORIES, fetchCategoryOverview } from '../utils/categoryOverview'
 
 const REGIONS = [
   { value: 'all', label: '🌍 Global'          },
@@ -28,52 +13,24 @@ const REGIONS = [
   { value: 'int', label: '🌐 International'   },
 ]
 
-export default function CategoryPage({ navigate, goBack, outlets = [] }) {
+export default function CategoryPage({ navigate, goBack, outlets = [], initial = null }) {
   const [region, setRegion] = useState('all')
-  const [counts, setCounts] = useState({})
-  const [previews, setPreviews] = useState({}) // category → latest article
-  const [loading, setLoading] = useState(true)
+  const [counts, setCounts] = useState(initial?.counts || {})
+  const [previews, setPreviews] = useState(initial?.previews || {}) // category → latest article
+  const [loading, setLoading] = useState(!initial)
 
-  // One category_overview RPC (per-category count + latest article, region
-  // filtered in SQL) replaces downloading every categorised article and
-  // counting in JS — which both cost egress and truncated (wrongly) at the
-  // 1,000-row cap. Falls back to the old client method if the RPC isn't
-  // present yet (pre-migration).
+  // Server-rendered overview covers the 'all' region (ISR, so crawlers see
+  // real numbers); region switches fetch fresh via the shared helper.
   const loadCounts = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await db.rpc('category_overview', { p_region: region })
-    if (!error && data) {
-      const newCounts = {}, newPreviews = {}
-      for (const row of data) {
-        newCounts[row.category] = Number(row.cnt) || 0
-        newPreviews[row.category] = { id: row.latest_id, title: row.latest_title, category: row.category, published_at: row.latest_published_at }
-      }
-      setCounts(newCounts); setPreviews(newPreviews); setLoading(false)
-      return
-    }
-    // Fallback: old client-side aggregation
-    const { data: rows } = await db
-      .from('articles')
-      .select('id, title, category, published_at, outlets(country)')
-      .not('category', 'is', null)
-      .order('published_at', { ascending: false })
-    if (!rows) { setLoading(false); return }
-    const filtered = region === 'all' ? rows : rows.filter(a => {
-      const c = a.outlets?.country || ''
-      if (region === 'UK') return c === 'UK'
-      if (region === 'US') return c === 'US'
-      return c !== 'UK' && c !== 'US'
-    })
-    const newCounts = {}, newPreviews = {}
-    for (const a of filtered) {
-      const cat = a.category
-      newCounts[cat] = (newCounts[cat] || 0) + 1
-      if (!newPreviews[cat]) newPreviews[cat] = a
-    }
-    setCounts(newCounts); setPreviews(newPreviews); setLoading(false)
+    const { counts: c, previews: p } = await fetchCategoryOverview(db, region)
+    setCounts(c); setPreviews(p); setLoading(false)
   }, [region])
 
-  useEffect(() => { loadCounts() }, [loadCounts])
+  useEffect(() => {
+    if (region === 'all' && initial) { setCounts(initial.counts); setPreviews(initial.previews); setLoading(false); return }
+    loadCounts()
+  }, [loadCounts, region])
 
   const handleRefresh = useCallback(async () => {
     setCounts({}); setPreviews({})
@@ -93,11 +50,11 @@ export default function CategoryPage({ navigate, goBack, outlets = [] }) {
         <div>
 
         <div style={{ marginBottom: 16 }}>
-          <h1 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 24, fontWeight: 700, marginBottom: 4 }}>
+          <h1 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 26, fontWeight: 700, marginBottom: 4 }}>
             Categories
           </h1>
           <p style={{ fontSize: 13, color: 'var(--text2)' }}>
-            {loading ? 'Loading…' : `${total.toLocaleString()} stories across ${CATEGORIES.length} categories`}
+            {loading ? 'Loading…' : `${total.toLocaleString()} stories this week across ${CATEGORIES.length} categories`}
           </p>
         </div>
 
@@ -148,7 +105,7 @@ export default function CategoryPage({ navigate, goBack, outlets = [] }) {
                   }}>{c.emoji}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
-                      <span style={{ fontWeight: 600, fontSize: 15 }}>{c.label}</span>
+                      <span style={{ fontWeight: 600, fontSize: 16 }}>{c.label}</span>
                       <span style={{ fontSize: 12, color: 'var(--text3)', flexShrink: 0 }}>
                         {loading ? '—' : `${count.toLocaleString()} stories`}
                       </span>
