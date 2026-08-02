@@ -146,8 +146,8 @@ function Stat({ title, rows, foot, kicker, k }) {
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'center', gap: z(dense ? 13 : 20) }}>
         {rows.map(([label, value], i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: z(18) }}>
-            <span style={{ display: 'flex', width: z(280), justifyContent: 'flex-end', fontFamily: SF, fontSize: z(dense ? 22 : 25), fontWeight: 700, color: '#CFCBC5' }}>
-              {label}
+            <span style={{ display: 'flex', width: z(280), justifyContent: 'flex-end', fontFamily: SF, fontSize: z(label.length > 14 ? 19 : dense ? 22 : 25), fontWeight: 700, color: '#CFCBC5', whiteSpace: 'nowrap' }}>
+              {label.length > 22 ? label.slice(0, 21) + '…' : label}
             </span>
             <div style={{ display: 'flex', flex: 1, alignItems: 'center', gap: z(14) }}>
               <div style={{

@@ -26,6 +26,32 @@ function CopyButton({ text, label = 'Copy' }) {
   )
 }
 
+// Drafts are the model's; posts are the OWNER's. Every draft text is
+// editable in place before publishing — the buttons post whatever the text
+// says at the moment of posting.
+function EditToggle({ editing, setEditing }) {
+  return (
+    <button
+      onClick={() => setEditing(e => !e)}
+      style={{ fontSize: 12, fontWeight: 600, padding: '4px 12px', borderRadius: 99, border: `0.5px solid ${editing ? 'var(--green)' : 'var(--border)'}`, background: editing ? 'var(--green)' : 'var(--surface)', color: editing ? '#fff' : 'var(--text2)', cursor: 'pointer', flexShrink: 0 }}
+    >
+      {editing ? '✓ Done' : '✏️ Edit'}
+    </button>
+  )
+}
+
+function DraftText({ editing, value, onChange, style }) {
+  if (!editing) return <div style={style}>{value}</div>
+  return (
+    <textarea
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      rows={Math.max(3, Math.ceil((value || '').length / 55))}
+      style={{ ...style, display: 'block', width: '100%', background: 'var(--bg2, var(--bg))', border: '1px solid var(--coral)', borderRadius: 8, padding: '8px 10px', resize: 'vertical', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box' }}
+    />
+  )
+}
+
 // Two-tap publish: first tap arms ("Sure?"), second posts. Disarms after 4s.
 // Nothing ships on a single stray click.
 // Server-backed record of what the owner has published — keyed by
@@ -248,12 +274,15 @@ function PostCard({ post }) {
   const [withCard, setWithCard] = useState(true)
   const [imgIdx, setImgIdx] = useState(0)
   const [customPhoto, setCustomPhoto] = useState(null) // owner-uploaded photo overrides the story pool
+  const [editing, setEditing] = useState(false)
+  const [text, setText] = useState(post.text || '')
+  const [short, setShort] = useState(post.short || '')
   const pool = post.images?.length ? post.images : post.card ? [post.card] : []
   const cardUrl = withCard ? (customPhoto || (pool.length ? pool[Math.min(imgIdx, pool.length - 1)] : undefined)) : undefined
   const cardAlt = post.meta?.title || post.story || ''
 
   const copyText = [
-    post.text,
+    text,
     post.poll_options?.length ? `\n\nPoll options:\n• ${post.poll_options.join('\n• ')}` : '',
   ].join('')
 
@@ -274,21 +303,22 @@ function PostCard({ post }) {
           )}
         </span>
         <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+          <EditToggle editing={editing} setEditing={setEditing} />
           <CopyButton text={copyText} />
-          {/https?:\/\/|www\./i.test(post.text) ? (
+          {/https?:\/\/|www\./i.test(text) ? (
             <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--amber, #C98A08)' }} title="X charges 13x for URL posts and buries their reach — links live in the Bluesky variant. Regenerate for linkless X drafts.">
               🔗 has link — X posting off
             </span>
           ) : (
-            <PostButton platform="x" story={post.story} pulse={post.pulse} text={post.text} pollOptions={post.poll_options} imageUrl={cardUrl} imageAlt={cardAlt} label={post.card ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />
+            <PostButton platform="x" story={post.story} pulse={post.pulse} text={text} pollOptions={post.poll_options} imageUrl={cardUrl} imageAlt={cardAlt} label={post.card ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />
           )}
         </span>
       </div>
 
-      <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{post.text}</div>
+      <DraftText editing={editing} value={text} onChange={setText} style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }} />
 
-      {typeof post.text === 'string' && (() => {
-        const n = post.text.length
+      {typeof text === 'string' && (() => {
+        const n = text.length
         const over = n > 280
         return (
           <div style={{ fontSize: 11, marginTop: 8, fontWeight: 600, color: over ? 'var(--amber, #C98A08)' : 'var(--text3)' }}>
@@ -303,15 +333,15 @@ function PostCard({ post }) {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#2E86EA' }}>🦋 Bluesky</span>
             <span style={{ display: 'inline-flex', gap: 6 }}>
-              <CopyButton text={post.short} />
-              {post.short.length <= 300 && (
-                <PostButton platform="bluesky" story={post.story} pulse={post.pulse} text={post.short} imageUrl={cardUrl} imageAlt={cardAlt} label="Post to Bluesky" color="#2E86EA" />
+              <CopyButton text={short} />
+              {short.length <= 300 && (
+                <PostButton platform="bluesky" story={post.story} pulse={post.pulse} text={short} imageUrl={cardUrl} imageAlt={cardAlt} label="Post to Bluesky" color="#2E86EA" />
               )}
             </span>
           </div>
-          <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{post.short}</div>
+          <DraftText editing={editing} value={short} onChange={setShort} style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }} />
           {(() => {
-            const n = post.short.length
+            const n = short.length
             const over = n > 300
             return (
               <div style={{ fontSize: 11, marginTop: 8, fontWeight: 600, color: over ? 'var(--red)' : 'var(--text3)' }}>
@@ -328,8 +358,8 @@ function PostCard({ post }) {
             📘 Facebook <span style={{ color: 'var(--text3)', fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}>· X copy + story link</span>
           </span>
           <span style={{ display: 'inline-flex', gap: 6 }}>
-            <CopyButton text={fbText(post.text, post.short)} />
-            <PostButton platform="facebook" story={post.story} pulse={post.pulse} text={fbText(post.text, post.short)} imageUrl={cardUrl} imageAlt={cardAlt} label="Post to Facebook" color="#1877F2" />
+            <CopyButton text={fbText(text, short)} />
+            <PostButton platform="facebook" story={post.story} pulse={post.pulse} text={fbText(text, short)} imageUrl={cardUrl} imageAlt={cardAlt} label="Post to Facebook" color="#1877F2" />
           </span>
         </div>
       )}
@@ -360,6 +390,10 @@ function QueueItem({ q, dismiss }) {
   const [withCard, setWithCard] = useState(true)
   const [imgIdx, setImgIdx] = useState(0)
   const [customPhoto, setCustomPhoto] = useState(null) // owner-uploaded photo overrides the story pool
+  const [editing, setEditing] = useState(false)
+  const [qx, setQx] = useState(q.x || '')
+  const [qb, setQb] = useState(q.bluesky || '')
+  const [qf, setQf] = useState(q.facebook || '')
   const pool = q.images?.length ? q.images : q.card ? [q.card] : []
   const cardUrl = withCard ? (customPhoto || (pool.length ? pool[Math.min(imgIdx, pool.length - 1)] : undefined)) : undefined
   return (
@@ -375,11 +409,12 @@ function QueueItem({ q, dismiss }) {
           </span>
         )}
         {q.url && <a href={q.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--coral)' }}>view →</a>}
+        {!q.live && <span style={{ marginLeft: 'auto' }}><EditToggle editing={editing} setEditing={setEditing} /></span>}
         {!q.live && (
           <button
             onClick={() => dismiss(q.story)}
             title="Dismiss — removes this draft from the queue (the story won't be re-drafted)"
-            style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: 'var(--text3)', background: 'none', border: '0.5px solid var(--border)', borderRadius: 99, padding: '2px 10px', cursor: 'pointer' }}
+            style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', background: 'none', border: '0.5px solid var(--border)', borderRadius: 99, padding: '2px 10px', cursor: 'pointer' }}
           >
             ✕ Dismiss
           </button>
@@ -388,33 +423,34 @@ function QueueItem({ q, dismiss }) {
 
       {q.x && (
         <>
-          <div style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{q.x}</div>
+          <DraftText editing={editing && !q.live} value={qx} onChange={setQx} style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{q.x.length} chars</span>
-            <CopyButton text={q.x} />
-            {!q.live && <PostButton platform="x" story={q.story} pulse={q.pulse} text={q.x} imageUrl={cardUrl} imageAlt={q.alt} label={q.card ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />}
+            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{qx.length} chars</span>
+            <CopyButton text={qx} />
+            {!q.live && <PostButton platform="x" story={q.story} pulse={q.pulse} text={qx} imageUrl={cardUrl} imageAlt={q.alt} label={q.card ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />}
           </div>
         </>
       )}
 
       {q.bluesky && (
         <div style={{ marginTop: q.x ? 12 : 0, paddingTop: q.x ? 12 : 0, borderTop: q.x ? '0.5px solid var(--border)' : 'none' }}>
-          <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: q.x ? 'var(--text2)' : 'var(--text)' }}>{q.bluesky}</div>
+          <DraftText editing={editing && !q.live} value={qb} onChange={setQb} style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: q.x ? 'var(--text2)' : 'var(--text)' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: q.bluesky.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{q.bluesky.length} / 300</span>
-            <CopyButton text={q.bluesky} />
-            {!q.live && q.bluesky.length <= 300 && <PostButton platform="bluesky" story={q.story} pulse={q.pulse} text={q.bluesky} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Bluesky" color="#2E86EA" />}
+            <span style={{ fontSize: 11, fontWeight: 600, color: qb.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{qb.length} / 300</span>
+            <CopyButton text={qb} />
+            {!q.live && qb.length <= 300 && <PostButton platform="bluesky" story={q.story} pulse={q.pulse} text={qb} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Bluesky" color="#2E86EA" />}
           </div>
         </div>
       )}
 
       {q.facebook && (
         <div style={{ marginTop: (q.x || q.bluesky) ? 12 : 0, paddingTop: (q.x || q.bluesky) ? 12 : 0, borderTop: (q.x || q.bluesky) ? '0.5px solid var(--border)' : 'none' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1877F2' }}>📘 Facebook</span>
-            <CopyButton text={q.facebook} />
-            {!q.live && <PostButton platform="facebook" story={q.story} pulse={q.pulse} text={q.facebook} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Facebook" color="#1877F2" />}
+            <CopyButton text={qf} />
+            {!q.live && <PostButton platform="facebook" story={q.story} pulse={q.pulse} text={qf} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Facebook" color="#1877F2" />}
           </div>
+          {editing && !q.live && <DraftText editing value={qf} onChange={setQf} style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: 'var(--text2)', marginTop: 8 }} />}
         </div>
       )}
 
@@ -428,6 +464,9 @@ function JudgmentItem({ p, dismiss }) {
   const [withCard, setWithCard] = useState(true)
   const [imgIdx, setImgIdx] = useState(0)
   const [customPhoto, setCustomPhoto] = useState(null) // owner-uploaded photo overrides the story pool
+  const [editing, setEditing] = useState(false)
+  const [text, setText] = useState(p.text || '')
+  const [short, setShort] = useState(p.short || '')
   const pool = p.images?.length ? p.images : p.card ? [p.card] : []
   const cardUrl = withCard ? (customPhoto || (pool.length ? pool[Math.min(imgIdx, pool.length - 1)] : undefined)) : undefined
   return (
@@ -444,14 +483,15 @@ function JudgmentItem({ p, dismiss }) {
         <span style={{ fontSize: 10, color: 'var(--amber, #C98A08)', fontWeight: 600 }} title={`X: ${p.x} · Bluesky: ${p.bluesky}`}>
           {p.x === p.bluesky ? p.x : `X: ${p.x}`}
         </span>
+        <span style={{ marginLeft: 'auto' }}><EditToggle editing={editing} setEditing={setEditing} /></span>
         <button
           onClick={() => dismiss(p.story)}
-          style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600, color: 'var(--text3)', background: 'none', border: '0.5px solid var(--border)', borderRadius: 99, padding: '2px 10px', cursor: 'pointer' }}
+          style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', background: 'none', border: '0.5px solid var(--border)', borderRadius: 99, padding: '2px 10px', cursor: 'pointer' }}
         >
           ✕ Dismiss
         </button>
       </div>
-      <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: 'var(--text)' }}>{p.text}</div>
+      <DraftText editing={editing} value={text} onChange={setText} style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: 'var(--text)' }} />
       {p.poll_options?.length > 0 && (
         <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
           {p.poll_options.map((o, k) => (
@@ -460,27 +500,27 @@ function JudgmentItem({ p, dismiss }) {
         </div>
       )}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{(p.text || '').length} chars</span>
-        <CopyButton text={p.text} />
-        {!/https?:\/\/|www\./i.test(p.text || '') && (
-          <PostButton platform="x" story={p.story} pulse={p.pulse} text={p.text} pollOptions={p.poll_options || undefined} imageUrl={p.poll_options?.length ? undefined : cardUrl} imageAlt={p.story} label={p.card && !p.poll_options?.length ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />
+        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{text.length} chars</span>
+        <CopyButton text={text} />
+        {!/https?:\/\/|www\./i.test(text) && (
+          <PostButton platform="x" story={p.story} pulse={p.pulse} text={text} pollOptions={p.poll_options || undefined} imageUrl={p.poll_options?.length ? undefined : cardUrl} imageAlt={p.story} label={p.card && !p.poll_options?.length ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />
         )}
       </div>
       {p.short && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--border)' }}>
-          <div style={{ fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap', color: 'var(--text2)' }}>{p.short}</div>
+          <DraftText editing={editing} value={short} onChange={setShort} style={{ fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap', color: 'var(--text2)' }} />
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: p.short.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{p.short.length} / 300</span>
-            <CopyButton text={p.short} />
-            {p.short.length <= 300 && <PostButton platform="bluesky" story={p.story} pulse={p.pulse} text={p.short} imageUrl={cardUrl} imageAlt={p.story} label="Post to Bluesky" color="#2E86EA" />}
+            <span style={{ fontSize: 11, fontWeight: 600, color: short.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{short.length} / 300</span>
+            <CopyButton text={short} />
+            {short.length <= 300 && <PostButton platform="bluesky" story={p.story} pulse={p.pulse} text={short} imageUrl={cardUrl} imageAlt={p.story} label="Post to Bluesky" color="#2E86EA" />}
           </div>
         </div>
       )}
       {!p.poll_options?.length && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
           <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1877F2' }}>📘 Facebook</span>
-          <CopyButton text={fbText(p.text, p.short)} />
-          <PostButton platform="facebook" story={p.story} pulse={p.pulse} text={fbText(p.text, p.short)} imageUrl={cardUrl} imageAlt={p.story} label="Post to Facebook" color="#1877F2" />
+          <CopyButton text={fbText(text, short)} />
+          <PostButton platform="facebook" story={p.story} pulse={p.pulse} text={fbText(text, short)} imageUrl={cardUrl} imageAlt={p.story} label="Post to Facebook" color="#1877F2" />
         </div>
       )}
       <CardPreview url={p.card} images={p.images} idx={imgIdx} setIdx={setImgIdx} on={withCard} setOn={setWithCard} custom={customPhoto} setCustom={setCustomPhoto} />

@@ -447,7 +447,7 @@ Draft 3-5 posts, each with "type":"coverage_data". Fewer, better: a post only ea
 - Week-over-week claims: ONLY where the data marks the change citable, expressed as the supplied multiple (\"3.3x last week's rate\") — never quote per-1k units, never build a comparison from raw totals, and if usage barely moved, don't mention last week at all.
 - Plain declarative voice. No hashtags, no emoji spam (one is fine), no exclamation marks.
 - Each post: "text" (X, NO links), "short" (Bluesky ≤300 chars, end with https://www.ratednews.com/coverage-report), "story" (short label), "pulse" 1-10 + "pulse_why".
-- Where a post is built on a ranking or comparison of 2-6 numbers, ALSO include "chart": {"title": "<max 80 chars>", "rows": [["<outlet or term>", <number>], ...], "foot": "<corpus line, max 100 chars>"} using ONLY numbers from the data. Skip chart otherwise.${steer ? `\n\nThe owner wants this angle: "${steer}"` : ''}
+- Where a post is built on a ranking or comparison of 2-6 numbers, ALSO include "chart": {"title": "<max 80 chars>", "rows": [["<label>", <number>], ...], "foot": "<corpus line, max 100 chars>"} using ONLY numbers from the data. Row labels: short display names, 14 characters max ("Independent", "NY Post", "GB News") — never parentheticals or qualifiers; the term/context belongs in the chart title. Skip chart otherwise.${steer ? `\n\nThe owner wants this angle: "${steer}"` : ''}
 
 Return JSON only: {"posts":[...]}`
 
