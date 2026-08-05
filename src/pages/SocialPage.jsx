@@ -784,6 +784,82 @@ function CoverageGenerator({ onRun }) {
   )
 }
 
+// Owner picks the story: paste a ratednews story/article link (or an
+// ingested article's original URL) and the desk drafts posts from that
+// story's full cluster — same machinery as trending, aimed by hand.
+function StoryLinkGenerator({ onRun }) {
+  const [link, setLink]   = useState('')
+  const [steer, setSteer] = useState('')
+  const [posts, setPosts] = useState(null)
+  const [busy, setBusy]   = useState(false)
+  const [error, setError] = useState('')
+  const [note, setNote]   = useState('')
+
+  async function generate() {
+    if (!link.trim() || busy) return
+    setBusy(true); setError(''); setNote(''); setPosts(null)
+    try {
+      const { data: { session } } = await db.auth.getSession()
+      const res = await fetch('/api/social-compose', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
+        body: JSON.stringify({ storyUrl: link.trim(), steer }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Generation failed')
+      setPosts(sortByPulse(json.posts || []))
+      if (json.note) setNote(json.note)
+      if (json.posts?.length) onRun?.(json.posts, 'story')
+    } catch (e) {
+      setError(e.message?.includes('Failed to fetch')
+        ? 'Connection dropped. If the run completed it will appear under Previous runs shortly.'
+        : (e.message || 'Something went wrong'))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 16 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>🎯 From a story link</div>
+      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
+        Paste a story or article link — the desk pulls that story's full coverage and drafts the post. Works with ratednews links or any article URL from our feeds.
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <input
+          value={link}
+          onChange={e => setLink(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && generate()}
+          placeholder="https://www.ratednews.com/story/…"
+          style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text)', outline: 'none' }}
+        />
+        <input
+          value={steer}
+          onChange={e => setSteer(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && generate()}
+          placeholder="Optional angle — e.g. 'lead with the fan reaction'"
+          style={{ width: '100%', boxSizing: 'border-box', background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 8, padding: '9px 12px', fontSize: 13, color: 'var(--text)', outline: 'none' }}
+        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <button onClick={generate} disabled={busy || !link.trim()} className="nav-pill" style={{ opacity: busy || !link.trim() ? 0.55 : 1, cursor: busy || !link.trim() ? 'default' : 'pointer' }}>
+            {busy ? 'Reading the coverage…' : 'Draft this story'}
+          </button>
+          {error && <span style={{ fontSize: 12, color: 'var(--red)' }}>{error}</span>}
+        </div>
+      </div>
+
+      {posts && posts.length > 0 && (
+        <div style={{ marginTop: 16 }}>
+          {posts.map((post, i) => <PostCard key={i} post={post} />)}
+        </div>
+      )}
+      {posts && posts.length === 0 && (
+        <div style={{ fontSize: 13, color: 'var(--text3)', marginTop: 12 }}>{note || "Couldn't resolve that link."}</div>
+      )}
+    </div>
+  )
+}
+
 function Composer({ onRun }) {
   const [input, setInput]     = useState('')
   const [steer, setSteer]     = useState('')
@@ -942,6 +1018,7 @@ export default function SocialPage({ user, goBack }) {
           <div>
             <TrendingGenerator onRun={recordRun} />
             <CoverageGenerator onRun={recordRun} />
+            <StoryLinkGenerator onRun={recordRun} />
             <AutopilotFeed state={scout} />
             <Composer onRun={recordRun} />
           </div>
@@ -992,7 +1069,7 @@ export default function SocialPage({ user, goBack }) {
               <div key={run.id || ri} style={{ marginBottom: 20 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)' }}>
-                    {run.mode === 'trending' ? 'trending' : run.mode === 'coverage' ? '📊 coverage' : 'composer'} · {clock(run.at)} · {timeAgo(run.at)} · {run.posts.length} posts
+                    {run.mode === 'trending' ? 'trending' : run.mode === 'coverage' ? '📊 coverage' : run.mode === 'story' ? '🎯 story link' : 'composer'} · {clock(run.at)} · {timeAgo(run.at)} · {run.posts.length} posts
                   </span>
                   {run.id && (
                     <button
