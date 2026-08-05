@@ -363,6 +363,135 @@ Label every post's "story" field and set "story_index" to the STORY number it co
 Return the JSON only.`
 }
 
+// ── Story-link generation — owner picks the story, we draft it ───────────────
+// Accepts a ratednews /story/ or /article/ link (slug ends in the article's
+// 8-char short id) or the original URL of any article we've ingested, resolves
+// it to the full cluster, and drafts posts with the same machinery as trending.
+async function resolveStoryLink(input) {
+  const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY)
+  const SELECT = 'id, title, summary, image_url, category, published_at, cluster_id, outlets(name, country)'
+  let anchor = null
+  const m = String(input).match(/-([0-9a-f]{8})(?:[/?#].*)?$/i)
+  if (m) {
+    const pfx = m[1].toLowerCase()
+    const { data } = await supabase.from('articles').select(SELECT)
+      .gte('id', `${pfx}-0000-0000-0000-000000000000`)
+      .lte('id', `${pfx}-ffff-ffff-ffff-ffffffffffff`)
+      .limit(1).maybeSingle()
+    anchor = data
+  }
+  if (!anchor && /^https?:\/\//i.test(String(input).trim())) {
+    const { data } = await supabase.from('articles').select(SELECT)
+      .eq('url', String(input).trim()).limit(1).maybeSingle()
+    anchor = data
+  }
+  if (!anchor) return null
+
+  let members = [anchor]
+  if (anchor.cluster_id) {
+    const { data: cluster } = await supabase.from('articles').select(SELECT)
+      .eq('cluster_id', anchor.cluster_id)
+      .order('published_at', { ascending: false })
+      .limit(60)
+    if (cluster?.length) members = cluster
+  }
+
+  const c = {
+    headlines: [], outlets: new Set(), countries: new Set(),
+    category: anchor.category || null,
+    newest: members[0].published_at, oldest: members[0].published_at,
+    storyUrl: `${URL}/story/${articleSlug(anchor.title, anchor.id)}`,
+  }
+  for (const a of members) {
+    const name = a.outlets?.name
+    if (!name) continue
+    if (a.published_at < c.oldest) c.oldest = a.published_at
+    if (a.published_at > c.newest) c.newest = a.published_at
+    if (!c.outlets.has(name)) {
+      c.outlets.add(name)
+      c.countries.add(a.outlets?.country || 'International')
+      c.headlines.push({ outlet: name, title: a.title, summary: (a.summary || '').slice(0, 220) })
+    }
+    if (a.image_url) {
+      const u = String(a.image_url).replace(/&amp;/g, '&')
+      if (/^https?:\/\//.test(u)) {
+        c.imageUrls = c.imageUrls || []
+        if (c.imageUrls.length < 8 && !c.imageUrls.includes(u)) c.imageUrls.push(u)
+        if (!c.imageUrl) c.imageUrl = u
+      }
+    }
+  }
+  c.liveEvent = c.headlines.some(h => /\blive\b|as it happens|live updates|live blog|liveblog/i.test(h.title || ''))
+  return c.headlines.length ? c : null
+}
+
+export async function generateStoryBatch(link, steer = '') {
+  const c = await resolveStoryLink(link)
+  if (!c) return { posts: [], note: "Couldn't match that link to a story we've indexed — paste a ratednews story/article link, or an article's original URL from one of our feeds." }
+
+  const heads = c.headlines.slice(0, 8).map(h => `  - ${h.outlet}: "${h.title}"${h.summary ? `\n    detail: ${h.summary}` : ''}`).join('\n')
+  const prompt = `The owner hand-picked ONE story to post about. The full coverage picture:
+
+STORY${c.category ? ` (${c.category})` : ''}${c.liveEvent ? ' 🔴 LIVE IN PROGRESS' : ''} — ${c.outlets.size} outlet${c.outlets.size === 1 ? '' : 's'} in our sample (INTERNAL signal — never state outlet counts in posts) — first covered ${ago(c.oldest)} · latest ${ago(c.newest)}:
+${heads}
+  Coverage page (Bluesky "short" variant ONLY — never in the X text): ${c.storyUrl}
+
+Draft the "news" post for this story — report it the way a top breaking-news account would. If (and ONLY if) two of its verbatim headlines clash hard enough that a stranger would stop scrolling, ALSO draft a "coverage_contrast" post for it. Give every post an honest pulse.${steer ? `\n\nThe owner wants this angle/tone — honour it (while keeping the one hard neutrality line intact): "${steer}"` : ''}
+
+Return the JSON only.`
+
+  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  const msg = await client.messages.create({
+    model: MODEL,
+    max_tokens: 7000,
+    system: SYSTEM,
+    messages: [{ role: 'user', content: prompt }],
+  })
+  const text = msg.content.filter(b => b.type === 'text').map(b => b.text).join('')
+  const start = text.indexOf('{'), end = text.lastIndexOf('}')
+  if (start === -1 || end === -1) throw new Error('Bad model output')
+  const parsed = JSON.parse(text.slice(start, end + 1))
+  if (!Array.isArray(parsed.posts) || !parsed.posts.length) throw new Error('No posts returned')
+
+  for (const p of parsed.posts) {
+    p.pulse = Number.isFinite(+p.pulse) ? Math.max(1, Math.min(10, Math.round(+p.pulse))) : null
+    if (typeof p.short === 'string' && p.short.length > 300) {
+      const stripped = p.short.replace(/\s*https?:\/\/\S+\s*$/, '').trim()
+      if (stripped.length <= 300) p.short = stripped
+    }
+    p.story = p.story || (c.headlines[0]?.title || '').slice(0, 60)
+    p.meta = {
+      clusterId: null,
+      outlets: c.outlets.size,
+      breaking: false,
+      update: null,
+      grown: false,
+      category: c.category,
+      regional: false,
+      liveEvent: c.liveEvent,
+      title: c.headlines[0]?.title || '',
+      first: ago(c.oldest),
+      newest: ago(c.newest),
+    }
+    p.auto = evaluateAutoGates(p, p.meta)
+    p.card = null
+    if (p.type === 'coverage_contrast' && p.contrast?.a_outlet && p.contrast?.a_headline && p.contrast?.b_outlet && p.contrast?.b_headline) {
+      const cq = new URLSearchParams({
+        type: 'clash',
+        ao: p.contrast.a_outlet.slice(0, 40),
+        aq: p.contrast.a_headline.slice(0, 160),
+        bo: p.contrast.b_outlet.slice(0, 40),
+        bq: p.contrast.b_headline.slice(0, 160),
+      })
+      p.card = `${URL}/api/social-card?${cq}`
+    } else if (c.imageUrl) {
+      p.card = c.imageUrl
+      p.images = c.imageUrls || [c.imageUrl]
+    }
+  }
+  return { posts: parsed.posts }
+}
+
 // ── Real-engagement calibration ──────────────────────────────────────────────
 // The feedback loop: /api/social-metrics stores actual like/repost/reply
 // counts for published posts. The prompt shows the model its recent winners
@@ -587,9 +716,10 @@ export default async function handler(req, res) {
 
   const isTrending = req.body?.trending === true
   const isCoverage = req.body?.coverage === true
+  const storyLink  = (req.body?.storyUrl || '').toString().trim().slice(0, 400)
   const headlines  = (req.body?.headlines || '').toString().trim()
   const steer      = (req.body?.steer || '').toString().trim().slice(0, 300)
-  if (!isTrending && !isCoverage && !headlines) return res.status(400).json({ error: 'Paste at least one headline.' })
+  if (!isTrending && !isCoverage && !storyLink && !headlines) return res.status(400).json({ error: 'Paste at least one headline.' })
   if (headlines.length > 4000) return res.status(400).json({ error: 'Too much text — trim it down.' })
 
   const steerBlock = steer
@@ -615,6 +745,12 @@ export default async function handler(req, res) {
       const batch = await generateCoverageBatch(steer)
       saveManualRun('coverage', batch.posts)
       return res.status(200).json({ posts: batch.posts, note: batch.note, dataFrom: batch.generatedAt })
+    }
+
+    if (storyLink) {
+      const batch = await generateStoryBatch(storyLink, steer)
+      saveManualRun('story', batch.posts)
+      return res.status(200).json({ posts: batch.posts, note: batch.note })
     }
 
     // Headline-compose mode — no story metadata, gates run on content alone
