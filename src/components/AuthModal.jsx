@@ -15,9 +15,20 @@ export default function AuthModal({ onClose, showToast }) {
     e.preventDefault()
     if (!email || !password) { setMessage({ type: 'error', text: 'Please enter your email and password.' }); return }
     setLoading(true); setMessage(null)
-    const { error } = await db.auth.signInWithPassword({ email, password })
+    // The signIn promise can hang behind supabase-js's auth lock even after
+    // the sign-in succeeds (the SIGNED_IN event closes this modal from _app
+    // in that case). The race keeps the button honest instead of spinning
+    // forever on "Please wait…".
+    const result = await Promise.race([
+      db.auth.signInWithPassword({ email, password }),
+      new Promise(resolve => setTimeout(() => resolve({ timedOut: true }), 12000)),
+    ])
     setLoading(false)
-    if (error) { setMessage({ type: 'error', text: error.message }); return }
+    if (result.timedOut) {
+      setMessage({ type: 'error', text: 'That took longer than it should. You may already be signed in — if this stays open, refresh the page.' })
+      return
+    }
+    if (result.error) { setMessage({ type: 'error', text: result.error.message }); return }
     showToast('Welcome back!')
     onClose()
   }
