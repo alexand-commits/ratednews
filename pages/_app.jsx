@@ -83,6 +83,15 @@ export default function App({ Component, pageProps }) {
     return () => subscription.unsubscribe()
   }, [])
 
+  // Close the auth modal on the SESSION, not just the modal's own await —
+  // supabase-js auth calls serialize behind a browser lock, and after a
+  // mobile screen-lock the signIn promise can hang forever even though the
+  // sign-in succeeded and SIGNED_IN fired (symptom: stuck modal, restart,
+  // already logged in). The event is the reliable signal; use it.
+  useEffect(() => {
+    if (session?.user) setShowAuthModal(false)
+  }, [session?.user?.id])
+
   // ── Outlets (global, used by navigate for slug generation) ─────────────
   // Cache in sessionStorage for 5 minutes — avoids a cold Supabase fetch on
   // every page load and fixes the brief '—' flash on the feed stat chip.
