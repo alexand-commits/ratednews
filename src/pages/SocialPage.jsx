@@ -67,18 +67,6 @@ const Published = createContext({ map: {}, record: () => {} })
 // so runs and drafts can be pinned to an actual moment.
 const clock = ts => ts ? new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''
 
-// The scout cron fires at :07, :22, :37, :52 — the earliest a draft can land
-// is the first tick at/after the rate window opens (generation adds a minute
-// or two, hence the "~" wherever this is shown).
-function nextScoutTick(after = Date.now()) {
-  const d = new Date(after)
-  d.setSeconds(0, 0)
-  const next = [7, 22, 37, 52].find(t => t > d.getMinutes())
-  if (next != null) d.setMinutes(next)
-  else { d.setHours(d.getHours() + 1); d.setMinutes(7) }
-  return d
-}
-
 function draftKey(story, text) {
   if (!story) return null
   let h = 5381
@@ -378,262 +366,6 @@ function PostCard({ post }) {
 
       <MetaLine post={post} />
       <CardPreview url={post.card} images={post.images} idx={imgIdx} setIdx={setImgIdx} on={withCard} setOn={setWithCard} custom={customPhoto} setCustom={setCustomPhoto} />
-    </div>
-  )
-}
-
-// ── Post queue (main column) — autopilot scouts and drafts; the owner
-// approves with the same two-tap buttons as the generators. Nothing publishes
-// itself: the scout's job ends at the draft.
-// One queue story: both platform variants, card preview + toggle, actions.
-function QueueItem({ q, dismiss }) {
-  const [withCard, setWithCard] = useState(true)
-  const [imgIdx, setImgIdx] = useState(0)
-  const [customPhoto, setCustomPhoto] = useState(null) // owner-uploaded photo overrides the story pool
-  const [editing, setEditing] = useState(false)
-  const [qx, setQx] = useState(q.x || '')
-  const [qb, setQb] = useState(q.bluesky || '')
-  const [qf, setQf] = useState(q.facebook || '')
-  const pool = q.images?.length ? q.images : q.card ? [q.card] : []
-  const cardUrl = withCard ? (customPhoto || (pool.length ? pool[Math.min(imgIdx, pool.length - 1)] : undefined)) : undefined
-  return (
-    <div style={{ background: 'var(--bg)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--coral)' }}>
-          {q.live ? '✅ posted' : '🕐 drafted'} {clock(q.at)} · {timeAgo(q.at)}
-        </span>
-        <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text2)' }}>· {q.story}</span>
-        {Number.isFinite(q.pulse) && (
-          <span style={{ fontSize: 11, fontWeight: 700, color: q.pulse >= 8 ? 'var(--coral)' : 'var(--amber, #C98A08)' }}>
-            {q.pulse >= 8 ? '🔥 ' : ''}pulse {q.pulse}/10
-          </span>
-        )}
-        {q.url && <a href={q.url} target="_blank" rel="noopener noreferrer" style={{ fontSize: 11, color: 'var(--coral)' }}>view →</a>}
-        {!q.live && <span style={{ marginLeft: 'auto' }}><EditToggle editing={editing} setEditing={setEditing} /></span>}
-        {!q.live && (
-          <button
-            onClick={() => dismiss(q.story)}
-            title="Dismiss — removes this draft from the queue (the story won't be re-drafted)"
-            style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', background: 'none', border: '0.5px solid var(--border)', borderRadius: 99, padding: '2px 10px', cursor: 'pointer' }}
-          >
-            ✕ Dismiss
-          </button>
-        )}
-      </div>
-
-      {q.x && (
-        <>
-          <DraftText editing={editing && !q.live} value={qx} onChange={setQx} style={{ fontSize: 14, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: 'var(--text)' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{qx.length} chars</span>
-            <CopyButton text={qx} />
-            {!q.live && <PostButton platform="x" story={q.story} pulse={q.pulse} text={qx} imageUrl={cardUrl} imageAlt={q.alt} label={q.card ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />}
-          </div>
-        </>
-      )}
-
-      {q.bluesky && (
-        <div style={{ marginTop: q.x ? 12 : 0, paddingTop: q.x ? 12 : 0, borderTop: q.x ? '0.5px solid var(--border)' : 'none' }}>
-          <DraftText editing={editing && !q.live} value={qb} onChange={setQb} style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: q.x ? 'var(--text2)' : 'var(--text)' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: qb.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{qb.length} / 300</span>
-            <CopyButton text={qb} />
-            {!q.live && qb.length <= 300 && <PostButton platform="bluesky" story={q.story} pulse={q.pulse} text={qb} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Bluesky" color="#2E86EA" />}
-          </div>
-        </div>
-      )}
-
-      {q.facebook && (
-        <div style={{ marginTop: (q.x || q.bluesky) ? 12 : 0, paddingTop: (q.x || q.bluesky) ? 12 : 0, borderTop: (q.x || q.bluesky) ? '0.5px solid var(--border)' : 'none' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-            <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1877F2' }}>📘 Facebook</span>
-            <CopyButton text={qf} />
-            {!q.live && <PostButton platform="facebook" story={q.story} pulse={q.pulse} text={qf} imageUrl={cardUrl} imageAlt={q.alt} label="Post to Facebook" color="#1877F2" />}
-          </div>
-          {editing && !q.live && <DraftText editing value={qf} onChange={setQf} style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: 'var(--text2)', marginTop: 8 }} />}
-        </div>
-      )}
-
-      <CardPreview url={q.card} images={q.images} idx={imgIdx} setIdx={setImgIdx} on={withCard} setOn={setWithCard} custom={customPhoto} setCustom={setCustomPhoto} />
-    </div>
-  )
-}
-
-// A gated draft awaiting the owner's judgment — full text, reason, card, actions.
-function JudgmentItem({ p, dismiss }) {
-  const [withCard, setWithCard] = useState(true)
-  const [imgIdx, setImgIdx] = useState(0)
-  const [customPhoto, setCustomPhoto] = useState(null) // owner-uploaded photo overrides the story pool
-  const [editing, setEditing] = useState(false)
-  const [text, setText] = useState(p.text || '')
-  const [short, setShort] = useState(p.short || '')
-  const pool = p.images?.length ? p.images : p.card ? [p.card] : []
-  const cardUrl = withCard ? (customPhoto || (pool.length ? pool[Math.min(imgIdx, pool.length - 1)] : undefined)) : undefined
-  return (
-    <div style={{ background: 'var(--bg)', border: '0.5px dashed var(--border2)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text2)' }}>
-          {(TYPE_META[p.type] || {}).emoji || '✳️'} {p.story}
-        </span>
-        {Number.isFinite(p.pulse) && (
-          <span style={{ fontSize: 10, fontWeight: 700, color: p.pulse >= 8 ? 'var(--coral)' : p.pulse >= 6 ? 'var(--amber, #C98A08)' : 'var(--text3)' }}>
-            pulse {p.pulse}/10
-          </span>
-        )}
-        <span style={{ fontSize: 10, color: 'var(--amber, #C98A08)', fontWeight: 600 }} title={`X: ${p.x} · Bluesky: ${p.bluesky}`}>
-          {p.x === p.bluesky ? p.x : `X: ${p.x}`}
-        </span>
-        <span style={{ marginLeft: 'auto' }}><EditToggle editing={editing} setEditing={setEditing} /></span>
-        <button
-          onClick={() => dismiss(p.story)}
-          style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)', background: 'none', border: '0.5px solid var(--border)', borderRadius: 99, padding: '2px 10px', cursor: 'pointer' }}
-        >
-          ✕ Dismiss
-        </button>
-      </div>
-      <DraftText editing={editing} value={text} onChange={setText} style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: 'pre-wrap', color: 'var(--text)' }} />
-      {p.poll_options?.length > 0 && (
-        <div style={{ display: 'flex', gap: 6, marginTop: 8, flexWrap: 'wrap' }}>
-          {p.poll_options.map((o, k) => (
-            <span key={k} style={{ fontSize: 12, padding: '4px 12px', border: '0.5px solid var(--border)', borderRadius: 99, color: 'var(--text2)' }}>{o}</span>
-          ))}
-        </div>
-      )}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-        <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text3)' }}>{text.length} chars</span>
-        <CopyButton text={text} />
-        {!/https?:\/\/|www\./i.test(text) && (
-          <PostButton platform="x" story={p.story} pulse={p.pulse} text={text} pollOptions={p.poll_options || undefined} imageUrl={p.poll_options?.length ? undefined : cardUrl} imageAlt={p.story} label={p.card && !p.poll_options?.length ? 'Post to X · 2¢' : 'Post to X · 1.5¢'} color="var(--coral)" />
-        )}
-      </div>
-      {p.short && (
-        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '0.5px solid var(--border)' }}>
-          <DraftText editing={editing} value={short} onChange={setShort} style={{ fontSize: 12, lineHeight: 1.5, whiteSpace: 'pre-wrap', color: 'var(--text2)' }} />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 6 }}>
-            <span style={{ fontSize: 11, fontWeight: 600, color: short.length > 300 ? 'var(--red)' : 'var(--text3)' }}>{short.length} / 300</span>
-            <CopyButton text={short} />
-            {short.length <= 300 && <PostButton platform="bluesky" story={p.story} pulse={p.pulse} text={short} imageUrl={cardUrl} imageAlt={p.story} label="Post to Bluesky" color="#2E86EA" />}
-          </div>
-        </div>
-      )}
-      {!p.poll_options?.length && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 8 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1877F2' }}>📘 Facebook</span>
-          <CopyButton text={fbText(text, short)} />
-          <PostButton platform="facebook" story={p.story} pulse={p.pulse} text={fbText(text, short)} imageUrl={cardUrl} imageAlt={p.story} label="Post to Facebook" color="#1877F2" />
-        </div>
-      )}
-      <CardPreview url={p.card} images={p.images} idx={imgIdx} setIdx={setImgIdx} on={withCard} setOn={setWithCard} custom={customPhoto} setCustom={setCustomPhoto} />
-    </div>
-  )
-}
-
-function AutopilotFeed({ state }) {
-  const [localDismissed, setLocalDismissed] = useState([])
-
-  if (!state || state.error || !state.configured) return null
-
-  async function dismiss(story) {
-    setLocalDismissed(prev => [...prev, story]) // optimistic
-    try {
-      const { data: { session } } = await db.auth.getSession()
-      await fetch('/api/social-auto', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` },
-        body: JSON.stringify({ story }),
-      })
-    } catch {}
-  }
-
-  const hidden = new Set([...(state.dismissed || []).map(d => d.story), ...localDismissed])
-
-  // Build the queue: newest drafts first, one card per story. Trending content
-  // is perishable — a 2h-old surge isn't trending any more, so drafts expire
-  // out of the queue instead of lingering (runs are still kept 7 days).
-  const QUEUE_MAX_AGE_H = 2
-  const queue = []
-  const seenStories = new Set()
-  for (const r of state.runs) { // runs arrive newest-first
-    const entries = [...(r.posted || []).map(p => ({ ...p, live: true })), ...(r.wouldPost || [])]
-    const byStory = new Map()
-    for (const p of entries) {
-      if (!byStory.has(p.story)) byStory.set(p.story, { story: p.story, at: r.at, x: null, bluesky: null, facebook: null, url: null, live: false, card: null, alt: '', pulse: p.pulse ?? null })
-      const g = byStory.get(p.story)
-      g[p.platform] = p.text
-      if (p.card) { g.card = p.card; g.alt = p.alt || p.story }
-      if (p.images?.length) g.images = p.images
-      if (p.live) { g.live = true; g.url = p.url || g.url }
-    }
-    for (const [story, g] of byStory) {
-      if (seenStories.has(story)) continue
-      seenStories.add(story)
-      if (hidden.has(story)) continue
-      if ((Date.now() - new Date(g.at)) / 3600000 <= QUEUE_MAX_AGE_H) queue.push(g)
-    }
-  }
-
-  // When could the next draft realistically land? A queue run needs at least
-  // one platform's rate window open, then the next cron tick to find a story
-  // surging. Windows come from the server (same maths as the real gate).
-  const windows = state.nextWindow ? Object.values(state.nextWindow) : []
-  const rateLimited = windows.length > 0 && windows.every(Boolean)
-  const eta = nextScoutTick(rateLimited ? Math.min(...windows.map(w => +new Date(w))) : Date.now())
-
-  return (
-    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 24 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 4, flexWrap: 'wrap' }}>
-        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>📥 Post queue</div>
-        <span style={{ fontSize: 11, color: 'var(--text3)' }}>
-          the scout drafts, you decide — it never posts itself
-        </span>
-        {state.heartbeat && (
-          <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }} title={state.heartbeat.last_result || ''}>
-            ● last checked {timeAgo(state.heartbeat.at)} · {state.heartbeat.checks_today} check{state.heartbeat.checks_today === 1 ? '' : 's'} today
-          </span>
-        )}
-      </div>
-      <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>
-        Drafts land here within ~15 min of a story surging and expire after 2 hours — trending doesn't keep. Two taps to publish; ✕ to bin.{' '}
-        {rateLimited
-          ? <strong>Rate-limited right now — earliest next draft ~{clock(eta)}.</strong>
-          : <>Next scout pass ~{clock(eta)} — a draft drops if a story is surging.</>}
-      </div>
-
-      {queue.length === 0 ? (
-        <div style={{ fontSize: 13, color: 'var(--text3)', padding: '8px 0' }}>
-          Nothing trending right now — drafts expire after 2 hours, so an empty queue means no story is surging.
-          {state.heartbeat ? ` Last check ${timeAgo(state.heartbeat.at)}: ${state.heartbeat.last_result || 'nothing new'}.` : ' The scout keeps watching.'}
-        </div>
-      ) : queue.slice(0, 8).map((q, i) => <QueueItem key={q.story + i} q={q} dismiss={dismiss} />)}
-
-      {/* Manual-call drafts — fully written, gated for judgment not hidden. */}
-      {(() => {
-        const isActed = v => v === 'ok' || v === 'POSTED' || String(v || '').startsWith('WOULD POST')
-        const manual = []
-        const seen = new Set(seenStories)
-        for (const r of state.runs) {
-          for (const p of r.posts || []) {
-            // Contrast posts and their news twins share a story label — key on
-            // story+type so both variants can surface for the owner's pick.
-            const key = `${p.story}::${p.type}`
-            if (seen.has(key) || hidden.has(p.story)) continue
-            if (isActed(p.x) || isActed(p.bluesky)) continue
-            if ((Date.now() - new Date(r.at)) / 3600000 > QUEUE_MAX_AGE_H) continue
-            seen.add(key)
-            manual.push({ ...p, at: r.at })
-          }
-        }
-        if (!manual.length) return null
-        return (
-          <div style={{ marginTop: 4, marginBottom: 10 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.04em', textTransform: 'uppercase', color: 'var(--text3)', margin: '10px 0 8px' }}>
-              🖐 Your call — drafted, but gated for judgment
-            </div>
-            {manual.slice(0, 5).map((p, i) => <JudgmentItem key={p.story + i} p={p} dismiss={dismiss} />)}
-          </div>
-        )
-      })()}
-
     </div>
   )
 }
@@ -947,6 +679,14 @@ export default function SocialPage({ user, goBack }) {
     } catch (e) { setScout({ error: e.message }) }
   }
   useEffect(() => { if (isOwner) loadScout() }, [isOwner])
+  // Long-lived tabs (phone especially) were showing weeks-stale desk data —
+  // refetch whenever the tab returns to the foreground.
+  useEffect(() => {
+    if (!isOwner) return
+    const onVis = () => { if (document.visibilityState === 'visible') loadScout() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [isOwner])
   // After a manual generation, refetch so the run lands in server history.
   const recordRun = () => setTimeout(loadScout, 1500)
 
@@ -1019,7 +759,6 @@ export default function SocialPage({ user, goBack }) {
             <TrendingGenerator onRun={recordRun} />
             <CoverageGenerator onRun={recordRun} />
             <StoryLinkGenerator onRun={recordRun} />
-            <AutopilotFeed state={scout} />
             <Composer onRun={recordRun} />
           </div>
 

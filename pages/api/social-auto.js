@@ -15,9 +15,8 @@
  *   AUTO_POST_BLUESKY   — 'live' publishes to Bluesky; anything else = dry-run
  */
 import { createClient } from '@supabase/supabase-js'
-import { generateTrendingBatch, trendingStories } from './social-compose'
-import { postToX, postToBluesky, postToFacebook } from './social-post'
-import { AUTO_RATE_LIMITS, FLUFF_RE, BAIT_RE, isPromo } from '../../src/server/social-gates'
+import { trendingStories } from './social-compose'
+import { FLUFF_RE, BAIT_RE, isPromo } from '../../src/server/social-gates'
 
 // Story-level approximation of the post gates, used by the cheap pre-check
 // (before any Claude spend). Post-level gates still run after generation.
@@ -93,76 +92,6 @@ async function getHeartbeat(svc) {
   return data?.pack || null
 }
 
-async function recentRuns(svc, limit = 40) {
-  // 7 days — the queue persists until dismissed/posted, so the desk needs
-  // more than a day of drafts. Rate checks filter to 24h internally.
-  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
-  const { data } = await svc.from('social_drafts')
-    .select('created_at, pack')
-    .eq('pack->>kind', 'auto_run')
-    .gte('created_at', since)
-    .order('created_at', { ascending: false })
-    .limit(limit)
-  return data || []
-}
-
-// Everything the bot has published — or, in dry-run, WOULD have published.
-// Would-posts count exactly like posts so the dry-run history is a faithful
-// simulation of live behaviour (rate limits, story cool-downs) rather than
-// firing on every trigger.
-function postedLike(runs, platform) {
-  const out = []
-  for (const r of runs) {
-    for (const p of [...(r.pack?.posted || []), ...(r.pack?.wouldPost || [])]) {
-      if (p.platform === platform) out.push({ ...p, at: p.at || r.created_at })
-    }
-  }
-  return out
-}
-
-function rateCheck(platform, runs) {
-  const limits = AUTO_RATE_LIMITS[platform]
-  const dayAgo = Date.now() - 24 * 60 * 60 * 1000
-  const posted = postedLike(runs, platform).filter(p => new Date(p.at) >= dayAgo)
-  if (posted.length >= limits.maxPerDay) return `daily cap (${limits.maxPerDay}) reached`
-  const latest = posted.map(p => new Date(p.at)).sort((a, b) => b - a)[0]
-  if (latest && (Date.now() - latest) < limits.minGapMin * 60000) {
-    return `min gap ${limits.minGapMin}min not elapsed`
-  }
-  return null
-}
-
-// When each platform's auto rate window reopens — null = open now. Same maths
-// as rateCheck, but returns the timestamp so the desk can show an honest
-// "earliest next draft" time instead of leaving the owner guessing.
-function rateOpenAt(platform, runs) {
-  const limits = AUTO_RATE_LIMITS[platform]
-  const dayAgo = Date.now() - 24 * 60 * 60 * 1000
-  const posted = postedLike(runs, platform)
-    .filter(p => new Date(p.at) >= dayAgo)
-    .sort((a, b) => new Date(b.at) - new Date(a.at))
-  let t = 0
-  if (posted.length >= limits.maxPerDay) t = +new Date(posted[limits.maxPerDay - 1].at) + 24 * 60 * 60 * 1000
-  if (posted[0]) t = Math.max(t, +new Date(posted[0].at) + limits.minGapMin * 60000)
-  return t > Date.now() ? new Date(t).toISOString() : null
-}
-
-// Story-level cool-down: the same story may not be auto-picked twice within
-// 6h, updates included — a big development inside that window is exactly the
-// kind of post the owner fires manually from the desk.
-const STORY_COOLDOWN_H = 6
-function recentClusterIds(runs) {
-  const cutoff = Date.now() - STORY_COOLDOWN_H * 3600000
-  const ids = new Set()
-  for (const r of runs) {
-    for (const p of [...(r.pack?.posted || []), ...(r.pack?.wouldPost || [])]) {
-      const at = new Date(p.at || r.created_at)
-      if (at >= cutoff && p.clusterId != null) ids.add(p.clusterId)
-    }
-  }
-  return ids
-}
-
 export default async function handler(req, res) {
   // ── GET: desk panel data (owner auth) ─────────────────────────────────────
   if (req.method === 'GET') {
@@ -170,7 +99,6 @@ export default async function handler(req, res) {
 
     const configured = !!process.env.SOCIAL_AUTO_SECRET
     const svcG = configured && process.env.SUPABASE_SERVICE_ROLE_KEY ? svcClient() : null
-    const runs = svcG ? await recentRuns(svcG) : []
     const heartbeat = svcG ? await getHeartbeat(svcG) : null
     const dismissed = svcG ? ((await getDismissedRow(svcG))?.pack?.stories || []) : []
     let manualRuns = []
@@ -195,15 +123,6 @@ export default async function handler(req, res) {
       published,
       metrics,
       manualRuns,
-      nextWindow: svcG ? {
-        x:        rateOpenAt('x', runs),
-        bluesky:  rateOpenAt('bluesky', runs),
-        facebook: rateOpenAt('facebook', runs),
-      } : null,
-      mode: {
-        x:       process.env.AUTO_POST_X === 'live' ? 'live' : 'dry',
-        bluesky: process.env.AUTO_POST_BLUESKY === 'live' ? 'live' : 'dry',
-      },
       runs: runs.map(r => ({ at: r.created_at, ...r.pack })),
     })
   }
@@ -268,165 +187,57 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Forbidden' })
   }
 
-  const liveX = process.env.AUTO_POST_X === 'live'
-  const liveB = process.env.AUTO_POST_BLUESKY === 'live'
   const svc = svcClient()
 
   try {
-    const runs = await recentRuns(svc)
+    // ── Detector-only (queue retired 15 Aug 2026): no Claude calls, no
+    // drafts, no queue. The owner rarely used the queue; the valuable part
+    // was knowing WHEN something surges. The cron now just watches: when a
+    // genuinely surging story passes the content gates, it pings the owner's
+    // phone (ntfy) and the owner drafts on the desk — trending, story-link
+    // or composer. Zero generation spend.
+    const candidates = (await trendingStories({ lean: true })).filter(storyAutoEligible)
 
-    // ── Cheap pre-check (no Claude spend): is there anything NEW worth a run? ─
-    // The cron fires every 15 min for reaction speed; generation only happens
-    // when a rate-open platform has a gate-passing, not-yet-served story.
-    const rateOpen = {
-      x:        !rateCheck('x', runs),
-      bluesky:  !rateCheck('bluesky', runs),
-      facebook: !rateCheck('facebook', runs),
-    }
-    const coolingIds = recentClusterIds(runs)
-    const candidates = (await trendingStories({ lean: true }))
-      .filter(s => !coolingIds.has(s.clusterId))
-    const trigger = (rateOpen.x || rateOpen.bluesky || rateOpen.facebook) && candidates.some(s => storyAutoEligible(s))
-    if (!trigger) {
-      // Nothing new and postable — no run pack, but the heartbeat proves the
-      // scout checked.
-      const reason = !rateOpen.x && !rateOpen.bluesky && !rateOpen.facebook ? 'rate limits' : 'no new eligible story'
-      await beatHeart(svc, `checked — ${reason}`)
-      return res.status(200).json({ ok: true, trigger: false, reason })
-    }
+    // Surge bar — deliberately high; this is an interruption channel:
+    // breaking tier, or wide pickup across the press.
+    const surging = candidates.filter(c => c.breaking || c.outlets.size >= 8)
 
-    const batch = await generateTrendingBatch()
+    // 6h don't-re-alert memory, keyed by (now stable) cluster ids.
+    const { data: alertRow } = await svc.from('social_drafts')
+      .select('id, pack').eq('pack->>kind', 'alert_log').limit(1).maybeSingle()
+    const cutoff = Date.now() - 6 * 60 * 60 * 1000
+    const past = (alertRow?.pack?.entries || []).filter(e => new Date(e.at) >= cutoff)
+    const seen = new Set(past.map(e => e.clusterId))
+    const fresh = surging.filter(c => !seen.has(c.clusterId))
 
-    // Owner phone alert (ntfy.sh) — only for drafts worth interrupting for:
-    // pulse ≥ 8 or breaking-tier, with at least one gate-passing platform.
-    // The pipeline drafts within ~15 min of a surge; this closes the last
-    // latency gap, the owner not knowing a hot draft landed.
-    if (process.env.NTFY_TOPIC) {
-      const hot = (batch.posts || []).filter(p =>
-        (p.auto?.x === 'ok' || p.auto?.bluesky === 'ok' || p.auto?.facebook === 'ok') &&
-        ((p.pulse ?? 0) >= 8 || p.meta?.breaking))
-      if (hot.length) {
-        try {
-          await fetch(`https://ntfy.sh/${process.env.NTFY_TOPIC}`, {
-            method: 'POST',
-            headers: {
-              Title: `${hot.length} hot draft${hot.length > 1 ? 's' : ''} on the desk`,
-              Click: 'https://www.ratednews.com/social',
-              Priority: 'high',
-              Tags: 'fire',
-            },
-            body: hot.slice(0, 3).map(p => `${p.pulse ?? '—'}/10${p.meta?.breaking ? ' ⚡' : ''} · ${p.story}`).join('\n'),
-          })
-        } catch (e) { console.warn('[social-auto] ntfy alert failed:', e.message) }
-      }
+    if (fresh.length && process.env.NTFY_TOPIC) {
+      try {
+        await fetch(`https://ntfy.sh/${process.env.NTFY_TOPIC}`, {
+          method: 'POST',
+          headers: {
+            Title: fresh.length > 1 ? `${fresh.length} stories surging` : 'Story surging',
+            Click: 'https://www.ratednews.com/social',
+            Priority: 'high',
+            Tags: 'fire',
+          },
+          body: fresh.slice(0, 3).map(c => `${c.breaking ? '⚡ ' : ''}${c.headlines[0]?.title || 'story'}`).join('\n'),
+        })
+      } catch (e) { console.warn('[social-auto] ntfy alert failed:', e.message) }
     }
 
-    const decisions = (batch.posts || []).map(p => ({
-      story: p.story,
-      type: p.type,
-      preview: (p.text || '').slice(0, 140),
-      x: p.auto?.x,
-      bluesky: p.auto?.bluesky,
-      facebook: p.auto?.facebook,
-      pulse: p.pulse ?? null,
-      meta: p.meta ? { outlets: p.meta.outlets, breaking: p.meta.breaking, update: !!p.meta.update, first: p.meta.first } : null,
-    }))
-    const posted = []
-    const wouldPost = []
-
-    // ONE story per drafting run, drafted for EVERY platform whose gate
-    // passes — a queue card should carry both the X and Bluesky variants.
-    // Batch is hottest-first; skip cool-down stories, prefer fresh over ↻.
-    // Queue bar: pulse >= 7. Gate-passing but socially inert drafts stay in
-    // "Your call" — the owner can still post them, the scout won't push them.
-    const eligible = (batch.posts || [])
-      .filter(p =>
-        (p.auto?.x === 'ok' || p.auto?.bluesky === 'ok' || p.auto?.facebook === 'ok') &&
-        !coolingIds.has(p.meta?.clusterId) &&
-        (p.pulse ?? 7) >= 7)
-      .sort((a, b) => (b.pulse ?? 0) - (a.pulse ?? 0))
-    const candidate = eligible.find(p => !p.meta?.update) || eligible[0]
-    if (candidate) {
-      const d = decisions[batch.posts.indexOf(candidate)]
-      // Facebook variant: the X copy plus the story link (lifted from the
-      // Bluesky short) — FB welcomes links and renders a preview card.
-      const fbTextOf = p => {
-        const link = (p.short || '').match(/https?:\/\/\S+/)
-        return link ? `${p.text}\n\n${link[0]}` : p.text
-      }
-      for (const [platform, live, textOf] of [
-        ['x',        liveX, p => p.text],
-        ['bluesky',  liveB, p => p.short],
-        ['facebook', false, fbTextOf],
-      ]) {
-        if (candidate.auto?.[platform] !== 'ok') continue
-        const entry = {
-          platform,
-          story: candidate.story,
-          pulse: candidate.pulse ?? null,
-          clusterId: candidate.meta?.clusterId ?? null,
-          text: textOf(candidate),
-          card: candidate.card || null,
-          images: candidate.images || null,
-          alt: candidate.meta?.title || candidate.story || '',
-          at: new Date().toISOString(),
-        }
-        if (!live) {
-          d[platform] = 'WOULD POST (dry-run)'
-          wouldPost.push(entry)
-          continue
-        }
-        try {
-          const out = platform === 'x'
-            ? await postToX(textOf(candidate), undefined, candidate.card || undefined)
-            : platform === 'facebook'
-              ? await postToFacebook(textOf(candidate), candidate.card || undefined)
-              : await postToBluesky(textOf(candidate), candidate.card || undefined, entry.alt)
-          d[platform] = 'POSTED'
-          posted.push({ ...entry, url: out.url })
-        } catch (e) {
-          d[platform] = `post failed: ${e.message}`
-        }
-      }
+    if (fresh.length) {
+      const entries = [...past, ...fresh.map(c => ({ clusterId: c.clusterId, at: new Date().toISOString() }))]
+      const pack = { kind: 'alert_log', entries }
+      if (alertRow) await svc.from('social_drafts').update({ pack }).eq('id', alertRow.id)
+      else await svc.from('social_drafts').insert({ pack })
     }
 
-    const pack = {
-      kind: 'auto_run',
-      mode: { x: liveX ? 'live' : 'dry', bluesky: liveB ? 'live' : 'dry' },
-      note: batch.note || null,
-      decisions,
-      posted,
-      wouldPost,
-      // Full drafts of EVERY generated post — gated ones included. The desk
-      // shows manual-call drafts with their reasons; a gate means "the owner
-      // decides", not "the owner never sees it". Generation was paid for.
-      posts: (batch.posts || []).map((p, i) => ({
-        story: p.story,
-        type: p.type,
-        text: p.text,
-        short: p.short || null,
-        poll_options: p.poll_options || null,
-        card: p.card || null,
-        images: p.images || null,
-        why: p.why || null,
-        x: decisions[i]?.x,
-        bluesky: decisions[i]?.bluesky,
-        facebook: decisions[i]?.facebook,
-        pulse: p.pulse ?? null,
-        meta: decisions[i]?.meta || null,
-      })),
-    }
-    await svc.from('social_drafts').insert({ pack })
-    await beatHeart(svc, posted.length ? 'posted' : wouldPost.length ? 'drafted to queue' : 'generated — nothing cleared the pulse bar')
-    // Prune old auto_run packs alongside the seen_stories prune cadence
-    svc.from('social_drafts').delete().eq('pack->>kind', 'auto_run')
-      .lt('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()).then(() => {})
-
-    return res.status(200).json({ ok: true, posted: posted.length, wouldPost: wouldPost.length, decisions })
+    await beatHeart(svc, fresh.length
+      ? `alerted: ${fresh.slice(0, 2).map(c => (c.headlines[0]?.title || '').slice(0, 40)).join(' · ')}`
+      : 'checked — nothing surging')
+    return res.status(200).json({ ok: true, surging: fresh.length })
   } catch (err) {
     console.error('[social-auto]', err)
-    // Log failed runs too, so the desk panel shows gaps honestly
-    try { await svc.from('social_drafts').insert({ pack: { kind: 'auto_run', error: err.message, decisions: [], posted: [], wouldPost: [] } }) } catch {}
-    return res.status(500).json({ error: err.message || 'Auto run failed' })
+    return res.status(500).json({ error: err.message || 'Detector run failed' })
   }
 }
