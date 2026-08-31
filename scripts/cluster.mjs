@@ -10,8 +10,8 @@
  * accurate count — without guessing from whatever happens to be loaded in memory.
  *
  * cluster_peers shape (stored on every article in a cluster):
- *   [{ id, outlet_id, outlets: { name, logo_url } }, ...]
- *   — exactly the fields NewsCard needs for bias dots and article links.
+ *   [{ id, outlet_id, outlets: { name } }, ...]
+ *   — exactly the fields NewsCard needs (logos render from the name).
  *
  * Algorithm:
  *   1. Fetch all articles from the last CLUSTER_WINDOW_HOURS
@@ -92,24 +92,32 @@ async function main() {
   // Fetch all articles in the window with outlet info.
   // (No accuracy_score filter — AI scoring was removed; clustering is title-word
   //  overlap only, so it works on every ingested article.)
-  // Paginated fetch — Supabase caps every response at 1000 rows regardless of
-  // .limit(), and the window holds ~28k articles. The old single fetch saw
-  // only the newest ~2.5 HOURS: a story's early articles scrolled out of the
-  // window before the coverage wave arrived and could never join its cluster.
+  // Keyset-paginated fetch. Two hard-won lessons live here:
+  //  - Supabase caps every response at 1000 rows regardless of .limit(), and
+  //    the window holds ~37k articles — a single fetch sees ~2.5 hours.
+  //  - OFFSET pagination is quadratic server-side (page N scans and discards
+  //    all prior rows); at 96 runs/day it burned the project's disk-IO
+  //    budget. Cursor on (published_at, id) keeps every page an index seek.
   const articles = []
-  for (let from = 0; from < 40000; from += 1000) {
-    const { data: page, error } = await supabase
+  let cursor = null
+  for (;;) {
+    let q = supabase
       .from('articles')
-      .select('id, title, outlet_id, cluster_id, outlets(name, logo_url)')
+      .select('id, title, outlet_id, cluster_id, published_at, outlets(name)')
       .gte('published_at', cutoff)
       .order('published_at', { ascending: false })
-      .range(from, from + 999)
+      .order('id', { ascending: false })
+      .limit(1000)
+    if (cursor) q = q.or(`published_at.lt."${cursor.ts}",and(published_at.eq."${cursor.ts}",id.lt."${cursor.id}")`)
+    const { data: page, error } = await q
     if (error) {
       console.error('Failed to fetch articles:', error.message)
       process.exit(1)
     }
     articles.push(...(page || []))
     if (!page || page.length < 1000) break
+    const last = page[page.length - 1]
+    cursor = { ts: new Date(last.published_at).toISOString(), id: last.id }
   }
 
   console.log(`Fetched ${articles.length} articles from last ${CLUSTER_WINDOW_HOURS}h\n`)
@@ -240,10 +248,9 @@ async function main() {
         .map(m => ({
           id:        m.id,
           outlet_id: m.outlet_id,
-          outlets: {
-            name:     m.outlets?.name     ?? null,
-            logo_url: m.outlets?.logo_url ?? null,
-          },
+          // logo_url deliberately dropped — no consumer reads it (OutletLogo
+          // renders from the name) and it nearly doubled peer JSONB weight
+          outlets: { name: m.outlets?.name ?? null },
         }))
 
       clusterUpdates.push({ id: member.id, cluster_id: clusterId, cluster_peers: peers })

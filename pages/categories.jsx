@@ -53,7 +53,7 @@ export async function getStaticProps() {
       process.env.VITE_SUPABASE_ANON_KEY,
     )
     const initial = await fetchCategoryOverview(supabase, 'all')
-    return { props: { initial }, revalidate: 600 }
+    return { props: { initial }, revalidate: 3600 }
   } catch {
     return { props: { initial: null }, revalidate: 120 }
   }

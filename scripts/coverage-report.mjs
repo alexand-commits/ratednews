@@ -26,16 +26,24 @@ const db = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERV
 const DAYS = 7
 
 async function fetchHeadlines(sinceIso) {
+  // Keyset pagination — offset paging is quadratic server-side and at 14 days
+  // of volume (~175k rows) it both times out and torches the disk-IO budget.
   const rows = []
-  for (let from = 0; from < 200000; from += 1000) {
-    const { data: page, error } = await db.from('articles')
-      .select('title, outlet_id, cluster_id, published_at, outlets(name)')
+  let cursor = null
+  for (;;) {
+    let q = db.from('articles')
+      .select('id, title, outlet_id, cluster_id, published_at, outlets(name)')
       .gte('published_at', sinceIso)
       .order('published_at', { ascending: false })
-      .range(from, from + 999)
+      .order('id', { ascending: false })
+      .limit(1000)
+    if (cursor) q = q.or(`published_at.lt."${cursor.ts}",and(published_at.eq."${cursor.ts}",id.lt."${cursor.id}")`)
+    const { data: page, error } = await q
     if (error) throw new Error(error.message)
     rows.push(...(page || []))
     if (!page || page.length < 1000) break
+    const last = page[page.length - 1]
+    cursor = { ts: new Date(last.published_at).toISOString(), id: last.id }
   }
   return rows
 }
