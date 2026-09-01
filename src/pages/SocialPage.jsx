@@ -466,6 +466,30 @@ function CoverageGenerator({ onRun }) {
   const [busy, setBusy]   = useState(false)
   const [error, setError] = useState('')
   const [note, setNote]   = useState('')
+  const [refreshing, setRefreshing] = useState(false)
+  const [dataFrom, setDataFrom] = useState(null)
+
+  // Ad hoc, not Monday-hostage: recompute the week's data on demand
+  // (~15-30s server-side; hour-chunked index reads, cheap on the IO budget).
+  async function refreshData() {
+    if (refreshing || busy) return
+    setRefreshing(true); setError(''); setNote('')
+    try {
+      const { data: { session } } = await db.auth.getSession()
+      const res = await fetch('/api/coverage-compute', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session?.access_token}` },
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || 'Refresh failed')
+      setDataFrom(json.generatedAt)
+      setNote(`Data refreshed — ${(json.headlines || 0).toLocaleString()} headlines this week, ${json.framingSplits} framing split${json.framingSplits === 1 ? '' : 's'} found.`)
+    } catch (e) {
+      setError(e.message || 'Refresh failed')
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   async function generate() {
     if (busy) return
@@ -481,6 +505,7 @@ function CoverageGenerator({ onRun }) {
       if (!res.ok) throw new Error(json.error || 'Generation failed')
       setPosts(sortByPulse(json.posts || []))
       if (json.note) setNote(json.note)
+      if (json.dataFrom) setDataFrom(json.dataFrom)
       if (json.posts?.length) onRun?.(json.posts, 'coverage')
     } catch (e) {
       setError(e.message?.includes('Failed to fetch')
@@ -497,10 +522,18 @@ function CoverageGenerator({ onRun }) {
       <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>
         Data posts only RatedNews can make — tracked language, same-story framing splits, first-to-report — from this week's indexed headlines. Charts render as branded cards.
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={generate} disabled={busy} className="nav-pill" style={{ opacity: busy ? 0.55 : 1, cursor: busy ? 'default' : 'pointer' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <button onClick={generate} disabled={busy || refreshing} className="nav-pill" style={{ opacity: busy || refreshing ? 0.55 : 1, cursor: busy || refreshing ? 'default' : 'pointer' }}>
           {busy ? 'Crunching the week…' : 'Draft data posts'}
         </button>
+        <button
+          onClick={refreshData}
+          disabled={refreshing || busy}
+          style={{ fontSize: 12, fontWeight: 600, padding: '5px 14px', borderRadius: 99, border: '0.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text2)', cursor: refreshing || busy ? 'default' : 'pointer', opacity: refreshing ? 0.55 : 1 }}
+        >
+          {refreshing ? 'Recomputing… ~20s' : '↻ Refresh data'}
+        </button>
+        {dataFrom && <span style={{ fontSize: 11, color: 'var(--text3)' }}>data from {timeAgo(dataFrom)}</span>}
         {error && <span style={{ fontSize: 12, color: 'var(--red)' }}>{error}</span>}
       </div>
 

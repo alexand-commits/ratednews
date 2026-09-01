@@ -34,6 +34,7 @@
  */
 
 import { createClient }  from '@supabase/supabase-js'
+import { fetchHeadlines }  from '../src/server/coverage-compute.js'
 import { randomUUID }    from 'crypto'
 import dotenv            from 'dotenv'
 import { fileURLToPath } from 'url'
@@ -92,32 +93,17 @@ async function main() {
   // Fetch all articles in the window with outlet info.
   // (No accuracy_score filter — AI scoring was removed; clustering is title-word
   //  overlap only, so it works on every ingested article.)
-  // Keyset-paginated fetch. Two hard-won lessons live here:
-  //  - Supabase caps every response at 1000 rows regardless of .limit(), and
-  //    the window holds ~37k articles — a single fetch sees ~2.5 hours.
-  //  - OFFSET pagination is quadratic server-side (page N scans and discards
-  //    all prior rows); at 96 runs/day it burned the project's disk-IO
-  //    budget. Cursor on (published_at, id) keeps every page an index seek.
-  const articles = []
-  let cursor = null
-  for (;;) {
-    let q = supabase
-      .from('articles')
-      .select('id, title, outlet_id, cluster_id, published_at, outlets(name)')
-      .gte('published_at', cutoff)
-      .order('published_at', { ascending: false })
-      .order('id', { ascending: false })
-      .limit(1000)
-    if (cursor) q = q.or(`published_at.lt."${cursor.ts}",and(published_at.eq."${cursor.ts}",id.lt."${cursor.id}")`)
-    const { data: page, error } = await q
-    if (error) {
-      console.error('Failed to fetch articles:', error.message)
-      process.exit(1)
-    }
-    articles.push(...(page || []))
-    if (!page || page.length < 1000) break
-    const last = page[page.length - 1]
-    cursor = { ts: new Date(last.published_at).toISOString(), id: last.id }
+  // Hour-chunked fetch via the shared core. Third pagination approach and
+  // the one that actually seeks: OFFSET was quadratic; the or() keyset made
+  // the planner FILTER-walk the whole newer range per page (still ~700k
+  // row-touches per run — it kept burning the disk-IO budget for two weeks
+  // while looking fixed). Pure gte/lt hour ranges are bounded index scans.
+  let articles
+  try {
+    articles = await fetchHeadlines(supabase, Date.now() - CLUSTER_WINDOW_HOURS * 3600e3, Date.now())
+  } catch (err) {
+    console.error('Failed to fetch articles:', err.message)
+    process.exit(1)
   }
 
   console.log(`Fetched ${articles.length} articles from last ${CLUSTER_WINDOW_HOURS}h\n`)

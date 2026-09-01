@@ -523,10 +523,13 @@ async function performanceBlock() {
 export async function generateCoverageBatch(steer = '') {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) return { posts: [], note: 'Not configured.' }
   const svc = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  // Newest row, never maybeSingle — a stray duplicate row once made this
+  // read error out and the desk claimed no report existed for a month.
   const { data } = await svc.from('social_drafts')
-    .select('pack').eq('pack->>kind', 'coverage_report').limit(1).maybeSingle()
-  const rep = data?.pack
-  if (!rep) return { posts: [], note: 'No coverage report computed yet — it runs Monday mornings.' }
+    .select('pack, created_at').eq('pack->>kind', 'coverage_report')
+    .order('created_at', { ascending: false }).limit(1)
+  const rep = data?.[0]?.pack
+  if (!rep) return { posts: [], note: 'No coverage data yet — tap ↻ Refresh data first.' }
 
   // Week-over-week as a human multiple, corpus-growth-adjusted — and only
   // when the move is big enough to mean something. Per-1k rates are for the
