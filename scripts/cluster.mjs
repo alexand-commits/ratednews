@@ -88,6 +88,17 @@ async function main() {
   console.log('🔗 RatedNews Article Clustering')
   console.log('================================\n')
 
+  // Maintenance pause — a {kind:'maintenance', pause_cluster:true} row in
+  // social_drafts makes every cron tick a no-op. Exists so the DB can be
+  // given a genuinely quiet window to recover (IO budget refill, autovacuum)
+  // without needing workflow-file edits. Toggle by inserting/deleting the row.
+  const { data: pause } = await supabase.from('social_drafts')
+    .select('id').eq('pack->>kind', 'maintenance').limit(1).maybeSingle()
+  if (pause) {
+    console.log('⏸ maintenance pause row present — skipping this run')
+    return
+  }
+
   const cutoff = new Date(Date.now() - CLUSTER_WINDOW_HOURS * 60 * 60 * 1000).toISOString()
 
   // Fetch all articles in the window with outlet info.
