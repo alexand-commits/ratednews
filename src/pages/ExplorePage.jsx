@@ -57,7 +57,8 @@ function useIsDesktop() {
 export default function ExplorePage({ navigate, outlets = [] }) {
   const isDesktop = useIsDesktop()
   const [search, setSearch]           = useState('')
-  const [mobileVisible, setMobileVisible] = useState(60)
+  const [mobileVisible, setMobileVisible] = useState(30)
+  const [sectionsShown, setSectionsShown] = useState(6)
   const [searchFocused, setSearchFocused] = useState(false)
   const [searchHistory, setSearchHistory] = useState(() => {
     try { return JSON.parse(localStorage.getItem('rn_searchHistory') || '[]') } catch { return [] }
@@ -95,9 +96,9 @@ export default function ExplorePage({ navigate, outlets = [] }) {
   useEffect(() => {
     setFeedLoading(true)
     db.from('articles')
-      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comments(count)')
+      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url)')
       .order('published_at', { ascending: false })
-      .limit(400)
+      .limit(200)
       .then(({ data }) => { setFeedPool(data || []); setFeedLoading(false) })
   }, [])
 
@@ -109,10 +110,10 @@ export default function ExplorePage({ navigate, outlets = [] }) {
   useEffect(() => {
     if (region === 'all' || regionCache[region]) return
     db.from('articles')
-      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets!inner(name, country, logo_url), comments(count)')
+      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets!inner(name, country, logo_url)')
       .eq('outlets.country', region)
       .order('published_at', { ascending: false })
-      .limit(400)
+      .limit(200)
       .then(({ data }) => setRegionCache(prev => ({ ...prev, [region]: data || [] })))
   }, [region, regionCache])
 
@@ -124,7 +125,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
     if (category === 'all' || catCache[catKey]) return
     setCatLoading(true)
     let q = db.from('articles')
-      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets!inner(name, country, logo_url), comments(count)')
+      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets!inner(name, country, logo_url)')
       .eq('category', category)
     if (region !== 'all') q = q.eq('outlets.country', region)
     q.order('published_at', { ascending: false })
@@ -167,9 +168,8 @@ export default function ExplorePage({ navigate, outlets = [] }) {
     })
     const trendScore = a => {
       const coverage = a.cluster_peers?.length || 0
-      const comments = a.comments?.[0]?.count || 0
       const hoursAgo = Math.max(0.1, (Date.now() - new Date(a.published_at)) / 3600000)
-      return (coverage * 12 + comments * 5 + 1) / Math.pow(hoursAgo + 2, 1.8)
+      return (coverage * 12 + 1) / Math.pow(hoursAgo + 2, 1.8)
     }
     const byCat = {}
     for (const a of pool) {
@@ -397,7 +397,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
                 {isDesktop && <div className="desktop-only" style={{ flexDirection: 'column', gap: 30 }}>
                   {digest.length === 0 ? (
                     <div className="empty-state"><p>No stories match these filters yet.</p></div>
-                  ) : digest.map(sec => (
+                  ) : digest.slice(0, sectionsShown).map(sec => (
                     <section key={sec.value}>
                       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
                         <h2 style={{ margin: 0, fontFamily: 'var(--font-playfair), serif', fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>
@@ -424,6 +424,15 @@ export default function ExplorePage({ navigate, outlets = [] }) {
                       </div>
                     </section>
                   ))}
+                  {digest.length > sectionsShown && (
+                    <button
+                      className="btn-outline"
+                      style={{ width: '100%', fontSize: 13 }}
+                      onClick={() => setSectionsShown(digest.length)}
+                    >
+                      Show all sections ({digest.length - sectionsShown} more)
+                    </button>
+                  )}
                 </div>}
 
                 {/* Mobile: flat latest list, rendered incrementally — the full
