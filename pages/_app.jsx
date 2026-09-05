@@ -13,7 +13,6 @@ import PasswordResetModal from '../src/components/PasswordResetModal'
 import ErrorBoundary from '../src/components/ErrorBoundary'
 import { createNavigate } from '../src/utils/navigate'
 import { track } from '../src/utils/track'
-import { Analytics } from '@vercel/analytics/react'
 import { playfair, lato } from '../src/lib/fonts'
 import '../src/styles/globals.css'
 
