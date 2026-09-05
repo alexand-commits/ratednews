@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, createContext, useContext } from 'react'
+import { Analytics } from '@vercel/analytics/react'
 import { useRouter } from 'next/router'
 import Head from 'next/head'
 import Script from 'next/script'
@@ -286,6 +287,7 @@ export default function App({ Component, pageProps }) {
       <ErrorBoundary>
         <Component {...pageProps} />
         <Footer />
+        <Analytics />
       </ErrorBoundary>
 
       {showAuthModal && (
