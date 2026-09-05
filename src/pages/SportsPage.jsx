@@ -168,9 +168,8 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
   if (sort === 'trending') {
     const trendScore = a => {
       const coverage  = a.cluster_peers?.length || 0
-      const comments  = a.comments?.[0]?.count || 0
       const hoursAgo  = Math.max(0.1, (Date.now() - new Date(a.published_at)) / 3600000)
-      return (coverage * 12 + comments * 5 + 1) / Math.pow(hoursAgo + 2, 1.8)
+      return (coverage * 12 + 1) / Math.pow(hoursAgo + 2, 1.8)
     }
     const seen = new Set()
     filtered = bySport

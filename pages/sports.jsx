@@ -84,10 +84,10 @@ export async function getStaticProps() {
 
     const { data, error } = await supabase
       .from('articles')
-      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, logo_url, country), comments(count)')
+      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, logo_url, country)')
       .eq('category', 'Sport')
       .order('published_at', { ascending: false })
-      .limit(400)
+      .limit(200)
 
     if (error) throw error
 
