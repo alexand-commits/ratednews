@@ -467,7 +467,10 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
                 <div className="widget-title">Community rating</div>
                 <div className="community-grid">
                   <div className="comm-chip">
-                    <strong>{avgStars > 0 ? avgStars.toFixed(1) : outlet.community_score || 0}</strong>
+                    {/* Always /5. avgStars is /5 (live rows); community_score
+                        is stored /100, so it MUST be divided — the old fallback
+                        flashed a raw "84" here while ratings loaded. */}
+                    <strong>{avgStars > 0 ? avgStars.toFixed(1) : comScore > 0 ? (comScore / 20).toFixed(1) : '—'}</strong>
                     <span>Avg score</span>
                   </div>
                   <div className="comm-chip">
