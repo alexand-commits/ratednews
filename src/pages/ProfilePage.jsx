@@ -734,25 +734,39 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
                 <button className="btn-outline" style={{ marginTop: 12, fontSize: 13 }} onClick={() => navigate('outlets')}>Browse outlets</button>
               </div>
             ) : (
-              outletRatings.map(r => (
-                <div
-                  key={r.id}
-                  style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', cursor: 'pointer' }} className="border-hover"
-                  onClick={() => (r.outlet_id || r.outlets?.id) && navigate('outlet', { outletId: r.outlet_id || r.outlets.id })}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <OutletLogo name={r.outlets?.name || 'X'} size={30} borderRadius={7} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 500 }}>{r.outlets?.name || 'Unknown outlet'}</div>
-                      <div style={{ fontSize: 11, color: 'var(--text3)' }}>Rated {timeAgo(r.created_at)}</div>
+              outletRatings.map(r => {
+                const stars = r.overall_stars || 0
+                // Trust-level accent gives the list visual rhythm and makes it
+                // scannable at a glance instead of a stack of identical cards.
+                const accent = stars >= 4 ? 'var(--green)' : stars >= 3 ? 'var(--amber, #C98A08)' : 'var(--coral)'
+                const label = stars >= 4 ? 'Trust' : stars >= 3 ? 'Mixed' : 'Low trust'
+                return (
+                  <div
+                    key={r.id}
+                    className="border-hover"
+                    style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderLeft: `3px solid ${accent}`, borderRadius: 'var(--radius)', padding: '13px 16px', cursor: 'pointer' }}
+                    onClick={() => (r.outlet_id || r.outlets?.id) && navigate('outlet', { outletId: r.outlet_id || r.outlets.id })}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <OutletLogo name={r.outlets?.name || 'X'} size={38} borderRadius={9} />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 15, fontWeight: 600, marginBottom: 2 }}>{r.outlets?.name || 'Unknown outlet'}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: accent, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text3)' }}>· {timeAgo(r.created_at)}</span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        <RatingDots value={stars} size={9} showValue={false} />
+                        <span style={{ fontSize: 15, fontWeight: 700, color: accent }}>{stars.toFixed(1)}</span>
+                      </div>
                     </div>
-                    <RatingDots value={r.overall_stars || 0} size={9} showValue={false} />
+                    {r.review_text && (
+                      <div style={{ fontSize: 13, color: 'var(--text2)', marginTop: 10, lineHeight: 1.55, paddingLeft: 12, borderLeft: '2px solid var(--border)' }}>{r.review_text}</div>
+                    )}
                   </div>
-                  {r.review_text && (
-                    <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 8, lineHeight: 1.5, fontStyle: 'italic' }}>"{r.review_text}"</div>
-                  )}
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         ) : tab === 'saved' ? (
@@ -1037,26 +1051,29 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
             the most-rated outlets you haven't weighed in on */}
         <aside className="sidebar desktop-only">
           <div className="widget">
-            <div className="widget-title">Rate your sources</div>
+            <div className="widget-title">Outlets to rate</div>
+            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: -4, marginBottom: 10, lineHeight: 1.5 }}>
+              Quick picks — outlets you follow or that the community rates most.
+            </div>
             {(() => {
               const ratedIds = new Set(outletRatings.map(r => r.outlet_id))
               const followedUnrated = allOutlets.filter(o => followedOutletIds.has(o.id) && !ratedIds.has(o.id))
               const popularUnrated  = allOutlets.filter(o => !o.parent_outlet_id && !ratedIds.has(o.id) && !followedOutletIds.has(o.id))
                 .sort((a, b) => (b.total_ratings || 0) - (a.total_ratings || 0))
               const picks = [...followedUnrated, ...popularUnrated].slice(0, 6)
-              if (picks.length === 0) return <div style={{ fontSize: 12, color: 'var(--text3)' }}>You have rated everything you follow — nice.</div>
+              if (picks.length === 0) return <div style={{ fontSize: 12, color: 'var(--text3)' }}>Everything you follow is rated — nice work.</div>
               return picks.map(o => (
                 <div key={o.id} className="outlet-rank-row" onClick={() => navigate('outlet', { outletId: o.id })}>
                   <OutletLogo name={o.name} size={26} borderRadius={6} />
                   <span className="outlet-rank-name" title={o.name}>{o.name}</span>
-                  <span style={{ fontSize: 10, color: followedOutletIds.has(o.id) ? 'var(--coral)' : 'var(--text3)', flexShrink: 0 }}>
+                  <span style={{ fontSize: 10, fontWeight: 600, color: followedOutletIds.has(o.id) ? 'var(--text3)' : 'var(--coral)', flexShrink: 0 }}>
                     {followedOutletIds.has(o.id) ? 'Following' : 'Rate →'}
                   </span>
                 </div>
               ))
             })()}
-            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 10, lineHeight: 1.5 }}>
-              Your ratings shape the community scores.
+            <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 12, paddingTop: 10, borderTop: '0.5px solid var(--border)', lineHeight: 1.5 }}>
+              Community scores are built entirely from reader ratings like these.
             </div>
           </div>
         </aside>
