@@ -1,5 +1,11 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+/* Buttons don't inherit color/font by default — a <button> with no explicit
+   color renders in the browser's system black, which is invisible on the dark
+   theme (e.g. the "My feed" follow-suggestion cards). Inherit so any button
+   without its own color follows the page text colour in both themes. */
+button { color: inherit; font-family: inherit; }
+
 :root {
   --coral: #D85A30;
   --coral-light: #FAECE7;
