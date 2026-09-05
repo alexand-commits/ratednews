@@ -369,8 +369,6 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
 
   const trustStars = outletRatings.map(r => r.overall_stars || 0).filter(Boolean)
   const avgTrust   = trustStars.length ? (trustStars.reduce((a, b) => a + b, 0) / trustStars.length).toFixed(1) : null
-  const trusts     = outletRatings.filter(r => (r.overall_stars || 0) >= 4)
-  const distrusts  = outletRatings.filter(r => (r.overall_stars || 0) > 0 && (r.overall_stars || 0) <= 2)
 
   // Reading week — views in the last 7 days + dominant topic
   const weekViews = articleViews.filter(v => Date.now() - new Date(v.viewed_at) < 7 * 86400000)
@@ -658,33 +656,9 @@ export default function ProfilePage({ user, navigate, goBack, showToast, followe
           <>
             <ActivityChart ratings={articleRatings} outletRatings={outletRatings} comments={comments} />
 
-            {/* Sources you trust / distrust — the identity centrepiece */}
-            {outletRatings.length > 0 && (
-              <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px 18px', marginBottom: 16 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 14 }}>Sources you rate</div>
-                {[
-                  { title: 'You trust most', items: trusts,    tint: 'rgba(99,153,34,0.35)' },
-                  { title: 'You trust least', items: distrusts, tint: 'rgba(226,75,74,0.30)' },
-                ].map(({ title, items, tint }) => items.length > 0 && (
-                  <div key={title} style={{ marginBottom: 14 }}>
-                    <div style={{ fontSize: 11, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text3)', marginBottom: 8 }}>{title}</div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {items.map(r => (
-                        <div key={r.outlet_id || r.id} onClick={() => navigate('outlet', { outletId: r.outlet_id || r.outlets?.id })} className="border-hover"
-                          style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', background: 'var(--bg)', border: `0.5px solid ${tint}`, borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
-                          <OutletLogo name={r.outlets?.name || 'X'} size={26} borderRadius={6} />
-                          <span style={{ flex: 1, fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.outlets?.name || 'Unknown'}</span>
-                          <RatingDots value={r.overall_stars || 0} size={8} showValue={false} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                {trusts.length === 0 && distrusts.length === 0 && (
-                  <div style={{ fontSize: 13, color: 'var(--text3)' }}>Your ratings sit in the middle so far — rate a few sources 4–5★ or 1–2★ to see your trust profile.</div>
-                )}
-              </div>
-            )}
+            {/* "Sources you rate" trust/distrust block removed — it duplicated
+                the Ratings tab below, which now carries the same outlets with
+                trust-level accents. */}
 
             {/* Following */}
             {followedOutlets.length > 0 && (
