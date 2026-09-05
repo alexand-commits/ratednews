@@ -16,7 +16,7 @@ function getTrustLevel(total) {
   return           { label: 'New Member',              emoji: '👋', color: '#9E9B95' }
 }
 
-export default function Header({ navigate, goBack, isDark, toggleTheme, user, onLoginClick, onSignOut }) {
+export default function Header({ navigate, goBack, isDark, toggleTheme, user, onLoginClick, onJoinClick, onSignOut }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [stats, setStats]       = useState(null)
   const menuRef = useRef(null)
@@ -266,7 +266,13 @@ export default function Header({ navigate, goBack, isDark, toggleTheme, user, on
             )}
           </div>
         ) : (
-          <button className="nav-pill" onClick={onLoginClick}>Sign in</button>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            <button
+              onClick={onLoginClick}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text2)', padding: '6px 8px', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+            >Sign in</button>
+            <button className="nav-pill" onClick={onJoinClick || onLoginClick} style={{ whiteSpace: 'nowrap' }}>Create account</button>
+          </span>
         )}
       </div>
     </header>

@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import { db } from '../lib/supabase'
 
-export default function AuthModal({ onClose, showToast }) {
-  const [tab, setTab]         = useState('signin') // 'signin' | 'signup' | 'reset'
+export default function AuthModal({ onClose, showToast, initialTab = 'signin' }) {
+  const [tab, setTab]         = useState(initialTab) // 'signin' | 'signup' | 'reset'
   const [email, setEmail]     = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -38,13 +38,21 @@ export default function AuthModal({ onClose, showToast }) {
     if (!email || !password) { setMessage({ type: 'error', text: 'Please enter your email and password.' }); return }
     if (password.length < 8) { setMessage({ type: 'error', text: 'Password must be at least 8 characters.' }); return }
     setLoading(true); setMessage(null)
-    const { error } = await db.auth.signUp({
+    const { data, error } = await db.auth.signUp({
       email,
       password,
       options: { emailRedirectTo: 'https://www.ratednews.com' },
     })
     setLoading(false)
     if (error) { setMessage({ type: 'error', text: error.message }); return }
+    // Supabase never errors when the email is already registered (anti-
+    // enumeration) — it returns a user with an EMPTY identities array and
+    // sends no email. Detect that so we don't show a "check your inbox"
+    // screen for a mailbox that will never receive anything.
+    if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      setMessage({ type: 'error', text: 'That email already has an account. Try signing in, or reset your password.' })
+      return
+    }
     setSignupDone(true)
   }
 

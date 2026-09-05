@@ -28,6 +28,8 @@ export default function App({ Component, pageProps }) {
   const [isDark,           setIsDark]           = useState(true)
   const [session,          setSession]          = useState(null)
   const [showAuthModal,       setShowAuthModal]       = useState(false)
+  const [authTab,             setAuthTab]             = useState('signin')
+  const openAuth = (tab = 'signin') => { setAuthTab(tab); setShowAuthModal(true) }
   const [showPasswordReset,   setShowPasswordReset]   = useState(false)
   const [toast,            setToast]            = useState({ message: '', visible: false })
   const [followedOutletIds,setFollowedOutletIds]= useState(new Set())
@@ -244,7 +246,7 @@ export default function App({ Component, pageProps }) {
     user, session, isDark,
     toggleTheme:    () => setIsDark(d => !d),
     showToast,
-    openAuthModal:  () => setShowAuthModal(true),
+    openAuthModal:  () => openAuth('signin'),
     followedOutletIds, toggleFollow,
     savedArticleIds,   toggleSave,
     allOutlets, outletsLoading, refreshOutlets,
@@ -273,7 +275,8 @@ export default function App({ Component, pageProps }) {
         isDark={isDark}
         toggleTheme={() => setIsDark(d => !d)}
         user={user}
-        onLoginClick={() => setShowAuthModal(true)}
+        onLoginClick={() => openAuth('signin')}
+        onJoinClick={() => openAuth('signup')}
         onSignOut={async () => {
           await db.auth.signOut()
           showToast('Signed out')
@@ -290,7 +293,7 @@ export default function App({ Component, pageProps }) {
       </ErrorBoundary>
 
       {showAuthModal && (
-        <AuthModal onClose={() => setShowAuthModal(false)} showToast={showToast} />
+        <AuthModal initialTab={authTab} onClose={() => setShowAuthModal(false)} showToast={showToast} />
       )}
 
       {showPasswordReset && (
