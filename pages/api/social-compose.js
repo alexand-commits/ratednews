@@ -502,7 +502,7 @@ async function performanceBlock() {
   try {
     const svc = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
     const { data } = await svc.from('social_drafts')
-      .select('pack').eq('pack->>kind', 'post_metrics').limit(1).maybeSingle()
+      .select('pack').eq('pack->>kind', 'post_metrics').order('created_at', { ascending: false }).limit(1).maybeSingle()
     const measured = (data?.pack?.entries || [])
       .filter(e => e.likes != null && e.preview)
       .map(e => ({ ...e, score: (e.likes || 0) + 2 * (e.reposts || 0) + (e.replies || 0) }))

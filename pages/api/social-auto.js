@@ -51,7 +51,7 @@ async function ownerAuth(req) {
 // queue window. A dismissed story stays in the 6h cool-down (rejected ≠ retry).
 async function getDismissedRow(svc) {
   const { data } = await svc.from('social_drafts')
-    .select('id, pack').eq('pack->>kind', 'queue_dismissed').limit(1).maybeSingle()
+    .select('id, pack').eq('pack->>kind', 'queue_dismissed').order('created_at', { ascending: false }).limit(1).maybeSingle()
   return data || null
 }
 
@@ -60,7 +60,7 @@ async function getDismissedRow(svc) {
 // same draft can't be double-posted from another device or after a refresh.
 async function getPublishedRow(svc) {
   const { data } = await svc.from('social_drafts')
-    .select('id, pack').eq('pack->>kind', 'published_log').limit(1).maybeSingle()
+    .select('id, pack').eq('pack->>kind', 'published_log').order('created_at', { ascending: false }).limit(1).maybeSingle()
   return data || null
 }
 
@@ -73,7 +73,7 @@ function svcClient() {
 async function beatHeart(svc, lastResult) {
   const today = new Date().toISOString().slice(0, 10)
   const { data: existing } = await svc.from('social_drafts')
-    .select('id, pack').eq('pack->>kind', 'auto_heartbeat').limit(1).maybeSingle()
+    .select('id, pack').eq('pack->>kind', 'auto_heartbeat').order('created_at', { ascending: false }).limit(1).maybeSingle()
   const prev = existing?.pack || {}
   const pack = {
     kind: 'auto_heartbeat',
@@ -88,7 +88,7 @@ async function beatHeart(svc, lastResult) {
 
 async function getHeartbeat(svc) {
   const { data } = await svc.from('social_drafts')
-    .select('pack').eq('pack->>kind', 'auto_heartbeat').limit(1).maybeSingle()
+    .select('pack').eq('pack->>kind', 'auto_heartbeat').order('created_at', { ascending: false }).limit(1).maybeSingle()
   return data?.pack || null
 }
 
@@ -114,7 +114,7 @@ export default async function handler(req, res) {
     const published = svcG ? ((await getPublishedRow(svcG))?.pack?.entries || []) : []
     // Engagement metrics — refreshed by /api/social-metrics on its own cron
     const metricsRow = svcG ? await svcG.from('social_drafts')
-      .select('pack').eq('pack->>kind', 'post_metrics').limit(1).maybeSingle() : null
+      .select('pack').eq('pack->>kind', 'post_metrics').order('created_at', { ascending: false }).limit(1).maybeSingle() : null
     const metrics = metricsRow?.data?.pack?.entries || []
     return res.status(200).json({
       configured,
@@ -204,7 +204,7 @@ export default async function handler(req, res) {
 
     // 6h don't-re-alert memory, keyed by (now stable) cluster ids.
     const { data: alertRow } = await svc.from('social_drafts')
-      .select('id, pack').eq('pack->>kind', 'alert_log').limit(1).maybeSingle()
+      .select('id, pack').eq('pack->>kind', 'alert_log').order('created_at', { ascending: false }).limit(1).maybeSingle()
     const cutoff = Date.now() - 6 * 60 * 60 * 1000
     const past = (alertRow?.pack?.entries || []).filter(e => new Date(e.at) >= cutoff)
     const seen = new Set(past.map(e => e.clusterId))

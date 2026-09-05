@@ -89,7 +89,7 @@ export default async function handler(req, res) {
 
   const svc = svcClient()
   const { data: pubRow } = await svc.from('social_drafts')
-    .select('pack').eq('pack->>kind', 'published_log').limit(1).maybeSingle()
+    .select('pack').eq('pack->>kind', 'published_log').order('created_at', { ascending: false }).limit(1).maybeSingle()
   const published = pubRow?.pack?.entries || []
   if (!published.length) return res.status(200).json({ ok: true, entries: 0 })
 
@@ -114,7 +114,7 @@ export default async function handler(req, res) {
 
   const pack = { kind: 'post_metrics', updated: new Date().toISOString(), entries }
   const { data: existing } = await svc.from('social_drafts')
-    .select('id').eq('pack->>kind', 'post_metrics').limit(1).maybeSingle()
+    .select('id').eq('pack->>kind', 'post_metrics').order('created_at', { ascending: false }).limit(1).maybeSingle()
   if (existing) await svc.from('social_drafts').update({ pack }).eq('id', existing.id)
   else await svc.from('social_drafts').insert({ pack })
 
