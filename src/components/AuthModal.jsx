@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { db } from '../lib/supabase'
 
 export default function AuthModal({ onClose, showToast, initialTab = 'signin' }) {
@@ -8,12 +8,15 @@ export default function AuthModal({ onClose, showToast, initialTab = 'signin' })
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState(null) // { type: 'error'|'success', text }
   const [signupDone, setSignupDone] = useState(false) // show post-signup screen
+  const submitting = useRef(false) // hard guard: the built-in email send is slow (~seconds); without this a second Enter/click fires a SECOND signup → duplicate confirmation email
 
   function switchTab(t) { setTab(t); setMessage(null); setSignupDone(false) }
 
   async function handleSignIn(e) {
     e.preventDefault()
+    if (submitting.current) return
     if (!email || !password) { setMessage({ type: 'error', text: 'Please enter your email and password.' }); return }
+    submitting.current = true
     setLoading(true); setMessage(null)
     // The signIn promise can hang behind supabase-js's auth lock even after
     // the sign-in succeeds (the SIGNED_IN event closes this modal from _app
@@ -25,9 +28,11 @@ export default function AuthModal({ onClose, showToast, initialTab = 'signin' })
     ])
     setLoading(false)
     if (result.timedOut) {
+      submitting.current = false
       setMessage({ type: 'error', text: 'That took longer than it should. You may already be signed in — if this stays open, refresh the page.' })
       return
     }
+    submitting.current = false
     if (result.error) { setMessage({ type: 'error', text: result.error.message }); return }
     showToast('Welcome back!')
     onClose()
@@ -35,8 +40,10 @@ export default function AuthModal({ onClose, showToast, initialTab = 'signin' })
 
   async function handleSignUp(e) {
     e.preventDefault()
+    if (submitting.current) return
     if (!email || !password) { setMessage({ type: 'error', text: 'Please enter your email and password.' }); return }
     if (password.length < 8) { setMessage({ type: 'error', text: 'Password must be at least 8 characters.' }); return }
+    submitting.current = true
     setLoading(true); setMessage(null)
     const { data, error } = await db.auth.signUp({
       email,
@@ -44,6 +51,7 @@ export default function AuthModal({ onClose, showToast, initialTab = 'signin' })
       options: { emailRedirectTo: 'https://www.ratednews.com' },
     })
     setLoading(false)
+    submitting.current = false
     if (error) { setMessage({ type: 'error', text: error.message }); return }
     // Supabase never errors when the email is already registered (anti-
     // enumeration) — it returns a user with an EMPTY identities array and
@@ -85,7 +93,7 @@ export default function AuthModal({ onClose, showToast, initialTab = 'signin' })
             <div style={{ fontSize: 36, marginBottom: 12 }}>📬</div>
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8, fontFamily: 'var(--font-playfair), serif' }}>Check your inbox</div>
             <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.6, marginBottom: 20 }}>
-              We've sent a confirmation link to <strong>{email}</strong>. Click it to activate your account, then sign in.
+              We've sent a confirmation link to <strong>{email}</strong> — it can take a minute to arrive, and may land in spam. Click it to activate your account, then sign in.
             </p>
             <button
               className="btn-primary"
