@@ -207,7 +207,7 @@ export async function getStaticProps() {
     const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
     const { data } = await supabase.from('social_drafts')
       .select('pack').eq('pack->>kind', 'coverage_report').limit(1).maybeSingle()
-    return { props: { report: data?.pack || null }, revalidate: 3600 }
+    return { props: { report: data?.pack || null }, revalidate: 21600 }
   } catch {
     return { props: { report: null }, revalidate: 600 }
   }

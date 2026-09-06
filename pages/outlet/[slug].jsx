@@ -228,6 +228,6 @@ export async function getStaticProps({ params }) {
 
   return {
     props: { outlet, compareTargets },
-    revalidate: 3600, // regenerate every hour, matching the ingest schedule
+    revalidate: 21600, // regenerate every hour, matching the ingest schedule
   }
 }

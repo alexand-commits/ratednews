@@ -301,5 +301,5 @@ export async function getStaticProps({ params }) {
     return { redirect: { destination: `/article/${canonical}`, permanent: true } }
   }
 
-  return { props: { article }, revalidate: 3600 }
+  return { props: { article }, revalidate: 21600 }
 }

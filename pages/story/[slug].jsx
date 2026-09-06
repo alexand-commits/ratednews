@@ -162,5 +162,5 @@ export async function getStaticProps({ params }) {
   // slugs) and crawler hits at 900s were driving millions of ISR regenerations
   // ($ writes). Coverage lists barely change hour-to-hour; the article page
   // still re-resolves the live cluster on click.
-  return { props: { story }, revalidate: 3600 }
+  return { props: { story }, revalidate: 21600 }
 }

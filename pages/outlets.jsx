@@ -12,9 +12,9 @@ export async function getStaticProps() {
       .from('outlets')
       .select('id, name, country, logo_url, type, community_score, total_ratings, parent_outlet_id')
       .order('community_score', { ascending: false, nullsFirst: false })
-    return { props: { initialOutlets: data || [] }, revalidate: 3600 }
+    return { props: { initialOutlets: data || [] }, revalidate: 21600 }
   } catch {
-    return { props: { initialOutlets: [] }, revalidate: 3600 }
+    return { props: { initialOutlets: [] }, revalidate: 21600 }
   }
 }
 

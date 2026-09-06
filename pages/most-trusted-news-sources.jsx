@@ -157,8 +157,8 @@ export async function getStaticProps() {
       .sort((a, b) => (b.community_score - a.community_score) || (b.total_ratings - a.total_ratings))
       .slice(0, 25)
     const provisionalCount = all.filter(o => (o.total_ratings || 0) > 0 && (o.total_ratings || 0) < MIN_RANK_RATINGS).length
-    return { props: { ranked, provisionalCount, generatedAt: new Date().toISOString() }, revalidate: 3600 }
+    return { props: { ranked, provisionalCount, generatedAt: new Date().toISOString() }, revalidate: 21600 }
   } catch {
-    return { props: { ranked: [], provisionalCount: 0, generatedAt: new Date().toISOString() }, revalidate: 3600 }
+    return { props: { ranked: [], provisionalCount: 0, generatedAt: new Date().toISOString() }, revalidate: 21600 }
   }
 }
