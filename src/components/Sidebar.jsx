@@ -2,7 +2,6 @@ import React from 'react'
 import OutletLogo from './OutletLogo'
 import RatingDots from './RatingDots'
 import { isRankEligible } from '../utils/helpers'
-import DigestSignup from './DigestSignup'
 import TrendingStoriesWidget from './TrendingStoriesWidget'
 
 export default function Sidebar({ outlets, navigate, trendingTopics = [], activeTopic = null, onTopic }) {
@@ -49,8 +48,6 @@ export default function Sidebar({ outlets, navigate, trendingTopics = [], active
           </a>
         </div>
       </div>
-
-      <DigestSignup />
     </div>
   )
 }

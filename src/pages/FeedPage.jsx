@@ -790,10 +790,12 @@ export default function FeedPage({
                       navigate={navigate}
                       relatedArticles={a.cluster_peers || []}
                     />
-                    {/* Mobile: the sidebar (and its signup) is unreachable below an
-                        infinite feed — surface the digest capture in-feed instead */}
+                    {/* Newsletter capture in-feed (all viewports). The sidebar
+                        no longer carries the signup — it's finite and stranded
+                        beside an infinite feed — so this is the primary capture
+                        point on every screen. */}
                     {i === 9 && (
-                      <div className="mobile-block">
+                      <div style={{ margin: '2px 0' }}>
                         <DigestSignup />
                       </div>
                     )}
