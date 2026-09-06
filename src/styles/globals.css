@@ -261,8 +261,12 @@ img, video, iframe, embed, object { max-width: 100%; }
    as the (much taller) content column scrolls; scrolls internally if taller
    than the viewport. */
 @media (min-width: 1024px) {
-  .grid > .sidebar { position: sticky; top: 68px; align-self: flex-start; max-height: calc(100vh - 84px); overflow-y: auto; scrollbar-width: none; }
-  .grid > .sidebar::-webkit-scrollbar { display: none; }
+  /* Sticky so the sidebar follows as you read — but NOT an internal scroll
+     container. The old max-height + overflow-y:auto made it its own scroll box,
+     so the mouse wheel got trapped scrolling the sidebar instead of the page
+     (felt janky/"slow"). Without them, a tall sidebar simply scrolls away with
+     the page once its content is exhausted — no wheel trap. */
+  .grid > .sidebar { position: sticky; top: 68px; align-self: flex-start; }
 }
 /* Offscreen cards skip layout+paint entirely — long feeds scroll at the cost
    of only the visible viewport. The intrinsic-size hint keeps the scrollbar
@@ -387,6 +391,9 @@ img, video, iframe, embed, object { max-width: 100%; }
 .article-outlet-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .article-av { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 500; }
 .article-headline-full { font-family: var(--font-playfair), serif; font-size: 26px; font-weight: 700; line-height: 1.35; margin: 0 0 14px; overflow-wrap: break-word; word-break: break-word; }
+/* Smaller on phones — 26px Playfair wraps to ~5 lines on a 375px screen and
+   pushed all the coverage below the fold. */
+@media (max-width: 768px) { .article-headline-full { font-size: 22px; line-height: 1.3; margin-bottom: 12px; } }
 
 /* Visually hidden but available to screen readers and crawlers */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
