@@ -223,8 +223,26 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
 
   // One-tap trust rating handler — refreshes the score without opening the modal
   async function handleTrustRated(starVal) {
+    const wasRated = alreadyRated
     setAlreadyRated(true)
     setMyRating(m => ({ ...(m || {}), overall_stars: starVal, overallStars: starVal }))
+
+    // Optimistic score bump — the community rating reflects INSTANTLY instead of
+    // only after two DB round-trips (which lag on a busy DB and made the rating
+    // feel unconfirmed). A brand-new rating adds to the average; changing an
+    // existing rating leaves the estimate to the refetch below.
+    if (!wasRated) {
+      setLiveOutlet(o => {
+        const base = o || outlet
+        const oldCount = base?.total_ratings || 0
+        const newScore = Math.round(((base?.community_score || 0) * oldCount + starVal * 20) / (oldCount + 1))
+        return { ...base, total_ratings: oldCount + 1, community_score: newScore }
+      })
+    }
+    // The confirmation the action was missing.
+    showToast?.(`Thanks — you rated ${outlet.name} ${starVal}★`)
+
+    // Confirm/correct against the DB (trigger keeps outlets.community_score in sync)
     const { data: updatedOutlet } = await db.from('outlets').select('*').eq('id', outletId).single()
     if (updatedOutlet) setLiveOutlet(updatedOutlet)
     const { data: updatedRatings } = await db.from('outlet_ratings').select('*').eq('outlet_id', outletId).order('created_at', { ascending: false })
