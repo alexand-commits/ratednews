@@ -158,5 +158,9 @@ export async function getStaticProps({ params }) {
     members,
   }
 
-  return { props: { story }, revalidate: 900 }
+  // 1h, not 15min — story pages are the highest-volume ISR set (thousands of
+  // slugs) and crawler hits at 900s were driving millions of ISR regenerations
+  // ($ writes). Coverage lists barely change hour-to-hour; the article page
+  // still re-resolves the live cluster on click.
+  return { props: { story }, revalidate: 3600 }
 }
