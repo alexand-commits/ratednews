@@ -18,24 +18,29 @@ export default function AuthModal({ onClose, showToast, initialTab = 'signin' })
     if (!email || !password) { setMessage({ type: 'error', text: 'Please enter your email and password.' }); return }
     submitting.current = true
     setLoading(true); setMessage(null)
-    // The signIn promise can hang behind supabase-js's auth lock even after
-    // the sign-in succeeds (the SIGNED_IN event closes this modal from _app
-    // in that case). The race keeps the button honest instead of spinning
-    // forever on "Please wait…".
-    const result = await Promise.race([
-      db.auth.signInWithPassword({ email, password }),
-      new Promise(resolve => setTimeout(() => resolve({ timedOut: true }), 12000)),
-    ])
-    setLoading(false)
-    if (result.timedOut) {
+    // try/finally is essential: if the auth call REJECTS (network error, auth
+    // lock deadlock), the guard MUST still release — otherwise submitting stays
+    // true and every future click returns early, leaving the button dead
+    // ("sign in hangs"). The race also stops an indefinitely-pending promise
+    // from spinning "Please wait…" forever.
+    try {
+      const result = await Promise.race([
+        db.auth.signInWithPassword({ email, password }),
+        new Promise(resolve => setTimeout(() => resolve({ timedOut: true }), 12000)),
+      ])
+      if (result.timedOut) {
+        setMessage({ type: 'error', text: 'That took longer than it should. You may already be signed in — if this stays open, refresh the page.' })
+        return
+      }
+      if (result.error) { setMessage({ type: 'error', text: result.error.message }); return }
+      showToast('Welcome back!')
+      onClose()
+    } catch (err) {
+      setMessage({ type: 'error', text: err?.message || 'Sign in failed — check your connection and try again.' })
+    } finally {
       submitting.current = false
-      setMessage({ type: 'error', text: 'That took longer than it should. You may already be signed in — if this stays open, refresh the page.' })
-      return
+      setLoading(false)
     }
-    submitting.current = false
-    if (result.error) { setMessage({ type: 'error', text: result.error.message }); return }
-    showToast('Welcome back!')
-    onClose()
   }
 
   async function handleSignUp(e) {
@@ -45,23 +50,28 @@ export default function AuthModal({ onClose, showToast, initialTab = 'signin' })
     if (password.length < 8) { setMessage({ type: 'error', text: 'Password must be at least 8 characters.' }); return }
     submitting.current = true
     setLoading(true); setMessage(null)
-    const { data, error } = await db.auth.signUp({
-      email,
-      password,
-      options: { emailRedirectTo: 'https://www.ratednews.com' },
-    })
-    setLoading(false)
-    submitting.current = false
-    if (error) { setMessage({ type: 'error', text: error.message }); return }
-    // Supabase never errors when the email is already registered (anti-
-    // enumeration) — it returns a user with an EMPTY identities array and
-    // sends no email. Detect that so we don't show a "check your inbox"
-    // screen for a mailbox that will never receive anything.
-    if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-      setMessage({ type: 'error', text: 'That email already has an account. Try signing in, or reset your password.' })
-      return
+    try {
+      const { data, error } = await db.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: 'https://www.ratednews.com' },
+      })
+      if (error) { setMessage({ type: 'error', text: error.message }); return }
+      // Supabase never errors when the email is already registered (anti-
+      // enumeration) — it returns a user with an EMPTY identities array and
+      // sends no email. Detect that so we don't show a "check your inbox"
+      // screen for a mailbox that will never receive anything.
+      if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        setMessage({ type: 'error', text: 'That email already has an account. Try signing in, or reset your password.' })
+        return
+      }
+      setSignupDone(true)
+    } catch (err) {
+      setMessage({ type: 'error', text: err?.message || 'Sign up failed — try again.' })
+    } finally {
+      submitting.current = false
+      setLoading(false)
     }
-    setSignupDone(true)
   }
 
   async function handleResetPassword(e) {
