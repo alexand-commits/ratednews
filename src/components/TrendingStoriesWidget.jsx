@@ -10,7 +10,7 @@ import { track } from '../utils/track'
 // 'inline' renders bare for mobile ramps inside existing containers.
 // `stories` overrides the global feed with a caller-computed list (e.g. the
 // sports page passes sport-only clusters) — same shape: {slug, title, outlets}.
-export default function TrendingStoriesWidget({ variant = 'widget', title = '🔥 Trending · 24h', limit = 6, stories: storiesProp = null }) {
+export default function TrendingStoriesWidget({ variant = 'widget', title = '🔥 Trending · 24h', limit = 5, stories: storiesProp = null }) {
   const globalStories = useTrendingStories()
   const stories = storiesProp ?? globalStories
   if (!stories.length) return null
