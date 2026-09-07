@@ -38,27 +38,9 @@ const REGIONS = [
   { value: 'Americas',   label: 'Americas'     },
 ]
 
-// Render-time breakpoint check (matches the 1024px CSS grid breakpoint).
-// The digest (desktop) and flat list (mobile) used to BOTH render and rely on
-// CSS visibility — that put ~430 cards / 9k DOM nodes on every load and made
-// scrolling sluggish. Render only the active branch instead.
-function useIsDesktop() {
-  const [isDesktop, setIsDesktop] = useState(false)
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 1024px)')
-    const update = () => setIsDesktop(mq.matches)
-    update()
-    mq.addEventListener('change', update)
-    return () => mq.removeEventListener('change', update)
-  }, [])
-  return isDesktop
-}
-
 export default function ExplorePage({ navigate, outlets = [] }) {
-  const isDesktop = useIsDesktop()
   const [search, setSearch]           = useState('')
-  const [mobileVisible, setMobileVisible] = useState(30)
-  const [sectionsShown, setSectionsShown] = useState(6)
+  const [visible, setVisible] = useState(30)
   const [searchFocused, setSearchFocused] = useState(false)
   const [searchHistory, setSearchHistory] = useState(() => {
     try { return JSON.parse(localStorage.getItem('rn_searchHistory') || '[]') } catch { return [] }
@@ -155,36 +137,6 @@ export default function ExplorePage({ navigate, outlets = [] }) {
     setCategory(v)
     if (typeof window !== 'undefined') window.scrollTo({ top: 0 })
   }
-
-  // Category digest — Explore's desktop default. One section per category with
-  // its top stories (trend-scored), so the page answers "what's happening across
-  // every section?" rather than duplicating the homepage's Latest stream.
-  const digest = useMemo(() => {
-    const seen = new Set()
-    const basePool = region === 'all' ? feedPool : (regionCache[region] || [])
-    const pool = basePool.filter(a => {
-      if (a.cluster_id) { if (seen.has(a.cluster_id)) return false; seen.add(a.cluster_id) }
-      return true
-    })
-    const trendScore = a => {
-      const coverage = a.cluster_peers?.length || 0
-      const hoursAgo = Math.max(0.1, (Date.now() - new Date(a.published_at)) / 3600000)
-      return (coverage * 12 + 1) / Math.pow(hoursAgo + 2, 1.8)
-    }
-    const byCat = {}
-    for (const a of pool) {
-      const c = a.category || 'World'
-      ;(byCat[c] = byCat[c] || []).push(a)
-    }
-    return CATEGORIES
-      .filter(c => c.value !== 'all' && (byCat[c.value]?.length || 0) >= 3)
-      .map(c => ({
-        ...c,
-        count: byCat[c.value].length,
-        items: byCat[c.value].slice().sort((x, y) => trendScore(y) - trendScore(x)).slice(0, 4),
-      }))
-      .sort((a, b) => b.count - a.count)
-  }, [feedPool, regionCache, region])
 
   // Trending topics — shared phrase-first extraction (same engine as the
   // homepage chips). Clicking one feeds the full-text search, so topics are a
@@ -361,7 +313,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
           <>
 
             {/* Region — same editions as desktop */}
-            <div className="filter-bar hide-desktop" style={{ marginBottom: 8 }}>
+            <div className="filter-bar" style={{ marginBottom: 8 }}>
               {REGIONS.map(r => (
                 <button
                   key={r.value}
@@ -372,7 +324,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
             </div>
 
             {/* Category filter — mobile only; the hub owns categories on desktop */}
-            <div className="filter-bar hide-desktop" style={{ marginBottom: 16 }}>
+            <div className="filter-bar" style={{ marginBottom: 16 }}>
               {CATEGORIES.map(c => (
                 <button
                   key={c.value}
@@ -391,149 +343,43 @@ export default function ExplorePage({ navigate, outlets = [] }) {
                   </div>
                 ))}
               </div>
-            ) : category === 'all' ? (
-              <>
-                {/* Desktop: category digest — the section front */}
-                {isDesktop && <div className="desktop-only" style={{ flexDirection: 'column', gap: 30 }}>
-                  {digest.length === 0 ? (
-                    <div className="empty-state"><p>No stories match these filters yet.</p></div>
-                  ) : digest.slice(0, sectionsShown).map(sec => (
-                    <section key={sec.value}>
-                      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
-                        <h2 style={{ margin: 0, fontFamily: 'var(--font-playfair), serif', fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>
-                          {sec.emoji} {sec.label}
-                          {region !== 'all' && <span style={{ fontWeight: 400, fontSize: 14, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
-                        </h2>
-                        <button
-                          onClick={() => goCategory(sec.value)}
-                          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--coral)', padding: 0 }}
-                        >View all →</button>
-                      </div>
-                      <div className="feed feed--grid-plain">
-                        {sec.items.map((a, i) => (
-                          <NewsCard
-                            key={a.id}
-                            article={a}
-                            index={i}
-                            navigate={navigate}
-                            onClick={() => navigate('article', { articleId: a.id, title: a.title })}
-                            relatedArticles={a.cluster_peers || undefined}
-                            compact
-                          />
-                        ))}
-                      </div>
-                    </section>
-                  ))}
-                  {digest.length > sectionsShown && (
-                    <button
-                      className="btn-outline"
-                      style={{ width: '100%', fontSize: 13 }}
-                      onClick={() => setSectionsShown(digest.length)}
-                    >
-                      Show all sections ({digest.length - sectionsShown} more)
-                    </button>
-                  )}
-                </div>}
-
-                {/* Mobile: flat latest list, rendered incrementally — the full
-                    ~370-card list in one go is what made scrolling drag */}
-                {!isDesktop && <div className="hide-desktop">
-                  <div className="section-label" style={{ marginBottom: 10 }}>
-                    Latest across all outlets
-                    {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
-                  </div>
-                  {browseFeed.length === 0 ? (
-                    <div className="empty-state"><p>No stories match these filters yet.</p></div>
-                  ) : (
-                    <div className="feed">
-                      {browseFeed.slice(0, mobileVisible).map((a, i) => (
-                        <NewsCard
-                          key={a.id}
-                          article={a}
-                          index={i}
-                          navigate={navigate}
-                          onClick={() => navigate('article', { articleId: a.id, title: a.title })}
-                          relatedArticles={a.cluster_peers || undefined}
-                        />
-                      ))}
-                      {browseFeed.length > mobileVisible && (
-                        <button
-                          className="btn-outline"
-                          style={{ width: '100%', marginTop: 4, fontSize: 13 }}
-                          onClick={() => setMobileVisible(v => v + 60)}
-                        >
-                          Show more ({browseFeed.length - mobileVisible} more)
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  {/* Trending exit-ramp — bottom of the list, not above it */}
-                  <div style={{ marginTop: 28 }}>
-                    <TrendingStoriesWidget variant="inline" title="🔥 Trending now" />
-                  </div>
-                </div>}
-              </>
+            ) : browseFeed.length === 0 ? (
+              <div className="empty-state"><p>No stories match these filters yet.</p></div>
             ) : (
               <>
-                {/* Deep category view */}
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 10 }}>
-                  <h2 style={{ margin: 0, fontFamily: 'var(--font-playfair), serif', fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>
-                    {CATEGORIES.find(c => c.value === category)?.emoji} {category}
-                    {region !== 'all' && <span style={{ fontWeight: 400, fontSize: 14, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
-                  </h2>
-                  <button
-                    onClick={() => goCategory('all')}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'var(--coral)', padding: 0 }}
-                  >✕ all sections</button>
+                <div className="section-label" style={{ marginBottom: 10 }}>
+                  {category === 'all' ? 'Latest across all outlets' : `${CATEGORIES.find(c => c.value === category)?.emoji || ''} ${category}`}
+                  {region !== 'all' && <span style={{ fontWeight: 400, color: 'var(--text3)' }}> · {REGIONS.find(r => r.value === region)?.label}</span>}
                 </div>
-                {browseFeed.length === 0 ? (
-                  <div className="empty-state"><p>No stories match these filters yet.</p></div>
-                ) : (
-                  <div className="feed feed--grid-plain">
-                    {browseFeed.map((a, i) => (
-                      <NewsCard
-                        key={a.id}
-                        article={a}
-                        index={i}
-                        navigate={navigate}
-                        onClick={() => navigate('article', { articleId: a.id, title: a.title })}
-                        relatedArticles={a.cluster_peers || undefined}
-                      />
-                    ))}
-                  </div>
+                <div className="feed feed--grid-plain">
+                  {browseFeed.slice(0, visible).map((a, i) => (
+                    <NewsCard
+                      key={a.id}
+                      article={a}
+                      index={i}
+                      navigate={navigate}
+                      onClick={() => navigate('article', { articleId: a.id, title: a.title })}
+                      relatedArticles={a.cluster_peers || undefined}
+                    />
+                  ))}
+                </div>
+                {browseFeed.length > visible && (
+                  <button className="btn-outline" style={{ width: '100%', marginTop: 8, fontSize: 13 }} onClick={() => setVisible(v => v + 30)}>
+                    Show more ({browseFeed.length - visible} more)
+                  </button>
                 )}
+                <div className="hide-desktop" style={{ marginTop: 28 }}>
+                  <TrendingStoriesWidget variant="inline" title="🔥 Trending now" />
+                </div>
               </>
             )}
           </>
         )}
         </div>
 
-        {/* ── Rail — topics lead (like every other page's rail), filters follow ── */}
+        {/* ── Rail — trending only; categories are now top-of-feed filter pills ── */}
         <aside className="sidebar desktop-only" style={{ marginTop: 38 }}>
           <TrendingStoriesWidget />
-
-          <div className="widget">
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
-              <div className="widget-title">Browse categories</div>
-              {category !== 'all' && (
-                <button
-                  onClick={() => goCategory('all')}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: 'var(--coral)', padding: 0 }}
-                >✕ Clear</button>
-              )}
-            </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {CATEGORIES.map(c => (
-                <button
-                  key={c.value}
-                  className={`pill${!isSearchActive && category === c.value ? ' active' : ''}`}
-                  onClick={() => { goCategory(c.value); setSearch('') }}
-                  style={{ fontSize: 11.5, padding: '4px 11px' }}
-                >{c.emoji ? `${c.emoji} ` : ''}{c.label}</button>
-              ))}
-            </div>
-          </div>
-
           <DigestSignup />
         </aside>
         </div>

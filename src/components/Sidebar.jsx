@@ -8,7 +8,7 @@ export default function Sidebar({ outlets, navigate, trendingTopics = [], active
   const top5 = outlets
     .filter(isRankEligible)
     .sort((a, b) => (b.community_score || 0) - (a.community_score || 0))
-    .slice(0, 5)
+    .slice(0, 4)
 
   return (
     <div className="sidebar">
@@ -28,18 +28,11 @@ export default function Sidebar({ outlets, navigate, trendingTopics = [], active
             </div>
           ))
         )}
-        <button
-          className="btn-outline"
-          style={{ width: '100%', marginTop: 12, fontSize: 12 }}
-          onClick={() => navigate('rankings')}
-        >
-          Full rankings →
-        </button>
         <a
           href="/most-trusted-news-sources"
-          style={{ display: 'block', textAlign: 'center', marginTop: 8, fontSize: 12, fontWeight: 600, color: 'var(--coral)', textDecoration: 'none' }}
+          style={{ display: 'block', textAlign: 'center', marginTop: 12, fontSize: 12, fontWeight: 600, color: 'var(--coral)', textDecoration: 'none' }}
         >
-          🏆 Most trusted sources {new Date().getFullYear()} →
+          🏆 Full rankings →
         </a>
       </div>
     </div>
