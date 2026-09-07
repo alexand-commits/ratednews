@@ -8,7 +8,7 @@ export default function Sidebar({ outlets, navigate, trendingTopics = [], active
   const top5 = outlets
     .filter(isRankEligible)
     .sort((a, b) => (b.community_score || 0) - (a.community_score || 0))
-    .slice(0, 4)
+    .slice(0, 3)
 
   return (
     <div className="sidebar">
