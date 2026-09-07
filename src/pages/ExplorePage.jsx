@@ -240,21 +240,6 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         )}
         </div>
 
-        {/* Region edition switcher — full-width above the grid so the rail
-            aligns with content, not controls */}
-        {!isSearchActive && (
-          <div className="filter-bar desktop-only" style={{ marginBottom: 16 }}>
-            <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', flexShrink: 0, alignSelf: 'center' }}>Region</span>
-            {REGIONS.map(r => (
-              <button
-                key={r.value}
-                className={`pill${region === r.value ? ' active' : ''}`}
-                onClick={() => setRegion(r.value)}
-              >{r.label}</button>
-            ))}
-          </div>
-        )}
-
         <div className="grid">
         <div>
         {/* ── Search results ── */}
