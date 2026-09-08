@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { db } from '../lib/supabase'
 
 export default function AuthModal({ onClose, showToast, initialTab = 'signin' }) {
@@ -9,6 +9,17 @@ export default function AuthModal({ onClose, showToast, initialTab = 'signin' })
   const [message, setMessage] = useState(null) // { type: 'error'|'success', text }
   const [signupDone, setSignupDone] = useState(false) // show post-signup screen
   const submitting = useRef(false) // hard guard: the built-in email send is slow (~seconds); without this a second Enter/click fires a SECOND signup → duplicate confirmation email
+
+  // Escape closes the modal. Backdrop-click-to-close was removed: the card is
+  // 400px wide and centred, leaving a ~440px invisible dismiss zone on each side
+  // of a 1280px screen — a stray click near the form was closing the modal and
+  // losing typed input ("closes when I move my mouse off"). Explicit exits only:
+  // the ✕, the Cancel button, or Escape.
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   function switchTab(t) { setTab(t); setMessage(null); setSignupDone(false) }
 
@@ -97,8 +108,9 @@ export default function AuthModal({ onClose, showToast, initialTab = 'signin' })
   // ── Post-signup confirmation screen ──────────────────────────────────────────
   if (signupDone) {
     return (
-      <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-card" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+      <div className="modal-overlay">
+        <div className="modal-card" style={{ maxWidth: 400, position: 'relative' }} onClick={e => e.stopPropagation()}>
+          <button className="modal-close" onClick={onClose} style={{ position: 'absolute', top: 12, right: 12 }}>✕</button>
           <div style={{ textAlign: 'center', padding: '8px 0 16px' }}>
             <div style={{ fontSize: 36, marginBottom: 12 }}>📬</div>
             <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8, fontFamily: 'var(--font-playfair), serif' }}>Check your inbox</div>
@@ -128,7 +140,7 @@ export default function AuthModal({ onClose, showToast, initialTab = 'signin' })
   // ── Reset password tab ────────────────────────────────────────────────────────
   if (tab === 'reset') {
     return (
-      <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-overlay">
         <div className="modal-card" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
           <div className="modal-header">
             <div>
@@ -177,7 +189,7 @@ export default function AuthModal({ onClose, showToast, initialTab = 'signin' })
 
   // ── Sign in / Sign up tabs ────────────────────────────────────────────────────
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div className="modal-overlay">
       <div className="modal-card" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <div>
