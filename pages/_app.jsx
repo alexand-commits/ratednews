@@ -71,7 +71,7 @@ export default function App({ Component, pageProps }) {
     db.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       if (session?.user) { loadFollows(session.user.id); loadSaves(session.user.id) }
-    })
+    }).catch(e => { if (process.env.NODE_ENV !== 'production') console.error('[getSession] failed:', e) })
     const { data: { subscription } } = db.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       if (_event === 'PASSWORD_RECOVERY') {
@@ -122,6 +122,12 @@ export default function App({ Component, pageProps }) {
         setAllOutlets(outlets)
         setOutletsLoading(false)
         try { sessionStorage.setItem(CACHE_KEY, JSON.stringify({ data: outlets, ts: Date.now() })) } catch (e) {}
+      })
+      // Without this, a rejected fetch (Supabase blip, offline) leaves
+      // outletsLoading stuck true → the whole site shows a perpetual skeleton.
+      .catch(e => {
+        setOutletsLoading(false)
+        if (process.env.NODE_ENV !== 'production') console.error('[outlets] fetch failed:', e)
       })
   }, [])
 
@@ -178,8 +184,8 @@ export default function App({ Component, pageProps }) {
   }
 
   async function toggleFollow(outletId) {
+    if (!user) { setShowAuthModal(true); return }
     track('follow_outlet', { outlet_id: outletId })
-    if (!user) return
     const isFollowing = followedOutletIds.has(outletId)
     if (isFollowing) {
       // Optimistic update first
@@ -278,9 +284,14 @@ export default function App({ Component, pageProps }) {
         onLoginClick={() => openAuth('signin')}
         onJoinClick={() => openAuth('signup')}
         onSignOut={async () => {
-          await db.auth.signOut()
-          showToast('Signed out')
-          router.push('/')
+          try {
+            await db.auth.signOut()
+            showToast('Signed out')
+            router.push('/')
+          } catch (e) {
+            showToast('Could not sign out — please try again')
+            if (process.env.NODE_ENV !== 'production') console.error('[signOut] failed:', e)
+          }
         }}
       />
 
@@ -289,7 +300,6 @@ export default function App({ Component, pageProps }) {
       <ErrorBoundary>
         <Component {...pageProps} />
         <Footer />
-        <Analytics />
       </ErrorBoundary>
 
       {showAuthModal && (

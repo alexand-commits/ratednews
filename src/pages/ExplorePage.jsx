@@ -153,15 +153,25 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         .replace(/[,()\.:]/g, ' ')
         .trim()
       if (!escaped) { setDbResults([]); setDbLoading(false); return }
-      const { data } = await db
-        .from('articles')
-        .select('id, title, published_at, category, summary, url, outlets(name, logo_url, country)')
-        .or(`title.ilike.%${escaped}%,summary.ilike.%${escaped}%`)
-        .order('published_at', { ascending: false })
-        .limit(30)
-      setDbResults(data || [])
-      setDbLoading(false)
-      track('search', { source: 'explore' })
+      try {
+        const { data, error } = await db
+          .from('articles')
+          .select('id, title, published_at, category, summary, url, outlets(name, logo_url, country)')
+          .or(`title.ilike.%${escaped}%,summary.ilike.%${escaped}%`)
+          .order('published_at', { ascending: false })
+          .limit(30)
+        // Distinguish a real failure from a genuine no-match: null tells the UI
+        // "search failed", [] tells it "no results" — otherwise a rejected query
+        // renders a misleading "No results" and can leave the spinner stuck.
+        if (error) { setDbResults(null); return }
+        setDbResults(data || [])
+        track('search', { source: 'explore' })
+      } catch (e) {
+        setDbResults(null)
+        if (process.env.NODE_ENV !== 'production') console.error('[explore search] failed:', e)
+      } finally {
+        setDbLoading(false)
+      }
       // save to history
       const t = search.trim()
       if (t.length >= 2) {

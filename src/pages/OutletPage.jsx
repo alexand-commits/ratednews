@@ -258,7 +258,7 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
       .from('comments')
       .insert({ outlet_id: outletId, body, upvotes: 0, downvotes: 0, user_id: user.id })
       .select()
-    if (error) { showToast('Could not post comment'); return }
+    if (error || !data?.[0]) { showToast('Could not post comment'); return }
     setCommentInput('')
     setComments(prev => [data[0], ...prev])
     showToast('Comment posted!')
@@ -290,18 +290,6 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
     setVotedComments(prev => ({ ...prev, [key]: true }))
     applyDelta(1)
     await db.rpc('delta_comment_vote', { comment_id: commentId, field_name: field, delta: 1 })
-  }
-
-  function ScoreBar({ label, value, tip }) {
-    return (
-      <div className="score-bar-row">
-        <span className="sbl" style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          {label}{tip && <InfoTip text={tip} />}
-        </span>
-        <div className="sb-bg"><div className="sb-fill" style={{ width: `${value}%`, background: scoreColor(value) }}></div></div>
-        <span className="sbv">{value}</span>
-      </div>
-    )
   }
 
   return (

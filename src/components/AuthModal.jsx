@@ -89,20 +89,31 @@ export default function AuthModal({ onClose, showToast, initialTab = 'signin' })
     e.preventDefault()
     if (!email) { setMessage({ type: 'error', text: 'Please enter your email address.' }); return }
     setLoading(true); setMessage(null)
-    const { error } = await db.auth.resetPasswordForEmail(email, {
-      redirectTo: 'https://www.ratednews.com',
-    })
-    setLoading(false)
-    if (error) { setMessage({ type: 'error', text: error.message }); return }
-    setMessage({ type: 'success', text: 'Password reset email sent — check your inbox.' })
+    try {
+      const { error } = await db.auth.resetPasswordForEmail(email, {
+        redirectTo: 'https://www.ratednews.com',
+      })
+      if (error) { setMessage({ type: 'error', text: error.message }); return }
+      setMessage({ type: 'success', text: 'Password reset email sent — check your inbox.' })
+    } catch (err) {
+      setMessage({ type: 'error', text: err?.message || 'Could not send the reset email — try again.' })
+    } finally {
+      setLoading(false)
+    }
   }
 
   async function handleResendConfirmation() {
     if (!email) return
     setLoading(true)
-    await db.auth.resend({ type: 'signup', email })
-    setLoading(false)
-    showToast('Confirmation email resent!')
+    try {
+      const { error } = await db.auth.resend({ type: 'signup', email })
+      if (error) { showToast('Could not resend — try again'); return }
+      showToast('Confirmation email resent!')
+    } catch (e) {
+      showToast('Could not resend — try again')
+    } finally {
+      setLoading(false)
+    }
   }
 
   // ── Post-signup confirmation screen ──────────────────────────────────────────

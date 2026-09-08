@@ -330,7 +330,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
       .from('comments')
       .insert({ article_id: articleId, body, upvotes: 0, downvotes: 0, user_id: user.id })
       .select()
-    if (error) { showToast('Could not post comment'); return }
+    if (error || !data?.[0]) { showToast('Could not post comment'); return }
     setCommentInput('')
     setComments(prev => [data[0], ...prev])
     showToast('Comment posted!')
@@ -345,7 +345,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
       .from('comments')
       .insert({ article_id: articleId, parent_id: parentId, body, upvotes: 0, downvotes: 0, ...(user ? { user_id: user.id } : {}) })
       .select()
-    if (error) { showToast('Could not post reply'); return }
+    if (error || !data?.[0]) { showToast('Could not post reply'); return }
     setReplyInputs(prev => ({ ...prev, [parentId]: '' }))
     setReplyingTo(null)
     setReplies(prev => ({ ...prev, [parentId]: [...(prev[parentId] || []), data[0]] }))
