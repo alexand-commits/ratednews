@@ -33,7 +33,6 @@ export default function Feed({ initialArticles, initialCount }) {
   const [hasMore,          setHasMore]          = useState(initialArticles.length === BATCH)
   const [loadingMore,      setLoadingMore]      = useState(false)
   const [fetchError,       setFetchError]       = useState(false)
-  const [trendingArticles,     setTrendingArticles]     = useState([]) // full data — for card rendering under topics
   const [trendingTopicsSource, setTrendingTopicsSource] = useState([]) // title+outlet_id only — for topic computation
 
   // Always fetch fresh articles on mount — ISR data can be up to 5 min stale.
@@ -61,13 +60,6 @@ export default function Feed({ initialArticles, initialCount }) {
         .order('published_at', { ascending: false })
         .range(0, BATCH + 40 - 1),
       db.from('articles').select('*', { count: 'estimated', head: true }),
-      // Full-data 24h articles for card rendering when a trending topic is active.
-      // 150 rows with all display columns — enough to fill any topic's article list.
-      db.from('articles')
-        .select(ARTICLE_SELECT)
-        .gte('published_at', cutoff)
-        .order('published_at', { ascending: false })
-        .limit(150),
       // Minimal 24h fetch for trending topic computation only.
       // title + outlet_id is ~100 bytes/row, so 1000 rows ≈ 100KB — negligible egress.
       // A higher ceiling means topics that spiked earlier in the day still surface.
@@ -76,14 +68,13 @@ export default function Feed({ initialArticles, initialCount }) {
         .gte('published_at', cutoff)
         .order('published_at', { ascending: false })
         .limit(1000),
-    ]).then(([{ data }, { count }, { data: recent }, { data: topicsSrc }]) => {
+    ]).then(([{ data }, { count }, { data: topicsSrc }]) => {
       clearTimeout(timeout)
       setFetchError(false)
       setArticles(data || [])
       setTotalCount(count || 0)
       setOffset(BATCH + 40)
       setHasMore((data || []).length === BATCH + 40)
-      setTrendingArticles(recent || [])
       setTrendingTopicsSource(topicsSrc || [])
       if (!hasCached) setLoading(false)
     }).catch(() => {
@@ -167,7 +158,6 @@ export default function Feed({ initialArticles, initialCount }) {
       </Head>
       <FeedPage
         articles={articles}
-        trendingArticles={trendingArticles}
         trendingTopicsSource={trendingTopicsSource}
         outlets={allOutlets}
         loading={loading}
