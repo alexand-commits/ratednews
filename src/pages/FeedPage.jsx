@@ -243,7 +243,9 @@ export default function FeedPage({
       const { data } = await db
         .from('articles')
         .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comments(count)')
-        .or(`title.ilike.%${escaped}%,summary.ilike.%${escaped}%`)
+        // Title-only so it uses the pg_trgm GIN index on articles.title. An OR
+        // across summary (unindexed) would drop the whole query back to a seq-scan.
+        .ilike('title', `%${escaped}%`)
         .order('published_at', { ascending: false })
         .limit(50)
       setDbResults(data || [])

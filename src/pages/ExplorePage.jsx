@@ -157,7 +157,9 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         const { data, error } = await db
           .from('articles')
           .select('id, title, published_at, category, summary, url, outlets(name, logo_url, country)')
-          .or(`title.ilike.%${escaped}%,summary.ilike.%${escaped}%`)
+          // Title-only so it uses the pg_trgm GIN index on articles.title. An OR
+          // across summary (unindexed) would drop the whole query back to a seq-scan.
+          .ilike('title', `%${escaped}%`)
           .order('published_at', { ascending: false })
           .limit(30)
         // Distinguish a real failure from a genuine no-match: null tells the UI
