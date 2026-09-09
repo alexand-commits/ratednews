@@ -53,7 +53,11 @@ function NewsCard({ article, index, onClick, navigate, relatedArticles = [], com
                 {outlet.name || 'Unknown'}
               </span>
             )}
-            <span className="ts">{timeAgo(article.published_at)}</span>
+            {/* Relative time is Date.now()-based, so the ISR build value and the
+                client's load-time value differ — suppressHydrationWarning lets React
+                accept that one text node instead of failing hydration on every card
+                (it corrects to the live value on the next render). */}
+            <span className="ts" suppressHydrationWarning>{timeAgo(article.published_at)}</span>
           </div>
 
           <Link href={`/article/${slug}`} className="news-headline" style={{ textDecoration: 'none', color: 'inherit' }}>
