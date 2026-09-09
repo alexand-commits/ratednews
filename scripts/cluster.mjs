@@ -53,7 +53,12 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
-const CLUSTER_WINDOW_HOURS = 72  // how far back to look for story clusters
+const CLUSTER_WINDOW_HOURS = 48  // how far back to look for story clusters.
+// Trimmed from 72h: clustering action is concentrated in a story's first 24–48h,
+// so re-scanning hours 49–72 every 15-min run was ~a third of the read cost for
+// the marginal case of a 3-day-old story picking up a late outlet. Existing story
+// pages resolve cluster_id live at request time, so a smaller window never shrinks
+// what an already-formed story shows. Bump back to 72 to revert.
 const MIN_OVERLAP          = 3   // significant words that must overlap
 const BATCH_SIZE           = 100 // articles per DB upsert batch
 
