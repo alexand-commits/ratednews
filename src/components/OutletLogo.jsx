@@ -344,7 +344,7 @@ const CONTAINER_BG_OVERRIDES = {
   'BBC Sport': { background: '#0f1923', border: 'none' },
 }
 
-export default function OutletLogo({ name = '', size = 32, borderRadius = 8, style = {} }) {
+function OutletLogo({ name = '', size = 32, borderRadius = 8, style = {} }) {
   const [failed, setFailed] = useState(false)
   const override = LOGO_OVERRIDES[name]
   const domain = OUTLET_DOMAINS[name]
@@ -362,7 +362,12 @@ export default function OutletLogo({ name = '', size = 32, borderRadius = 8, sty
     ...style,
   }
 
-  const logoSrc = override || (domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=64` : null)
+  // Self-hosted favicons (public/logos/<domain>.png, fetched once at prep time)
+  // instead of hotlinking Google's s2/favicons service — kills ~87 third-party
+  // requests per page, the privacy leak (Google no longer sees every outlet a
+  // reader views), and the dependency on Google's uptime. A missing file falls
+  // back to coloured initials via the existing onError handler.
+  const logoSrc = override || (domain ? `/logos/${domain}.png` : null)
   const containerOverride = CONTAINER_BG_OVERRIDES[name] || {}
 
   if (logoSrc && !failed) {
@@ -385,3 +390,7 @@ export default function OutletLogo({ name = '', size = 32, borderRadius = 8, sty
     </div>
   )
 }
+
+// Memoized: in a feed/list the same logo re-renders on every parent state change
+// (the 3s placeholder tick, scroll, etc.) though its props never change.
+export default React.memo(OutletLogo)
