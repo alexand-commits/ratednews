@@ -310,7 +310,14 @@ export default function FeedPage({
     return kept
   }
 
-  const filtered = dedupeRelated(
+  // Memoized on its real inputs only — NOT on every render. Previously this ran
+  // inline each render (a 3s placeholder timer + every keystroke re-triggered it),
+  // so the O(n²) dedupe + full re-sort ran constantly and produced a fresh array
+  // reference that also defeated the interleaved/displayList/heroList memos below.
+  // Note: dropping the per-render run means the gravity-decay trending order no
+  // longer reshuffles purely as time passes — it re-ranks on new data / filter
+  // change / refresh, which is the correct, less-jumpy behaviour for a reader.
+  const filtered = useMemo(() => dedupeRelated(
     (feedTab === 'following' ? followingArticles : articles)
       .filter(a => category === 'all' || getArticleCategory(a) === category)
       .filter(a => region === 'all' || getArticleRegion(a) === region)
@@ -343,7 +350,7 @@ export default function FeedPage({
         const sb = tb > now ? 0 : tb
         return sb - sa
       })
-  )
+  ), [articles, followingArticles, feedTab, category, region, sort])
 
   // Round-robin interleave by outlet so the feed isn't 25 BBCs then 25 CNNs.
   // Only applied on the 'latest' sort — 'Top stories' has its own ranking.
