@@ -60,7 +60,10 @@ const CLUSTER_WINDOW_HOURS = 48  // how far back to look for story clusters.
 // pages resolve cluster_id live at request time, so a smaller window never shrinks
 // what an already-formed story shows. Bump back to 72 to revert.
 const MIN_OVERLAP          = 3   // significant words that must overlap
-const BATCH_SIZE           = 100 // articles per DB upsert batch
+const BATCH_SIZE           = 40  // articles per DB upsert batch. Dropped from 100:
+// 100-row upserts of the cluster_peers JSONB were hitting Postgres statement
+// timeouts under write pressure (heavy JSONB column + index churn). Smaller
+// batches keep each statement well under the timeout and shorten lock hold time.
 
 // Stop words — keep in sync with FeedPage and ArticlePage
 const STOP = new Set([
