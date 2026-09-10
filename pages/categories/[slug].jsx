@@ -17,7 +17,7 @@ const ARTICLE_SELECT = [
   'summary', 'url', 'image_url',
   'total_ratings', 'community_score', 'cluster_id', 'cluster_peers',
   'outlets(name, country, logo_url)',
-  'comments(count)',
+  'comment_count',
 ].join(', ')
 
 export const CATEGORY_META = [

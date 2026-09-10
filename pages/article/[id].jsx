@@ -35,7 +35,7 @@ export default function ArticleDetail({ article: initialArticle }) {
     if (!initialArticle?.id) return
     let cancelled = false
     db.from('articles')
-      .select('*, outlets(name, country, logo_url), comments(count)')
+      .select('*, outlets(name, country, logo_url)')
       .eq('id', initialArticle.id)
       .single()
       // Guard against an out-of-order A response landing after we've moved to B.
@@ -284,7 +284,7 @@ export async function getStaticProps({ params }) {
   const pfx = shortMatch[1]
   const { data: article } = await supabase
     .from('articles')
-    .select('*, outlets(name, country, logo_url), comments(count)')
+    .select('*, outlets(name, country, logo_url)')
     .gte('id', `${pfx}-0000-0000-0000-000000000000`)
     .lte('id', `${pfx}-ffff-ffff-ffff-ffffffffffff`)
     .single()

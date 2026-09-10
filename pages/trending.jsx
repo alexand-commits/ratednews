@@ -85,7 +85,7 @@ export async function getStaticProps() {
 
     const { data, error } = await supabase
       .from('articles')
-      .select('id, title, published_at, outlet_id, category, summary, image_url, view_count, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, logo_url, country), comments(count)')
+      .select('id, title, published_at, outlet_id, category, summary, image_url, view_count, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, logo_url, country), comment_count')
       .gte('published_at', since24h)
       .order('published_at', { ascending: false })
       .limit(200)
@@ -126,7 +126,7 @@ export async function getStaticProps() {
     const scored = (data || []).map(a => {
       const hoursAgo  = (Date.now() - new Date(a.published_at)) / 3600000
       const views     = a.view_count || 0
-      const comments  = a.comments?.[0]?.count || 0
+      const comments  = a.comment_count || 0
       // cluster_peers is publisher-deduped by scripts/cluster.mjs — the same
       // number every other surface shows. Token overlap only for unclustered.
       const coverage  = a.cluster_peers?.length ?? (coverageMap[a.id] || 0)

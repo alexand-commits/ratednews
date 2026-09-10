@@ -10,7 +10,7 @@ function RankedRow({ a, rank, isLast, navigate }) {
   const outlet = a.outlets || {}
   const [dotBg] = outletColor(outlet.name || 'X')
   const slug = articleSlug(a.title, a.id)
-  const comments = a.comments?.[0]?.count || 0
+  const comments = a.comment_count || 0
   const hasImage = a.image_url && !imgFailed
 
   return (

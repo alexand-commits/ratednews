@@ -63,7 +63,7 @@ const SORTS = [
 // query cost is dominated by rows x payload, so 10 returns in ~110ms where 30
 // took ~550ms on the anon role.
 const TOPIC_PAGE = 10
-const TOPIC_SELECT = 'id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comments(count)'
+const TOPIC_SELECT = 'id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comment_count'
 
 const REGIONS = [
   { value: 'all',        label: 'All'          },
@@ -141,7 +141,8 @@ export default function FeedPage({
 
     // Fetch a FIRST PAGE only. Measured on the anon role: this same query at
     // limit 30 takes ~550ms, at limit 10 ~110ms — the cost is dominated by rows
-    // x payload (cluster_peers JSONB + the comments(count) aggregate), not by
+    // x payload (cluster_peers JSONB, and formerly a per-row comments(count)
+    // aggregate — since replaced by the stored comment_count column), not by
     // the ILIKE. So show 10 fast and let the reader ask for more.
     const run = () => db.from('articles')
       .select(TOPIC_SELECT)
@@ -323,7 +324,7 @@ export default function FeedPage({
       if (!escaped) { setDbResults([]); setDbLoading(false); return }
       const { data } = await db
         .from('articles')
-        .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comments(count)')
+        .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comment_count')
         // Title-only so it uses the pg_trgm GIN index on articles.title. An OR
         // across summary (unindexed) would drop the whole query back to a seq-scan.
         .ilike('title', `%${escaped}%`)
@@ -363,13 +364,14 @@ export default function FeedPage({
     setFollowingLoading(true)
     const ids = [...followedOutletIds]
     db.from('articles')
-      .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, logo_url, country), comments(count)')
+      .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, logo_url, country), comment_count')
       .in('outlet_id', ids)
       .order('published_at', { ascending: false })
       // 50, not 100. At 100 this query EXCEEDED the anon role's statement timeout
       // (~4.8s) and returned an error, which this handler turned into an empty
       // array — so My feed silently rendered nothing. The cost is the payload:
-      // 100 rows x cluster_peers JSONB + comments(count). 50 rows returns in
+      // 100 rows x cluster_peers JSONB (plus, at the time, a per-row
+      // comments(count) aggregate — now a stored column). 50 rows returns in
       // ~310ms. Measured, not guessed. (No date cutoff needed — the limit is the
       // lever — so outlets that post rarely still show up.)
       .limit(50)
@@ -421,7 +423,7 @@ export default function FeedPage({
           const trendScore = a => {
             // cluster_peers is a JSONB array — use .length for the outlet coverage count
             const coverage  = a.cluster_peers?.length || 0
-            const comments  = a.comments?.[0]?.count || 0
+            const comments  = a.comment_count || 0
             // Gravity decay: score / (age + 2)^1.8
             // Stories need cross-outlet coverage or engagement to hold their rank;
             // age pushes them down even if covered — keeps the list feeling fresh.

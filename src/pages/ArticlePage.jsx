@@ -293,7 +293,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     if (allArticles.find(a => a.id === articleId)) { setFetchedArticle(null); return }
     setFetchedArticle(null)
     db.from('articles')
-      .select('*, outlets(name, country, logo_url), comments(count)')
+      .select('*, outlets(name, country, logo_url)')
       .eq('id', articleId)
       .single()
       .then(({ data }) => { if (data) setFetchedArticle(data) })

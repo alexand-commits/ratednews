@@ -18,7 +18,7 @@ const ARTICLE_SELECT = [
   'summary', 'url', 'image_url',
   'total_ratings', 'community_score', 'cluster_id', 'cluster_peers',
   'outlets(name, country, logo_url)',
-  'comments(count)',
+  'comment_count',
 ].join(', ')
 
 export default function Feed({ initialArticles, initialCount }) {
@@ -226,7 +226,7 @@ export async function getStaticProps() {
     const now = Date.now()
     const trendScore = a => {
       const coverage = a.cluster_peers?.length || 0
-      const comments = a.comments?.[0]?.count || 0
+      const comments = a.comment_count || 0
       const hoursAgo = Math.max(0.1, (now - new Date(a.published_at)) / 3600000)
       return (coverage * 12 + comments * 5 + 1) / Math.pow(hoursAgo + 2, 1.8)
     }
