@@ -74,9 +74,22 @@ export default function ArticleDetail({ article: initialArticle }) {
   const comStars   = rated ? (com / 20).toFixed(1) : null
 
   const scorePart = rated ? `Community rating ${comStars}/5 (${totalRatings} ${totalRatings === 1 ? 'rating' : 'ratings'}). ` : ''
+
+  // Lead with the thing the original publisher cannot offer.
+  //
+  // Bing ranks these pages around position 3 but they convert at ~0.1% — because
+  // in the results we look like a second copy of the source: same headline, and
+  // a description that WAS just the source's own lead paragraph. A searcher
+  // picks the original every time. Putting the cross-outlet coverage first gives
+  // the snippet a reason to exist that inquirer.net can't match. Costs nothing in
+  // ranking terms (descriptions aren't a ranking signal) and is fully reversible.
+  const peerCount = article.cluster_size || article.cluster_peers?.length || 0
+  const coveragePart = peerCount > 0
+    ? `${peerCount + 1} outlets covered this — compare the reporting. `
+    : ''
   const metaDesc  = summary
-    ? `${scorePart}${summary}`.slice(0, 155)
-    : `"${article.title}" from ${outletName}, on RatedNews. Rate it for accuracy, bias and quality.`
+    ? `${coveragePart}${scorePart}${summary}`.slice(0, 155)
+    : `${coveragePart}"${article.title}" from ${outletName}, on RatedNews. Rate it for accuracy, bias and quality.`.slice(0, 155)
 
   const keywords = [
     outletName, article.category,

@@ -35,6 +35,7 @@
 
 import { createClient }  from '@supabase/supabase-js'
 import { fetchHeadlines }  from '../src/server/coverage-compute.js'
+import { submitToIndexNow } from '../src/server/indexnow.js'
 import { randomUUID }    from 'crypto'
 import dotenv            from 'dotenv'
 import { fileURLToPath } from 'url'
@@ -134,6 +135,13 @@ function stem(w) {
     if (w.endsWith('s') && !w.endsWith('ss')) return w.slice(0, -1)
   }
   return w
+}
+
+// Mirrors pages/sitemap.xml.jsx and src/utils/helpers.js so the story URL we
+// push to IndexNow is byte-identical to the one we publish in the sitemap.
+function toArticleSlug(title, id) {
+  const t = (title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60).replace(/-$/, '')
+  return t ? `${t}-${String(id).slice(0, 8)}` : String(id).slice(0, 8)
 }
 
 function sigWords(title) {
@@ -392,6 +400,7 @@ async function main() {
   // ── Build update payloads ──────────────────────────────────────────────────
   const clusteredIds  = new Set()
   const clusterUpdates = []
+  const changedStoryUrls = []  // pushed to IndexNow after a successful write
 
   for (const { clusterId, members } of clusters) {
     // Only rewrite clusters whose membership actually changed — with the full
@@ -404,6 +413,12 @@ async function main() {
       members.forEach(m => clusteredIds.add(m.id))
       continue
     }
+
+    // This cluster is new or its membership moved, so its story page is fresh
+    // content. Collect the canonical story URL (newest member — the same rule
+    // the sitemap and the page's canonical tag use) to push to IndexNow.
+    const newestMember = members.reduce((a, b) => (b.published_at > a.published_at ? b : a), members[0])
+    changedStoryUrls.push(`https://www.ratednews.com/story/${toArticleSlug(newestMember.title, newestMember.id)}`)
     for (const member of members) {
       // "N sources" should mean publishers, not feeds — post-flattening,
       // BBC World + BBC Politics are separate outlets but one publisher.
@@ -483,6 +498,13 @@ async function main() {
   console.log(`\n\n================================`)
   console.log(`✅ Written: ${written}  ❌ Failed: ${failed}`)
   console.log(`📦 Clusters: ${clusters.length}  In clusters: ${clusteredCount}`)
+
+  // Tell Bing about the new story pages. Google doesn't support IndexNow and
+  // is served by the sitemap instead. Never allowed to fail the run.
+  if (changedStoryUrls.length && written > 0) {
+    const r = await submitToIndexNow(changedStoryUrls)
+    console.log(`📤 IndexNow: ${r.submitted} story URLs${r.status ? ` (HTTP ${r.status})` : ''}${r.skipped ? ` — ${r.skipped}` : ''}`)
+  }
 
   // Stamp the run so the cadence guard can skip the next tick. Written only
   // after a real run, so a skipped or failed run never pushes the window out.
