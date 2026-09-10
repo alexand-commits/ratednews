@@ -134,7 +134,17 @@ export default function FeedPage({
   // so topics like "Strait of Hormuz" that spiked earlier in the day still show articles.
   // `topicNonce` lets the retry button re-run this effect for the same topic.
   useEffect(() => {
-    if (!activeTopic) { setTopicArticles([]); setTopicError(false); return }
+    // Clearing the topic must also drop the loading flag. The `cancelled` guard
+    // below stops an in-flight request from touching state, so if we returned
+    // here without resetting, topicLoading stayed true forever and the feed
+    // rendered the loading branch on an empty topic — a blank screen.
+    if (!activeTopic) {
+      setTopicArticles([])
+      setTopicError(false)
+      setTopicLoading(false)
+      setTopicHasMore(false)
+      return
+    }
     let cancelled = false
     setTopicLoading(true)
     setTopicError(false)
@@ -901,7 +911,7 @@ export default function FeedPage({
                   <h3>No results for "{search}"</h3>
                   <p>Try different keywords or clear the search to browse all stories.</p>
                 </div>
-              ) : topicLoading ? (
+              ) : topicLoading && activeTopic ? (
                 <div className="empty-state">
                   <p style={{ color: 'var(--text3)' }}>Loading articles on {activeTopic}…</p>
                 </div>
