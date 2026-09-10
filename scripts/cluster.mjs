@@ -53,7 +53,7 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
 
-const CLUSTER_WINDOW_HOURS = 48  // how far back to look for story clusters.
+const CLUSTER_WINDOW_HOURS = Number(process.env.CLUSTER_WINDOW_HOURS || 48)  // how far back to look for story clusters.
 // Trimmed from 72h: clustering action is concentrated in a story's first 24–48h,
 // so re-scanning hours 49–72 every 15-min run was ~a third of the read cost for
 // the marginal case of a 3-day-old story picking up a late outlet. Existing story
@@ -203,7 +203,12 @@ async function main() {
   const fs = await import('node:fs')
   if (cachePath && fs.existsSync(cachePath)) {
     articles = JSON.parse(fs.readFileSync(cachePath, 'utf8'))
-    console.log(`(dry-run cache: ${articles.length} articles from ${cachePath})`)
+    // Trim to the requested window so a narrower CLUSTER_WINDOW_HOURS can be
+    // compared against the same cached corpus.
+    const winCut = Date.now() - CLUSTER_WINDOW_HOURS * 3600e3
+    const before = articles.length
+    articles = articles.filter(a => new Date(a.published_at).getTime() >= winCut)
+    console.log(`(dry-run cache: ${articles.length}/${before} articles within ${CLUSTER_WINDOW_HOURS}h)`)
   } else {
     try {
       articles = await fetchHeadlines(supabase, Date.now() - CLUSTER_WINDOW_HOURS * 3600e3, Date.now())
@@ -361,6 +366,16 @@ async function main() {
         if (hit.members.length > 14) console.log(`   … +${hit.members.length - 14} more`)
       }
     }
+
+    // How many clusters actually SPAN more than 24h? Those are the only ones a
+    // narrower window could splinter — everything else is fully contained.
+    const spans = clusters.map(c => {
+      const ts = c.members.map(m => new Date(m.published_at).getTime())
+      return (Math.max(...ts) - Math.min(...ts)) / 3600e3
+    })
+    const over24 = spans.filter(h => h > 24).length
+    const over12 = spans.filter(h => h > 12).length
+    console.log(`cluster time-span: >12h ${over12}/${clusters.length} (${(100*over12/clusters.length).toFixed(1)}%), >24h ${over24}/${clusters.length} (${(100*over24/clusters.length).toFixed(1)}%)`)
 
     const topN = Number(process.env.SHOW || 3)
     for (const c of clusters.slice(0, topN)) {
