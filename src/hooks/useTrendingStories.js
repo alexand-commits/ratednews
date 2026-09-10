@@ -1,18 +1,21 @@
 import { useState, useEffect } from 'react'
-import { db } from '../lib/supabase'
-import { articleSlug } from '../utils/helpers'
 
 // Sidebar trending rail — top story clusters by coverage velocity, the SAME
 // signal that powers /trending and the social desk. Replaces the old
 // token-frequency topic pills, which leaked context-free fragments
 // ("Islamic", "Heritage List") and had no click destination.
 //
-// STRICT per-cluster counting (Sept): counts distinct outlets in each single
-// cluster, no fragment-pooling. Pooling across clusters was tried but made the
-// sidebar's counts disagree with the /trending page (which counts strictly),
-// so the same story showed two different numbers. Both surfaces now count the
-// same way — a plainer number that always survives an audit.
-// Module-level cache: fetched once per session across every page that mounts it.
+// STRICT per-cluster counting: distinct outlets within one cluster, no
+// fragment-pooling. Pooling across clusters was tried but made the sidebar's
+// counts disagree with the /trending page (which counts strictly), so the same
+// story showed two different numbers. Both surfaces now count the same way — a
+// plainer number that always survives an audit.
+//
+// The grouping used to run in the browser off a 1200-row Supabase query
+// (~1.6s — the last per-visitor hang on the homepage). It's identical for every
+// reader, so it now comes from /api/trending-stories, which computes it once and
+// is edge-cached for 15 minutes. Kept the module-level cache so a session still
+// only asks once, across every page that mounts the rail.
 let cache = null
 let inflight = null
 
@@ -22,42 +25,10 @@ export function useTrendingStories() {
   useEffect(() => {
     if (cache) return
     if (!inflight) {
-      const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-      inflight = db.from('articles')
-        .select('id, title, cluster_id, outlet_id, published_at')
-        .not('cluster_id', 'is', null)
-        .gte('published_at', cutoff)
-        .order('published_at', { ascending: false })
-        .limit(1200)
-        .then(({ data }) => {
-          const clusters = new Map()
-          for (const a of (data || [])) {
-            let c = clusters.get(a.cluster_id)
-            if (!c) {
-              // Newest-first: the first article seen anchors title + slug
-              c = { anchor: a, outlets: new Set(), newest: a.published_at, oldest: a.published_at }
-              clusters.set(a.cluster_id, c)
-            }
-            c.outlets.add(a.outlet_id)
-            if (a.published_at < c.oldest) c.oldest = a.published_at
-          }
-          const now = Date.now()
-          cache = [...clusters.values()]
-            .filter(c => c.outlets.size >= 3)
-            .map(c => {
-              const firstAgeH = Math.max(0.75, (now - new Date(c.oldest)) / 3600000)
-              const newestAgeH = Math.max(0, (now - new Date(c.newest)) / 3600000)
-              return {
-                title: c.anchor.title,
-                slug: articleSlug(c.anchor.title, c.anchor.id),
-                outlets: c.outlets.size,
-                heat: (c.outlets.size / firstAgeH) * 10 / Math.pow(newestAgeH + 1, 1.2),
-              }
-            })
-            .sort((a, b) => b.heat - a.heat)
-            .slice(0, 6)
-          return cache
-        })
+      inflight = fetch('/api/trending-stories')
+        .then(r => (r.ok ? r.json() : { stories: [] }))
+        .then(({ stories: s }) => { cache = s || []; return cache })
+        .catch(() => { inflight = null; return [] })
     }
     let mounted = true
     inflight.then(t => { if (mounted) setStories(t) })
