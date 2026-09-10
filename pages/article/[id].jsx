@@ -234,12 +234,17 @@ export async function getStaticPaths() {
   // 'blocking' means every path still server-renders on first hit.
   try {
     const supabase = await getSupabase()
-    // Pre-build the 500 most recent articles with slug-based paths
+    // Pre-build the 150 most recent articles. Was 500 — but every deploy then
+    // ran 500 page builds, each doing its own DB round trip, and they were
+    // timing out at 60s apiece and failing the build. fallback:'blocking' means
+    // anything not prebuilt still server-renders FULLY on first hit (not a
+    // skeleton), so this costs nothing in SEO — it only trades one slower first
+    // visit on older articles for materially faster, more reliable deploys.
     const { data: articles } = await supabase
       .from('articles')
       .select('id, title')
       .order('published_at', { ascending: false })
-      .limit(500)
+      .limit(150)
 
     return {
       paths: (articles || []).map(a => ({
