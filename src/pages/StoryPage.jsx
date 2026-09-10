@@ -87,6 +87,7 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
               sizes="(max-width: 900px) 100vw, 640px"
               style={{ objectFit: 'cover' }}
               unoptimized
+              referrerPolicy="no-referrer"
               onError={() => setHeroFailed(true)}
             />
           </div>

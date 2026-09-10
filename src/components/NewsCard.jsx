@@ -105,6 +105,7 @@ function NewsCard({ article, index, onClick, navigate, relatedArticles = [], com
               style={{ objectFit: 'cover' }}
               priority={index < 2}
               unoptimized
+              referrerPolicy="no-referrer"
               onError={() => setImgFailed(true)}
             />
           </div>

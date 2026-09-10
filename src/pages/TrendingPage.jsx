@@ -106,6 +106,7 @@ function RankedRow({ a, rank, isLast, navigate }) {
             sizes="92px"
             style={{ objectFit: 'cover' }}
             unoptimized
+            referrerPolicy="no-referrer"
             onError={() => setImgFailed(true)}
           />
         </div>
@@ -191,6 +192,7 @@ function HeroCard({ hero, navigate }) {
               sizes="(max-width: 768px) 100vw, 260px"
               style={{ objectFit: 'cover' }}
               unoptimized
+              referrerPolicy="no-referrer"
               onError={() => setImgFailed(true)}
             />
           </div>

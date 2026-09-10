@@ -44,6 +44,7 @@ function ArticleCard({ a, onClick }) {
               sizes="80px"
               style={{ objectFit: 'cover' }}
               unoptimized
+              referrerPolicy="no-referrer"
               onError={() => setImgFailed(true)}
             />
           </div>

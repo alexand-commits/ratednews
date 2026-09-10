@@ -87,6 +87,28 @@ const DISTINCTIVE_DF     = num('DISTINCTIVE_DF', 0)
 // all 52 outlets, dropping only same-publisher duplicates (84 -> 77 articles).
 const MAX_PER_PUBLISHER  = num('MAX_PER_PUBLISHER', 3)
 const DRY_RUN            = process.env.DRY_RUN === '1'
+
+// Service journalism and affiliate filler, not stories. These share every
+// entity name with real coverage of the same fixture ("Liverpool", "Atletico",
+// "Madrid"), so no overlap threshold can separate them — a betting offer and a
+// match report are genuinely about the same teams. Excluding them from
+// CLUSTERING keeps "N sources covering this" honest: 20 outlets reporting a
+// match is a story, 20 bookmaker promos is not. They still appear in the feed
+// as normal articles; they just don't inflate anyone's coverage count.
+const JUNK_TITLE_RE = new RegExp([
+  // Bookmaker / affiliate promos
+  '\\bbetting\\b', '\\bbookmaker', 'sky ?bet\\b', 'bet ?365', 'ladbrokes',
+  'paddy power', 'william hill', 'free bets?\\b', 'sign-?up offer',
+  'offer:? ?\\d+/\\d+', '\\b\\d+/\\d+ (on|odds)\\b', 'best odds', '\\bacca\\b',
+  'promo code', 'discount code', 'deal of the day',
+  // Tipping/preview filler — "prediction, time, odds" in either order
+  'predictions?.{0,30}\\bodds\\b', '\\bodds\\b.{0,30}predictions?',
+  // Service journalism: how/when to watch
+  'what tv channel', 'what channel', 'how to watch', 'live ?stream',
+  'kick-?off time', 'start time and', 'tv channel and',
+].join('|'), 'i')
+
+const isJunk = title => JUNK_TITLE_RE.test(title || '')
 const BATCH_SIZE           = 40  // articles per DB upsert batch. Dropped from 100:
 // 100-row upserts of the cluster_peers JSONB were hitting Postgres statement
 // timeouts under write pressure (heavy JSONB column + index churn). Smaller
@@ -166,7 +188,11 @@ async function main() {
   console.log(`Fetched ${articles.length} articles from last ${CLUSTER_WINDOW_HOURS}h\n`)
 
   // Precompute significant word sets
-  const pool = articles.map(a => ({
+  // Junk is excluded from the POOL, not from `articles` — so anything that
+  // previously landed in a cluster still gets its stale cluster_id cleared by
+  // the clear-updates pass below.
+  const junkCount = articles.filter(a => isJunk(a.title)).length
+  const pool = articles.filter(a => !isJunk(a.title)).map(a => ({
     ...a,
     words: new Set(sigWords(a.title)),
   }))
@@ -286,6 +312,7 @@ async function main() {
       else bucket['50+']++
     }
     const pubsOf = ms => new Set(ms.map(m => m.outlet_id)).size
+    console.log(`excluded as junk (betting/TV-guide/affiliate): ${junkCount}`)
     console.log(`CONFIG  MIN_OVERLAP=${MIN_OVERLAP} RESCUE=${RESCUE_MIN_OVERLAP} TOKEN_CAP=${TOKEN_CAP} DISTINCTIVE_DF=${DISTINCTIVE_DF} MAX_PER_PUB=${MAX_PER_PUBLISHER}`)
     console.log(`clusters=${clusters.length} clustered=${clusteredCount} singles=${pool.length - clusteredCount} largest=${sizes[0] || 0}`)
     console.log(`sizes ${JSON.stringify(bucket)}`)
