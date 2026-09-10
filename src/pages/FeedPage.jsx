@@ -65,7 +65,7 @@ const SORTS = [
 const TOPIC_PAGE = 10
 const TOPIC_WINDOW_NARROW = 6   // hours — first try; keeps the sort cheap for broad topics
 const TOPIC_WINDOW_WIDE   = 24  // hours — fallback when a topic is sparse
-const TOPIC_SELECT = 'id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comment_count'
+const TOPIC_SELECT = 'id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, cluster_size, outlets(name, country, logo_url), comment_count'
 
 const REGIONS = [
   { value: 'all',        label: 'All'          },
@@ -353,7 +353,7 @@ export default function FeedPage({
       if (!escaped) { setDbResults([]); setDbLoading(false); return }
       const { data } = await db
         .from('articles')
-        .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comment_count')
+        .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, cluster_size, outlets(name, country, logo_url), comment_count')
         // Title-only so it uses the pg_trgm GIN index on articles.title. An OR
         // across summary (unindexed) would drop the whole query back to a seq-scan.
         .ilike('title', `%${escaped}%`)
@@ -393,7 +393,7 @@ export default function FeedPage({
     setFollowingLoading(true)
     const ids = [...followedOutletIds]
     db.from('articles')
-      .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, logo_url, country), comment_count')
+      .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, cluster_size, outlets(name, logo_url, country), comment_count')
       .in('outlet_id', ids)
       .order('published_at', { ascending: false })
       // 50, not 100. At 100 this query EXCEEDED the anon role's statement timeout
@@ -451,7 +451,7 @@ export default function FeedPage({
         if (sort === 'trending') {
           const trendScore = a => {
             // cluster_peers is a JSONB array — use .length for the outlet coverage count
-            const coverage  = a.cluster_peers?.length || 0
+            const coverage  = a.cluster_size || a.cluster_peers?.length || 0
             const comments  = a.comment_count || 0
             // Gravity decay: score / (age + 2)^1.8
             // Stories need cross-outlet coverage or engagement to hold their rank;

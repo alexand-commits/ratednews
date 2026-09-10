@@ -86,6 +86,7 @@ const DISTINCTIVE_DF     = num('DISTINCTIVE_DF', 0)
 // NOT cost source counts on real stories — the Philippine-ferry cluster keeps
 // all 52 outlets, dropping only same-publisher duplicates (84 -> 77 articles).
 const MAX_PER_PUBLISHER  = num('MAX_PER_PUBLISHER', 3)
+const PEER_STORE_CAP     = num('PEER_STORE_CAP', 8)
 const DRY_RUN            = process.env.DRY_RUN === '1'
 
 // Service journalism and affiliate filler, not stories. These share every
@@ -374,7 +375,7 @@ async function main() {
         return k
       }
       const seenPubs = new Set([pubKey(member.outlets?.name)])
-      const peers = members
+      const dedupedPeers = members
         .filter(m => m.id !== member.id)
         .filter(m => {
           const k = pubKey(m.outlets?.name)
@@ -382,7 +383,20 @@ async function main() {
           seenPubs.add(k)
           return true
         })
-        .slice(0, 40) // bound the JSONB payload — unbounded peer arrays on big clusters blew batch statement timeouts
+
+      // cluster_size is the AUTHORITATIVE count — distinct peer publishers,
+      // excluding this article's own (identical semantics to the old
+      // cluster_peers.length, so every existing read is a drop-in swap).
+      // It has to be stored separately because the peer ARRAY is now capped
+      // far below the real count.
+      const clusterSize = dedupedPeers.length
+
+      const peers = dedupedPeers
+        // 8, not 40. Cards render at most 5 logos and nothing else reads past
+        // the first few, so storing 40 put a fat JSONB blob on every row of
+        // every list query for nothing. The true count lives in cluster_size,
+        // so trimming the array no longer costs accuracy.
+        .slice(0, PEER_STORE_CAP)
         .map(m => ({
           id:        m.id,
           outlet_id: m.outlet_id,
@@ -391,7 +405,7 @@ async function main() {
           outlets: { name: m.outlets?.name ?? null },
         }))
 
-      clusterUpdates.push({ id: member.id, cluster_id: clusterId, cluster_peers: peers })
+      clusterUpdates.push({ id: member.id, cluster_id: clusterId, cluster_peers: peers, cluster_size: clusterSize })
       clusteredIds.add(member.id)
     }
   }
@@ -400,7 +414,7 @@ async function main() {
   // (only where a stale cluster_id is actually set; blank rows stay untouched)
   const clearUpdates = articles
     .filter(a => !clusteredIds.has(a.id) && a.cluster_id)
-    .map(a => ({ id: a.id, cluster_id: null, cluster_peers: [] }))
+    .map(a => ({ id: a.id, cluster_id: null, cluster_peers: [], cluster_size: 0 }))
 
   const allUpdates = [...clusterUpdates, ...clearUpdates]
   console.log(`Writing ${clusterUpdates.length} clustered  +  ${clearUpdates.length} cleared\n`)

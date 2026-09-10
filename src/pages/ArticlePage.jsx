@@ -501,7 +501,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
                 color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 8,
               }}>
-                📰 Also covered by {(article.cluster_peers?.length || sameStoryArticles.length)} other outlet{(article.cluster_peers?.length || sameStoryArticles.length) !== 1 ? 's' : ''}
+                📰 Also covered by {(article.cluster_size || article.cluster_peers?.length || sameStoryArticles.length)} other outlet{(article.cluster_size || article.cluster_peers?.length || sameStoryArticles.length) !== 1 ? 's' : ''}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {sameStoryArticles.map(a => {
@@ -535,12 +535,12 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                   )
                 })}
               </div>
-              {(article.cluster_peers?.length || 0) > sameStoryArticles.length && (
+              {(article.cluster_size || article.cluster_peers?.length || 0) > sameStoryArticles.length && (
                 <Link
                   href={`/story/${articleSlug(article.title, article.id)}`}
                   style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--coral)', marginTop: 8, paddingLeft: 2, textDecoration: 'none' }}
                 >
-                  See all {(article.cluster_peers.length) + 1} outlets covering this story →
+                  See all {((article.cluster_size || article.cluster_peers.length) + 1)} outlets covering this story →
                 </Link>
               )}
             </div>

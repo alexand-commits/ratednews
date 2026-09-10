@@ -17,7 +17,7 @@ const ARTICLE_SELECT = [
   'id', 'title', 'published_at', 'outlet_id',
   'category', 'geographic_scope', 'article_region',
   'summary', 'url', 'image_url',
-  'total_ratings', 'community_score', 'cluster_id', 'cluster_peers',
+  'total_ratings', 'community_score', 'cluster_id', 'cluster_peers', 'cluster_size',
   'outlets(name, country, logo_url)',
   'comment_count',
 ].join(', ')
@@ -257,7 +257,7 @@ export async function getStaticProps() {
     // Keep this formula in sync with the 'trending' sort in src/pages/FeedPage.jsx
     const now = Date.now()
     const trendScore = a => {
-      const coverage = a.cluster_peers?.length || 0
+      const coverage = a.cluster_size || a.cluster_peers?.length || 0
       const comments = a.comment_count || 0
       const hoursAgo = Math.max(0.1, (now - new Date(a.published_at)) / 3600000)
       return (coverage * 12 + comments * 5 + 1) / Math.pow(hoursAgo + 2, 1.8)

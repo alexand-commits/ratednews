@@ -78,7 +78,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
   useEffect(() => {
     setFeedLoading(true)
     db.from('articles')
-      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url)')
+      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, cluster_size, outlets(name, country, logo_url)')
       .order('published_at', { ascending: false })
       .limit(200)
       .then(({ data }) => { setFeedPool(data || []); setFeedLoading(false) })
@@ -92,7 +92,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
   useEffect(() => {
     if (region === 'all' || regionCache[region]) return
     db.from('articles')
-      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets!inner(name, country, logo_url)')
+      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, cluster_size, outlets!inner(name, country, logo_url)')
       .eq('outlets.country', region)
       .order('published_at', { ascending: false })
       .limit(200)
@@ -107,7 +107,7 @@ export default function ExplorePage({ navigate, outlets = [] }) {
     if (category === 'all' || catCache[catKey]) return
     setCatLoading(true)
     let q = db.from('articles')
-      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets!inner(name, country, logo_url)')
+      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, cluster_size, outlets!inner(name, country, logo_url)')
       .eq('category', category)
     if (region !== 'all') q = q.eq('outlets.country', region)
     q.order('published_at', { ascending: false })

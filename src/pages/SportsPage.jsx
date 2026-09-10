@@ -142,7 +142,7 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
     return [...clusters.values()]
       .map(c => {
         // cluster_peers counts publishers beyond this page's pool — use the bigger signal
-        const outletCount = Math.max(c.outletIds.size, (c.anchor.cluster_peers?.length || 0) + 1)
+        const outletCount = Math.max(c.outletIds.size, (c.anchor.cluster_size || c.anchor.cluster_peers?.length || 0) + 1)
         const firstAgeH  = Math.max(0.75, (now - new Date(c.oldest)) / 3600000)
         const newestAgeH = Math.max(0, (now - new Date(c.newest)) / 3600000)
         return {
@@ -167,7 +167,7 @@ export default function SportsPage({ articles, generatedAt, navigate, goBack, on
   let filtered
   if (sort === 'trending') {
     const trendScore = a => {
-      const coverage  = a.cluster_peers?.length || 0
+      const coverage  = a.cluster_size || a.cluster_peers?.length || 0
       const hoursAgo  = Math.max(0.1, (Date.now() - new Date(a.published_at)) / 3600000)
       return (coverage * 12 + 1) / Math.pow(hoursAgo + 2, 1.8)
     }

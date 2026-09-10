@@ -22,6 +22,9 @@ function NewsCard({ article, index, onClick, navigate, relatedArticles = [], com
 
   const hasAngles = relatedArticles.length > 0
   // All articles in this cluster (primary + related), deduped by outlet
+  // The stored peer array is capped (8) for payload reasons, so it can no
+  // longer be counted for display — cluster_size carries the true number of
+  // OTHER publishers, +1 for this article's own.
   const allAngles = hasAngles
     ? [article, ...relatedArticles].filter((a, i, arr) =>
         arr.findIndex(x => x.outlet_id === a.outlet_id) === i
@@ -136,7 +139,7 @@ function NewsCard({ article, index, onClick, navigate, relatedArticles = [], com
               ))}
             </div>
             <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--coral)' }}>
-              {allAngles.length} sources covering this
+              {article.cluster_size ? article.cluster_size + 1 : allAngles.length} sources covering this
             </span>
             <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text3)' }}>→</span>
           </div>

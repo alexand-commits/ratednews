@@ -15,7 +15,7 @@ const ARTICLE_SELECT = [
   'id', 'title', 'published_at', 'outlet_id',
   'category', 'geographic_scope', 'article_region',
   'summary', 'url', 'image_url',
-  'total_ratings', 'community_score', 'cluster_id', 'cluster_peers',
+  'total_ratings', 'community_score', 'cluster_id', 'cluster_peers', 'cluster_size',
   'outlets(name, country, logo_url)',
   'comment_count',
 ].join(', ')
