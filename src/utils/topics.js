@@ -114,6 +114,17 @@ const COMMON_WORDS = new Set([
   'reporter','reporters','anchor','correspondent','journalist',
   'editor','editors','spokesperson','spokesman','spokeswoman',
   'source','sources','bulletin','broadcast','programme','program',
+  // ── Months — genuine proper nouns, so the "capitalised = proper noun" test
+  // can't catch them, but a month is never itself a story topic. ('May' is
+  // already above as a modal verb.)
+  'january','february','march','april','june','july','august',
+  'september','october','november','december',
+  // ── Vague scale/quantity words. These lead sentence-case headlines
+  // ("Hundreds evacuated as…") so they read as capitalised proper nouns.
+  'hundreds','thousands','dozens','dozen','millions','billions','scores',
+  'handful','couple','several','various','numerous',
+  // ── Generic nouns seen surfacing as topics from title-case headlines
+  'person','persons','night','nights','morning','afternoon',
 ])
 
 // Known media outlet acronyms — blocked as both standalone topics and phrase anchors
@@ -184,18 +195,36 @@ const PLACE_PREFIXES = new Set([
 // Stop-words allowed to sit *inside* a phrase but not start/end one
 const PHRASE_CONNECTORS = new Set(['of','the','and','in','on','at','to','for','by','with','from','over','into','as','a','de','da','del','van','von','le','la'])
 
+// Generic on their own, but the tail of a real named institution: "Supreme
+// Court", "White House", "Labour Party", "Premier League". They're in
+// COMMON_WORDS (so a bare "Court" never trends) but must be allowed INTO a
+// phrase — otherwise the phrase never forms and the orphaned first word
+// ("Supreme") surfaces alone as a meaningless topic.
+const INSTITUTION_NOUNS = new Set([
+  'court','courts','house','senate','congress','parliament','council',
+  'party','league','university','palace','assembly','commission','bank',
+])
+
 export function computeTrendingTopics(topicsSource) {
     const phraseFreq   = {}
     const phraseOutlets = {}  // phrase key → Set of outlet_ids
     const singleFreq   = {}
     const singleOutlets = {}  // single key → Set of outlet_ids
+    // Headlines capitalise their FIRST word whatever it is, so a capital in
+    // position 0 is no evidence of a proper noun ("Hundreds evacuated as…").
+    // Only words seen capitalised mid-headline at least once qualify as singles.
+    const singleNonInitial = new Set()
     const displayForm  = {}
 
     // topicsSource: up to 1000 rows, title+outlet_id only — full 24h window
     for (const article of topicsSource.slice(0, 1000)) {
       const title = (article.title || '').trim()
       if (!title) continue
-      const rawWords = title.split(/\s+/)
+      // Split on hyphens/dashes/slashes as well as whitespace. Stripping them
+      // instead fused compounds into fake proper nouns — "Republican-drawn"
+      // became "Republicandrawn", which passes the capitalised-word test and
+      // trended as a topic.
+      const rawWords = title.split(/[\s\-‐-―/]+/)
 
       // ── Pass 1: multi-word phrases ──
       let buffer = []
@@ -210,7 +239,7 @@ export function computeTrendingTopics(topicsSource) {
         // UNLESS that token is a PLACE_PREFIX — "New York", "North Korea", "San Francisco"
         // are valid phrases even though "new/north/san" are common words.
         const nonConnectors = buffer.filter(t => !PHRASE_CONNECTORS.has(t.key))
-        if (nonConnectors.some(t => (COMMON_WORDS.has(t.key) && !PLACE_PREFIXES.has(t.key)) || MEDIA_ACRONYMS.has(t.key))) {
+        if (nonConnectors.some(t => (COMMON_WORDS.has(t.key) && !PLACE_PREFIXES.has(t.key) && !INSTITUTION_NOUNS.has(t.key)) || MEDIA_ACRONYMS.has(t.key))) {
           buffer = []; return
         }
         const phrase    = buffer.map(t => t.word).join(' ')
@@ -235,9 +264,10 @@ export function computeTrendingTopics(topicsSource) {
         // The flushBuffer check still rejects any phrase where a COMMON_WORDS term
         // is a non-connector, so "New deal" or "North facing" won't surface.
         const isPlacePrefix = /^[A-Z][a-z]+$/.test(clean) && PLACE_PREFIXES.has(key0)
+        const isInstitution = /^[A-Z][a-z]+$/.test(clean) && INSTITUTION_NOUNS.has(key0)
         const isProperNoun  = /^[A-Z][a-z]{1,}$/.test(clean) && !COMMON_WORDS.has(key0) && !PHRASE_CONNECTORS.has(key0)
         const isConnector   = PHRASE_CONNECTORS.has(key0)
-        if (isAcronym || isProperNoun || isPlacePrefix) {
+        if (isAcronym || isProperNoun || isPlacePrefix || isInstitution) {
           buffer.push({ word: isAcronym ? clean : clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase(), key: key0 })
         } else if (isConnector && buffer.length > 0) {
           buffer.push({ word: clean.toLowerCase(), key: clean.toLowerCase() })
@@ -258,6 +288,7 @@ export function computeTrendingTopics(topicsSource) {
         if (key.length < 3) return
         if (COMMON_WORDS.has(key) || MEDIA_ACRONYMS.has(key)) return
         singleFreq[key] = (singleFreq[key] || 0) + 1
+        if (idx > 0) singleNonInitial.add(key)
         if (!singleOutlets[key]) singleOutlets[key] = new Set()
         singleOutlets[key].add(article.outlet_id)
         if (!displayForm[key]) {
@@ -285,6 +316,7 @@ export function computeTrendingTopics(topicsSource) {
       if (
         count >= 4 &&
         (singleOutlets[key]?.size ?? 0) >= 2 &&
+        singleNonInitial.has(key) &&
         !scored[key] &&
         !allPhraseKeys.some(p => p.includes(key)) &&
         !ANCHOR_LAST_NAMES.has(key)
