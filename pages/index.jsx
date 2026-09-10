@@ -56,14 +56,15 @@ export default function Feed({ initialArticles, initialCount }) {
     // and pure egress. Render the SSR feed as-is and only pull the light topic
     // source, deferred to idle so it never competes with hydration. Freshness is
     // covered by FeedPage's 2-min new-articles banner + infinite scroll.
+    // Fire immediately rather than waiting for idle. This is a light query
+    // (title+outlet_id, ~590ms) feeding the trending bar, which sits above the
+    // fold — parking it behind requestIdleCallback (up to a 2.5s wait) made the
+    // bar visibly pop in late. It's async I/O, so it doesn't block paint or
+    // hydration; the deferral was only ever needed for the heavy 90-row refetch
+    // that this path no longer does.
     if (hasCached) {
-      let handle
-      if (typeof requestIdleCallback === 'function') {
-        handle = requestIdleCallback(fetchTopics, { timeout: 2500 })
-        return () => cancelIdleCallback(handle)
-      }
-      handle = setTimeout(fetchTopics, 400)
-      return () => clearTimeout(handle)
+      fetchTopics()
+      return
     }
 
     // COLD PATH — SSR returned nothing (a failed regeneration). The client fetch

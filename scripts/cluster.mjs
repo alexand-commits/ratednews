@@ -59,7 +59,27 @@ const CLUSTER_WINDOW_HOURS = 48  // how far back to look for story clusters.
 // the marginal case of a 3-day-old story picking up a late outlet. Existing story
 // pages resolve cluster_id live at request time, so a smaller window never shrinks
 // what an already-formed story shows. Bump back to 72 to revert.
-const MIN_OVERLAP          = 3   // significant words that must overlap
+// ── Tunables. Env-overridable so DRY_RUN=1 can sweep configurations against the
+// live corpus without editing code. Defaults are the shipped behaviour.
+const num = (name, dflt) => (process.env[name] ? Number(process.env[name]) : dflt)
+
+const MIN_OVERLAP        = num('MIN_OVERLAP', 3)   // significant words that must overlap
+// The rescue pass joins orphans to an existing cluster. Held to the same low bar
+// as the main pass it produced outright false joins (an Oasis article landing in
+// a Liverpool-vs-Atletico cluster), so it can be required to be stricter.
+const RESCUE_MIN_OVERLAP = num('RESCUE_MIN_OVERLAP', MIN_OVERLAP)
+// Tokens appearing in more than this many titles carry no story identity and are
+// skipped when generating candidate pairs.
+const TOKEN_CAP          = num('TOKEN_CAP', 250)
+// Require at least one shared token RARER than this to bind two articles. Common
+// entity names ("liverpool", "atletico", "madrid") trivially give 3 overlaps for
+// every article about one fixture, merging previews, betting offers, TV guides
+// and match reports into a single "story". 0 disables the requirement.
+const DISTINCTIVE_DF     = num('DISTINCTIVE_DF', 0)
+// Cap how many articles one publisher can contribute to a cluster (0 = no cap).
+// One local outlet posting 15 pieces on a fixture shouldn't define the cluster.
+const MAX_PER_PUBLISHER  = num('MAX_PER_PUBLISHER', 0)
+const DRY_RUN            = process.env.DRY_RUN === '1'
 const BATCH_SIZE           = 40  // articles per DB upsert batch. Dropped from 100:
 // 100-row upserts of the cluster_peers JSONB were hitting Postgres statement
 // timeouts under write pressure (heavy JSONB column + index churn). Smaller
@@ -143,24 +163,30 @@ async function main() {
     }
   })
 
-  // Words this common in a 72h window ("trump", "police") carry no story
-  // identity — skip them when generating candidate pairs, both for precision
-  // and to keep the pairing loop O(rare-word matches) instead of O(n²).
-  const TOKEN_CAP = 250
-
+  // Words this common carry no story identity — skip them when generating
+  // candidate pairs, both for precision and to keep the pairing loop
+  // O(rare-word matches) instead of O(n²). (TOKEN_CAP is a tunable up top.)
   const sharedCounts = (i, skipAssigned, assigned) => {
-    const m = new Map() // candidate index → overlapping word count
+    const m = new Map() // candidate index → { n, distinctive }
     for (const w of pool[i].words) {
       const post = index.get(w)
       if (post.length > TOKEN_CAP) continue
+      // Does this token actually identify a story, or is it just a common
+      // entity that every article about the same fixture/person shares?
+      const isDistinctive = DISTINCTIVE_DF > 0 && post.length <= DISTINCTIVE_DF
       for (const j of post) {
         if (j === i) continue
         if (skipAssigned && assigned.has(j)) continue
-        m.set(j, (m.get(j) || 0) + 1)
+        const cur = m.get(j) || { n: 0, distinctive: false }
+        cur.n++
+        if (isDistinctive) cur.distinctive = true
+        m.set(j, cur)
       }
     }
     return m
   }
+  const binds = (s, threshold) =>
+    s.n >= threshold && (DISTINCTIVE_DF === 0 || s.distinctive)
 
   // Main pass: anchor stars. Every member overlaps the anchor directly.
   const assigned = new Map() // pool index → clustersRaw index
@@ -169,8 +195,8 @@ async function main() {
     if (assigned.has(i)) continue
     const counts = sharedCounts(i, true, assigned)
     const memberIdx = []
-    for (const [j, n] of counts) {
-      if (n >= MIN_OVERLAP && pool[j].outlet_id !== pool[i].outlet_id) memberIdx.push(j)
+    for (const [j, s] of counts) {
+      if (binds(s, MIN_OVERLAP) && pool[j].outlet_id !== pool[i].outlet_id) memberIdx.push(j)
     }
     if (!memberIdx.length) continue // singleton — not a cluster
     const cn = clustersRaw.length
@@ -187,14 +213,28 @@ async function main() {
     if (snapshot.has(i)) continue
     const counts = sharedCounts(i, false, snapshot)
     let best = null, bestN = 0
-    for (const [j, n] of counts) {
-      if (n >= MIN_OVERLAP && snapshot.has(j) && n > bestN) { best = j; bestN = n }
+    for (const [j, s] of counts) {
+      if (binds(s, RESCUE_MIN_OVERLAP) && snapshot.has(j) && s.n > bestN) { best = j; bestN = s.n }
     }
     if (best != null) clustersRaw[snapshot.get(best)].memberIdx.push(i)
   }
 
+  // One publisher posting 15 pieces on a fixture shouldn't define the cluster.
+  // Keep the anchor plus the first N per outlet (members stay in anchor-first,
+  // newest-first order).
+  const capPerPublisher = ms => {
+    if (MAX_PER_PUBLISHER <= 0) return ms
+    const seen = new Map()
+    return ms.filter(m => {
+      const k = m.outlet_id || 'unknown'
+      const n = (seen.get(k) || 0) + 1
+      seen.set(k, n)
+      return n <= MAX_PER_PUBLISHER
+    })
+  }
+
   const components = clustersRaw
-    .map(c => c.memberIdx.map(ix => pool[ix]))
+    .map(c => capPerPublisher(c.memberIdx.map(ix => pool[ix])))
     .filter(ms => new Set(ms.map(m => m.outlet_id)).size >= 2)
     .sort((a, b) => b.length - a.length)
 
@@ -211,6 +251,37 @@ async function main() {
 
   const clusteredCount = clusters.reduce((s, c) => s + c.members.length, 0)
   console.log(`Found ${clusters.length} clusters spanning ${clusteredCount} articles\n`)
+
+  // ── DRY_RUN: report quality, write nothing ─────────────────────────────────
+  // Lets a config be swept against the live corpus before it touches the DB.
+  // Watch BOTH directions: too loose merges unrelated stories, too tight
+  // fragments one story into many small clusters.
+  if (DRY_RUN) {
+    const sizes = clusters.map(c => c.members.length)
+    const bucket = { '2': 0, '3-5': 0, '6-10': 0, '11-20': 0, '21-50': 0, '50+': 0 }
+    for (const n of sizes) {
+      if (n === 2) bucket['2']++
+      else if (n <= 5) bucket['3-5']++
+      else if (n <= 10) bucket['6-10']++
+      else if (n <= 20) bucket['11-20']++
+      else if (n <= 50) bucket['21-50']++
+      else bucket['50+']++
+    }
+    const pubsOf = ms => new Set(ms.map(m => m.outlet_id)).size
+    console.log(`CONFIG  MIN_OVERLAP=${MIN_OVERLAP} RESCUE=${RESCUE_MIN_OVERLAP} TOKEN_CAP=${TOKEN_CAP} DISTINCTIVE_DF=${DISTINCTIVE_DF} MAX_PER_PUB=${MAX_PER_PUBLISHER}`)
+    console.log(`clusters=${clusters.length} clustered=${clusteredCount} singles=${pool.length - clusteredCount} largest=${sizes[0] || 0}`)
+    console.log(`sizes ${JSON.stringify(bucket)}`)
+    const topN = Number(process.env.SHOW || 3)
+    for (const c of clusters.slice(0, topN)) {
+      console.log(`\n--- cluster: ${c.members.length} articles / ${pubsOf(c.members)} outlets ---`)
+      for (const m of c.members.slice(0, 12)) {
+        console.log(`   [${(m.outlets?.name || '?').slice(0, 20).padEnd(20)}] ${m.title.slice(0, 72)}`)
+      }
+      if (c.members.length > 12) console.log(`   … +${c.members.length - 12} more`)
+    }
+    console.log('\n(DRY_RUN — nothing written)')
+    return
+  }
 
   // ── Build update payloads ──────────────────────────────────────────────────
   const clusteredIds  = new Set()
