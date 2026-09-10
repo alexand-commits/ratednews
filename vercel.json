@@ -8,8 +8,6 @@
     { "source": "/Archives/:year/:month/business/:slug*",   "destination": "/categories/business",    "permanent": true },
     { "source": "/Archives/:year/:month/sport/:slug*",      "destination": "/categories/sport",       "permanent": true },
     { "source": "/Archives/:year/:month/environment/:slug*","destination": "/categories/environment", "permanent": true },
-    { "source": "/Archives/:year/:month/crime/:slug*",      "destination": "/categories/crime",       "permanent": true },
-    { "source": "/Archives/:year/:month/:category/:slug*",  "destination": "/",                       "permanent": true },
-    { "source": "/archives/:id*",                           "destination": "/",                       "permanent": true }
+    { "source": "/Archives/:year/:month/crime/:slug*",      "destination": "/categories/crime",       "permanent": true }
   ]
 }
