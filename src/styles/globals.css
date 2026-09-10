@@ -273,13 +273,14 @@ img, video, iframe, embed, object { max-width: 100%; }
    from jumping as cards enter the viewport. */
 .feed .news-card, .feed--grid-plain .news-card { content-visibility: auto; contain-intrinsic-size: auto 150px; }
 
-/* Trending topics live inline above the feed on mobile, in the sidebar on desktop */
+/* Trending topic pills sit inline above the feed on every viewport. (They used to
+   be hidden ≥1024px on the assumption the sidebar carried them, but the sidebar
+   shows trending STORIES, not topic pills — so desktop lost them entirely.) */
 .sidebar-trending { display: none; }
 /* Generic desktop/mobile visibility helpers (1024px breakpoint, matching the grid) */
 .desktop-only { display: none; }
 @media (min-width: 1024px) {
   .sidebar-trending { display: block; }
-  .trending-inline { display: none; }
   .desktop-only { display: flex; }
   .hide-desktop { display: none !important; }
 }

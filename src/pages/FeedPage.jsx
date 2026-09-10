@@ -101,6 +101,8 @@ export default function FeedPage({
   const [dbLoading, setDbLoading]       = useState(false)
   const [activeTopic, setActiveTopic]   = useState(initialTopic) // trending topic filter
   const [topicArticles, setTopicArticles] = useState([])    // live query results for active topic
+  const [topicError, setTopicError]       = useState(false) // query FAILED (vs genuinely no matches)
+  const [topicNonce, setTopicNonce]       = useState(0)     // bump to re-run the topic query (retry)
   const [topicLoading, setTopicLoading]   = useState(false)
   const searchTimer                 = useRef(null)
   const searchInputRef              = useRef(null)
@@ -119,23 +121,57 @@ export default function FeedPage({
 
   // Live query when a trending topic is selected — searches the full 24h window
   // so topics like "Strait of Hormuz" that spiked earlier in the day still show articles.
+  // `topicNonce` lets the retry button re-run this effect for the same topic.
   useEffect(() => {
-    if (!activeTopic) { setTopicArticles([]); return }
+    if (!activeTopic) { setTopicArticles([]); setTopicError(false); return }
+    let cancelled = false
     setTopicLoading(true)
+    setTopicError(false)
     const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     // Escape LIKE metacharacters and PostgREST syntax chars
     const escaped = activeTopic.replace(/[%_\\]/g, '\\$&').replace(/[,()\.:]/g, ' ').trim()
-    db.from('articles')
+
+    const run = () => db.from('articles')
       .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comments(count)')
       .ilike('title', `%${escaped}%`)
       .gte('published_at', cutoff)
       .order('published_at', { ascending: false })
       .limit(30)
-      .then(({ data }) => {
-        setTopicArticles(data || [])
-        setTopicLoading(false)
-      })
-  }, [activeTopic])
+
+    // A broad topic ("Israeli") matches enough rows that the ILIKE + sort can blow
+    // past the anon role's ~3s statement timeout. That returns an ERROR, not an
+    // empty set — and treating it as empty rendered a flat lie ("No stories on
+    // Israeli in the last 24h") when there were plenty. Surface the failure, and
+    // retry once since the timeout is load-dependent and often passes second time.
+    ;(async () => {
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const { data, error } = await run()
+          if (cancelled) return
+          if (!error) {
+            setTopicArticles(data || [])
+            setTopicError(false)
+            setTopicLoading(false)
+            return
+          }
+          if (attempt === 1) {
+            setTopicArticles([])
+            setTopicError(true)
+            setTopicLoading(false)
+          }
+        } catch (e) {
+          if (cancelled) return
+          if (attempt === 1) {
+            setTopicArticles([])
+            setTopicError(true)
+            setTopicLoading(false)
+          }
+        }
+      }
+    })()
+
+    return () => { cancelled = true }
+  }, [activeTopic, topicNonce])
 
   // Search history (localStorage-persisted)
   const [searchHistory, setSearchHistory] = useState(() => {
@@ -195,7 +231,10 @@ export default function FeedPage({
 
   useEffect(() => {
     // Don't poll when a search or topic filter is active — banner would be confusing
-    if (search || activeTopic || feedTab === 'following') return
+    // Only on 'Latest'. On 'Top stories' the feed is RANKED, so 20 new low-coverage
+    // articles don't crack the top — tapping "refresh" looked like nothing happened.
+    // Skipping the poll there also drops a count query every 2 min.
+    if (search || activeTopic || feedTab === 'following' || sort !== 'latest') return
     const poll = async () => {
       if (!latestPublishedAtRef.current) return
       if (document.visibilityState !== 'visible') return // don't poll backgrounded tabs
@@ -209,7 +248,7 @@ export default function FeedPage({
     const onVis = () => { if (document.visibilityState === 'visible') poll() }
     document.addEventListener('visibilitychange', onVis)
     return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVis) }
-  }, [search, activeTopic, feedTab])
+  }, [search, activeTopic, feedTab, sort])
 
   function handleNewArticlesBanner() {
     setNewArticleCount(0)
@@ -566,7 +605,7 @@ export default function FeedPage({
           )}
         </div>
 
-        {/* Topic insight cards — inline on mobile; ≥1024px these live in the sidebar */}
+        {/* Trending topic pills — inline above the feed on every viewport */}
         {topicInsights.length > 0 && (
           <div className="trending-inline" style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
@@ -652,7 +691,7 @@ export default function FeedPage({
             )}
 
             {/* New articles banner */}
-            {newArticleCount > 0 && !search && !activeTopic && feedTab === 'all' && (
+            {newArticleCount > 0 && !search && !activeTopic && feedTab === 'all' && sort === 'latest' && (
               <div
                 onClick={handleNewArticlesBanner}
                 style={{
@@ -769,6 +808,19 @@ export default function FeedPage({
               ) : topicLoading ? (
                 <div className="empty-state">
                   <p style={{ color: 'var(--text3)' }}>Loading articles on {activeTopic}…</p>
+                </div>
+              ) : topicError && activeTopic ? (
+                <div className="empty-state">
+                  <h3>Couldn't load stories on "{activeTopic}"</h3>
+                  <p>That took too long to load — it's usually momentary.</p>
+                  <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12 }}>
+                    <button className="btn-primary" style={{ fontSize: 13 }} onClick={() => setTopicNonce(n => n + 1)}>
+                      Try again
+                    </button>
+                    <button className="btn-outline" style={{ fontSize: 13 }} onClick={() => setActiveTopic(null)}>
+                      Back to all stories
+                    </button>
+                  </div>
                 </div>
               ) : displayList.length === 0 && activeTopic ? (
                 <div className="empty-state">
