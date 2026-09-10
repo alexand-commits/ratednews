@@ -77,11 +77,12 @@ export default function ExplorePage({ navigate, outlets = [] }) {
   // Fetch a recent pool to power the browse feed (category filter)
   useEffect(() => {
     setFeedLoading(true)
-    db.from('articles')
-      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, cluster_size, outlets(name, country, logo_url)')
-      .order('published_at', { ascending: false })
-      .limit(200)
-      .then(({ data }) => { setFeedPool(data || []); setFeedLoading(false) })
+    // Edge-cached: these pools are identical for every reader, and the direct
+    // query measured 2352ms. See pages/api/explore-feed.js
+    fetch('/api/explore-feed')
+      .then(r => (r.ok ? r.json() : { articles: [] }))
+      .then(({ articles }) => { setFeedPool(articles || []); setFeedLoading(false) })
+      .catch(() => setFeedLoading(false))
   }, [])
 
   // Region = the outlet's home region ("UK" means stories from UK outlets —
@@ -91,12 +92,10 @@ export default function ExplorePage({ navigate, outlets = [] }) {
   const [regionCache, setRegionCache] = useState({})
   useEffect(() => {
     if (region === 'all' || regionCache[region]) return
-    db.from('articles')
-      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, cluster_size, outlets!inner(name, country, logo_url)')
-      .eq('outlets.country', region)
-      .order('published_at', { ascending: false })
-      .limit(200)
-      .then(({ data }) => setRegionCache(prev => ({ ...prev, [region]: data || [] })))
+    fetch(`/api/explore-feed?region=${encodeURIComponent(region)}`)
+      .then(r => (r.ok ? r.json() : { articles: [] }))
+      .then(({ articles }) => setRegionCache(prev => ({ ...prev, [region]: articles || [] })))
+      .catch(() => {})
   }, [region, regionCache])
 
   // Deep per-category fetch — region-aware (cache key category:region) so the
@@ -106,16 +105,13 @@ export default function ExplorePage({ navigate, outlets = [] }) {
   useEffect(() => {
     if (category === 'all' || catCache[catKey]) return
     setCatLoading(true)
-    let q = db.from('articles')
-      .select('id, title, published_at, outlet_id, category, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, cluster_size, outlets!inner(name, country, logo_url)')
-      .eq('category', category)
-    if (region !== 'all') q = q.eq('outlets.country', region)
-    q.order('published_at', { ascending: false })
-      .limit(100)
-      .then(({ data }) => {
-        setCatCache(prev => ({ ...prev, [catKey]: data || [] }))
+    fetch(`/api/explore-feed?category=${encodeURIComponent(category)}&region=${encodeURIComponent(region)}`)
+      .then(r => (r.ok ? r.json() : { articles: [] }))
+      .then(({ articles }) => {
+        setCatCache(prev => ({ ...prev, [catKey]: articles || [] }))
         setCatLoading(false)
       })
+      .catch(() => setCatLoading(false))
   }, [catKey, category, region, catCache])
 
   // Browse feed — the right pool for the view (global, regional, or category
@@ -309,26 +305,54 @@ export default function ExplorePage({ navigate, outlets = [] }) {
         {!isSearchActive && (
           <>
 
-            {/* Region — same editions as desktop */}
-            <div className="filter-bar" style={{ marginBottom: 8 }}>
-              {REGIONS.map(r => (
+            {/* Active-filter summary — makes it obvious something is narrowing
+                the feed, and gives one place to undo it all. */}
+            {(region !== 'all' || category !== 'all') && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 12 }}>
+                <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Filtered
+                  {region !== 'all' ? ` · ${REGIONS.find(r => r.value === region)?.label || region}` : ''}
+                  {category !== 'all' ? ` · ${CATEGORIES.find(c => c.value === category)?.label || category}` : ''}
+                </span>
                 <button
-                  key={r.value}
-                  className={`pill${region === r.value ? ' active' : ''}`}
-                  onClick={() => setRegion(r.value)}
-                >{r.label}</button>
-              ))}
+                  onClick={() => { setRegion('all'); goCategory('all') }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: 'var(--coral)', padding: 0, fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+                >✕ Clear all</button>
+              </div>
+            )}
+
+            {/* Region — same editions as desktop. An active pill carries an ✕ and
+                toggles back to 'all', so clearing one filter doesn't mean hunting
+                for the 'All' pill. */}
+            <div className="filter-bar" style={{ marginBottom: 8 }}>
+              {REGIONS.map(r => {
+                const isActive = region === r.value
+                const clearable = isActive && r.value !== 'all'
+                return (
+                  <button
+                    key={r.value}
+                    className={`pill${isActive ? ' active' : ''}`}
+                    onClick={() => setRegion(clearable ? 'all' : r.value)}
+                    aria-label={clearable ? `Clear ${r.label} filter` : r.label}
+                  >{r.label}{clearable ? ' ✕' : ''}</button>
+                )
+              })}
             </div>
 
-            {/* Category filter — mobile only; the hub owns categories on desktop */}
+            {/* Category filter */}
             <div className="filter-bar" style={{ marginBottom: 16 }}>
-              {CATEGORIES.map(c => (
-                <button
-                  key={c.value}
-                  className={`pill${category === c.value ? ' active' : ''}`}
-                  onClick={() => goCategory(c.value)}
-                >{c.emoji ? `${c.emoji} ` : ''}{c.label}</button>
-              ))}
+              {CATEGORIES.map(c => {
+                const isActive = category === c.value
+                const clearable = isActive && c.value !== 'all'
+                return (
+                  <button
+                    key={c.value}
+                    className={`pill${isActive ? ' active' : ''}`}
+                    onClick={() => goCategory(clearable ? 'all' : c.value)}
+                    aria-label={clearable ? `Clear ${c.label} filter` : c.label}
+                  >{c.emoji ? `${c.emoji} ` : ''}{c.label}{clearable ? ' ✕' : ''}</button>
+                )
+              })}
             </div>
 
             {(feedLoading || (category === 'all' && region !== 'all' && !regionCache[region]) || (category !== 'all' && catLoading && !catCache[catKey])) ? (
