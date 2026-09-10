@@ -38,7 +38,10 @@ export default function DigestSignup() {
   }
 
   return (
-    <div className="widget">
+    // Owns its own spacing: callers must NOT wrap this in a spacing div, or a
+    // signed-in visitor (where this renders null) leaves an empty grid cell —
+    // a visible hole in the feed.
+    <div className="widget" style={{ margin: '2px 0' }}>
       <div className="widget-title">📬 The week in coverage</div>
       {status === 'done' ? (
         <div style={{ fontSize: 13, color: 'var(--green-dark)', fontWeight: 600 }}>

@@ -855,11 +855,7 @@ export default function FeedPage({
                         no longer carries the signup — it's finite and stranded
                         beside an infinite feed — so this is the primary capture
                         point on every screen. */}
-                    {i === 9 && (
-                      <div style={{ margin: '2px 0' }}>
-                        <DigestSignup />
-                      </div>
-                    )}
+                    {i === 9 && <DigestSignup />}
                   </React.Fragment>
                 ))
               )}
