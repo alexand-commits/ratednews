@@ -324,7 +324,13 @@ export default function FeedPage({
       .select('id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, logo_url, country), comments(count)')
       .in('outlet_id', ids)
       .order('published_at', { ascending: false })
-      .limit(100)
+      // 50, not 100. At 100 this query EXCEEDED the anon role's statement timeout
+      // (~4.8s) and returned an error, which this handler turned into an empty
+      // array — so My feed silently rendered nothing. The cost is the payload:
+      // 100 rows x cluster_peers JSONB + comments(count). 50 rows returns in
+      // ~310ms. Measured, not guessed. (No date cutoff needed — the limit is the
+      // lever — so outlets that post rarely still show up.)
+      .limit(50)
       .then(({ data, error }) => {
         if (error && process.env.NODE_ENV !== 'production') console.error('[MyFeed] query failed:', error)
         setFollowingArticles(data || [])
@@ -610,7 +616,7 @@ export default function FeedPage({
         </div>
 
         {/* Trending topic pills — inline above the feed on every viewport */}
-        {topicInsights.length > 0 && (
+        {topicInsights.length > 0 && feedTab !== 'following' && (
           <div className="trending-inline" style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
               🔥 Trending · 24h
