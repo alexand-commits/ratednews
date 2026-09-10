@@ -107,7 +107,9 @@ export async function getStaticProps() {
         articles: [],
         generatedAt: new Date().toISOString(),
       },
-      revalidate: 1800,
+      // 120s, not 1800s — an empty page is a broken page, so don't cache a
+      // transient failure for half an hour. (Same bug took out /trending.)
+      revalidate: 120,
     }
   }
 }

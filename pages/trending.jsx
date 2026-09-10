@@ -83,14 +83,22 @@ export async function getStaticProps() {
 
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
 
-    const { data, error } = await supabase
-      .from('articles')
-      .select('id, title, published_at, outlet_id, category, summary, image_url, view_count, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, logo_url, country), comment_count')
-      .gte('published_at', since24h)
-      .order('published_at', { ascending: false })
-      .limit(200)
-
-    if (error) throw error
+    // Retry once before giving up. A single transient timeout here used to cache
+    // an EMPTY trending page for 30 minutes (see the catch below) — the page
+    // rendered "Nothing trending yet" while the DB was perfectly healthy.
+    let data = null
+    let lastErr = null
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const res = await supabase
+        .from('articles')
+        .select('id, title, published_at, outlet_id, category, summary, image_url, view_count, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, logo_url, country), comment_count')
+        .gte('published_at', since24h)
+        .order('published_at', { ascending: false })
+        .limit(200)
+      if (!res.error) { data = res.data; lastErr = null; break }
+      lastErr = res.error
+    }
+    if (lastErr) throw lastErr
 
     // ── Cross-outlet coverage scoring ──────────────────────────────────────────
     // Extract meaningful tokens from a title (strip stop words + short words)
@@ -178,7 +186,10 @@ export async function getStaticProps() {
         articles: [],
         generatedAt: new Date().toISOString(),
       },
-      revalidate: 1800,
+      // 120s, not 1800s. An empty trending page is a broken page, so retry
+      // soon — caching a transient failure for half an hour meant one slow
+      // moment took the whole tab down until the next successful regen.
+      revalidate: 120,
     }
   }
 }
