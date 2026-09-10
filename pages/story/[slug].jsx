@@ -14,10 +14,23 @@ export default function StoryDetail({ story }) {
   const count = story.members?.length || 0
   const ogImage = `https://www.ratednews.com/api/og?type=story&title=${encodeURIComponent((story.title || '').slice(0, 120))}&count=${count}&sources=${encodeURIComponent([...new Set((story.members || []).map(m => m.outlets?.name).filter(Boolean))].slice(0, 4).join('|'))}`
   const title = `${story.title} — ${count} ${count === 1 ? 'source' : 'sources'} covering it | RatedNews`
-  const desc  = count >= 8
-    ? `See how ${count} news outlets are covering this story, side by side, on RatedNews. Rate the sources you trust.`
-    : 'See how newsrooms are covering this story, side by side, on RatedNews. Rate the sources you trust.'
-  const url   = `https://www.ratednews.com/story/${story.slug}`
+  // A unique description per story. Every story with <8 sources previously
+  // shared one identical sentence — thousands of pages with the same meta
+  // description is a weak signal on exactly the pages meant to carry our SEO.
+  // Name the story and the outlets so each page describes itself.
+  const outletNames = [...new Set((story.members || []).map(m => m.outlets?.name).filter(Boolean))]
+  const rawDesc = count > 1
+    ? `${count} outlets covering: ${story.title}. Compare how ${outletNames.slice(0, 3).join(', ')}${outletNames.length > 3 ? ' and others' : ''} reported it, side by side on RatedNews.`
+    : `${story.title} — see how this story is being reported, side by side on RatedNews.`
+  const desc = rawDesc.length > 158 ? `${rawDesc.slice(0, 155).trimEnd()}…` : rawDesc
+
+  // Cluster-level canonical. EVERY member of a cluster yields a valid /story/
+  // URL rendering the same page, and each feed card links to its own member's
+  // URL — so a 20-outlet story advertised 20 near-duplicate URLs, each
+  // self-canonicalising. Point them all at one representative (the newest
+  // member, the same rule the sitemap uses) so they consolidate into a single
+  // indexable page instead of competing with each other.
+  const url = `https://www.ratednews.com/story/${story.canonicalSlug || story.slug}`
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -148,9 +161,15 @@ export async function getStaticProps({ params }) {
     if (a.outlets) delete a.outlets.parent_outlet_id
   }
 
+  // The representative URL for this cluster — newest member, matching the rule
+  // pages/sitemap.xml.jsx uses to pick its one URL per cluster. Every other
+  // member's /story/ URL canonicalises here.
+  const newest = members.reduce((a, b) => (b.published_at > a.published_at ? b : a), members[0])
+
   const story = {
     anchorId: anchor.id,
     slug: canonical,
+    canonicalSlug: articleSlug(newest.title, newest.id),
     title: anchor.title,
     // Hero: anchor's photo, else the first member that has one — an anchor
     // without a photo was blanking the hero even on well-photographed stories

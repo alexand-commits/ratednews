@@ -60,15 +60,40 @@ export async function getServerSideProps({ res }) {
   // and generate stale 404s in Search Console once they're re-ingested
   const since90d = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
 
-  const [{ data: outlets }, { data: articles }] = await Promise.all([
+  // Paged, because PostgREST caps a response at 1000 rows however high the
+  // .limit() is. The old single .limit(1500) therefore returned 1000 rows —
+  // and at ~14k articles/day that is UNDER TWO HOURS of content. The sitemap
+  // was a rolling 2-hour window: URLs appeared and vanished long before
+  // Googlebot (~190 crawls/day) could reach them, which is exactly why Search
+  // Console reported Discovery <1%. Page back far enough to publish a STABLE
+  // set of story URLs that persists between regenerations.
+  const PAGE = 1000
+  const MAX_PAGES = 12          // ~12k articles scanned, ~4x/day — negligible
+  const MAX_STORY_URLS = 3000
+  async function fetchArticlePages() {
+    const out = []
+    const clusters = new Set()
+    for (let p = 0; p < MAX_PAGES; p++) {
+      const { data, error } = await supabase
+        .from('articles')
+        .select('id, title, published_at, cluster_id')
+        .gte('published_at', since90d)
+        .order('published_at', { ascending: false })
+        .range(p * PAGE, p * PAGE + PAGE - 1)
+      if (error || !data?.length) break
+      out.push(...data)
+      for (const a of data) if (a.cluster_id) clusters.add(a.cluster_id)
+      if (data.length < PAGE) break              // exhausted
+      if (clusters.size >= MAX_STORY_URLS) break // enough stories
+    }
+    return out
+  }
+
+  const [{ data: outlets }, articles] = await Promise.all([
     // NB: outlets has no updated_at column — selecting it errored the whole
     // query and silently dropped every outlet page from the sitemap.
     supabase.from('outlets').select('name, total_ratings').is('parent_outlet_id', null),
-    supabase.from('articles')
-      .select('id, title, published_at, cluster_id')
-      .gte('published_at', since90d)
-      .order('published_at', { ascending: false })
-      .limit(1500),
+    fetchArticlePages(),
   ])
 
   const outletPages = (outlets || []).map(o => ({
@@ -117,8 +142,14 @@ export async function getServerSideProps({ res }) {
   // One URL per cluster: the same headline syndicated across 3+ outlets was
   // listing 3+ near-duplicate URLs, diluting crawl budget. The newest member
   // represents the cluster (its story page covers the rest).
+  // Solo articles are the thinnest thing on the site — one outlet restating its
+  // own headline, with no story page to aggregate it. With a crawl budget of
+  // ~190/day they shouldn't crowd out story pages, so cap them at the newest
+  // few hundred rather than listing every one.
+  const MAX_SOLO_ARTICLE_URLS = 250
   const articlePages = []
   for (const a of (articles || [])) {
+    if (articlePages.length >= MAX_SOLO_ARTICLE_URLS) break
     // Clustered articles are represented by their richer /story page; listing
     // the newest member's stub too put the SAME slug on two paths, making the
     // story page compete with its own thin stub. Solo articles only here.
