@@ -113,11 +113,13 @@ export default function App({ Component, pageProps }) {
       }
     } catch (e) {}
 
-    // Explicit column list — avoids fetching any future large columns automatically.
-    // Includes all fields used across FeedPage, OutletPage, and NewsCard.
-    const OUTLET_SELECT = 'id, name, country, logo_url, type, community_score, total_ratings, parent_outlet_id'
-    db.from('outlets').select(OUTLET_SELECT).order('community_score', { ascending: false, nullsFirst: false })
-      .then(({ data }) => {
+    // Served from /api/outlets, which is edge-cached for 15 minutes. This list
+    // is identical for every reader and barely moves, so querying Supabase once
+    // per session was per-visitor work for shared data — the same waste the
+    // trending rail had. A cache hit returns in tens of ms.
+    fetch('/api/outlets')
+      .then(r => (r.ok ? r.json() : { outlets: [] }))
+      .then(({ outlets: data }) => {
         const outlets = data || []
         setAllOutlets(outlets)
         setOutletsLoading(false)
