@@ -157,6 +157,34 @@ async function main() {
     return
   }
 
+  // ── Cadence guard ──────────────────────────────────────────────────────────
+  // Measured: one run re-reads ~29,600 rows (177s) to place ~54 new articles —
+  // 0.2% of the corpus. Across 96 runs/day that's 2.84M row-reads and ~4.7
+  // HOURS of database read time, almost all of it re-deriving clusters that
+  // didn't change. Halving the cadence halves all of that for no algorithm
+  // risk: ingest still runs every 15 min so articles appear in the feed
+  // immediately; they just wait a little longer for their coverage badge.
+  //
+  // Enforced here rather than in .github/workflows (the deploy token has no
+  // `workflow` scope), so the cron still ticks every 15 min and every other
+  // tick exits in a couple of cheap queries.
+  // Set MIN_RUN_INTERVAL_MIN=0 to disable.
+  const MIN_RUN_INTERVAL_MIN = num('MIN_RUN_INTERVAL_MIN', 25)
+  const STATE_KIND = 'cluster_state'
+  let stateRowId = null
+  if (MIN_RUN_INTERVAL_MIN > 0 && !DRY_RUN) {
+    const { data: state } = await supabase.from('social_drafts')
+      .select('id, pack').eq('pack->>kind', STATE_KIND)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle()
+    stateRowId = state?.id ?? null
+    const last = state?.pack?.last_run ? Date.parse(state.pack.last_run) : 0
+    const minsSince = (Date.now() - last) / 60000
+    if (last && minsSince < MIN_RUN_INTERVAL_MIN) {
+      console.log(`⏭ last run ${minsSince.toFixed(1)}min ago (< ${MIN_RUN_INTERVAL_MIN}) — skipping`)
+      return
+    }
+  }
+
   const cutoff = new Date(Date.now() - CLUSTER_WINDOW_HOURS * 60 * 60 * 1000).toISOString()
 
   // Fetch all articles in the window with outlet info.
@@ -440,6 +468,14 @@ async function main() {
   console.log(`\n\n================================`)
   console.log(`✅ Written: ${written}  ❌ Failed: ${failed}`)
   console.log(`📦 Clusters: ${clusters.length}  In clusters: ${clusteredCount}`)
+
+  // Stamp the run so the cadence guard can skip the next tick. Written only
+  // after a real run, so a skipped or failed run never pushes the window out.
+  if (MIN_RUN_INTERVAL_MIN > 0) {
+    const pack = { kind: STATE_KIND, last_run: new Date().toISOString() }
+    if (stateRowId) await supabase.from('social_drafts').update({ pack }).eq('id', stateRowId)
+    else await supabase.from('social_drafts').insert({ pack })
+  }
 
   if (process.env.GITHUB_OUTPUT) {
     const fs = await import('fs')
