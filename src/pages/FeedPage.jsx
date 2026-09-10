@@ -83,7 +83,7 @@ function getArticleRegion(article) {
 }
 
 export default function FeedPage({
-  articles, trendingArticles = [], trendingTopicsSource,
+  articles, trendingArticles = [], trendingTopicsSource, initialTopics = [],
   outlets, loading, navigate,
   initialCategory = 'all', initialRegion = 'all',
   initialTopic = null, initialTab = 'all',
@@ -498,7 +498,7 @@ export default function FeedPage({
   const trendingTopics = useMemo(() => computeTrendingTopics(topicsSource), [topicsSource])
 
   // Topic insights — count uses topicsSource (300 rows) for accurate frequency
-  const topicInsights = useMemo(() => {
+  const computedTopicInsights = useMemo(() => {
     if (!trendingTopics.length) return []
     return trendingTopics.slice(0, 8).map(topic => {
       const key = topic.toLowerCase()
@@ -514,6 +514,12 @@ export default function FeedPage({
     // fewer, better topics beats a long row of weak ones.
     .slice(0, 5)
   }, [trendingTopics, topicsSource])
+
+  // Prefer topics computed server-side in getStaticProps: they ship with the
+  // HTML so the bar renders immediately, instead of waiting on a per-visitor
+  // 1000-row fetch (measured 2.6s). Fall back to the client computation for
+  // surfaces that don't supply them.
+  const topicInsights = initialTopics.length ? initialTopics : computedTopicInsights
 
   // Which list to display — DB results when search active, interleaved otherwise
   const isSearchActive = dbResults !== null

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { db } from '../src/lib/supabase'
 import FeedPage from '../src/pages/FeedPage'
 import { useAppContext } from './_app'
+import { computeTrendingTopics } from '../src/utils/topics'
 
 const BATCH = 50
 
@@ -21,7 +22,7 @@ const ARTICLE_SELECT = [
   'comment_count',
 ].join(', ')
 
-export default function Feed({ initialArticles, initialCount }) {
+export default function Feed({ initialArticles, initialCount, initialTopics = [] }) {
   const router  = useRouter()
   const { navigate, allOutlets, user, followedOutletIds, savedArticleIds,
           toggleSave, showToast, openAuthModal, toggleFollow } = useAppContext()
@@ -63,7 +64,10 @@ export default function Feed({ initialArticles, initialCount }) {
     // hydration; the deferral was only ever needed for the heavy 90-row refetch
     // that this path no longer does.
     if (hasCached) {
-      fetchTopics()
+      // getStaticProps now ships the topic pills with the HTML, so the bar is
+      // instant and this per-visitor 1000-row query (measured 2.6s — the "bar
+      // hangs") is skipped entirely. Only fetch if the server had none.
+      if (!initialTopics.length) fetchTopics()
       return
     }
 
@@ -178,6 +182,7 @@ export default function Feed({ initialArticles, initialCount }) {
       <FeedPage
         articles={articles}
         trendingTopicsSource={trendingTopicsSource}
+        initialTopics={initialTopics}
         outlets={allOutlets}
         loading={loading}
         navigate={navigate}
@@ -216,13 +221,39 @@ export async function getStaticProps() {
     // collapse clusters to one row each, and take the top BATCH. This makes the
     // server-rendered first paint already match the client's default sort — no
     // flash of latest-order before hydration. Done in Node; no schema change.
-    const [{ data: raw }, { count }] = await Promise.all([
+    // Topic pills used to be computed in the browser from a 1000-row fetch on
+    // EVERY visit — measured at 2.6s, so the bar visibly hung. It only changes
+    // as fast as ingest does, so compute it here instead: once per ISR regen
+    // (15 min) rather than once per visitor, and the bar ships with the HTML.
+    const topicCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    const [{ data: raw }, { count }, { data: topicRows }] = await Promise.all([
       supabase.from('articles')
         .select(SSR_SELECT)
         .order('published_at', { ascending: false })
         .range(0, BATCH + 40 - 1),
       supabase.from('articles').select('*', { count: 'estimated', head: true }),
+      supabase.from('articles')
+        .select('title, outlet_id')
+        .gte('published_at', topicCutoff)
+        .order('published_at', { ascending: false })
+        .limit(1000),
     ])
+
+    // Mirrors FeedPage's topicInsights: count each topic across the sample,
+    // drop one-offs, strongest first, cap at 5.
+    let initialTopics = []
+    try {
+      const src = topicRows || []
+      initialTopics = computeTrendingTopics(src)
+        .slice(0, 8)
+        .map(topic => {
+          const key = topic.toLowerCase()
+          return { topic, count: src.filter(a => (a.title || '').toLowerCase().includes(key)).length }
+        })
+        .filter(t => t.count >= 2)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5)
+    } catch { initialTopics = [] }
     // Keep this formula in sync with the 'trending' sort in src/pages/FeedPage.jsx
     const now = Date.now()
     const trendScore = a => {
@@ -243,13 +274,13 @@ export async function getStaticProps() {
       })
       .slice(0, BATCH)
     return {
-      props: { initialArticles: articles, initialCount: count || 0 },
+      props: { initialArticles: articles, initialCount: count || 0, initialTopics },
       revalidate: 900, // regenerate every 15 minutes — matches ingest cadence
     }
   } catch {
     // Retry fast on failure — an empty homepage forces every visitor down the
     // cold client-fetch path (skeleton hang), so don't let a transient DB blip
     // cache an empty feed for long. 120s, not 1800s.
-    return { props: { initialArticles: [], initialCount: 0 }, revalidate: 120 }
+    return { props: { initialArticles: [], initialCount: 0, initialTopics: [] }, revalidate: 120 }
   }
 }
