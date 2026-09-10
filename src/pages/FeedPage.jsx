@@ -430,6 +430,10 @@ export default function FeedPage({
     })
     .filter(t => t.count >= 2)
     .sort((a, b) => b.count - a.count)
+    // Cap at 5. Filter/sort first so we keep the five STRONGEST topics, not
+    // whichever five survived — and each pill is a slow ILIKE when tapped, so
+    // fewer, better topics beats a long row of weak ones.
+    .slice(0, 5)
   }, [trendingTopics, topicsSource])
 
   // Which list to display — DB results when search active, interleaved otherwise
