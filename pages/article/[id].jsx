@@ -87,9 +87,16 @@ export default function ArticleDetail({ article: initialArticle }) {
   const coveragePart = peerCount > 0
     ? `${peerCount + 1} outlets covered this — compare the reporting. `
     : ''
-  const metaDesc  = summary
-    ? `${coveragePart}${scorePart}${summary}`.slice(0, 155)
-    : `${coveragePart}"${article.title}" from ${outletName}, on RatedNews. Rate it for accuracy, bias and quality.`.slice(0, 155)
+  const baseDesc = summary
+    ? `${coveragePart}${scorePart}${summary}`
+    : `${coveragePart}"${article.title}" from ${outletName}, on RatedNews.`
+  // Some source summaries are only a line long, leaving a description too thin
+  // to be useful in results (Bing flags anything under ~120 chars). Pad those
+  // with what the page actually offers rather than leaving a stub.
+  const metaDesc = (baseDesc.length < 120
+    ? `${baseDesc} Compare coverage from ${outletName} and other outlets, and rate it for accuracy and bias on RatedNews.`
+    : baseDesc
+  ).slice(0, 158)
 
   const keywords = [
     outletName, article.category,

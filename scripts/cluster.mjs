@@ -499,11 +499,29 @@ async function main() {
   console.log(`✅ Written: ${written}  ❌ Failed: ${failed}`)
   console.log(`📦 Clusters: ${clusters.length}  In clusters: ${clusteredCount}`)
 
-  // Tell Bing about the new story pages. Google doesn't support IndexNow and
-  // is served by the sitemap instead. Never allowed to fail the run.
-  if (changedStoryUrls.length && written > 0) {
-    const r = await submitToIndexNow(changedStoryUrls)
-    console.log(`📤 IndexNow: ${r.submitted} story URLs${r.status ? ` (HTTP ${r.status})` : ''}${r.skipped ? ` — ${r.skipped}` : ''}`)
+  // Tell Bing about new pages. Google doesn't support IndexNow and is served by
+  // the sitemap instead, so nothing here touches Google's ~190/day crawl budget.
+  //
+  // Story URLs are the unique content. Article URLs are included because Bing
+  // RANKS them (9 of our top 11 Bing pages are /article/) and its own dashboard
+  // flags recently-published pages that weren't submitted. They're deliberately
+  // absent from the sitemap — that's curated for Google's scarce budget — so
+  // IndexNow is how Bing learns about them.
+  //
+  // Scoped to articles published since roughly the last run, so each article is
+  // announced about once (~300 per 30-min run) rather than resubmitting the
+  // whole window every time. Never allowed to fail the run.
+  if (written > 0) {
+    const sinceLastRun = Date.now() - (MIN_RUN_INTERVAL_MIN + 10) * 60 * 1000
+    const freshArticleUrls = (articles || [])
+      .filter(a => new Date(a.published_at).getTime() >= sinceLastRun)
+      .map(a => `https://www.ratednews.com/article/${toArticleSlug(a.title, a.id)}`)
+
+    const payload = [...changedStoryUrls, ...freshArticleUrls]
+    if (payload.length) {
+      const r = await submitToIndexNow(payload)
+      console.log(`📤 IndexNow: ${r.submitted} URLs (${changedStoryUrls.length} story, ${freshArticleUrls.length} article)${r.status ? ` HTTP ${r.status}` : ''}${r.skipped ? ` — ${r.skipped}` : ''}`)
+    }
   }
 
   // Stamp the run so the cadence guard can skip the next tick. Written only
