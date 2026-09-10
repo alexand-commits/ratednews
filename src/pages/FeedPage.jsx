@@ -63,6 +63,8 @@ const SORTS = [
 // query cost is dominated by rows x payload, so 10 returns in ~110ms where 30
 // took ~550ms on the anon role.
 const TOPIC_PAGE = 10
+const TOPIC_WINDOW_NARROW = 6   // hours — first try; keeps the sort cheap for broad topics
+const TOPIC_WINDOW_WIDE   = 24  // hours — fallback when a topic is sparse
 const TOPIC_SELECT = 'id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, outlets(name, country, logo_url), comment_count'
 
 const REGIONS = [
@@ -110,6 +112,7 @@ export default function FeedPage({
   const [topicError, setTopicError]       = useState(false) // query FAILED (vs genuinely no matches)
   const [topicNonce, setTopicNonce]       = useState(0)     // bump to re-run the topic query (retry)
   const [topicHasMore, setTopicHasMore]   = useState(false)
+  const [topicWindow, setTopicWindow]     = useState(TOPIC_WINDOW_WIDE) // hours actually used
   const [topicLoadingMore, setTopicLoadingMore] = useState(false)
   const [topicLoading, setTopicLoading]   = useState(false)
   const searchTimer                 = useRef(null)
@@ -135,21 +138,36 @@ export default function FeedPage({
     let cancelled = false
     setTopicLoading(true)
     setTopicError(false)
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     // Escape LIKE metacharacters and PostgREST syntax chars
     const escaped = activeTopic.replace(/[%_\\]/g, '\\$&').replace(/[,()\.:]/g, ' ').trim()
 
-    // Fetch a FIRST PAGE only. Measured on the anon role: this same query at
-    // limit 30 takes ~550ms, at limit 10 ~110ms — the cost is dominated by rows
-    // x payload (cluster_peers JSONB, and formerly a per-row comments(count)
-    // aggregate — since replaced by the stored comment_count column), not by
-    // the ILIKE. So show 10 fast and let the reader ask for more.
-    const run = () => db.from('articles')
+    // Window escalation. LIMIT only helps when the plan can STOP EARLY, and for
+    // a broad topic ("Liverpool") it can't: it matches thousands of rows and has
+    // to sort them all by published_at before taking 10 — which blew past the
+    // anon role's ~3s statement timeout. Narrowing the window is what makes the
+    // sort cheap. So: try 6h first (a broad topic has plenty there — measured
+    // ~120ms vs a timeout at 24h); only widen to 24h when the topic is sparse,
+    // and a sparse topic matches few rows so the 24h sort is cheap anyway.
+    // Fast in both cases, and newest-first ordering is preserved.
+    const runWindow = hours => db.from('articles')
       .select(TOPIC_SELECT)
       .ilike('title', `%${escaped}%`)
-      .gte('published_at', cutoff)
+      .gte('published_at', new Date(Date.now() - hours * 60 * 60 * 1000).toISOString())
       .order('published_at', { ascending: false })
       .limit(TOPIC_PAGE)
+
+    const run = async () => {
+      const narrow = await runWindow(TOPIC_WINDOW_NARROW)
+      if (narrow.error) return narrow
+      if ((narrow.data || []).length >= TOPIC_PAGE) {
+        setTopicWindow(TOPIC_WINDOW_NARROW)
+        return narrow
+      }
+      const wide = await runWindow(TOPIC_WINDOW_WIDE)
+      if (wide.error) return narrow.data?.length ? narrow : wide
+      setTopicWindow(TOPIC_WINDOW_WIDE)
+      return wide
+    }
 
     // A broad topic ("Israeli") matches enough rows that the ILIKE + sort can blow
     // past the anon role's ~3s statement timeout. That returns an ERROR, not an
@@ -192,7 +210,8 @@ export default function FeedPage({
   async function loadMoreTopicArticles() {
     if (topicLoadingMore || !activeTopic) return
     setTopicLoadingMore(true)
-    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+    // Same window the first page came from, so paging stays consistent.
+    const cutoff = new Date(Date.now() - topicWindow * 60 * 60 * 1000).toISOString()
     const escaped = activeTopic.replace(/[%_\\]/g, '\\$&').replace(/[,()\.:]/g, ' ').trim()
     const from = topicArticles.length
     try {
@@ -662,8 +681,18 @@ export default function FeedPage({
         {/* Trending topic pills — inline above the feed on every viewport */}
         {topicInsights.length > 0 && feedTab !== 'following' && (
           <div className="trending-inline" style={{ marginBottom: 14 }}>
-            <div style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-              🔥 Trending · 24h
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+              <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {activeTopic ? `🔥 Filtered by ${activeTopic}` : '🔥 Trending · 24h'}
+              </span>
+              {activeTopic && (
+                <button
+                  onClick={() => setActiveTopic(null)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: 'var(--coral)', padding: 0, fontFamily: 'inherit' }}
+                >
+                  ✕ Clear filter
+                </button>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
               {topicInsights.map(({ topic }) => {
@@ -682,8 +711,21 @@ export default function FeedPage({
                     onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = 'var(--coral)' }}
                     onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = 'var(--border)' }}
                   >
-                    <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', color: isActive ? '#fff' : 'inherit' }}>
+                    {/* An active pill shows an explicit x — the coral fill alone
+                        didn't read as "tap to clear this filter". */}
+                    <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', color: isActive ? '#fff' : 'inherit', display: 'flex', alignItems: 'center', gap: 7 }}>
                       {topic}
+                      {isActive && (
+                        <span
+                          aria-hidden="true"
+                          style={{
+                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                            width: 15, height: 15, borderRadius: '50%',
+                            background: 'rgba(255,255,255,0.28)', color: '#fff',
+                            fontSize: 10, lineHeight: 1, fontWeight: 700,
+                          }}
+                        >✕</span>
+                      )}
                     </div>
                   </div>
                 )
@@ -878,7 +920,7 @@ export default function FeedPage({
                 </div>
               ) : displayList.length === 0 && activeTopic ? (
                 <div className="empty-state">
-                  <h3>No stories on "{activeTopic}" in the last 24h</h3>
+                  <h3>No stories on "{activeTopic}" in the last {topicWindow}h</h3>
                   <p>This topic may have trended earlier. Check back after the next update.</p>
                   <button className="btn-outline" style={{ marginTop: 12, fontSize: 13 }} onClick={() => setActiveTopic(null)}>
                     Back to all stories
@@ -949,7 +991,7 @@ export default function FeedPage({
                 <div style={{ textAlign: 'center', padding: '28px 16px', borderTop: '1px solid var(--divider)', marginTop: 8 }}>
                   <div style={{ fontSize: 20, marginBottom: 6 }}>📰</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 3 }}>
-                    {displayList.length} {displayList.length !== 1 ? 'stories' : 'story'} on {activeTopic} in the last 24h
+                    {displayList.length} {displayList.length !== 1 ? 'stories' : 'story'} on {activeTopic} in the last {topicWindow}h
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>That's everything — updates hourly</div>
                   <button
