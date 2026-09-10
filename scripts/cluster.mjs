@@ -67,7 +67,11 @@ const MIN_OVERLAP        = num('MIN_OVERLAP', 3)   // significant words that mus
 // The rescue pass joins orphans to an existing cluster. Held to the same low bar
 // as the main pass it produced outright false joins (an Oasis article landing in
 // a Liverpool-vs-Atletico cluster), so it can be required to be stricter.
-const RESCUE_MIN_OVERLAP = num('RESCUE_MIN_OVERLAP', MIN_OVERLAP)
+// 4, not MIN_OVERLAP. Measured on a live 48h corpus: at 3 an Oasis-ticket
+// article was absorbed into a 51-article Liverpool-vs-Atletico cluster; at 4 it
+// lands in a correct 3-article Oasis cluster. Cluster COUNT is identical either
+// way (3695), so this buys precision without fragmenting.
+const RESCUE_MIN_OVERLAP = num('RESCUE_MIN_OVERLAP', 4)
 // Tokens appearing in more than this many titles carry no story identity and are
 // skipped when generating candidate pairs.
 const TOKEN_CAP          = num('TOKEN_CAP', 250)
@@ -78,7 +82,10 @@ const TOKEN_CAP          = num('TOKEN_CAP', 250)
 const DISTINCTIVE_DF     = num('DISTINCTIVE_DF', 0)
 // Cap how many articles one publisher can contribute to a cluster (0 = no cap).
 // One local outlet posting 15 pieces on a fixture shouldn't define the cluster.
-const MAX_PER_PUBLISHER  = num('MAX_PER_PUBLISHER', 0)
+// 3. One local outlet filed 15 of 27 pieces on a single fixture. Capping does
+// NOT cost source counts on real stories — the Philippine-ferry cluster keeps
+// all 52 outlets, dropping only same-publisher duplicates (84 -> 77 articles).
+const MAX_PER_PUBLISHER  = num('MAX_PER_PUBLISHER', 3)
 const DRY_RUN            = process.env.DRY_RUN === '1'
 const BATCH_SIZE           = 40  // articles per DB upsert batch. Dropped from 100:
 // 100-row upserts of the cluster_peers JSONB were hitting Postgres statement
@@ -138,11 +145,22 @@ async function main() {
   // row-touches per run — it kept burning the disk-IO budget for two weeks
   // while looking fixed). Pure gte/lt hour ranges are bounded index scans.
   let articles
-  try {
-    articles = await fetchHeadlines(supabase, Date.now() - CLUSTER_WINDOW_HOURS * 3600e3, Date.now())
-  } catch (err) {
-    console.error('Failed to fetch articles:', err.message)
-    process.exit(1)
+  // DRY_CACHE lets a dry-run sweep reuse one fetched corpus across many configs
+  // instead of re-reading 48h from the DB each time. Dev-only; ignored unless
+  // DRY_RUN is set, so a real cron run can never read stale articles.
+  const cachePath = DRY_RUN && process.env.DRY_CACHE ? process.env.DRY_CACHE : null
+  const fs = await import('node:fs')
+  if (cachePath && fs.existsSync(cachePath)) {
+    articles = JSON.parse(fs.readFileSync(cachePath, 'utf8'))
+    console.log(`(dry-run cache: ${articles.length} articles from ${cachePath})`)
+  } else {
+    try {
+      articles = await fetchHeadlines(supabase, Date.now() - CLUSTER_WINDOW_HOURS * 3600e3, Date.now())
+    } catch (err) {
+      console.error('Failed to fetch articles:', err.message)
+      process.exit(1)
+    }
+    if (cachePath) fs.writeFileSync(cachePath, JSON.stringify(articles))
   }
 
   console.log(`Fetched ${articles.length} articles from last ${CLUSTER_WINDOW_HOURS}h\n`)
@@ -271,6 +289,23 @@ async function main() {
     console.log(`CONFIG  MIN_OVERLAP=${MIN_OVERLAP} RESCUE=${RESCUE_MIN_OVERLAP} TOKEN_CAP=${TOKEN_CAP} DISTINCTIVE_DF=${DISTINCTIVE_DF} MAX_PER_PUB=${MAX_PER_PUBLISHER}`)
     console.log(`clusters=${clusters.length} clustered=${clusteredCount} singles=${pool.length - clusteredCount} largest=${sizes[0] || 0}`)
     console.log(`sizes ${JSON.stringify(bucket)}`)
+    // FIND=<substring> — print the cluster containing that headline, so a
+    // specific false join can be checked config-by-config rather than inferred
+    // from aggregates.
+    if (process.env.FIND) {
+      const needle = process.env.FIND.toLowerCase()
+      const hit = clusters.find(c => c.members.some(m => (m.title || '').toLowerCase().includes(needle)))
+      if (!hit) {
+        console.log(`\nFIND "${process.env.FIND}": not in ANY cluster (left as a single)`)
+      } else {
+        console.log(`\nFIND "${process.env.FIND}" -> cluster of ${hit.members.length} articles / ${new Set(hit.members.map(m => m.outlet_id)).size} outlets:`)
+        for (const m of hit.members.slice(0, 14)) {
+          console.log(`   [${(m.outlets?.name || '?').slice(0, 18).padEnd(18)}] ${m.title.slice(0, 70)}`)
+        }
+        if (hit.members.length > 14) console.log(`   … +${hit.members.length - 14} more`)
+      }
+    }
+
     const topN = Number(process.env.SHOW || 3)
     for (const c of clusters.slice(0, topN)) {
       console.log(`\n--- cluster: ${c.members.length} articles / ${pubsOf(c.members)} outlets ---`)
