@@ -11,7 +11,8 @@ import { track } from '../utils/track'
 // `stories` overrides the global feed with a caller-computed list (e.g. the
 // sports page passes sport-only clusters) — same shape: {slug, title, outlets}.
 export default function TrendingStoriesWidget({ variant = 'widget', title = '🔥 Trending · 24h', limit = 5, stories: storiesProp = null }) {
-  const globalStories = useTrendingStories()
+  // Don't fetch the global list when the caller supplied its own.
+  const globalStories = useTrendingStories(storiesProp !== null)
   const stories = storiesProp ?? globalStories
   if (!stories.length) return null
 

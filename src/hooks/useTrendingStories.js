@@ -19,11 +19,16 @@ import { useState, useEffect } from 'react'
 let cache = null
 let inflight = null
 
-export function useTrendingStories() {
+// `skip` is for callers that already have their own list (the sports rail passes
+// sport-only clusters). Without it the hook still fetched the GLOBAL list and
+// threw the result away — measured live on /sports: one request, no consumer.
+// Hooks can't be called conditionally, so the flag lives here rather than at the
+// call site.
+export function useTrendingStories(skip = false) {
   const [stories, setStories] = useState(cache || [])
 
   useEffect(() => {
-    if (cache) return
+    if (skip || cache) return
     if (!inflight) {
       inflight = fetch('/api/trending-stories')
         .then(r => (r.ok ? r.json() : { stories: [] }))
@@ -33,7 +38,7 @@ export function useTrendingStories() {
     let mounted = true
     inflight.then(t => { if (mounted) setStories(t) })
     return () => { mounted = false }
-  }, [])
+  }, [skip])
 
   return stories
 }
