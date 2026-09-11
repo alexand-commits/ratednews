@@ -488,12 +488,23 @@ export default function OutletsRankingsPage({
                               <div className="rank-bar-fill" style={{ width: `${barWidth}%`, background: tab === 'community' ? 'var(--green)' : 'var(--coral)' }} />
                             </div>
                           )}
-                          <div style={{ fontSize: isWide ? 12 : 12.5, textAlign: 'right', marginTop: isWide ? 3 : 0, color: isProvisional ? 'var(--text3)' : tab === 'community' ? 'var(--green-dark)' : 'var(--text2)', fontWeight: 600 }}>
-                            {isProvisional
-                              ? (isWide
-                                  ? `${tab === 'community' && score > 0 ? (score / 20).toFixed(1) + ' · ' : ''}provisional`
-                                  : tab === 'community' && score > 0 ? `${(score / 20).toFixed(1)}*` : '—')
-                              : tab === 'community' && score > 0 ? (score / 20).toFixed(1) : score || '—'}
+                          {/* The score is the only data on the row, so it gets
+                              the type size to match. "provisional" stays small
+                              and on its own line — at 20px it would wrap the
+                              column and swamp the number it qualifies.
+                              tabular-nums keeps the column edge straight now
+                              that the digits are large enough to notice. */}
+                          <div style={{ textAlign: 'right', marginTop: isWide ? 4 : 0, color: isProvisional ? 'var(--text3)' : tab === 'community' ? 'var(--green-dark)' : 'var(--text2)', fontWeight: 600, lineHeight: 1.15 }}>
+                            <span style={{ fontSize: isWide ? 20 : 17, fontVariantNumeric: 'tabular-nums' }}>
+                              {tab === 'community' && score > 0
+                                ? (score / 20).toFixed(1)
+                                : score || '—'}
+                            </span>
+                            {isProvisional && (
+                              <span style={{ display: 'block', fontSize: isWide ? 10 : 9.5, fontWeight: 600, letterSpacing: '0.03em', textTransform: 'uppercase', color: 'var(--text3)', marginTop: 1 }}>
+                                provisional
+                              </span>
+                            )}
                           </div>
                         </div>
 
