@@ -92,18 +92,11 @@ function NewsCard({ article, index, onClick, navigate, relatedArticles = [], com
           )}
         </div>
 
-        {/* Thumbnail.
-            72px, not 92px. The thumbnail and the headline share one row, so
-            every pixel here comes straight out of the text column — at 92px
-            that column was 221px wide, which on a 390px phone is 21-27
-            characters per line and pushed long headlines to 5 and 6 lines.
-            Measured at 72px: column 241px, and those same headlines re-wrap
-            6 lines -> 5, 4 -> 3, 3 -> 2. Median card height 264px -> 241px
-            with nothing truncated. */}
+        {/* Thumbnail */}
         {hasImage && (
           <div style={{
             position: 'relative',
-            width: compact ? 52 : 72, height: compact ? 52 : 72, flexShrink: 0,
+            width: compact ? 52 : 92, height: compact ? 52 : 92, flexShrink: 0,
             borderRadius: 10, overflow: 'hidden',
             background: 'var(--bg2)',
           }}>
@@ -111,7 +104,7 @@ function NewsCard({ article, index, onClick, navigate, relatedArticles = [], com
               src={article.image_url}
               alt={article.title}
               fill
-              sizes={compact ? '52px' : '72px'}
+              sizes={compact ? '52px' : '92px'}
               style={{ objectFit: 'cover' }}
               priority={index < 2}
               unoptimized

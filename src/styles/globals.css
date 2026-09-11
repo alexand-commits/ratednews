@@ -226,10 +226,7 @@ img, video, iframe, embed, object { max-width: 100%; }
 .outlet-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
 .ts { font-size: 11px; color: var(--text3); white-space: nowrap; flex-shrink: 0; }
 .trending-chip { font-size: 10px; padding: 2px 7px; border-radius: 20px; background: var(--green-light); color: var(--green-dark); }
-/* Leading 1.25, not 1.45. Display type takes tighter leading than body type,
-   and 1.45 is a body-text value — the hero card two rules up already sets 1.22.
-   A 4-line headline loses ~13px with no change to size or wrapping. */
-.news-headline { font-family: var(--font-playfair), serif; font-size: 16px; font-weight: 500; line-height: 1.25; margin-bottom: 8px; color: var(--text); display: block; overflow-wrap: break-word; word-break: break-word; }
+.news-headline { font-family: var(--font-playfair), serif; font-size: 16px; font-weight: 500; line-height: 1.45; margin-bottom: 8px; color: var(--text); display: block; overflow-wrap: break-word; word-break: break-word; }
 @media (max-width: 768px) { .news-headline { font-weight: 600; } }
 
 /* Trending hero — text beside image on desktop, image above text on mobile */
