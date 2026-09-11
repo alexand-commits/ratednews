@@ -48,7 +48,18 @@ export default async function handler(req, res) {
       if (attempt === 1) throw r.error
     }
 
-    res.setHeader('Cache-Control', 'public, s-maxage=900, stale-while-revalidate=1800')
+    // 15 categories x 8 regions = 120 cache keys. At 900s fresh + 1800s stale
+    // a key is only useful for 45 minutes, and at our traffic almost no key
+    // gets a second request inside that window — so nearly every pill tap was
+    // a MISS paying the full query. Measured live: 7 of 8 taps MISSed at
+    // 0.8-2.1s each; only the default all/all view (which everyone loads) HIT.
+    //
+    // An hour fresh, a day stale-while-revalidate, keeps a key useful for ~25
+    // hours, so a tapped category is almost always served from the edge and
+    // refreshed in the background. The cost is that a category pool can be up
+    // to an hour old on first view, which is the right trade for a browse-by-
+    // topic surface — breaking news is the feed's job, not Explore's.
+    res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400')
     res.status(200).json({ articles: data || [] })
   } catch (err) {
     console.error('explore-feed error:', err)
