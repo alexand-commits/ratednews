@@ -227,10 +227,23 @@ export async function getStaticProps() {
     // (15 min) rather than once per visitor, and the bar ships with the HTML.
     const topicCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
     const [{ data: raw }, { count }, { data: topicRows }] = await Promise.all([
+      // Rank over a pool WIDER than the clustering lag.
+      //
+      // This used to take the newest 90 articles — about 21 minutes of content
+      // at our publishing rate. Clustering runs every 30 minutes, so that
+      // window was routinely all-unclustered: every article scored coverage 0,
+      // "Top stories" silently degraded to plain recency, and the SSR HTML
+      // carried no coverage badges and NO story links at all (measured: 0 of 50
+      // with cluster data). Google then had no internal links to story pages —
+      // the one thing we most want it to crawl.
+      //
+      // 400 rows spans ~50 minutes, comfortably past the lag, so clustered
+      // stories are present and the trend score can actually do its job. It's
+      // one fetch per ISR regeneration (every 15 min), not per visitor.
       supabase.from('articles')
         .select(SSR_SELECT)
         .order('published_at', { ascending: false })
-        .range(0, BATCH + 40 - 1),
+        .range(0, 399),
       supabase.from('articles').select('*', { count: 'estimated', head: true }),
       supabase.from('articles')
         .select('title, outlet_id')
