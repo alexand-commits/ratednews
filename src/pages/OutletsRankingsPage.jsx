@@ -495,7 +495,7 @@ export default function OutletsRankingsPage({
                               tabular-nums keeps the column edge straight now
                               that the digits are large enough to notice. */}
                           <div style={{ textAlign: 'right', marginTop: isWide ? 4 : 0, color: isProvisional ? 'var(--text3)' : tab === 'community' ? 'var(--green-dark)' : 'var(--text2)', fontWeight: 600, lineHeight: 1.15 }}>
-                            <span style={{ fontSize: isWide ? 20 : 17, fontVariantNumeric: 'tabular-nums' }}>
+                            <span style={{ fontSize: isWide ? 17 : 15, fontVariantNumeric: 'tabular-nums' }}>
                               {tab === 'community' && score > 0
                                 ? (score / 20).toFixed(1)
                                 : score || '—'}
