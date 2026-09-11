@@ -65,7 +65,11 @@ export default function Header({ navigate, goBack, isDark, toggleTheme, user, on
 
   return (
     <header className="header">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0 }}>
+      {/* overflow:hidden is load-bearing. minWidth:0 lets this group shrink past
+          its content, and without a clip the logo text spilled OUT of the group
+          and rendered underneath the theme switch — on a detail page (back arrow
+          present) the header wanted ~416px of a 390px screen. */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 2, minWidth: 0, overflow: 'hidden' }}>
         {showBack && (
           <button
             className="header-back mobile-only"
@@ -92,7 +96,7 @@ export default function Header({ navigate, goBack, isDark, toggleTheme, user, on
           >{l.label}</Link>
         ))}
       </nav>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
         <button
           className="theme-switch"
           role="switch"
@@ -267,11 +271,27 @@ export default function Header({ navigate, goBack, isDark, toggleTheme, user, on
           </div>
         ) : (
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {/* Two text buttons cost ~160px, which is what pushed the logo under
+                the theme switch on mobile. Under 768px they collapse into one
+                icon sized to match the signed-in avatar exactly, so the header
+                doesn't reflow the moment someone signs in. */}
             <button
+              className="header-auth-icon"
+              onClick={onJoinClick || onLoginClick}
+              aria-label="Sign in or create an account"
+              title="Sign in or create an account"
+            >
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
+              </svg>
+            </button>
+            <button
+              className="header-auth-text"
               onClick={onLoginClick}
               style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--text2)', padding: '6px 8px', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
             >Sign in</button>
-            <button className="nav-pill" onClick={onJoinClick || onLoginClick} style={{ whiteSpace: 'nowrap' }}>Create account</button>
+            <button className="nav-pill header-auth-text" onClick={onJoinClick || onLoginClick} style={{ whiteSpace: 'nowrap' }}>Create account</button>
           </span>
         )}
       </div>
