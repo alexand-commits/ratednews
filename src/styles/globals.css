@@ -180,13 +180,18 @@ img, video, iframe, embed, object { max-width: 100%; }
 .pill { font-size: 12px; padding: 5px 14px; border-radius: 20px; border: 0.5px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; font-family: var(--font-lato), sans-serif; white-space: nowrap; flex-shrink: 0; }
 .pill:hover { border-color: var(--coral); color: var(--coral); }
 .pill.active { background: var(--coral); color: #fff; border-color: var(--coral); }
-/* Touch targets. Measured on the live Explore page, pills were 26px tall
-   against a 44pt iOS / 48dp Android minimum — 59% of the floor, on the
-   most-tapped control on the site, where a mis-tap costs a full category
-   load. This rule has existed since the mobile block was written but sat
-   ABOVE the base .pill rule with identical specificity, so it never applied.
-   Keep it here, after the base rule, or it silently dies again. */
-@media (max-width: 768px) { .pill { padding: 11px 16px; font-size: 13px; } }
+/* Touch targets. This rule has existed since the mobile block was written but
+   sat ABOVE the base .pill rule with identical specificity, so it never
+   applied and pills rendered at 26px. Keep it HERE, after the base rule, or it
+   silently dies again.
+   11px padding hit the 44pt iOS floor exactly but read as chunky against the
+   rest of the page — two stacked rows of large lozenges dominating Explore.
+   8px lands at ~33px: still 27% up on the broken 26px, deliberately short of
+   the platform minimum. A judgement call in favour of the page's density, made
+   with the guideline known. If mis-taps show up, this is the first thing to
+   revisit — and the fix is padding here, not a hit-area pseudo-element, which
+   would overlap the second pill row and steal its taps. */
+@media (max-width: 768px) { .pill { padding: 8px 14px; font-size: 13px; } }
 
 /* SEARCH */
 .search-bar { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 0.5px solid var(--border); border-radius: 24px; padding: 8px 16px; margin-bottom: 20px; }
