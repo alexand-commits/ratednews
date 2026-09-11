@@ -40,8 +40,7 @@ const REGIONS = [
 
 export default function ExplorePage({ navigate, outlets = [], initialSearch = '' }) {
   // `?q=` makes a search shareable and gives the WebSite SearchAction schema on
-  // the homepage a real destination. It seeds the box; after that the input owns
-  // the state, so typing doesn't fight the URL.
+  // the homepage a real destination.
   const [search, setSearch]           = useState(initialSearch)
   const [visible, setVisible] = useState(30)
   const [searchFocused, setSearchFocused] = useState(false)
@@ -50,6 +49,18 @@ export default function ExplorePage({ navigate, outlets = [], initialSearch = ''
   })
   const [dbResults, setDbResults]       = useState(null)
   const [dbLoading, setDbLoading]       = useState(false)
+
+  // /explore is statically optimised, so router.query is EMPTY on the first
+  // render and only fills in after hydration — the useState initialiser above
+  // therefore only ever sees ''. Seed from the prop once it actually arrives.
+  // Guarded by a ref so it fires exactly once: without that, clearing the box
+  // on a ?q= URL would immediately refill it.
+  const seededFromUrl = useRef(false)
+  useEffect(() => {
+    if (seededFromUrl.current || !initialSearch) return
+    seededFromUrl.current = true
+    setSearch(initialSearch)
+  }, [initialSearch])
   const [category, setCategory]         = useState('all')
   const [region, setRegion]             = useState('all')
   const [feedPool, setFeedPool]         = useState([])
