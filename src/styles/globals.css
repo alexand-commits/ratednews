@@ -130,8 +130,9 @@ img, video, iframe, embed, object { max-width: 100%; }
   /* Match .container's gutter, and buy back 16px for the logo */
   .header { padding: 0 16px; }
   .logo { font-size: 20px; }
-  /* 44px-ish touch targets — pills are the most-tapped mobile control */
-  .pill { padding: 10px 16px; font-size: 13px; }
+  /* The mobile .pill touch-target rule USED to live here and never applied —
+     the base .pill rule further down the file has the same specificity and
+     won on source order. It now sits directly after that base rule instead. */
   /* Edge fade signals "scrolls sideways" on overflowing pill rows; rows whose
      content ends before the container edge are untouched */
   .filter-bar { -webkit-mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 28px), transparent 100%); mask-image: linear-gradient(90deg, #000 0%, #000 calc(100% - 28px), transparent 100%); }
@@ -179,6 +180,13 @@ img, video, iframe, embed, object { max-width: 100%; }
 .pill { font-size: 12px; padding: 5px 14px; border-radius: 20px; border: 0.5px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; font-family: var(--font-lato), sans-serif; white-space: nowrap; flex-shrink: 0; }
 .pill:hover { border-color: var(--coral); color: var(--coral); }
 .pill.active { background: var(--coral); color: #fff; border-color: var(--coral); }
+/* Touch targets. Measured on the live Explore page, pills were 26px tall
+   against a 44pt iOS / 48dp Android minimum — 59% of the floor, on the
+   most-tapped control on the site, where a mis-tap costs a full category
+   load. This rule has existed since the mobile block was written but sat
+   ABOVE the base .pill rule with identical specificity, so it never applied.
+   Keep it here, after the base rule, or it silently dies again. */
+@media (max-width: 768px) { .pill { padding: 11px 16px; font-size: 13px; } }
 
 /* SEARCH */
 .search-bar { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 0.5px solid var(--border); border-radius: 24px; padding: 8px 16px; margin-bottom: 20px; }
