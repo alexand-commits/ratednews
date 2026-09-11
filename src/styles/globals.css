@@ -346,7 +346,11 @@ img, video, iframe, embed, object { max-width: 100%; }
 .outlet-hero { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 24px; margin-bottom: 20px; display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
 .outlet-logo-big { width: 64px; height: 64px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 500; flex-shrink: 0; }
 .outlet-hero-info { flex: 1; min-width: 0; }
-.outlet-hero-name { font-family: var(--font-playfair), serif; font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+/* 8px above the chips, 10px below them: the chips describe the outlet, so the
+   tighter gap groups them with the name rather than floating them between name
+   and description. Keep the value here BELOW the one under it — an inline
+   margin on the h1 used to override this and flatten the gap to zero. */
+.outlet-hero-name { font-family: var(--font-playfair), serif; font-size: 24px; font-weight: 700; margin-bottom: 8px; }
 .outlet-meta-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
 .meta-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; background: var(--bg2); padding: 3px 10px; border-radius: 20px; color: var(--text2); line-height: 1.4; }
 .outlet-desc { font-size: 13px; color: var(--text2); line-height: 1.6; }
