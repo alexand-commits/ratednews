@@ -205,9 +205,15 @@ export async function getStaticProps() {
     // Service key: server-side only. The pack lives in social_drafts, which
     // anon clients rightly can't read.
     const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+    // ORDER IS LOAD-BEARING. Past weeks are now kept rather than overwritten,
+    // so this table holds one row per week — an unordered limit(1) would show
+    // an arbitrary week's numbers under a page that claims to be this week's.
+    // Never maybeSingle() here either: it throws on multiple rows, which is
+    // exactly what this table now has by design.
     const { data } = await supabase.from('social_drafts')
-      .select('pack').eq('pack->>kind', 'coverage_report').limit(1).maybeSingle()
-    return { props: { report: data?.pack || null }, revalidate: 21600 }
+      .select('pack').eq('pack->>kind', 'coverage_report')
+      .order('created_at', { ascending: false }).limit(1)
+    return { props: { report: data?.[0]?.pack || null }, revalidate: 21600 }
   } catch {
     return { props: { report: null }, revalidate: 600 }
   }

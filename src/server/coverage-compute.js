@@ -204,9 +204,14 @@ export async function computeCoverageReport(db) {
   const rows = all.filter(r => r.published_at >= weekAgoIso)
   const prevRows = all.filter(r => r.published_at < weekAgoIso)
 
+  const generatedAt = new Date().toISOString()
   return {
     kind: 'coverage_report',
-    generatedAt: new Date().toISOString(),
+    // Stable per-week key: the storage key today, and the URL slug when the
+    // archive gets /coverage-report/[week]. Date-only so a re-run inside the
+    // same day updates that week instead of forking it.
+    week: generatedAt.slice(0, 10),
+    generatedAt,
     windowDays: DAYS,
     since: weekAgoIso,
     corpus: {
@@ -220,15 +225,33 @@ export async function computeCoverageReport(db) {
   }
 }
 
-// Dedupe-safe store: update the newest existing row, delete any strays (a
-// duplicate row once made the desk read fail into "no report computed").
+// One row PER WEEK, keyed on report.week. Nothing is deleted.
+//
+// This used to keep a single row and overwrite it every Monday, so 52 unique
+// datasets a year collapsed to one and every past week was destroyed. They are
+// the most defensible thing the site produces — no one else can compute
+// same-story vocabulary splits without the clustering pipeline — and they are
+// only citable if the URL a journalist links still shows the numbers they
+// quoted. So: accumulate.
+//
+// Re-running inside the same week updates that week's row rather than adding a
+// second, which keeps the cron idempotent and preserves the old dedupe
+// guarantee where it actually mattered.
+//
+// Growth is ~52 packs a year at a few hundred KB each. Fine to leave unbounded
+// for years; if it ever needs a cap, prune oldest-first — never newest.
 export async function storeCoverageReport(db, report) {
-  const { data: existing } = await db.from('social_drafts')
-    .select('id, created_at').eq('pack->>kind', 'coverage_report')
+  const week = report.week
+  if (!week) throw new Error('storeCoverageReport: report.week is required')
+
+  const { data: sameWeek } = await db.from('social_drafts')
+    .select('id').eq('pack->>kind', 'coverage_report').eq('pack->>week', week)
     .order('created_at', { ascending: false })
-  if (existing?.length) {
-    await db.from('social_drafts').update({ pack: report }).eq('id', existing[0].id)
-    for (const stray of existing.slice(1)) {
+
+  if (sameWeek?.length) {
+    await db.from('social_drafts').update({ pack: report }).eq('id', sameWeek[0].id)
+    // Collapse any duplicates WITHIN this week only. Other weeks are history.
+    for (const stray of sameWeek.slice(1)) {
       await db.from('social_drafts').delete().eq('id', stray.id)
     }
   } else {
