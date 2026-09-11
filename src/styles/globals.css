@@ -293,9 +293,8 @@ img, video, iframe, embed, object { max-width: 100%; }
    from jumping as cards enter the viewport. */
 .feed .news-card, .feed--grid-plain .news-card { content-visibility: auto; contain-intrinsic-size: auto 150px; }
 
-/* Trending topic pills sit inline above the feed on every viewport. (They used to
-   be hidden ≥1024px on the assumption the sidebar carried them, but the sidebar
-   shows trending STORIES, not topic pills — so desktop lost them entirely.) */
+/* The sidebar's trending-STORIES card is desktop-only; on mobile the Trending
+   tab in the bottom nav is the route to the same thing. */
 .sidebar-trending { display: none; }
 /* Generic desktop/mobile visibility helpers (1024px breakpoint, matching the grid) */
 .desktop-only { display: none; }
@@ -305,10 +304,6 @@ img, video, iframe, embed, object { max-width: 100%; }
   .hide-desktop { display: none !important; }
 }
 
-/* Topic chips act differently to filters (they launch a search) — mark them */
-.pill-topic { color: var(--coral); border-color: rgba(216, 90, 48, 0.4); }
-.pill-topic:hover { border-color: var(--coral); background: rgba(216, 90, 48, 0.08); }
-.pill-topic.active { background: var(--coral); border-color: var(--coral); color: #fff; }
 .widget { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 16px; }
 .widget-title { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text2); margin-bottom: 14px; }
 

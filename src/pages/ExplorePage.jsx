@@ -38,8 +38,11 @@ const REGIONS = [
   { value: 'Americas',   label: 'Americas'     },
 ]
 
-export default function ExplorePage({ navigate, outlets = [] }) {
-  const [search, setSearch]           = useState('')
+export default function ExplorePage({ navigate, outlets = [], initialSearch = '' }) {
+  // `?q=` makes a search shareable and gives the WebSite SearchAction schema on
+  // the homepage a real destination. It seeds the box; after that the input owns
+  // the state, so typing doesn't fight the URL.
+  const [search, setSearch]           = useState(initialSearch)
   const [visible, setVisible] = useState(30)
   const [searchFocused, setSearchFocused] = useState(false)
   const [searchHistory, setSearchHistory] = useState(() => {

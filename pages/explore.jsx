@@ -1,9 +1,12 @@
 import Head from 'next/head'
+import { useRouter } from 'next/router'
 import { useAppContext } from './_app'
 import ExplorePage from '../src/pages/ExplorePage'
 
 export default function Explore() {
   const { navigate, allOutlets } = useAppContext()
+  const router = useRouter()
+  const q = typeof router.query.q === 'string' ? router.query.q : ''
 
   return (
     <>
@@ -24,7 +27,7 @@ export default function Explore() {
         <meta name="twitter:description" content="Search every news story across 250+ outlets by topic, person or event." />
         <meta name="twitter:image"      content="https://www.ratednews.com/api/og?type=brand" />
       </Head>
-      <ExplorePage navigate={navigate} outlets={allOutlets} />
+      <ExplorePage navigate={navigate} outlets={allOutlets} initialSearch={q} />
     </>
   )
 }

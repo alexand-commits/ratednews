@@ -4,7 +4,7 @@ import RatingDots from './RatingDots'
 import { isRankEligible } from '../utils/helpers'
 import TrendingStoriesWidget from './TrendingStoriesWidget'
 
-export default function Sidebar({ outlets, navigate, trendingTopics = [], activeTopic = null, onTopic }) {
+export default function Sidebar({ outlets, navigate }) {
   const top5 = outlets
     .filter(isRankEligible)
     .sort((a, b) => (b.community_score || 0) - (a.community_score || 0))

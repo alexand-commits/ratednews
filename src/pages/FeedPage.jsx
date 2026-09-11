@@ -7,7 +7,6 @@ import { timeAgo } from '../utils/helpers'
 import { db } from '../lib/supabase'
 import { track } from '../utils/track'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
-import { computeTrendingTopics } from '../utils/topics'
 import DigestSignup from '../components/DigestSignup'
 
 // Category taxonomy — must match scripts/categorise.mjs (the server-side source
@@ -59,14 +58,6 @@ const SORTS = [
   { value: 'latest',    label: 'Latest'      },
 ]
 
-// Topic-filtered view: fetch one small page first, then more on request. The
-// query cost is dominated by rows x payload, so 10 returns in ~110ms where 30
-// took ~550ms on the anon role.
-const TOPIC_PAGE = 10
-const TOPIC_WINDOW_NARROW = 6   // hours — first try; keeps the sort cheap for broad topics
-const TOPIC_WINDOW_WIDE   = 24  // hours — fallback when a topic is sparse
-const TOPIC_SELECT = 'id, title, published_at, outlet_id, category, geographic_scope, article_region, summary, url, image_url, total_ratings, community_score, cluster_id, cluster_peers, cluster_size, outlets(name, country, logo_url), comment_count'
-
 const REGIONS = [
   { value: 'all',        label: 'All'          },
   { value: 'US',         label: 'US'           },
@@ -83,18 +74,15 @@ function getArticleRegion(article) {
 }
 
 export default function FeedPage({
-  articles, trendingArticles = [], trendingTopicsSource, initialTopics = [],
+  articles, trendingArticles = [],
   outlets, loading, navigate,
   initialCategory = 'all', initialRegion = 'all',
-  initialTopic = null, initialTab = 'all',
+  initialTab = 'all',
   totalArticleCount, user, followedOutletIds = new Set(), toggleFollow,
   onLoginClick, loadMoreArticles, hasMoreArticles, loadingMore,
   savedArticleIds = new Set(), toggleSave, onRefresh,
   fetchError = false,
 }) {
-  // trendingTopicsSource: 300 minimal rows (title+outlet_id) for topic computation.
-  // Falls back to trendingArticles so categories page still works without the prop.
-  const topicsSource = trendingTopicsSource || trendingArticles
   const [category, setCategory] = useState(initialCategory)
   const [region, setRegion]     = useState(initialRegion)
   const [search, setSearch]     = useState('')
@@ -107,143 +95,22 @@ export default function FeedPage({
   // DB search state
   const [dbResults, setDbResults]       = useState(null)   // null = search not active
   const [dbLoading, setDbLoading]       = useState(false)
-  const [activeTopic, setActiveTopic]   = useState(initialTopic) // trending topic filter
-  const [topicArticles, setTopicArticles] = useState([])    // live query results for active topic
-  const [topicError, setTopicError]       = useState(false) // query FAILED (vs genuinely no matches)
-  const [topicNonce, setTopicNonce]       = useState(0)     // bump to re-run the topic query (retry)
-  const [topicHasMore, setTopicHasMore]   = useState(false)
-  const [topicWindow, setTopicWindow]     = useState(TOPIC_WINDOW_WIDE) // hours actually used
-  const [topicLoadingMore, setTopicLoadingMore] = useState(false)
-  const [topicLoading, setTopicLoading]   = useState(false)
   const searchTimer                 = useRef(null)
   const searchInputRef              = useRef(null)
 
-  // Sync activeTopic + feedTab into the URL so back-navigation restores them
+  // Sync feedTab into the URL so back-navigation restores it. A stale ?topic=
+  // from a bookmark is stripped here rather than redirected — the pills it
+  // referred to are gone, so the param has nothing left to mean.
   useEffect(() => {
     if (typeof window === 'undefined') return
     const params = new URLSearchParams(window.location.search)
-    if (activeTopic) params.set('topic', activeTopic); else params.delete('topic')
+    params.delete('topic')
     if (feedTab !== 'all') params.set('tab', feedTab); else params.delete('tab')
     const newSearch = params.toString() ? `?${params}` : ''
     if (window.location.search !== newSearch) {
       window.history.replaceState({ ...window.history.state }, '', window.location.pathname + newSearch)
     }
-  }, [activeTopic, feedTab])
-
-  // Live query when a trending topic is selected — searches the full 24h window
-  // so topics like "Strait of Hormuz" that spiked earlier in the day still show articles.
-  // `topicNonce` lets the retry button re-run this effect for the same topic.
-  useEffect(() => {
-    // Clearing the topic must also drop the loading flag. The `cancelled` guard
-    // below stops an in-flight request from touching state, so if we returned
-    // here without resetting, topicLoading stayed true forever and the feed
-    // rendered the loading branch on an empty topic — a blank screen.
-    if (!activeTopic) {
-      setTopicArticles([])
-      setTopicError(false)
-      setTopicLoading(false)
-      setTopicHasMore(false)
-      return
-    }
-    let cancelled = false
-    setTopicLoading(true)
-    setTopicError(false)
-    // Escape LIKE metacharacters and PostgREST syntax chars
-    const escaped = activeTopic.replace(/[%_\\]/g, '\\$&').replace(/[,()\.:]/g, ' ').trim()
-
-    // Window escalation. LIMIT only helps when the plan can STOP EARLY, and for
-    // a broad topic ("Liverpool") it can't: it matches thousands of rows and has
-    // to sort them all by published_at before taking 10 — which blew past the
-    // anon role's ~3s statement timeout. Narrowing the window is what makes the
-    // sort cheap. So: try 6h first (a broad topic has plenty there — measured
-    // ~120ms vs a timeout at 24h); only widen to 24h when the topic is sparse,
-    // and a sparse topic matches few rows so the 24h sort is cheap anyway.
-    // Fast in both cases, and newest-first ordering is preserved.
-    const runWindow = hours => db.from('articles')
-      .select(TOPIC_SELECT)
-      .ilike('title', `%${escaped}%`)
-      .gte('published_at', new Date(Date.now() - hours * 60 * 60 * 1000).toISOString())
-      .order('published_at', { ascending: false })
-      .limit(TOPIC_PAGE)
-
-    const run = async () => {
-      const narrow = await runWindow(TOPIC_WINDOW_NARROW)
-      if (narrow.error) return narrow
-      if ((narrow.data || []).length >= TOPIC_PAGE) {
-        setTopicWindow(TOPIC_WINDOW_NARROW)
-        return narrow
-      }
-      const wide = await runWindow(TOPIC_WINDOW_WIDE)
-      if (wide.error) return narrow.data?.length ? narrow : wide
-      setTopicWindow(TOPIC_WINDOW_WIDE)
-      return wide
-    }
-
-    // A broad topic ("Israeli") matches enough rows that the ILIKE + sort can blow
-    // past the anon role's ~3s statement timeout. That returns an ERROR, not an
-    // empty set — and treating it as empty rendered a flat lie ("No stories on
-    // Israeli in the last 24h") when there were plenty. Surface the failure, and
-    // retry once since the timeout is load-dependent and often passes second time.
-    ;(async () => {
-      for (let attempt = 0; attempt < 2; attempt++) {
-        try {
-          const { data, error } = await run()
-          if (cancelled) return
-          if (!error) {
-            setTopicArticles(data || [])
-            setTopicHasMore((data || []).length === TOPIC_PAGE)
-            setTopicError(false)
-            setTopicLoading(false)
-            return
-          }
-          if (attempt === 1) {
-            setTopicArticles([])
-            setTopicError(true)
-            setTopicLoading(false)
-          }
-        } catch (e) {
-          if (cancelled) return
-          if (attempt === 1) {
-            setTopicArticles([])
-            setTopicError(true)
-            setTopicLoading(false)
-          }
-        }
-      }
-    })()
-
-    return () => { cancelled = true }
-  }, [activeTopic, topicNonce])
-
-  // "Show more" for a topic — appends the next page instead of refetching the
-  // first one, so the initial view stays instant.
-  async function loadMoreTopicArticles() {
-    if (topicLoadingMore || !activeTopic) return
-    setTopicLoadingMore(true)
-    // Same window the first page came from, so paging stays consistent.
-    const cutoff = new Date(Date.now() - topicWindow * 60 * 60 * 1000).toISOString()
-    const escaped = activeTopic.replace(/[%_\\]/g, '\\$&').replace(/[,()\.:]/g, ' ').trim()
-    const from = topicArticles.length
-    try {
-      const { data, error } = await db.from('articles')
-        .select(TOPIC_SELECT)
-        .ilike('title', `%${escaped}%`)
-        .gte('published_at', cutoff)
-        .order('published_at', { ascending: false })
-        .range(from, from + TOPIC_PAGE - 1)
-      if (!error && data?.length) {
-        // Guard against duplicates — ingest shifts offsets between pages.
-        setTopicArticles(prev => {
-          const seen = new Set(prev.map(a => a.id))
-          return [...prev, ...data.filter(a => !seen.has(a.id))]
-        })
-        setTopicHasMore(data.length === TOPIC_PAGE)
-      } else {
-        setTopicHasMore(false)
-      }
-    } catch { setTopicHasMore(false) }
-    setTopicLoadingMore(false)
-  }
+  }, [feedTab])
 
   // Search history (localStorage-persisted)
   const [searchHistory, setSearchHistory] = useState(() => {
@@ -306,7 +173,7 @@ export default function FeedPage({
     // Only on 'Latest'. On 'Top stories' the feed is RANKED, so 20 new low-coverage
     // articles don't crack the top — tapping "refresh" looked like nothing happened.
     // Skipping the poll there also drops a count query every 2 min.
-    if (search || activeTopic || feedTab === 'following' || sort !== 'latest') return
+    if (search || feedTab === 'following' || sort !== 'latest') return
     const poll = async () => {
       if (!latestPublishedAtRef.current) return
       if (document.visibilityState !== 'visible') return // don't poll backgrounded tabs
@@ -320,7 +187,7 @@ export default function FeedPage({
     const onVis = () => { if (document.visibilityState === 'visible') poll() }
     document.addEventListener('visibilitychange', onVis)
     return () => { clearInterval(id); document.removeEventListener('visibilitychange', onVis) }
-  }, [search, activeTopic, feedTab, sort])
+  }, [search, feedTab, sort])
 
   function handleNewArticlesBanner() {
     setNewArticleCount(0)
@@ -495,36 +362,9 @@ export default function FeedPage({
     return result
   }, [filtered, sort])
   // Trending topics — shared extraction (src/utils/topics.js), also used by Explore
-  const trendingTopics = useMemo(() => computeTrendingTopics(topicsSource), [topicsSource])
-
-  // Topic insights — count uses topicsSource (300 rows) for accurate frequency
-  const computedTopicInsights = useMemo(() => {
-    if (!trendingTopics.length) return []
-    return trendingTopics.slice(0, 8).map(topic => {
-      const key = topic.toLowerCase()
-      const count = topicsSource.filter(a =>
-        (a.title || '').toLowerCase().includes(key)
-      ).length
-      return { topic, count }
-    })
-    .filter(t => t.count >= 2)
-    .sort((a, b) => b.count - a.count)
-    // Cap at 5. Filter/sort first so we keep the five STRONGEST topics, not
-    // whichever five survived — and each pill is a slow ILIKE when tapped, so
-    // fewer, better topics beats a long row of weak ones.
-    .slice(0, 5)
-  }, [trendingTopics, topicsSource])
-
-  // Prefer topics computed server-side in getStaticProps: they ship with the
-  // HTML so the bar renders immediately, instead of waiting on a per-visitor
-  // 1000-row fetch (measured 2.6s). Fall back to the client computation for
-  // surfaces that don't supply them.
-  const topicInsights = initialTopics.length ? initialTopics : computedTopicInsights
-
   // Which list to display — DB results when search active, interleaved otherwise
   const isSearchActive = dbResults !== null
-  const baseList = isSearchActive ? dbResults : interleaved
-  const rawList = activeTopic ? topicArticles : baseList
+  const rawList = isSearchActive ? dbResults : interleaved
 
   // Story-grouping: collapse clustered articles so each story shows once. When
   // several loaded articles share a cluster_id (same story, different outlets),
@@ -548,7 +388,7 @@ export default function FeedPage({
   // trending view, promote the first imaged story to the front (order of the
   // rest unchanged). Search/topic/latest views keep pure order.
   const heroList = useMemo(() => {
-    if (isSearchActive || activeTopic || sort !== 'trending' || feedTab !== 'all') return displayList
+    if (isSearchActive || sort !== 'trending' || feedTab !== 'all') return displayList
     if (!displayList.length || displayList[0].image_url) return displayList
     const idx = displayList.slice(0, 6).findIndex(a => a.image_url)
     if (idx <= 0) return displayList
@@ -556,7 +396,7 @@ export default function FeedPage({
     const [hero] = next.splice(idx, 1)
     next.unshift(hero)
     return next
-  }, [displayList, isSearchActive, activeTopic, sort, feedTab])
+  }, [displayList, isSearchActive, sort, feedTab])
 
   // Outlet search — match search term against outlet names
   const matchedOutlets = useMemo(() => {
@@ -694,62 +534,6 @@ export default function FeedPage({
           )}
         </div>
 
-        {/* Trending topic pills — inline above the feed on every viewport */}
-        {topicInsights.length > 0 && feedTab !== 'following' && (
-          <div className="trending-inline" style={{ marginBottom: 14 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <span style={{ fontSize: 11, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {activeTopic ? `🔥 Filtered by ${activeTopic}` : '🔥 Trending · 24h'}
-              </span>
-              {activeTopic && (
-                <button
-                  onClick={() => setActiveTopic(null)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: 'var(--coral)', padding: 0, fontFamily: 'inherit' }}
-                >
-                  ✕ Clear filter
-                </button>
-              )}
-            </div>
-            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4, WebkitOverflowScrolling: 'touch' }}>
-              {topicInsights.map(({ topic }) => {
-                const isActive = activeTopic === topic
-                return (
-                  <div
-                    key={topic}
-                    onClick={() => setActiveTopic(isActive ? null : topic)}
-                    style={{
-                      flexShrink: 0, cursor: 'pointer',
-                      background: isActive ? 'var(--coral)' : 'var(--surface)',
-                      border: `0.5px solid ${isActive ? 'var(--coral)' : 'var(--border)'}`,
-                      borderRadius: 'var(--radius-sm)', padding: '8px 14px',
-                      transition: 'all 0.15s',
-                    }}
-                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = 'var(--coral)' }}
-                    onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = 'var(--border)' }}
-                  >
-                    {/* An active pill shows an explicit x — the coral fill alone
-                        didn't read as "tap to clear this filter". */}
-                    <div style={{ fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', color: isActive ? '#fff' : 'inherit', display: 'flex', alignItems: 'center', gap: 7 }}>
-                      {topic}
-                      {isActive && (
-                        <span
-                          aria-hidden="true"
-                          style={{
-                            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                            width: 15, height: 15, borderRadius: '50%',
-                            background: 'rgba(255,255,255,0.28)', color: '#fff',
-                            fontSize: 10, lineHeight: 1, fontWeight: 700,
-                          }}
-                        >✕</span>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
         <div className="grid">
           <div>
             {/* Contextual header — only rendered when it says something the
@@ -803,7 +587,7 @@ export default function FeedPage({
             )}
 
             {/* New articles banner */}
-            {newArticleCount > 0 && !search && !activeTopic && feedTab === 'all' && sort === 'latest' && (
+            {newArticleCount > 0 && !search && feedTab === 'all' && sort === 'latest' && (
               <div
                 onClick={handleNewArticlesBanner}
                 style={{
@@ -824,7 +608,7 @@ export default function FeedPage({
             {/* feed--home enables the desktop grid (≥1024px, CSS-only — mobile
                 unaffected). Suppressed during search/topic views where a hero
                 treatment on the first result would be wrong. */}
-            <div className={`feed${!isSearchActive && !activeTopic ? ' feed--home' : ''}`}>
+            <div className={`feed${!isSearchActive ? ' feed--home' : ''}`}>
               {fetchError ? (
                 <div style={{
                   textAlign: 'center', padding: '40px 20px',
@@ -917,31 +701,6 @@ export default function FeedPage({
                   <h3>No results for "{search}"</h3>
                   <p>Try different keywords or clear the search to browse all stories.</p>
                 </div>
-              ) : topicLoading && activeTopic ? (
-                <div className="empty-state">
-                  <p style={{ color: 'var(--text3)' }}>Loading articles on {activeTopic}…</p>
-                </div>
-              ) : topicError && activeTopic ? (
-                <div className="empty-state">
-                  <h3>Couldn't load stories on "{activeTopic}"</h3>
-                  <p>That took too long to load — it's usually momentary.</p>
-                  <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12 }}>
-                    <button className="btn-primary" style={{ fontSize: 13 }} onClick={() => setTopicNonce(n => n + 1)}>
-                      Try again
-                    </button>
-                    <button className="btn-outline" style={{ fontSize: 13 }} onClick={() => setActiveTopic(null)}>
-                      Back to all stories
-                    </button>
-                  </div>
-                </div>
-              ) : displayList.length === 0 && activeTopic ? (
-                <div className="empty-state">
-                  <h3>No stories on "{activeTopic}" in the last {topicWindow}h</h3>
-                  <p>This topic may have trended earlier. Check back after the next update.</p>
-                  <button className="btn-outline" style={{ marginTop: 12, fontSize: 13 }} onClick={() => setActiveTopic(null)}>
-                    Back to all stories
-                  </button>
-                </div>
               ) : displayList.length === 0 ? (
                 <div className="empty-state">
                   <h3>No {category} articles yet</h3>
@@ -972,8 +731,8 @@ export default function FeedPage({
                 ))
               )}
 
-              {/* Infinite scroll sentinel — hidden when topic filter or search active */}
-              {!isSearchActive && !activeTopic && feedTab === 'all' && hasMoreArticles && (
+              {/* Infinite scroll sentinel — hidden while a search is active */}
+              {!isSearchActive && feedTab === 'all' && hasMoreArticles && (
                 <div ref={sentinelRef} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px 0', minHeight: 56 }}>
                   {loadingMore && (
                     <div style={{
@@ -987,41 +746,8 @@ export default function FeedPage({
                 </div>
               )}
 
-              {/* Topic filter end-of-list */}
-              {/* More stories on this topic — we only fetch a small first page
-                  so the topic opens instantly. */}
-              {activeTopic && topicHasMore && displayList.length > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '16px 0' }}>
-                  <button
-                    className="btn-outline"
-                    style={{ fontSize: 13 }}
-                    disabled={topicLoadingMore}
-                    onClick={loadMoreTopicArticles}
-                  >
-                    {topicLoadingMore ? 'Loading…' : `More stories on ${activeTopic}`}
-                  </button>
-                </div>
-              )}
-
-              {activeTopic && !topicHasMore && displayList.length > 0 && (
-                <div style={{ textAlign: 'center', padding: '28px 16px', borderTop: '1px solid var(--divider)', marginTop: 8 }}>
-                  <div style={{ fontSize: 20, marginBottom: 6 }}>📰</div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 3 }}>
-                    {displayList.length} {displayList.length !== 1 ? 'stories' : 'story'} on {activeTopic} in the last {topicWindow}h
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 12 }}>That's everything — updates hourly</div>
-                  <button
-                    className="btn-outline"
-                    style={{ fontSize: 12 }}
-                    onClick={() => setActiveTopic(null)}
-                  >
-                    Back to all stories
-                  </button>
-                </div>
-              )}
-
               {/* Regular feed end-of-list */}
-              {!isSearchActive && !activeTopic && feedTab === 'all' && !hasMoreArticles && displayList.length > 0 && (
+              {!isSearchActive && feedTab === 'all' && !hasMoreArticles && displayList.length > 0 && (
                 <div style={{ textAlign: 'center', padding: '28px 16px', borderTop: '1px solid var(--divider)', marginTop: 8 }}>
                   <div style={{ fontSize: 18, marginBottom: 6 }}>✓</div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text2)', marginBottom: 3 }}>You're all caught up</div>
@@ -1050,13 +776,7 @@ export default function FeedPage({
               )}
             </div>
           </div>
-          <Sidebar
-            outlets={outlets}
-            navigate={navigate}
-            trendingTopics={topicInsights.map(t => t.topic)}
-            activeTopic={activeTopic}
-            onTopic={topic => setActiveTopic(activeTopic === topic ? null : topic)}
-          />
+          <Sidebar outlets={outlets} navigate={navigate} />
         </div>
       </div>
 
