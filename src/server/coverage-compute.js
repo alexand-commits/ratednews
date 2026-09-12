@@ -25,7 +25,7 @@ export async function fetchHeadlines(db, sinceMs, untilMs) {
   const rows = []
   async function fetchChunk(fromMs, toMs, attempt = 0) {
     const { data, error } = await db.from('articles')
-      .select('id, title, outlet_id, cluster_id, published_at, outlets(name)')
+      .select('title, cluster_id, published_at, outlets(name)')
       .gte('published_at', new Date(fromMs).toISOString())
       .lt('published_at', new Date(toMs).toISOString())
       .limit(1000)
@@ -85,7 +85,10 @@ function brandOf(name) {
   return n
 }
 
-function languageWatch(rows, prevRows) {
+// `prev` is a summary — { headlines, totalFor(label) } — not a pile of rows.
+// It used to be the second week of a 14-day fetch; it now normally comes from
+// the previous week's stored pack, which already records exactly these numbers.
+function languageWatch(rows, prev) {
   const count = (pool, re, keepMatches = false) => {
     const byBrand = new Map()
     const matches = []
@@ -106,14 +109,16 @@ function languageWatch(rows, prevRows) {
     group: g.group,
     terms: g.variants.map(v => {
       const now = count(rows, v.re, true)
-      const prev = count(prevRows, v.re)
+      // A term added to the watchlist since the last report has no prior total,
+      // so prevRate stays 0 and the UI simply shows no comparison for it.
+      const prevTotal = prev.totalFor(v.label)
       return {
         term: v.label,
         total: now.total,
-        prevTotal: prev.total,
+        prevTotal,
         // Per-1k-headline rates — corpus-growth-adjusted week-over-week
         rate: rows.length ? +(now.total / rows.length * 1000).toFixed(2) : 0,
-        prevRate: prevRows.length ? +(prev.total / prevRows.length * 1000).toFixed(2) : 0,
+        prevRate: prev.headlines ? +(prevTotal / prev.headlines * 1000).toFixed(2) : 0,
         topOutlets: [...now.byBrand.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)
           .map(([outlet, n]) => ({ outlet, count: n })),
         headlines: now.matches, // click-to-audit on /coverage-report
@@ -251,32 +256,100 @@ function coverageCompleteness(rows, { storyCount = 8, outletCount = 10, minOutle
   return { minOutlets, stories, byOutlet }
 }
 
-export async function computeCoverageReport(db) {
+/**
+ * The most recent stored report from a DIFFERENT week than the one being
+ * computed. Recomputing today must not compare today against itself, which is
+ * what happens if you naively take the newest row.
+ */
+export async function fetchPriorPack(db, currentWeek) {
+  const { data } = await db.from('social_drafts')
+    .select('pack').eq('pack->>kind', 'coverage_report')
+    .order('created_at', { ascending: false }).limit(5)
+  return (data || [])
+    .map(r => r.pack)
+    .filter(Boolean)
+    .find(p => (p.week || (p.generatedAt || '').slice(0, 10)) !== currentWeek) || null
+}
+
+/**
+ * @param {object} db service-role Supabase client
+ * @param {{prevPack?: object|null}} opts prevPack is the PREVIOUS week's stored
+ *   report. When present the sweep only has to read 7 days instead of 14.
+ */
+export async function computeCoverageReport(db, opts = {}) {
   const now = Date.now()
   const weekAgo = now - DAYS * 86400e3
-  const twoWeeksAgo = now - 2 * DAYS * 86400e3
-
-  const all = await fetchHeadlines(db, twoWeeksAgo, now)
   const weekAgoIso = new Date(weekAgo).toISOString()
-  const rows = all.filter(r => r.published_at >= weekAgoIso)
-  const prevRows = all.filter(r => r.published_at < weekAgoIso)
-
   const generatedAt = new Date().toISOString()
+  const thisWeek = generatedAt.slice(0, 10)
+  // Looked up here rather than by each caller, so the cron and the desk button
+  // both get the shorter sweep without either having to remember. Pass an
+  // explicit `prevPack: null` to force the full 14-day read.
+  const prevPack = 'prevPack' in opts ? opts.prevPack : await fetchPriorPack(db, thisWeek)
+
+  // Halving the sweep.
+  //
+  // This used to fetch 14 days to publish 7, because week-over-week rates
+  // needed the previous week's headlines. But the only things it took from
+  // them were per-term totals and a corpus size — and since we started keeping
+  // every week's pack, both of those are already stored. So the second week of
+  // rows is redundant.
+  //
+  // It matters beyond tidiness: the 14-day sweep measured 478s, and the desk's
+  // recompute endpoint is capped at 300s, so the button could not finish. It
+  // failed with "failed to fetch" — the function killed mid-request — while
+  // the Monday cron, which runs in GitHub Actions with no such ceiling, was
+  // fine. Reading one week instead of two brings it back under the cap.
+  //
+  // The fallback path still reads 14 days, for a first-ever run with no stored
+  // history to compare against.
+  let rows
+  let prev
+  let comparedWith = null
+
+  if (prevPack?.corpus?.headlines) {
+    rows = await fetchHeadlines(db, weekAgo, now)
+    const totals = new Map()
+    for (const g of prevPack.language || []) {
+      for (const t of g.terms || []) totals.set(t.term, t.total || 0)
+    }
+    prev = { headlines: prevPack.corpus.headlines, totalFor: label => totals.get(label) ?? 0 }
+    comparedWith = prevPack.week || (prevPack.generatedAt || '').slice(0, 10) || null
+  } else {
+    const all = await fetchHeadlines(db, now - 2 * DAYS * 86400e3, now)
+    rows = all.filter(r => r.published_at >= weekAgoIso)
+    const prevRows = all.filter(r => r.published_at < weekAgoIso)
+    const totals = new Map()
+    for (const g of WATCH_GROUPS) {
+      for (const v of g.variants) {
+        let n = 0
+        for (const r of prevRows) if (v.re.test(r.title || '')) n++
+        totals.set(v.label, n)
+      }
+    }
+    prev = { headlines: prevRows.length, totalFor: label => totals.get(label) ?? 0 }
+  }
+
   return {
     kind: 'coverage_report',
-    // Stable per-week key: the storage key today, and the URL slug when the
-    // archive gets /coverage-report/[week]. Date-only so a re-run inside the
-    // same day updates that week instead of forking it.
-    week: generatedAt.slice(0, 10),
+    // Stable per-week key: the storage key, and the URL slug for the archive at
+    // /coverage-report/[week]. Date-only so a re-run inside the same day
+    // updates that week instead of forking it.
+    week: thisWeek,
     generatedAt,
     windowDays: DAYS,
     since: weekAgoIso,
+    // Which report the week-over-week figures are measured against. On the
+    // weekly cron that is exactly 7 days back; on an ad-hoc recompute it is
+    // whenever the last one ran, so the page says which rather than implying
+    // a clean 7-day gap.
+    comparedWith,
     corpus: {
       headlines: rows.length,
-      prevHeadlines: prevRows.length,
+      prevHeadlines: prev.headlines,
       outlets: new Set(rows.map(r => r.outlets?.name).filter(Boolean)).size,
     },
-    language: languageWatch(rows, prevRows),
+    language: languageWatch(rows, prev),
     framing: framingSplits(rows),
     attention: attention(rows),
     completeness: coverageCompleteness(rows),

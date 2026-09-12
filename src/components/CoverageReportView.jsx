@@ -360,7 +360,8 @@ export default function CoverageReportView({ report, eyebrow = null, footer = nu
                     Counts cover <strong>headlines</strong> we indexed from {report.corpus.outlets} public RSS feeds over the 7 days shown — not full article text.
                     A headline counts once per term (word-boundary match, case-insensitive), no matter how often the term repeats in it.
                     Section feeds are merged into their parent brand (BBC Sport counts as BBC).
-                    Week-over-week changes are computed on rates per 1,000 indexed headlines (so growth in our own feed roster doesn't masquerade as a trend) and shown as multiples.
+                    Week-over-week changes are computed on rates per 1,000 indexed headlines (so growth in our own feed roster doesn't masquerade as a trend) and shown as multiples{report.comparedWith ? <>, measured against the report published on {report.comparedWith}</> : ''}.
+                    That comparison is against the previous published report rather than a fixed 7 days back, so an off-schedule recompute compares against whenever the last one ran.
                     “First to report” counts stories covered by 5+ outlets where one outlet's article preceded every other outlet's by at least 5 minutes — wire syndication makes closer calls meaningless.
                     “Who carried the big stories” takes the week's most-covered stories (15+ distinct outlets each) and counts how many of them appeared in each of the week's highest-volume outlets' feeds.
                     It is a count and nothing more: an outlet not carrying a story can mean it wasn't their region or beat, that it ran outside our feed window, or that they simply didn't — we don't distinguish, and comparing outlets across different countries is not meaningful.
