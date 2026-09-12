@@ -162,7 +162,31 @@ export async function getServerSideProps({ res }) {
     })
   }
 
-  const sitemap = buildSitemap([...STATIC_PAGES, ...outletPages, ...comparePages, ...storyPages, ...articlePages])
+  // Coverage Report archive. Separate client: the packs live in social_drafts,
+  // which the anon key above rightly cannot read. Wrapped so a missing service
+  // key degrades to "no archive URLs" rather than taking out the whole sitemap.
+  // ~52 URLs a year, each permanently unique — cheap against crawl budget and
+  // exactly the kind of page worth spending it on.
+  let coveragePages = []
+  try {
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const svc = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY,
+      )
+      const { listReportWeeks } = await import('../src/server/coverage-store')
+      const weeks = await listReportWeeks(svc)
+      coveragePages = weeks.map((w, i) => ({
+        url: `https://www.ratednews.com/coverage-report/${w.week}`,
+        // Archived weeks never change; only the newest is still moving.
+        priority: i === 0 ? '0.7' : '0.6',
+        changefreq: i === 0 ? 'weekly' : 'yearly',
+        lastmod: (w.generatedAt || '').slice(0, 10) || undefined,
+      }))
+    }
+  } catch { coveragePages = [] }
+
+  const sitemap = buildSitemap([...STATIC_PAGES, ...coveragePages, ...outletPages, ...comparePages, ...storyPages, ...articlePages])
 
   res.setHeader('Content-Type', 'application/xml')
   res.setHeader('Cache-Control', 'public, s-maxage=21600, stale-while-revalidate=86400')
