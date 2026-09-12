@@ -36,7 +36,7 @@ where name in ('shared_buffers', 'effective_cache_size', 'work_mem',
 --    Every index is maintained on every INSERT. At ~14,000 articles/day, an
 --    index nobody reads is pure write cost.
 select
-  relname as table,
+  relname as "table",
   pg_size_pretty(pg_total_relation_size(relid))  as total,
   pg_size_pretty(pg_relation_size(relid))        as heap,
   pg_size_pretty(pg_indexes_size(relid))         as indexes,
@@ -53,8 +53,8 @@ limit 15;
 -- 4. UNUSED INDEXES — idx_scan = 0 means it has never been read since stats
 --    were last reset, while still costing a write on every row inserted.
 select
-  s.relname as table,
-  s.indexrelname as index,
+  s.relname as "table",
+  s.indexrelname as "index",
   s.idx_scan as times_used,
   pg_size_pretty(pg_relation_size(s.indexrelid)) as size
 from pg_stat_user_indexes s
