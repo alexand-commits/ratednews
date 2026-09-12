@@ -89,6 +89,44 @@ function TermBlock({ t }) {
   )
 }
 
+// The scale of the corpus, up front. Two of these numbers — stories and the
+// single-outlet SHARE — were computed every week and then thrown away, so the
+// page opened on a paragraph and never said how big the thing it was reporting
+// on actually is.
+function StatBar({ report }) {
+  const a = report.attention || {}
+  const stats = [
+    { value: report.corpus.headlines?.toLocaleString(), label: 'headlines indexed' },
+    { value: a.totalStories?.toLocaleString(), label: 'distinct stories' },
+    { value: report.corpus.outlets?.toLocaleString(), label: 'outlets tracked' },
+    a.totalStories && a.singleOutletStories != null
+      ? {
+          value: `${Math.round(a.singleOutletStories / a.totalStories * 100)}%`,
+          label: 'covered by one outlet',
+        }
+      : null,
+  ].filter(s => s && s.value != null)
+  if (!stats.length) return null
+  return (
+    <div style={{
+      display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10,
+      marginBottom: 26,
+    }}>
+      {stats.map(s => (
+        <div key={s.label} style={{
+          background: 'var(--surface)', border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius)', padding: '14px 16px',
+        }}>
+          <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text)', fontVariantNumeric: 'tabular-nums', lineHeight: 1.15 }}>
+            {s.value}
+          </div>
+          <div style={{ fontSize: 11.5, color: 'var(--text3)', marginTop: 3 }}>{s.label}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 function Section({ title, sub, children }) {
   return (
     <section style={{ marginBottom: 36 }}>
@@ -107,14 +145,19 @@ export default function CoverageReportView({ report, eyebrow = null, footer = nu
             {eyebrow}
             <h1 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 30, fontWeight: 700, marginBottom: 6 }}>The Coverage Report</h1>
             {report ? (
+              /* The corpus numbers moved into StatBar below — repeating them
+                 here made the opening paragraph a caption for the thing it sat
+                 above. */
               <p style={{ fontSize: 14, color: 'var(--text2)', lineHeight: 1.6 }}>
-                How the news covered the news, {fmtDate(report.since)}–{fmtDate(report.generatedAt)}: {report.corpus.headlines.toLocaleString()} headlines
-                indexed from {report.corpus.outlets} feeds. Counts, never conclusions — <a href="#methodology" style={{ color: 'var(--coral)', textDecoration: 'none' }}>methodology</a>.
+                How the news covered the news, {fmtDate(report.since)}–{fmtDate(report.generatedAt)}.
+                Counts, never conclusions — <a href="#methodology" style={{ color: 'var(--coral)', textDecoration: 'none' }}>methodology</a>.
               </p>
             ) : (
               <p style={{ fontSize: 14, color: 'var(--text2)' }}>The first weekly report is being computed — check back Monday.</p>
             )}
           </div>
+
+          {report && <StatBar report={report} />}
 
           {report && (
             <>
@@ -148,13 +191,22 @@ export default function CoverageReportView({ report, eyebrow = null, footer = nu
               <Section title="👀 Attention" sub="Where the coverage went — and where it didn't.">
                 <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', fontSize: 14, lineHeight: 1.8, color: 'var(--text2)' }}>
                   <div>📌 Biggest story: <strong style={{ color: 'var(--text)' }}>{report.attention.biggest?.story}</strong> — {report.attention.biggest?.outlets} outlets.</div>
-                  <div>🕳 <strong style={{ color: 'var(--text)' }}>{report.attention.singleOutletStories.toLocaleString()}</strong> stories were covered by only one outlet.</div>
+                  <div>
+                    🕳 <strong style={{ color: 'var(--text)' }}>{report.attention.singleOutletStories.toLocaleString()}</strong> stories were covered by only one outlet
+                    {report.attention.totalStories ? <> — out of {report.attention.totalStories.toLocaleString()} in total.</> : '.'}
+                  </div>
                 </div>
                 {report.attention.firstToReport.length > 0 && (
                   <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', marginTop: 12 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text3)', marginBottom: 10 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text3)', marginBottom: 4 }}>
                       🏁 First to report — clear-lead wins on widely covered stories
                     </div>
+                    {/* The denominator. "44 wins" says nothing without it. */}
+                    {report.attention.qualifyingStories > 0 && (
+                      <div style={{ fontSize: 11.5, color: 'var(--text3)', marginBottom: 10 }}>
+                        out of {report.attention.qualifyingStories.toLocaleString()} stories that qualified — 5+ outlets, with one clearly first
+                      </div>
+                    )}
                     {report.attention.firstToReport.map((f, i) => (
                       <Bar key={f.outlet} label={f.outlet} value={f.wins} max={report.attention.firstToReport[0].wins} first={i === 0} />
                     ))}

@@ -88,6 +88,12 @@ export default function Header({ navigate, goBack, isDark, toggleTheme, user, on
           { label: 'Sports',   href: '/sports',   match: p => p === '/sports' },
           { label: 'Explore',  href: '/explore',  match: p => p === '/explore' },
           { label: 'Outlets',  href: '/outlets',  match: p => p === '/outlets' || p.startsWith('/outlet/') || p === '/rankings' },
+          // Desktop only — .nav is display:none under 768px. The mobile bottom
+          // bar is five daily-use tabs and is full; a weekly report doesn't earn
+          // a slot next to Feed and Trending. Here it costs ~60px of 1,053px
+          // free, and a header link on every page is a far stronger internal
+          // signal than the single footer link this page had.
+          { label: 'Coverage', href: '/coverage-report', match: p => p.startsWith('/coverage-report') },
         ].map(l => (
           <Link
             key={l.href}
