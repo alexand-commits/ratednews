@@ -194,6 +194,63 @@ function attention(rows) {
   }
 }
 
+/**
+ * Which of the week's most-covered stories each major outlet carried.
+ *
+ * Only possible because articles are already clustered into stories — this is
+ * the thing no one can copy without the whole pipeline.
+ *
+ * Framed as a COUNT, not a verdict. "Covered 6 of 8" is a fact; "ignored two
+ * stories" is an accusation, and there are many innocent reasons a general
+ * outlet skips a story — beat, region, a wire deal, the day it fell on. The
+ * moment this page starts implying motive it loses the neutrality that makes
+ * every other number on it credible.
+ *
+ * Two guards against unfair comparisons:
+ *  - "Major outlets" are the highest-VOLUME publishers of the week, so nothing
+ *    is measured against a title that only files a few pieces a day.
+ *  - A story must clear MIN_OUTLETS distinct brands to count, so the set is
+ *    stories that were unambiguously the week's news rather than one section's.
+ * Neither makes cross-region comparison meaningful, which the methodology says
+ * out loud rather than hiding.
+ */
+function coverageCompleteness(rows, { storyCount = 8, outletCount = 10, minOutlets = 15 } = {}) {
+  const clusters = new Map()
+  const volume = new Map()
+  for (const r of rows) {
+    const b = brandOf(r.outlets?.name)
+    if (b) volume.set(b, (volume.get(b) || 0) + 1)
+    if (!r.cluster_id || !b) continue
+    let c = clusters.get(r.cluster_id)
+    if (!c) { c = { brands: new Set(), newest: r }; clusters.set(r.cluster_id, c) }
+    c.brands.add(b)
+    if (r.published_at > c.newest.published_at) c.newest = r
+  }
+
+  const big = [...clusters.values()]
+    .filter(c => c.brands.size >= minOutlets)
+    .sort((a, b) => b.brands.size - a.brands.size)
+    .slice(0, storyCount)
+  // Below three stories there is no pattern to report, only noise.
+  if (big.length < 3) return null
+
+  const majors = [...volume.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, outletCount)
+    .map(([brand]) => brand)
+
+  const stories = big.map(c => ({ story: c.newest.title, outlets: c.brands.size }))
+
+  const byOutlet = majors
+    .map(outlet => {
+      const missed = big.map((c, i) => (c.brands.has(outlet) ? -1 : i)).filter(i => i >= 0)
+      return { outlet, covered: big.length - missed.length, of: big.length, missed }
+    })
+    .sort((a, b) => b.covered - a.covered || a.outlet.localeCompare(b.outlet))
+
+  return { minOutlets, stories, byOutlet }
+}
+
 export async function computeCoverageReport(db) {
   const now = Date.now()
   const weekAgo = now - DAYS * 86400e3
@@ -222,6 +279,7 @@ export async function computeCoverageReport(db) {
     language: languageWatch(rows, prevRows),
     framing: framingSplits(rows),
     attention: attention(rows),
+    completeness: coverageCompleteness(rows),
   }
 }
 

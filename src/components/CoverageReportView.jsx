@@ -135,6 +135,7 @@ function StatBar({ report }) {
 const RAIL_SECTIONS = [
   { id: 'language',    label: 'Language watch' },
   { id: 'framing',     label: 'Same story, different words' },
+  { id: 'completeness', label: 'Who carried the big stories' },
   { id: 'attention',   label: 'Attention' },
   { id: 'methodology', label: 'Methodology' },
 ]
@@ -190,6 +191,63 @@ function ContentsRail({ report, sections }) {
         </div>
       )}
     </aside>
+  )
+}
+
+// Which of the week's biggest stories each major outlet carried.
+//
+// Presented as a count, never a verdict. "Covered 6 of 8" is a fact; "ignored
+// two" is an accusation, and a general outlet skipping a story has plenty of
+// innocent explanations — beat, region, the day it landed. The expander shows
+// exactly which stories, so the number is auditable like every other one here.
+function Completeness({ data }) {
+  const [openOutlet, setOpenOutlet] = useState(null)
+  if (!data || !data.stories?.length) return null
+  const { stories, byOutlet, minOutlets } = data
+  return (
+    <>
+      <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 12 }}>
+        <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text3)', marginBottom: 10 }}>
+          The {stories.length} most-covered stories — {minOutlets}+ outlets each
+        </div>
+        {stories.map((st, i) => (
+          <div key={i} style={{ display: 'flex', gap: 10, fontSize: 13, lineHeight: 1.5, padding: '5px 0', borderTop: i === 0 ? 'none' : '0.5px solid var(--divider, var(--border))' }}>
+            <span style={{ color: 'var(--text3)', flexShrink: 0, width: 16, fontVariantNumeric: 'tabular-nums' }}>{i + 1}</span>
+            <span style={{ color: 'var(--text2)', flex: 1, minWidth: 0 }}>{st.story}</span>
+            <span style={{ color: 'var(--coral)', fontWeight: 700, flexShrink: 0, fontVariantNumeric: 'tabular-nums' }}>{st.outlets}</span>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px' }}>
+        <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text3)', marginBottom: 4 }}>
+          How many each of the week's highest-volume outlets carried
+        </div>
+        <div style={{ fontSize: 11.5, color: 'var(--text3)', marginBottom: 10 }}>
+          Ranked by how much they published this week, so nothing is measured against a title that files a handful of pieces a day.
+        </div>
+        {byOutlet.map((o, i) => (
+          <div key={o.outlet}>
+            <Bar
+              label={o.outlet}
+              value={o.covered}
+              max={o.of}
+              first={i === 0}
+              active={openOutlet === o.outlet}
+              onClick={o.missed.length ? () => setOpenOutlet(v => (v === o.outlet ? null : o.outlet)) : undefined}
+            />
+            {openOutlet === o.outlet && o.missed.length > 0 && (
+              <div style={{ margin: '2px 0 8px 182px', fontSize: 12, color: 'var(--text3)', lineHeight: 1.6 }}>
+                Not in this outlet's feed:
+                {o.missed.map(idx => (
+                  <div key={idx} style={{ color: 'var(--text2)' }}>· {stories[idx]?.story}</div>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </>
   )
 }
 
@@ -258,6 +316,12 @@ export default function CoverageReportView({ report, eyebrow = null, footer = nu
                 </Section>
               )}
 
+              {report.completeness && (
+                <Section id="completeness" title="🗂 Who carried the big stories" sub="The week's most-covered stories, and how many of them each high-volume outlet had. A count, not a verdict.">
+                  <Completeness data={report.completeness} />
+                </Section>
+              )}
+
               <Section id="attention" title="👀 Attention" sub="Where the coverage went — and where it didn't.">
                 <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', fontSize: 14, lineHeight: 1.8, color: 'var(--text2)' }}>
                   <div>📌 Biggest story: <strong style={{ color: 'var(--text)' }}>{report.attention.biggest?.story}</strong> — {report.attention.biggest?.outlets} outlets.</div>
@@ -292,6 +356,8 @@ export default function CoverageReportView({ report, eyebrow = null, footer = nu
                     Section feeds are merged into their parent brand (BBC Sport counts as BBC).
                     Week-over-week changes are computed on rates per 1,000 indexed headlines (so growth in our own feed roster doesn't masquerade as a trend) and shown as multiples.
                     “First to report” counts stories covered by 5+ outlets where one outlet's article preceded every other outlet's by at least 5 minutes — wire syndication makes closer calls meaningless.
+                    “Who carried the big stories” takes the week's most-covered stories (15+ distinct outlets each) and counts how many of them appeared in each of the week's highest-volume outlets' feeds.
+                    It is a count and nothing more: an outlet not carrying a story can mean it wasn't their region or beat, that it ran outside our feed window, or that they simply didn't — we don't distinguish, and comparing outlets across different countries is not meaningful.
                     Tracked terms are chosen to cover competing vocabulary for the same subjects across the political spectrum.
                   </p>
                   <p>
