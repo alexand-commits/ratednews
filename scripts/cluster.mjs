@@ -477,6 +477,19 @@ async function main() {
   const allUpdates = [...clusterUpdates, ...clearUpdates]
   console.log(`Writing ${clusterUpdates.length} clustered  +  ${clearUpdates.length} cleared\n`)
 
+  // Refuse to mass-unset. The reset list above clears cluster_id on anything
+  // that was clustered but didn't re-cluster this run, which is correct for a
+  // handful of articles and catastrophic for all of them. If a run forms ZERO
+  // clusters over a 48h window that normally yields hundreds, the input is
+  // broken, not the data — on 2026-09-12 a dropped `outlet_id` column made
+  // every membership test compare undefined to undefined, and this list grew
+  // to all 11,468 clustered articles.
+  if (clusters.length === 0 && allUpdates.length > 0) {
+    console.error(`\n❌ Zero clusters formed but ${allUpdates.length} updates queued — refusing to run.`)
+    console.error('   That combination means the corpus is malformed, not that the news stopped clustering.')
+    process.exit(1)
+  }
+
   // ── Batch upsert ───────────────────────────────────────────────────────────
   let written = 0, failed = 0
 
@@ -524,8 +537,23 @@ async function main() {
     }
   }
 
+  // A run that wrote NOTHING while failing batches is not a run. It used to
+  // reach here anyway: log the batch errors, stamp last_run, exit 0. So the
+  // cron went green, the 25-minute cadence guard blocked a retry, and the site
+  // quietly lost every coverage badge and story link until somebody noticed
+  // stale articles by eye. That is exactly what happened on 2026-09-12 —
+  // clustering placed nothing for 157 minutes while reporting success, because
+  // the database was saturated and every JSONB write timed out.
+  //
+  // Now it refuses to stamp the window and exits non-zero, so the next tick
+  // retries immediately and the Action goes red.
+  if (failed > 0 && written === 0) {
+    console.error(`\n❌ Every batch failed (${failed} rows) — not stamping last_run so the next run retries.`)
+    process.exit(1)
+  }
+
   // Stamp the run so the cadence guard can skip the next tick. Written only
-  // after a real run, so a skipped or failed run never pushes the window out.
+  // after a run that actually wrote something.
   if (MIN_RUN_INTERVAL_MIN > 0) {
     const pack = { kind: STATE_KIND, last_run: new Date().toISOString() }
     if (stateRowId) await supabase.from('social_drafts').update({ pack }).eq('id', stateRowId)

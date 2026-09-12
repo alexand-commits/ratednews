@@ -5,6 +5,10 @@ import { db } from '../src/lib/supabase'
 import FeedPage from '../src/pages/FeedPage'
 import { useAppContext } from './_app'
 
+// How old the ISR payload may be before a visitor triggers a quiet refresh.
+// Comfortably above the 15-minute revalidate window, so only genuinely stale
+// first-loads pay for a query.
+const STALE_PAYLOAD_MIN = 25
 const BATCH = 50
 
 // Minimal column list — only what the feed cards actually render. Add columns
@@ -37,15 +41,44 @@ export default function Feed({ initialArticles, initialCount }) {
   useEffect(() => {
     const hasCached = initialArticles.length > 0
 
-    // WARM PATH — ISR already handed us a ranked, cluster-deduped, ≤15-min-old
-    // feed (getStaticProps applies the same trend sort). Firing a heavy 90-row
-    // refetch on every mount just to swap near-identical data was the load 'hang'
-    // and pure egress. Render the SSR feed as-is. Freshness is covered by
-    // FeedPage's 2-min new-articles banner + infinite scroll.
+    // WARM PATH — ISR already handed us a ranked, cluster-deduped feed
+    // (getStaticProps applies the same trend sort). Firing a heavy refetch on
+    // every mount just to swap near-identical data was the load 'hang' and pure
+    // egress, so a fresh payload is rendered as-is and the warm path issues
+    // ZERO browser queries.
     //
-    // With the trending pill bar gone, the warm path now issues ZERO browser
-    // queries — the last one was the 1000-row topic source.
-    if (hasCached) return
+    // The exception is a STALE payload. `revalidate: 900` is a floor, not a
+    // ceiling: once the window passes, Next serves the cached page to the next
+    // visitor and only THEN regenerates. On a quiet stretch the first person
+    // through the door gets whatever was last generated, which can be hours
+    // old — reported as "flicked to Latest and got articles 2h old", then
+    // watched them update underneath.
+    //
+    // So: refresh only when the payload is actually old. A fresh page still
+    // costs nothing, and the reader who caught the stale copy stops being the
+    // one person who sees yesterday's news.
+    const newestMs = initialArticles.reduce(
+      (max, a) => Math.max(max, new Date(a.published_at).getTime() || 0), 0)
+    const payloadAgeMin = newestMs ? (Date.now() - newestMs) / 60000 : Infinity
+    if (hasCached && payloadAgeMin <= STALE_PAYLOAD_MIN) return
+
+    if (hasCached) {
+      // Stale but present: swap the list quietly, no skeleton. The reader is
+      // already looking at articles; blanking them would be worse than the
+      // staleness.
+      db.from('articles')
+        .select(ARTICLE_SELECT)
+        .order('published_at', { ascending: false })
+        .range(0, BATCH - 1)
+        .then(({ data }) => {
+          if (!data?.length) return
+          setArticles(data)
+          setOffset(data.length)
+          setHasMore(data.length === BATCH)
+        })
+        .catch(() => {})
+      return
+    }
 
     // COLD PATH — SSR returned nothing (a failed regeneration). The client fetch
     // is now the only data source, so fetch feed + count with a skeleton and a

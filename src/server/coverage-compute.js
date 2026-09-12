@@ -17,6 +17,21 @@ import { WATCH_GROUPS, FRAMING_SETS } from './coverage-watchlist.js'
 
 const DAYS = 7
 
+/**
+ * SHARED between the Coverage Report and scripts/cluster.mjs. The select must
+ * satisfy BOTH callers.
+ *
+ * Do not trim columns here because one caller doesn't read them. On 2026-09-12
+ * `id` and `outlet_id` were dropped as unused — true for the coverage report,
+ * catastrophic for clustering, which keys its upsert on `id` and decides
+ * whether two articles are from different publishers on `outlet_id`. Every
+ * write failed on a null primary key, and because `outlet_id` was undefined no
+ * cluster ever formed, so the job queued all 11,468 clustered articles for
+ * `cluster_id: null`. Only the null-id failure stopped it wiping them.
+ *
+ * If a caller ever genuinely needs a slimmer row, add a parameter — don't
+ * narrow the default.
+ */
 export async function fetchHeadlines(db, sinceMs, untilMs) {
   const HOUR = 3600e3
   const chunks = []
@@ -25,7 +40,7 @@ export async function fetchHeadlines(db, sinceMs, untilMs) {
   const rows = []
   async function fetchChunk(fromMs, toMs, attempt = 0) {
     const { data, error } = await db.from('articles')
-      .select('title, cluster_id, published_at, outlets(name)')
+      .select('id, title, outlet_id, cluster_id, published_at, outlets(name)')
       .gte('published_at', new Date(fromMs).toISOString())
       .lt('published_at', new Date(toMs).toISOString())
       .limit(1000)
