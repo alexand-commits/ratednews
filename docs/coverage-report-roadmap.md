@@ -23,6 +23,37 @@ Live right now: 87,687 headlines, 297 feeds, week of 31 Aug – 7 Sept.
   this week's. Now ordered `created_at` desc. `maybeSingle()` is also gone — it
   throws on multiple rows, which this table now has by design.
 
+## What this costs (measured 2026-09-12)
+
+Short version: **the feature as it stands is one of the cheapest things the site
+runs.** Alexander was right to ask, and the answer is reassuring — but two of
+the proposed extensions are not cheap, so keep this section current.
+
+| | Measured | Context |
+|---|---|---|
+| DB reads per sweep | **157,560 rows** (87,687 current week + 69,873 prior) | Clustering reads **2.84M rows/day** — one sweep is ~0.8% of a clustering day |
+| Frequency | weekly cron `40 5 * * 1` | plus the owner-only desk button |
+| Page over the wire | **105KB** Brotli (478KB uncompressed) | edge-cached, ISR 6h |
+| Pack storage | 385KB × 52 = **20MB/year** | negligible |
+
+**Don't quote the 478KB figure as the page weight** — JSON compresses ~4.5:1 and
+the real transfer is 105KB. That mistake was made once in conversation already.
+
+### The three things that WOULD cost
+
+1. **Backfilling 52 weeks: 8.2M rows in one burst** — roughly three days of
+   clustering load compressed into one job, against a database that has been
+   taken down by an aggressive burst before. This is why the roadmap's backfill
+   step is **optional and must be throttled across days**, not a launch
+   requirement. Prefer letting the archive accumulate forward from the cron,
+   which costs nothing extra.
+2. **The desk's refresh button.** Owner-only but was uncapped: every click was a
+   full 157k-row sweep, so twenty idle clicks would out-read a full day of
+   clustering. Now guarded — skips with a 200 if the stored report is under an
+   hour old, with a `force: true` escape hatch for watchlist changes.
+3. **`getStaticPaths` on the archive must use `fallback: 'blocking'`.** With
+   `fallback: false` every deploy pre-renders all 52 weeks.
+
 ## Next, in order
 
 ### 1. `/coverage-report/[week]` — the archive
@@ -40,13 +71,16 @@ crawl-starved site.
 Gotcha: the one legacy row predates `report.week` and has no key. Fall back to
 `generatedAt.slice(0,10)` when building paths, or backfill the field once.
 
-### 2. Backfill
+### 2. Backfill — OPTIONAL, and throttled
 
 The pack is computed from `articles`, not from anything ephemeral, so past weeks
-are recomputable as far back as retention allows. Check how far that goes, then
-generate the archive already populated rather than waiting a year for it to
-accumulate. `computeCoverageReport` currently hardcodes "now" — it needs a
-window parameter to do this.
+are recomputable as far back as retention allows. `computeCoverageReport`
+hardcodes "now" and would need a window parameter.
+
+**But see the cost section: 52 weeks is 8.2M row-reads.** Do not run this as a
+loop. Either skip it entirely and let the archive build forward from the weekly
+cron (free), or spread it over days with a deliberate delay between weeks. The
+archive works fine without it — it just starts short.
 
 ### 3. A real share card per week
 

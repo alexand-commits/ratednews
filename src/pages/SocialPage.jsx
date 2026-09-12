@@ -468,20 +468,30 @@ function CoverageGenerator({ onRun }) {
   const [note, setNote]   = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [dataFrom, setDataFrom] = useState(null)
+  const [forceOffer, setForceOffer] = useState(false) // set when a refresh was skipped as too recent
 
   // Ad hoc, not Monday-hostage: recompute the week's data on demand
   // (~15-30s server-side; hour-chunked index reads, cheap on the IO budget).
-  async function refreshData() {
+  async function refreshData(force = false) {
     if (refreshing || busy) return
-    setRefreshing(true); setError(''); setNote('')
+    setRefreshing(true); setError(''); setNote(''); setForceOffer(false)
     try {
       const { data: { session } } = await db.auth.getSession()
       const res = await fetch('/api/coverage-compute', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${session?.access_token}` },
+        headers: { Authorization: `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ force }),
       })
       const json = await res.json()
       if (!res.ok) throw new Error(json.error || 'Refresh failed')
+      // Skipped, not failed: the sweep reads ~157k rows and the data only moves
+      // as fast as ingest, so inside the hour there is nothing to gain.
+      if (json.skipped) {
+        setDataFrom(json.generatedAt)
+        setForceOffer(true)
+        setNote(`Already computed ${json.ageMinutes} min ago — skipped to save a 157k-row sweep. New articles won't shift the week's counts much inside an hour.`)
+        return
+      }
       setDataFrom(json.generatedAt)
       setNote(`Data refreshed — ${(json.headlines || 0).toLocaleString()} headlines this week, ${json.framingSplits} framing split${json.framingSplits === 1 ? '' : 's'} found.`)
     } catch (e) {
@@ -527,13 +537,22 @@ function CoverageGenerator({ onRun }) {
           {busy ? 'Crunching the week…' : 'Draft data posts'}
         </button>
         <button
-          onClick={refreshData}
+          onClick={() => refreshData(false)}
           disabled={refreshing || busy}
           style={{ fontSize: 12, fontWeight: 600, padding: '5px 14px', borderRadius: 99, border: '0.5px solid var(--border)', background: 'var(--bg)', color: 'var(--text2)', cursor: refreshing || busy ? 'default' : 'pointer', opacity: refreshing ? 0.55 : 1 }}
         >
           {refreshing ? 'Recomputing… ~20s' : '↻ Refresh data'}
         </button>
         {dataFrom && <span style={{ fontSize: 11, color: 'var(--text3)' }}>data from {timeAgo(dataFrom)}</span>}
+        {forceOffer && !refreshing && (
+          <button
+            onClick={() => refreshData(true)}
+            title="Runs the full 14-day sweep regardless of age — use after changing the watchlist"
+            style={{ fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 99, border: '0.5px solid var(--coral)', background: 'transparent', color: 'var(--coral)', cursor: 'pointer' }}
+          >
+            Recompute anyway
+          </button>
+        )}
         {error && <span style={{ fontSize: 12, color: 'var(--red)' }}>{error}</span>}
       </div>
 
