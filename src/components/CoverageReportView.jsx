@@ -132,13 +132,19 @@ function StatBar({ report }) {
 // The answer to that space is navigation, not a wider column: 0 of 108 outlet
 // labels truncate at the current width, and the methodology prose would run
 // past a comfortable measure if the column grew.
-const RAIL_SECTIONS = [
-  { id: 'language',    label: 'Language watch' },
-  { id: 'framing',     label: 'Same story, different words' },
-  { id: 'completeness', label: 'Who carried the big stories' },
-  { id: 'attention',   label: 'Attention' },
-  { id: 'methodology', label: 'Methodology' },
-]
+// Built from what the pack ACTUALLY contains, not from a fixed list. Sections
+// render conditionally — framing can come back empty, and completeness only
+// exists in packs computed after it was added — so a hardcoded rail would link
+// to anchors that aren't on the page. Every archived week predates completeness.
+function railSections(report) {
+  return [
+    { id: 'language',     label: 'Language watch',             on: report?.language?.length > 0 },
+    { id: 'framing',      label: 'Same story, different words', on: report?.framing?.length > 0 },
+    { id: 'completeness', label: 'Who carried the big stories', on: !!report?.completeness },
+    { id: 'attention',    label: 'Attention',                   on: !!report?.attention },
+    { id: 'methodology',  label: 'Methodology',                 on: !!report },
+  ].filter(s => s.on)
+}
 
 function ContentsRail({ report, sections }) {
   const [active, setActive] = useState(sections[0]?.id || null)
@@ -267,7 +273,7 @@ export default function CoverageReportView({ report, eyebrow = null, footer = nu
   return (
     <div className="page-content">
       <div className="coverage-shell">
-        {report && <ContentsRail report={report} sections={RAIL_SECTIONS} />}
+        {report && <ContentsRail report={report} sections={railSections(report)} />}
         <div className="container" style={{ maxWidth: 760 }}>
           <div style={{ marginBottom: 30 }}>
             {eyebrow}
