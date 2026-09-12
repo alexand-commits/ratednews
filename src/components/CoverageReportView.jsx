@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 
 /**
@@ -127,9 +127,77 @@ function StatBar({ report }) {
   )
 }
 
-function Section({ title, sub, children }) {
+// Desktop-only contents rail. This page is ~5,000px tall with four sections and
+// sits in a 760px column, leaving ~340px of dead margin each side at 1440px.
+// The answer to that space is navigation, not a wider column: 0 of 108 outlet
+// labels truncate at the current width, and the methodology prose would run
+// past a comfortable measure if the column grew.
+const RAIL_SECTIONS = [
+  { id: 'language',    label: 'Language watch' },
+  { id: 'framing',     label: 'Same story, different words' },
+  { id: 'attention',   label: 'Attention' },
+  { id: 'methodology', label: 'Methodology' },
+]
+
+function ContentsRail({ report, sections }) {
+  const [active, setActive] = useState(sections[0]?.id || null)
+
+  useEffect(() => {
+    const els = sections.map(s => document.getElementById(s.id)).filter(Boolean)
+    if (!els.length || typeof IntersectionObserver === 'undefined') return
+    // rootMargin pulls the trip line to just under the sticky header, so the
+    // highlighted item is the section actually being read rather than whichever
+    // one happens to touch the viewport bottom.
+    const io = new IntersectionObserver(
+      entries => {
+        const visible = entries.filter(e => e.isIntersecting)
+        if (visible.length) setActive(visible[0].target.id)
+      },
+      { rootMargin: '-72px 0px -70% 0px', threshold: 0 },
+    )
+    els.forEach(el => io.observe(el))
+    return () => io.disconnect()
+  }, [sections])
+
   return (
-    <section style={{ marginBottom: 36 }}>
+    <aside className="coverage-rail" aria-label="On this page">
+      <div style={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'var(--text3)', marginBottom: 10 }}>
+        On this page
+      </div>
+      <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, marginBottom: 18 }}>
+        {sections.map(s => {
+          const on = active === s.id
+          return (
+            <a
+              key={s.id}
+              href={`#${s.id}`}
+              style={{
+                fontSize: 12.5, lineHeight: 1.4, padding: '6px 10px', borderRadius: 6,
+                textDecoration: 'none', color: on ? 'var(--coral)' : 'var(--text2)',
+                fontWeight: on ? 600 : 500,
+                background: on ? 'rgba(216,90,48,0.08)' : 'transparent',
+                borderLeft: `2px solid ${on ? 'var(--coral)' : 'transparent'}`,
+              }}
+            >{s.label}</a>
+          )
+        })}
+      </nav>
+      {report?.corpus && (
+        <div style={{ fontSize: 11.5, color: 'var(--text3)', lineHeight: 1.6, borderTop: '0.5px solid var(--border)', paddingTop: 12 }}>
+          <div>{report.corpus.headlines?.toLocaleString()} headlines</div>
+          <div>{report.corpus.outlets} outlets</div>
+          <div style={{ marginTop: 8 }}>Counts, never conclusions.</div>
+        </div>
+      )}
+    </aside>
+  )
+}
+
+function Section({ id, title, sub, children }) {
+  return (
+    // scroll-margin-top clears the sticky site header, so a jump link doesn't
+    // land the heading underneath it.
+    <section id={id} style={{ marginBottom: 36, scrollMarginTop: 72 }}>
       <h2 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 23, fontWeight: 700, marginBottom: 4 }}>{title}</h2>
       {sub && <p style={{ fontSize: 13, color: 'var(--text3)', marginBottom: 14 }}>{sub}</p>}
       {children}
@@ -140,7 +208,9 @@ function Section({ title, sub, children }) {
 export default function CoverageReportView({ report, eyebrow = null, footer = null }) {
   return (
     <div className="page-content">
-      <div className="container" style={{ maxWidth: 760 }}>
+      <div className="coverage-shell">
+        {report && <ContentsRail report={report} sections={RAIL_SECTIONS} />}
+        <div className="container" style={{ maxWidth: 760 }}>
           <div style={{ marginBottom: 30 }}>
             {eyebrow}
             <h1 style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 30, fontWeight: 700, marginBottom: 6 }}>The Coverage Report</h1>
@@ -161,7 +231,7 @@ export default function CoverageReportView({ report, eyebrow = null, footer = nu
 
           {report && (
             <>
-              <Section title="🔤 Language watch" sub="How many headlines contained each term, and which outlets used it most. Same subject, competing vocabulary.">
+              <Section id="language" title="🔤 Language watch" sub="How many headlines contained each term, and which outlets used it most. Same subject, competing vocabulary.">
                 {report.language.map(g => (
                   <div key={g.group} style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 12 }}>
                     <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text3)', marginBottom: 10 }}>{g.group}</div>
@@ -171,7 +241,7 @@ export default function CoverageReportView({ report, eyebrow = null, footer = nu
               </Section>
 
               {report.framing.length > 0 && (
-                <Section title="🪞 Same story, different words" sub="Single stories where outlets split over what to call the same event.">
+                <Section id="framing" title="🪞 Same story, different words" sub="Single stories where outlets split over what to call the same event.">
                   {report.framing.map((f, i) => (
                     <div key={i} style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 12 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, lineHeight: 1.4 }}>{f.story}</div>
@@ -188,7 +258,7 @@ export default function CoverageReportView({ report, eyebrow = null, footer = nu
                 </Section>
               )}
 
-              <Section title="👀 Attention" sub="Where the coverage went — and where it didn't.">
+              <Section id="attention" title="👀 Attention" sub="Where the coverage went — and where it didn't.">
                 <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', fontSize: 14, lineHeight: 1.8, color: 'var(--text2)' }}>
                   <div>📌 Biggest story: <strong style={{ color: 'var(--text)' }}>{report.attention.biggest?.story}</strong> — {report.attention.biggest?.outlets} outlets.</div>
                   <div>
@@ -214,8 +284,8 @@ export default function CoverageReportView({ report, eyebrow = null, footer = nu
                 )}
               </Section>
 
-              <Section title="Methodology">
-                <div id="methodology" style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7 }}>
+              <Section id="methodology" title="Methodology">
+                <div style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.7 }}>
                   <p style={{ marginBottom: 8 }}>
                     Counts cover <strong>headlines</strong> we indexed from {report.corpus.outlets} public RSS feeds over the 7 days shown — not full article text.
                     A headline counts once per term (word-boundary match, case-insensitive), no matter how often the term repeats in it.
@@ -232,6 +302,10 @@ export default function CoverageReportView({ report, eyebrow = null, footer = nu
             </>
           )}
         {footer}
+        </div>
+        {/* Balances the rail so the reading column stays centred on the page
+            rather than shifting right by the rail's width. */}
+        <div aria-hidden="true" />
       </div>
     </div>
   )

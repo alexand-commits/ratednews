@@ -636,3 +636,30 @@ img, video, iframe, embed, object { max-width: 100%; }
   text-underline-offset: 2px;
 }
 .legal-link:hover { color: var(--text2); }
+
+/* Coverage Report layout. Single column by default; at 1200px+ a contents rail
+   moves into the margin that was already empty. The centre column keeps its
+   760px measure — the grid is symmetric (rail, column, equal spacer) so adding
+   the rail doesn't shove the reading column off-centre. */
+.coverage-rail { display: none; }
+@media (min-width: 1200px) {
+  .coverage-shell {
+    display: grid;
+    grid-template-columns: 210px minmax(0, 760px) 210px;
+    justify-content: center;
+    gap: 24px;
+    align-items: start;
+  }
+  .coverage-shell > .container { padding-left: 0; padding-right: 0; }
+  .coverage-rail {
+    display: block;
+    position: sticky;
+    /* Clears the 56px sticky site header. */
+    top: 72px;
+    padding: 24px 0;
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    scrollbar-width: none;
+  }
+  .coverage-rail::-webkit-scrollbar { display: none; }
+}
