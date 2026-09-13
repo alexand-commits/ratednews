@@ -167,8 +167,11 @@ export default function ExplorePage({ navigate, outlets = [], initialSearch = ''
         const { data, error } = await db
           .from('articles')
           .select('id, title, published_at, category, summary, url, outlets(name, logo_url, country)')
-          // Title-only so it uses the pg_trgm GIN index on articles.title. An OR
-          // across summary (unindexed) would drop the whole query back to a seq-scan.
+          // Title-only. Needs the pg_trgm GIN index on articles.title — see
+          // sql/15_missing_indexes_audit.sql. That index did NOT exist until
+          // 2026-09-13 despite this comment claiming it did, so every search
+          // was a full scan of 849k rows. An OR across summary would drop back
+          // to a seq-scan regardless.
           .ilike('title', `%${escaped}%`)
           .order('published_at', { ascending: false })
           .limit(30)
