@@ -42,7 +42,29 @@ const nextConfig = {
     contentSecurityPolicy: "default-src 'none'; script-src 'none'; sandbox;",
   },
   async headers() {
-    return [{ source: '/(.*)', headers: securityHeaders }]
+    return [
+      // Outlet logos and static brand assets. Next serves everything in
+      // public/ as `max-age=0, must-revalidate`, which means the browser has
+      // the file cached and still makes a conditional request for it on every
+      // page load. Measured on the mobile homepage: 89 distinct logos, 26KB
+      // total, ZERO served from cache without a round trip, averaging 1,205ms
+      // each. That is what made the page feel slow — not bytes, 89 round trips
+      // before it settled.
+      //
+      // 30 days fresh, then served stale for a day while it revalidates in the
+      // background. Not `immutable`: fetch-logos.mjs can replace a logo under
+      // the same filename, so a permanent cache would strand a stale one. This
+      // way a change self-heals within a day and nobody waits for it.
+      {
+        source: '/logos/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=2592000, stale-while-revalidate=86400' }],
+      },
+      {
+        source: '/:file(.*\\.(?:png|jpg|jpeg|svg|ico|webp|woff2?))',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=2592000, stale-while-revalidate=86400' }],
+      },
+      { source: '/(.*)', headers: securityHeaders },
+    ]
   },
 
   async redirects() {
