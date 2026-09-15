@@ -8,7 +8,6 @@ import TrendingStoriesWidget from '../components/TrendingStoriesWidget'
 import OutletTrustRate from '../components/OutletTrustRate'
 import { track } from '../utils/track'
 import StoryIntelligence from '../components/StoryIntelligence'
-import Sidebar from '../components/Sidebar'
 
 // Extract meaningful initials from a username or email — avoids numbers/symbols
 function getInitials(str) {
@@ -583,15 +582,31 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                   Show {hiddenPeerCount} more {hiddenPeerCount === 1 ? 'outlet' : 'outlets'}
                 </button>
               )}
-              {/* The story page is more than this list, so it stays reachable —
-                  but as a secondary route now, not the only way to see peer 7. */}
+              {/* The story page is the product: every outlet's take side by
+                  side. It was grey 12px text sitting under a saturated orange
+                  button that sends the reader to another website — the only
+                  path that KEEPS them was the quietest thing on the page.
+                  Sells what is actually there, and names the number. */}
               {(article.cluster_size || article.cluster_peers?.length || 0) > 0 && (
                 <Link
                   href={`/story/${articleSlug(article.title, article.id)}`}
                   onClick={() => track('story_open', { from: 'article' })}
-                  style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text3)', marginTop: 10, paddingLeft: 2, textDecoration: 'none' }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, marginTop: 10,
+                    padding: '12px 14px', borderRadius: 10,
+                    border: '1px solid var(--coral)', background: 'rgba(216,90,48,0.07)',
+                    textDecoration: 'none',
+                  }}
                 >
-                  See the full story page →
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700, color: 'var(--coral)' }}>
+                      Compare all {(article.cluster_size || article.cluster_peers.length) + 1} outlets side by side
+                    </span>
+                    <span style={{ display: 'block', fontSize: 11.5, color: 'var(--text3)', marginTop: 2 }}>
+                      Every take on this story, on one page
+                    </span>
+                  </span>
+                  <span style={{ fontSize: 15, color: 'var(--coral)', flexShrink: 0 }}>→</span>
                 </Link>
               )}
             </div>
@@ -689,16 +704,23 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
         {/* Mobile trending exit-ramp — LAST: the reader has read, rated and
             seen the discussion; only then do we point them onward. The rail's
             trending widget covers desktop. */}
-        <div className="hide-desktop" style={{ marginTop: 20 }}>
+        <div className="hide-desktop" style={{
+          marginTop: 20,
+          background: 'var(--surface)', border: '0.5px solid var(--border)',
+          borderRadius: 'var(--radius)', padding: '16px 18px',
+        }}>
+          {/* Contained. These headlines used to sit bare on the page ground
+              with hairline dividers, directly under a page made entirely of
+              surface cards — it read as unfinished rather than as a module. */}
           <TrendingStoriesWidget variant="inline" title="🔥 Trending now" />
         </div>
         </div>
 
-        <Sidebar
-          outlets={outlets}
-          navigate={navigate}
-          onTopic={topic => navigate('feed', { topic })}
-        />
+        {/* No Sidebar here. It carried "Top rated outlets" — a global ranking
+            with no relationship to the article being read — and on mobile it
+            landed as an uncontained widget below the discussion with dead
+            space under it. The trending module below is the onward path; a
+            leaderboard is not. */}
         </div>
       </div>
     </div>
