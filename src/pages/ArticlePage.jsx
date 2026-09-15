@@ -238,7 +238,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
     if (article.cluster_id) {
       db.from('articles')
-        .select('id, title, outlet_id, published_at, outlets(name, country)')
+        .select('id, title, summary, outlet_id, published_at, outlets(name, country)')
         .eq('cluster_id', article.cluster_id)
         .limit(60)
         .then(({ data }) => {

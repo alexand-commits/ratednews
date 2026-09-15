@@ -2,29 +2,25 @@ import React from 'react'
 import { FRAMING_SETS } from '../server/coverage-watchlist'
 
 /**
- * PREVIEW BUILD — story intelligence on the article page.
+ * What this story's coverage looks like across every outlet carrying it —
+ * the thing a reader cannot get from any single source, including ours.
  *
- * What an article page can say that the source cannot. See
- * docs/story-intelligence-spec.md for the full plan and costings.
+ * Presented as ONE panel, not a stack of cards. Three identically-styled boxes
+ * read as a wall and gave the reader no idea which number mattered; the overlap
+ * figure is the finding and everything else is supporting detail, so the layout
+ * now says that.
  *
- * DELIBERATELY computed at render time here, which is the wrong place for
- * production. The spec calls for computing this once per story inside
- * scripts/cluster.mjs and storing it, because a render-time computation repeats
- * the same work for every visitor. Doing it here costs one extra query and zero
- * schema changes, which is the right trade for finding out whether it is worth
- * having at all before building the pipeline for it.
+ * Computed at render time, which is the wrong place for production — see
+ * docs/story-intelligence-spec.md. It belongs in scripts/cluster.mjs, computed
+ * once per story. Acceptable at current traffic, not at scale.
  *
- * Renders NOTHING when it has nothing true to say. The framing split in
- * particular is rare — the weekly report found one on 3 of 11,675 stories — so
- * it has to be a highlight, never a fixture, and never an apology.
+ * Renders NOTHING when it has nothing true to say.
  */
 
-// Geographic spread reads outlets.country, which is the outlet's home market —
-// the same meaning the Outlets page uses. "19 UK outlets covered this" is a
-// claim about who picked the story up, not about where the story happened.
 const REGION_LABEL = {
   UK: 'UK', US: 'US', Europe: 'Europe', MiddleEast: 'Middle East',
   Africa: 'Africa', AsiaPac: 'Asia Pacific', Americas: 'Americas',
+  Canada: 'Canada', International: 'International',
 }
 
 function spreadOf(members) {
@@ -39,40 +35,28 @@ function spreadOf(members) {
     .sort((a, b) => b.n - a.n)
 }
 
-// Same engine as the weekly Coverage Report's framingSplits(), run over one
-// cluster instead of the whole corpus. A real split needs 2+ competing labels
-// each chosen by 2+ DISTINCT publishers — one outlet using a word twice is not
-// a disagreement.
 function framingOf(members) {
   const out = []
   for (const set of FRAMING_SETS) {
     const usage = set.variants.map((label, i) => {
       const outlets = new Set()
       for (const m of members) {
-        if (set.res[i].test(m.title || '')) outlets.add(m.outlets?.name || m.outlet_id)
+        if (set.res[i].test(m.title || '') || set.res[i].test(m.summary || '')) {
+          outlets.add(m.outlets?.name || m.outlet_id)
+        }
       }
       return { label, outlets: [...outlets] }
     }).filter(u => u.outlets.length > 0)
-
     if (usage.length >= 2 && usage.filter(u => u.outlets.length >= 2).length >= 2) {
       out.push({ subject: set.subject, usage: usage.sort((a, b) => b.outlets.length - a.outlets.length) })
     }
   }
-  return out.slice(0, 1) // one per story; more than that is noise
+  return out.slice(0, 1)
 }
 
-
-// ── Headline overlap ────────────────────────────────────────────────────────
-// How much of this coverage is actually the same text.
-//
-// Measured over 701 stories: 61% have at least one near-identical pair and 18%
-// have 30%+ of their pairs near-identical. Both ends are informative — six
-// outlets running one agency's wording, or seven that each wrote their own.
-//
-// Reported as a COUNT, never as "syndicated". Two outlets can independently
-// land on the same words for a simple factual story, so the honest statement is
-// how many headlines match and the reader draws the conclusion. Counts, never
-// conclusions.
+// Headline overlap. Reported as a COUNT, never as "syndication" — outlets can
+// land on the same words independently for a simple factual story, so we state
+// how many match and let the reader conclude.
 const OVERLAP_STOP = new Set(('the a an and or but of to in on at for with from by as is are was were be been ' +
   'has have had will would could should says say said after before over under new more most it its his her ' +
   'their they them this that these those what which who how why when where').split(' '))
@@ -80,58 +64,53 @@ const OVERLAP_STOP = new Set(('the a an and or but of to in on at for with from 
 const tokens = t => new Set((t || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ')
   .split(/\s+/).filter(w => w.length > 2 && !OVERLAP_STOP.has(w)))
 
-// Jaccard: shared words over total distinct words. 0.6 is the threshold where
-// two headlines stop reading as independently written.
 const SIMILAR_AT = 0.6
 
 function overlapOf(members) {
   const toks = members.map(m => tokens(m.title))
   if (toks.length < 3) return null
   const linked = new Set()
-  let pairs = 0, similar = 0
+  let pairs = 0
   for (let i = 0; i < toks.length; i++) {
     for (let j = i + 1; j < toks.length; j++) {
       const a = toks[i], b = toks[j]
       const inter = [...a].filter(x => b.has(x)).length
       const union = new Set([...a, ...b]).size
       pairs++
-      if (union && inter / union >= SIMILAR_AT) { similar++; linked.add(i); linked.add(j) }
+      if (union && inter / union >= SIMILAR_AT) { linked.add(i); linked.add(j) }
     }
   }
-  if (!pairs) return null
-  return { share: similar / pairs, matching: linked.size, total: members.length }
+  return pairs ? { matching: linked.size, total: members.length } : null
 }
 
-// ── Still developing ────────────────────────────────────────────────────────
-// First covered over 12h ago, and someone published within the last 3. Fires on
-// 20% of multi-outlet stories. Uses spans in hours, so it survives the
-// timestamp problem in ingest.mjs (feeds without a pubDate get stamped at
-// ingest, up to 15 minutes late) — noise at that scale, fatal for ordering.
+// Spans in hours, so this survives ingest.mjs stamping feeds without a pubDate
+// at ingest time — up to 15 minutes late, noise at this scale.
 function developingOf(members) {
   const ts = members.map(m => +new Date(m.published_at)).filter(n => !isNaN(n)).sort((a, b) => a - b)
   if (ts.length < 3) return null
-  const hoursSince = t => (Date.now() - t) / 3600000
-  const oldest = hoursSince(ts[0]), newest = hoursSince(ts[ts.length - 1])
-  if (oldest > 12 && newest < 3) return { spanHours: Math.round(oldest) }
-  return null
+  const h = t => (Date.now() - t) / 3600000
+  const oldest = h(ts[0])
+  return (oldest > 12 && h(ts[ts.length - 1]) < 3) ? { hours: oldest } : null
 }
 
-const Card = ({ children }) => (
-  <div style={{
-    background: 'var(--surface)', border: '0.5px solid var(--border)',
-    borderRadius: 'var(--radius-sm)', padding: '12px 14px', marginBottom: 10,
-  }}>{children}</div>
-)
+// "95 hours ago" is a number, not a duration anyone feels.
+const ago = hours => hours < 36
+  ? `${Math.round(hours)} hours ago`
+  : `${Math.round(hours / 24)} days ago`
 
-const Label = ({ children }) => (
-  <div style={{
-    fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
-    color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 8,
-  }}>{children}</div>
-)
+function Row({ label, children }) {
+  return (
+    <div style={{ display: 'flex', gap: 12, padding: '9px 0', borderTop: '0.5px solid var(--border)' }}>
+      <span style={{
+        flexShrink: 0, width: 66, fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
+        textTransform: 'uppercase', color: 'var(--text3)', paddingTop: 2,
+      }}>{label}</span>
+      <span style={{ fontSize: 13, lineHeight: 1.55, color: 'var(--text2)', minWidth: 0 }}>{children}</span>
+    </div>
+  )
+}
 
 export default function StoryIntelligence({ members = [], totalOutlets = null }) {
-  // Below three outlets there is no "coverage" to characterise.
   if (!members || members.length < 3) return null
 
   const spread = spreadOf(members)
@@ -141,80 +120,91 @@ export default function StoryIntelligence({ members = [], totalOutlets = null })
   if (!spread.length && !framing.length && !overlap && !developing) return null
 
   const counted = members.length
-  const undercount = totalOutlets && totalOutlets > counted
+  // cluster_size is a snapshot from the last clustering run and can lag the live
+  // cluster query, which produced "Based on 47 of 43 outlets" — a count larger
+  // than its own total. Only claim a denominator when it is actually bigger.
+  const knownTotal = totalOutlets && totalOutlets > counted ? totalOutlets : null
+
+  const hasHero = overlap && overlap.total >= 4
+  const heroIsOverlap = hasHero && overlap.matching >= 2
 
   return (
-    <div style={{ marginBottom: 16 }}>
-      {framing.map(f => (
-        <Card key={f.subject}>
-          <Label>🪞 The same story, different words</Label>
-          <div style={{ fontSize: 13.5, lineHeight: 1.75, color: 'var(--text2)' }}>
-            {f.usage.map(u => (
-              <div key={u.label}>
-                <strong style={{ color: 'var(--text)' }}>
-                  {u.outlets.length} {u.outlets.length === 1 ? 'outlet' : 'outlets'}
-                </strong>
-                {' said '}
-                <span style={{ color: 'var(--coral)', fontWeight: 600 }}>“{u.label}”</span>
-                <span style={{ color: 'var(--text3)' }}> — {u.outlets.slice(0, 4).join(', ')}</span>
-              </div>
-            ))}
-          </div>
-        </Card>
-      ))}
+    <div style={{
+      background: 'var(--surface)', border: '0.5px solid var(--border)',
+      borderLeft: '2px solid var(--coral)',
+      borderRadius: 'var(--radius-sm)', padding: '14px 16px', marginBottom: 16,
+    }}>
+      <div style={{
+        fontSize: 10, fontWeight: 700, letterSpacing: '0.09em',
+        color: 'var(--text3)', textTransform: 'uppercase', marginBottom: hasHero ? 10 : 4,
+      }}>
+        About this coverage
+      </div>
 
-      {overlap && overlap.matching >= 2 && (
-        <Card>
-          <Label>📄 How much of this is the same text</Label>
-          <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text2)' }}>
-            <strong style={{ color: 'var(--text)' }}>{overlap.matching} of {overlap.total}</strong>
-            {' headlines use near-identical wording.'}
+      {/* The finding, at the size of a finding. */}
+      {heroIsOverlap && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{
+            fontFamily: 'var(--font-playfair), serif', fontSize: 26, fontWeight: 700,
+            color: 'var(--coral)', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums',
+          }}>
+            {overlap.matching} of {overlap.total}
           </div>
-          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 6 }}>
-            Compared word-for-word across headlines. Outlets can land on the same words independently — we count, we don't conclude.
+          <div style={{ fontSize: 13.5, color: 'var(--text2)', marginTop: 3, lineHeight: 1.5 }}>
+            headlines use near-identical wording
           </div>
-        </Card>
+        </div>
       )}
 
-      {overlap && overlap.matching === 0 && overlap.total >= 5 && (
-        <Card>
-          <Label>✍️ Independently written</Label>
-          <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text2)' }}>
-            No two of these <strong style={{ color: 'var(--text)' }}>{overlap.total}</strong> headlines share enough wording to look like the same copy.
+      {hasHero && !heroIsOverlap && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={{
+            fontFamily: 'var(--font-playfair), serif', fontSize: 22, fontWeight: 700,
+            color: 'var(--text)', lineHeight: 1.15,
+          }}>
+            Independently written
           </div>
-        </Card>
+          <div style={{ fontSize: 13.5, color: 'var(--text2)', marginTop: 3, lineHeight: 1.5 }}>
+            No two of these {overlap.total} headlines share enough wording to look like the same copy
+          </div>
+        </div>
+      )}
+
+      {framing.map(f => (
+        <Row key={f.subject} label="Wording">
+          {f.usage.map((u, i) => (
+            <React.Fragment key={u.label}>
+              {i > 0 && <span style={{ color: 'var(--text3)' }}> · </span>}
+              <strong style={{ color: 'var(--text)' }}>{u.outlets.length}</strong>
+              {' said '}
+              <span style={{ color: 'var(--coral)', fontWeight: 600 }}>“{u.label}”</span>
+            </React.Fragment>
+          ))}
+        </Row>
+      ))}
+
+      {spread.length > 0 && (
+        <Row label="Spread">
+          {spread.slice(0, 6).map((s, i) => (
+            <React.Fragment key={s.label}>
+              {i > 0 && <span style={{ color: 'var(--text3)' }}> · </span>}
+              <strong style={{ color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{s.n}</strong>
+              {' '}{s.label}
+            </React.Fragment>
+          ))}
+        </Row>
       )}
 
       {developing && (
-        <Card>
-          <Label>🔄 Still developing</Label>
-          <div style={{ fontSize: 13.5, lineHeight: 1.6, color: 'var(--text2)' }}>
-            First covered <strong style={{ color: 'var(--text)' }}>{developing.spanHours} hours ago</strong>, and outlets are still publishing on it.
-          </div>
-        </Card>
+        <Row label="Timeline">
+          First covered <strong style={{ color: 'var(--text)' }}>{ago(developing.hours)}</strong>, and outlets are still publishing on it
+        </Row>
       )}
 
-      {spread.length > 0 && (
-        <Card>
-          <Label>🌍 Who picked it up</Label>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {spread.map(s => (
-              <span key={s.label} style={{
-                fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 20,
-                background: 'var(--bg2)', color: 'var(--text2)', whiteSpace: 'nowrap',
-              }}>
-                {s.n} {s.label}
-              </span>
-            ))}
-          </div>
-          {/* Say what the numbers are OF. A count without its base is the one
-              thing this site should not publish. */}
-          <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 8 }}>
-            Based on {counted} of {totalOutlets || counted} outlets
-            {undercount ? ' whose coverage we have indexed' : ''}.
-          </div>
-        </Card>
-      )}
+      <div style={{ fontSize: 10.5, color: 'var(--text3)', marginTop: 10, lineHeight: 1.5 }}>
+        Based on {counted}{knownTotal ? ` of ${knownTotal}` : ''} outlet{counted === 1 ? '' : 's'} we have indexed.
+        {heroIsOverlap ? ' Headlines compared word-for-word — outlets can reach the same wording independently, so this is a count, not a conclusion.' : ''}
+      </div>
     </div>
   )
 }
