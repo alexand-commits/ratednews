@@ -7,6 +7,7 @@ import OutletLogo from '../components/OutletLogo'
 import TrendingStoriesWidget from '../components/TrendingStoriesWidget'
 import OutletTrustRate from '../components/OutletTrustRate'
 import { track } from '../utils/track'
+import StoryIntelligence from '../components/StoryIntelligence'
 import Sidebar from '../components/Sidebar'
 
 // Extract meaningful initials from a username or email — avoids numbers/symbols
@@ -133,6 +134,12 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   const [userLooks, setUserLooks] = useState({})         // { [user_id]: { color, emoji } }
   const [fetchedArticle, setFetchedArticle] = useState(null)
   const [sameStoryArticles, setSameStoryArticles] = useState([])
+  // PREVIEW ONLY. cluster_peers stores at most 8 peers, so a 34-outlet story
+  // would produce "3 UK, 2 US" and look like a lie. This pulls the full cluster
+  // for the intelligence panel. Cheap now that articles_cluster_id_idx exists —
+  // it was a full table scan until 2026-09-13. In production this computes once
+  // per story inside cluster.mjs instead; see docs/story-intelligence-spec.md.
+  const [clusterMembers, setClusterMembers] = useState([])
 
   const article = allArticles.find(a => a.id === articleId) || fetchedArticle
 
@@ -225,12 +232,29 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   useEffect(() => {
     if (!article) return
     setSameStoryArticles([])
+    setClusterMembers([])
+
+    if (article.cluster_id) {
+      db.from('articles')
+        .select('id, title, outlet_id, published_at, outlets(name, country)')
+        .eq('cluster_id', article.cluster_id)
+        .limit(60)
+        .then(({ data }) => {
+          if (!data?.length) return
+          const byOutlet = {}
+          for (const a of data) {
+            if (!byOutlet[a.outlet_id] || a.published_at > byOutlet[a.outlet_id].published_at) byOutlet[a.outlet_id] = a
+          }
+          setClusterMembers(Object.values(byOutlet))
+        })
+        .catch(() => {})
+    }
 
     if (article.cluster_peers?.length) {
       // Fast path: use pre-computed peer IDs — same source as the feed card count
       const peerIds = article.cluster_peers.map(p => p.id).slice(0, 20)
       db.from('articles')
-        .select('*, outlets(name, logo_url)')
+        .select('*, outlets(name, logo_url, country)')
         .in('id', peerIds)
         .order('published_at', { ascending: false })
         .then(({ data }) => {
@@ -463,6 +487,11 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               {article.summary}
             </div>
           )}
+          <StoryIntelligence
+            members={clusterMembers}
+            totalOutlets={(article.cluster_size || article.cluster_peers?.length || 0) + 1}
+          />
+
           {/* Same story across outlets */}
           {sameStoryArticles.length > 0 && (
             <div style={{ marginBottom: 16 }}>
