@@ -140,6 +140,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   // it was a full table scan until 2026-09-13. In production this computes once
   // per story inside cluster.mjs instead; see docs/story-intelligence-spec.md.
   const [clusterMembers, setClusterMembers] = useState([])
+  const [peersExpanded, setPeersExpanded] = useState(false)
 
   const article = allArticles.find(a => a.id === articleId) || fetchedArticle
 
@@ -233,6 +234,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
     if (!article) return
     setSameStoryArticles([])
     setClusterMembers([])
+    setPeersExpanded(false)
 
     if (article.cluster_id) {
       db.from('articles')
@@ -332,35 +334,37 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
       .then(({ data }) => setMyOutletTrust(data?.overall_stars || 0))
   }, [user?.id, article?.outlet_id])
 
-  // How many rival outlets to list before deferring to the story page.
+  // Rival outlets: show 6, expand in place for the rest.
   //
-  // 6. Measured over 2,040 stories in 24h via cluster_size: median 3 outlets,
-  // p75 4, p90 7, p95 10, p99 23, max 45. Half of all stories have exactly two.
-  // So 6 shows the TYPICAL story in full and only truncates the big ones — 11%
-  // of stories, against 7% at the old cap of 8 and 3.4% at 12.
+  // Measured over 2,040 stories in 24h via cluster_size: median 3 outlets,
+  // p75 4, p90 7, p95 10, p99 23, max 45. Half have exactly two. So 6 shows the
+  // TYPICAL story whole and only the big ones collapse — 11% of stories.
   //
-  // Truncating more is the point, not a cost. A cap generous enough to show
-  // everything removes the reason to open /story/[slug], and story_view is the
-  // event that proves the whole proposition landed — a reader going from one
-  // outlet's article to the multi-outlet comparison. Showing all nine outlets
-  // of a nine-outlet story means nobody ever clicks through.
+  // Expanding in place rather than linking away. A link to /story made the
+  // reader load a page to see two more headlines, which is a poor trade for
+  // them even though it drove the story_view event. The story-page link stays
+  // below as a secondary route, because that page is more than this list.
   //
   // A proportional rule ("show half") was rejected: it scales up exactly where
   // it hurts, turning a 45-outlet story into 22 cards nobody reads at 12
   // seconds of engagement, while leaving the median 3-outlet story alone.
-  const PEER_DISPLAY = 6
+  const PEER_COLLAPSED = 6
+  const PEER_MAX = 30
 
   // cluster_peers caps at 8 (PEER_STORE_CAP in cluster.mjs) so it cannot feed a
-  // list of 12. The full-cluster query added for StoryIntelligence can — one
+  // full list. The full-cluster query added for StoryIntelligence can — one
   // fetch serving both. Falls back to the snapshot before that query lands, or
   // when the article is unclustered.
-  const peerList = useMemo(() => {
+  const allPeers = useMemo(() => {
     const fromCluster = clusterMembers.filter(m => m.outlet_id !== article?.outlet_id)
     const src = fromCluster.length >= sameStoryArticles.length ? fromCluster : sameStoryArticles
     return [...src]
       .sort((a, b) => (a.published_at < b.published_at ? 1 : -1))
-      .slice(0, PEER_DISPLAY)
+      .slice(0, PEER_MAX)
   }, [clusterMembers, sameStoryArticles, article?.outlet_id])
+
+  const peerList = peersExpanded ? allPeers : allPeers.slice(0, PEER_COLLAPSED)
+  const hiddenPeerCount = allPeers.length - peerList.length
 
   if (!article) return null
 
@@ -566,13 +570,28 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                   )
                 })}
               </div>
-              {(article.cluster_size || article.cluster_peers?.length || 0) > peerList.length && (
+              {hiddenPeerCount > 0 && (
+                <button
+                  onClick={() => { setPeersExpanded(true); track('peers_expand', { hidden: hiddenPeerCount }) }}
+                  style={{
+                    width: '100%', marginTop: 8, padding: '9px 12px',
+                    background: 'none', border: '0.5px dashed var(--border2)',
+                    borderRadius: 8, cursor: 'pointer',
+                    fontSize: 12.5, fontWeight: 600, color: 'var(--coral)', fontFamily: 'inherit',
+                  }}
+                >
+                  Show {hiddenPeerCount} more {hiddenPeerCount === 1 ? 'outlet' : 'outlets'}
+                </button>
+              )}
+              {/* The story page is more than this list, so it stays reachable —
+                  but as a secondary route now, not the only way to see peer 7. */}
+              {(article.cluster_size || article.cluster_peers?.length || 0) > 0 && (
                 <Link
                   href={`/story/${articleSlug(article.title, article.id)}`}
                   onClick={() => track('story_open', { from: 'article' })}
-                  style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--coral)', marginTop: 8, paddingLeft: 2, textDecoration: 'none' }}
+                  style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text3)', marginTop: 10, paddingLeft: 2, textDecoration: 'none' }}
                 >
-                  See all {((article.cluster_size || article.cluster_peers.length) + 1)} outlets covering this story →
+                  See the full story page →
                 </Link>
               )}
             </div>
