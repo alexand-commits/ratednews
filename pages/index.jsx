@@ -5,10 +5,6 @@ import { db } from '../src/lib/supabase'
 import FeedPage from '../src/pages/FeedPage'
 import { useAppContext } from './_app'
 
-// How old the ISR payload may be before a visitor triggers a quiet refresh.
-// Comfortably above the 15-minute revalidate window, so only genuinely stale
-// first-loads pay for a query.
-const STALE_PAYLOAD_MIN = 25
 const BATCH = 50
 
 // Minimal column list — only what the feed cards actually render. Add columns
@@ -47,38 +43,18 @@ export default function Feed({ initialArticles, initialCount }) {
     // egress, so a fresh payload is rendered as-is and the warm path issues
     // ZERO browser queries.
     //
-    // The exception is a STALE payload. `revalidate: 900` is a floor, not a
-    // ceiling: once the window passes, Next serves the cached page to the next
-    // visitor and only THEN regenerates. On a quiet stretch the first person
-    // through the door gets whatever was last generated, which can be hours
-    // old — reported as "flicked to Latest and got articles 2h old", then
-    // watched them update underneath.
+    // A client-side "refresh when the payload is stale" was tried here on
+    // 2026-09-15 and REMOVED the same day. It refetched by published_at desc,
+    // and the newest 50 articles have no cluster data because clustering lags
+    // ingest by 25-30 minutes — so on any page older than the threshold it
+    // replaced a trend-ranked, cluster-deduped feed with a raw recency list
+    // and every coverage badge on the homepage disappeared.
     //
-    // So: refresh only when the payload is actually old. A fresh page still
-    // costs nothing, and the reader who caught the stale copy stops being the
-    // one person who sees yesterday's news.
-    const newestMs = initialArticles.reduce(
-      (max, a) => Math.max(max, new Date(a.published_at).getTime() || 0), 0)
-    const payloadAgeMin = newestMs ? (Date.now() - newestMs) / 60000 : Infinity
-    if (hasCached && payloadAgeMin <= STALE_PAYLOAD_MIN) return
+    // Freshness belongs in the ISR window, where the ranking is done properly,
+    // not in a client refetch that cannot reproduce it. revalidate is 300s.
+    // Do not reintroduce a plain recency refetch here.
+    if (hasCached) return
 
-    if (hasCached) {
-      // Stale but present: swap the list quietly, no skeleton. The reader is
-      // already looking at articles; blanking them would be worse than the
-      // staleness.
-      db.from('articles')
-        .select(ARTICLE_SELECT)
-        .order('published_at', { ascending: false })
-        .range(0, BATCH - 1)
-        .then(({ data }) => {
-          if (!data?.length) return
-          setArticles(data)
-          setOffset(data.length)
-          setHasMore(data.length === BATCH)
-        })
-        .catch(() => {})
-      return
-    }
 
     // COLD PATH — SSR returned nothing (a failed regeneration). The client fetch
     // is now the only data source, so fetch feed + count with a skeleton and a
@@ -263,7 +239,11 @@ export async function getStaticProps() {
       .slice(0, BATCH)
     return {
       props: { initialArticles: articles, initialCount: count || 0 },
-      revalidate: 900, // regenerate every 15 minutes — matches ingest cadence
+      // 5 minutes, not 15. This is the ONLY freshness lever on the homepage
+      // now that the client-side stale refresh is gone, and it is the one that
+      // keeps the trend ranking and cluster dedup intact. One extra page
+      // regeneration every 5 minutes is trivial against ~59k ISR writes/week.
+      revalidate: 300,
     }
   } catch {
     // Retry fast on failure — an empty homepage forces every visitor down the
