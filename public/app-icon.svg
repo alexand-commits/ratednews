@@ -1,0 +1,15 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- The RN monogram at app-icon size.
+       NOT social-icon.svg, which stacks "Rated" over "News" — that reads at
+       512px on a share card and is illegible as a 16px tab icon or a home
+       screen badge, which is what it was being used for.
+
+       Sized for `purpose: maskable`: Android may crop this to a circle, so all
+       content sits inside the central 80% safe zone (a 410px circle). The
+       glyphs span roughly x=120..392, well within it. -->
+  <rect width="512" height="512" rx="112" fill="#2C2B29"/>
+  <g font-family="Georgia, 'Times New Roman', serif" font-size="230" font-weight="700" text-anchor="middle">
+    <text x="188" y="336" fill="#FFFFFF">R</text>
+    <text x="330" y="336" fill="#D85A30">N</text>
+  </g>
+</svg>

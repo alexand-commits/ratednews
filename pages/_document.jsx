@@ -8,10 +8,18 @@ export default function Document() {
         <meta name="theme-color" content="#201E1C" media="(prefers-color-scheme: dark)" />
         <meta name="theme-color" content="#F8F6F4" media="(prefers-color-scheme: light)" />
         <meta name="robots" content="index, follow" />
-        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-        {/* PNG fallback for crawlers/older browsers that don't fetch SVG favicons */}
-        <link rel="icon" type="image/png" href="/social-icon.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/social-icon.png" />
+        {/* Icons are the RN MONOGRAM, not the "Rated News" wordmark.
+            social-icon.png stacks "Rated" over "News" for a 512px share card
+            and was also serving as the favicon, the apple-touch-icon and both
+            manifest icons — two words squeezed into 16px, and into every home
+            screen badge. It stays where it belongs: social sharing only.
+
+            sizes="any" on the SVG is what makes browsers prefer it over the
+            PNG. Without it Chrome picks whichever raster it likes, which is
+            why the live tab icon and a fresh preview disagreed. */}
+        <link rel="icon" type="image/svg+xml" sizes="any" href="/favicon.svg" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/manifest.json" />
         {/* iOS PWA — required for full-screen standalone mode on iPhone/iPad */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
