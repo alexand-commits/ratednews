@@ -462,38 +462,6 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               {article.summary}
             </div>
           )}
-          <div className="article-actions" style={{ marginBottom: 20 }}>
-            <button className="btn-primary" onClick={() => article.url && window.open(article.url, '_blank')}>
-              Read full article on {outlet.name || 'source'} ↗
-            </button>
-            <button className="btn-outline" onClick={async () => {
-              const shareUrl = `https://www.ratednews.com/article/${articleSlug(article.title, article.id)}`
-              if (navigator.share) {
-                try { await navigator.share({ title: article.title, text: article.title, url: shareUrl }) } catch (_) {}
-              } else {
-                navigator.clipboard.writeText(shareUrl).then(() => showToast('Link copied!')).catch(() => showToast('Could not copy'))
-              }
-            }}>↑ Share</button>
-          </div>
-
-          {/* Contextual trust prompt — convert the reading moment into an outlet rating */}
-          <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-              <OutletLogo name={outlet.name || 'X'} size={30} borderRadius={7} />
-              <OutletTrustRate
-                outlet={{ id: article.outlet_id }}
-                user={user}
-                onLoginClick={onLoginClick}
-                showToast={showToast}
-                initialStars={myOutletTrust}
-                onRated={n => setMyOutletTrust(n)}
-                label={`Do you trust ${outlet.name || 'this source'}?`}
-                size={24}
-              />
-            </div>
-          </div>
-
-
           {/* Same story across outlets */}
           {sameStoryArticles.length > 0 && (
             <div style={{ marginBottom: 16 }}>
@@ -545,6 +513,45 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               )}
             </div>
           )}
+
+          {/* The source link sits AFTER the coverage, deliberately.
+              It used to be the first thing under the headline and the only
+              saturated element on the page, so a visitor arriving from search
+              saw one obvious action and it was the exit. The comparison — other
+              outlets' headlines on the same story — is the reason to be here,
+              so it goes first and the door comes after it. */}
+          <div className="article-actions" style={{ marginBottom: 20 }}>
+            <button className="btn-primary" onClick={() => article.url && window.open(article.url, '_blank')}>
+              Read full article on {outlet.name || 'source'} ↗
+            </button>
+            <button className="btn-outline" onClick={async () => {
+              const shareUrl = `https://www.ratednews.com/article/${articleSlug(article.title, article.id)}`
+              if (navigator.share) {
+                try { await navigator.share({ title: article.title, text: article.title, url: shareUrl }) } catch (_) {}
+              } else {
+                navigator.clipboard.writeText(shareUrl).then(() => showToast('Link copied!')).catch(() => showToast('Could not copy'))
+              }
+            }}>↑ Share</button>
+          </div>
+
+          {/* Contextual trust prompt — convert the reading moment into an outlet rating */}
+          <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+              <OutletLogo name={outlet.name || 'X'} size={30} borderRadius={7} />
+              <OutletTrustRate
+                outlet={{ id: article.outlet_id }}
+                user={user}
+                onLoginClick={onLoginClick}
+                showToast={showToast}
+                initialStars={myOutletTrust}
+                onRated={n => setMyOutletTrust(n)}
+                label={`Do you trust ${outlet.name || 'this source'}?`}
+                size={24}
+              />
+            </div>
+          </div>
+
+
 
         </div>
 
