@@ -334,15 +334,21 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
   // How many rival outlets to list before deferring to the story page.
   //
-  // 12, not 8. Measured over 2,040 stories in 24h: median 3 outlets, p90 7,
-  // p95 10, p99 23, max 45. A flat 8 truncates 7% of stories; 12 truncates
-  // 3.4%, so ~95% of articles show their COMPLETE coverage and only genuinely
-  // huge stories defer to /story, which is what that page is for.
+  // 6. Measured over 2,040 stories in 24h via cluster_size: median 3 outlets,
+  // p75 4, p90 7, p95 10, p99 23, max 45. Half of all stories have exactly two.
+  // So 6 shows the TYPICAL story in full and only truncates the big ones — 11%
+  // of stories, against 7% at the old cap of 8 and 3.4% at 12.
   //
-  // A proportional rule ("show half") was considered and rejected: it scales up
-  // exactly where it hurts, turning a 45-outlet story into 22 cards nobody reads
-  // at 12 seconds of engagement, while leaving the median 3-outlet story alone.
-  const PEER_DISPLAY = 12
+  // Truncating more is the point, not a cost. A cap generous enough to show
+  // everything removes the reason to open /story/[slug], and story_view is the
+  // event that proves the whole proposition landed — a reader going from one
+  // outlet's article to the multi-outlet comparison. Showing all nine outlets
+  // of a nine-outlet story means nobody ever clicks through.
+  //
+  // A proportional rule ("show half") was rejected: it scales up exactly where
+  // it hurts, turning a 45-outlet story into 22 cards nobody reads at 12
+  // seconds of engagement, while leaving the median 3-outlet story alone.
+  const PEER_DISPLAY = 6
 
   // cluster_peers caps at 8 (PEER_STORE_CAP in cluster.mjs) so it cannot feed a
   // list of 12. The full-cluster query added for StoryIntelligence can — one
