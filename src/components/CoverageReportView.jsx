@@ -138,10 +138,10 @@ function StatBar({ report }) {
 // to anchors that aren't on the page. Every archived week predates completeness.
 function railSections(report) {
   return [
-    { id: 'language',     label: 'Language watch',             on: report?.language?.length > 0 },
     { id: 'framing',      label: 'Same story, different words', on: report?.framing?.length > 0 },
     { id: 'completeness', label: 'Who carried the big stories', on: !!report?.completeness },
     { id: 'attention',    label: 'Attention',                   on: !!report?.attention },
+    { id: 'language',     label: 'Language watch',             on: report?.language?.length > 0 },
     { id: 'methodology',  label: 'Methodology',                 on: !!report },
   ].filter(s => s.on)
 }
@@ -257,6 +257,79 @@ function Completeness({ data }) {
   )
 }
 
+
+// A watch group, collapsed to its headline number.
+//
+// The watchlist went from 4 groups to 10 on 2026-09-13, which took this section
+// to 7,674px of an 11,445px page — 67% of the report, and nine screens between
+// the reader and the two genuinely novel sections below it. More data made the
+// page worse.
+//
+// Collapsed, each group states its own most-used term and total. The bars and
+// the click-to-audit headlines are one tap away, which is the right depth for
+// reference material: available to anyone who doubts a number, not in the way
+// of everyone who doesn't.
+function LanguageGroup({ group }) {
+  const [open, setOpen] = useState(false)
+  const terms = group.terms || []
+  const used = terms.filter(t => t.total > 0)
+  if (!used.length) return null
+  const top = used[0]
+  const total = used.reduce((n, t) => n + t.total, 0)
+
+  return (
+    <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', marginBottom: 8 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'baseline', gap: 10, flexWrap: 'wrap',
+          padding: '12px 16px', background: 'none', border: 'none', cursor: 'pointer',
+          textAlign: 'left', fontFamily: 'inherit', color: 'inherit',
+        }}
+      >
+        <span style={{ fontSize: 13, fontWeight: 700 }}>{group.group}</span>
+        <span style={{ fontSize: 12.5, color: 'var(--text2)' }}>
+          most used <span style={{ color: 'var(--text)', fontWeight: 600 }}>“{top.term}”</span> — {top.total.toLocaleString()}
+        </span>
+        <span style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          <span style={{ fontSize: 11.5, color: 'var(--text3)', fontVariantNumeric: 'tabular-nums' }}>{total.toLocaleString()}</span>
+          <span style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--coral)' }}>{open ? '▾' : '▸'}</span>
+        </span>
+      </button>
+      {open && (
+        <div style={{ padding: '0 16px 12px' }}>
+          {terms.map(t => <TermBlock key={t.term} t={t} />)}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
+// The week in one sentence, before any table.
+//
+// The report opened on a stat bar and then 44 term bars — method before
+// finding. A reader who never scrolls should still leave with the single most
+// striking thing in the data, and the most striking thing is consistently the
+// same: how much of the week's news only one newsroom bothered with.
+function Lead({ report }) {
+  const a = report.attention || {}
+  if (!a.totalStories || a.singleOutletStories == null) return null
+  const pct = Math.round((a.singleOutletStories / a.totalStories) * 100)
+  const biggest = a.biggest
+  return (
+    <div style={{
+      borderLeft: '2px solid var(--coral)', paddingLeft: 14, marginBottom: 26,
+    }}>
+      <p style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 19, lineHeight: 1.45, color: 'var(--text)', fontWeight: 500 }}>
+        <strong style={{ color: 'var(--coral)' }}>{pct}%</strong> of the {a.totalStories.toLocaleString()} stories
+        we indexed this week were carried by exactly one outlet.
+        {biggest?.outlets ? <> The most-covered was picked up by <strong>{biggest.outlets}</strong>.</> : null}
+      </p>
+    </div>
+  )
+}
+
 function Section({ id, title, sub, children }) {
   return (
     // scroll-margin-top clears the sticky site header, so a jump link doesn't
@@ -292,18 +365,10 @@ export default function CoverageReportView({ report, eyebrow = null, footer = nu
           </div>
 
           {report && <StatBar report={report} />}
+          {report && <Lead report={report} />}
 
           {report && (
             <>
-              <Section id="language" title="🔤 Language watch" sub="How many headlines contained each term, and which outlets used it most. Same subject, competing vocabulary.">
-                {report.language.map(g => (
-                  <div key={g.group} style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: 12 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text3)', marginBottom: 10 }}>{g.group}</div>
-                    {g.terms.map(t => <TermBlock key={t.term} t={t} />)}
-                  </div>
-                ))}
-              </Section>
-
               {report.framing.length > 0 && (
                 <Section id="framing" title="🪞 Same story, different words" sub="Single stories where outlets split over what to call the same event.">
                   {report.framing.map((f, i) => (
@@ -322,13 +387,13 @@ export default function CoverageReportView({ report, eyebrow = null, footer = nu
                 </Section>
               )}
 
-              {report.completeness && (
+{report.completeness && (
                 <Section id="completeness" title="🗂 Who carried the big stories" sub="The week's most-covered stories, and how many of them each high-volume outlet had. A count, not a verdict.">
                   <Completeness data={report.completeness} />
                 </Section>
               )}
 
-              <Section id="attention" title="👀 Attention" sub="Where the coverage went — and where it didn't.">
+<Section id="attention" title="👀 Attention" sub="Where the coverage went — and where it didn't.">
                 <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', fontSize: 14, lineHeight: 1.8, color: 'var(--text2)' }}>
                   <div>📌 Biggest story: <strong style={{ color: 'var(--text)' }}>{report.attention.biggest?.story}</strong> — {report.attention.biggest?.outlets} outlets.</div>
                   <div>
@@ -352,6 +417,12 @@ export default function CoverageReportView({ report, eyebrow = null, footer = nu
                     ))}
                   </div>
                 )}
+              </Section>
+
+<Section id="language" title="🔤 Language watch" sub="How often each tracked term appeared, and which outlets reached for it. Tap a group for the outlet breakdown and the headlines behind every number.">
+                {report.language.map(g => (
+                  <LanguageGroup key={g.group} group={g} />
+                ))}
               </Section>
 
               <Section id="methodology" title="Methodology">
