@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { scoreColor, isRankEligible, MIN_RANK_RATINGS } from '../utils/helpers'
+import { scoreColor, rollUpOutlets, isRankEligible, MIN_RANK_RATINGS } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import { db } from '../lib/supabase'
 import { toSlug } from '../utils/navigate'
@@ -270,7 +270,10 @@ export default function OutletsRankingsPage({
   // A 5.0 from one rating is noise, not a ranking. Only outlets with
   // MIN_RANK_RATINGS+ hold ranked positions; below-threshold scores render
   // as provisional, and the headline stats only speak for eligible outlets.
-  const eligible    = pool.filter(isRankEligible).sort((a, b) => (b[activeTab.key] || 0) - (a[activeTab.key] || 0))
+  // Section feeds fold into their parent brand before ranking — see
+  // rollUpOutlets. Without it Sky Sports outranked Sky News, its own parent.
+  const rolled      = rollUpOutlets(pool)
+  const eligible    = rolled.filter(isRankEligible).sort((a, b) => (b[activeTab.key] || 0) - (a[activeTab.key] || 0))
   const provisional = pool.filter(o => !isRankEligible(o) && (o.total_ratings || 0) > 0).sort((a, b) => (b.total_ratings || 0) - (a.total_ratings || 0))
   const unrated     = pool.filter(o => !isRankEligible(o) && !(o.total_ratings > 0)).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   const sorted      = [...eligible, ...provisional, ...unrated]

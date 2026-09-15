@@ -60,3 +60,41 @@ export const MIN_RANK_RATINGS = 3
 export function isRankEligible(o) {
   return (o?.total_ratings || 0) >= MIN_RANK_RATINGS && (o?.community_score || 0) > 0
 }
+
+/**
+ * Merge section feeds into their parent brand for ranking purposes.
+ *
+ * Sky Sports carries parent_outlet_id -> Sky News, and both hold their own
+ * community_score. On 2026-09-15 that put Sky Sports at #1 in the rankings,
+ * ABOVE its own parent — one publisher holding two competing trust scores,
+ * with a section feed beating the brand it belongs to.
+ *
+ * Excluding children outright would be worse: Sky Sports had 3 ratings and Sky
+ * News 2, so dropping the child takes the parent under MIN_RANK_RATINGS and
+ * Sky disappears from the rankings altogether despite five real ratings from
+ * five real people.
+ *
+ * So: fold each child's ratings into its parent and weight the score by rating
+ * count, which is what a reader means when they say they trust Sky. A child
+ * whose parent isn't in the list stands alone rather than being silently
+ * dropped.
+ */
+export function rollUpOutlets(outlets = []) {
+  const byId = new Map(outlets.map(o => [o.id, o]))
+  const merged = new Map()
+
+  for (const o of outlets) {
+    const parent = o.parent_outlet_id && byId.get(o.parent_outlet_id)
+    const target = parent || o
+    const acc = merged.get(target.id) || { ...target, total_ratings: 0, _weighted: 0 }
+    const n = o.total_ratings || 0
+    acc.total_ratings += n
+    acc._weighted += (o.community_score || 0) * n
+    merged.set(target.id, acc)
+  }
+
+  return [...merged.values()].map(({ _weighted, ...o }) => ({
+    ...o,
+    community_score: o.total_ratings > 0 ? _weighted / o.total_ratings : (o.community_score || 0),
+  }))
+}

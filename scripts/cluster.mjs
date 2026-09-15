@@ -87,6 +87,20 @@ const DISTINCTIVE_DF     = num('DISTINCTIVE_DF', 0)
 // NOT cost source counts on real stories — the Philippine-ferry cluster keeps
 // all 52 outlets, dropping only same-publisher duplicates (84 -> 77 articles).
 const MAX_PER_PUBLISHER  = num('MAX_PER_PUBLISHER', 3)
+
+// "N sources" means PUBLISHERS, not feeds — post-flattening, BBC World and
+// BBC Politics are separate outlets but one publisher. Used both to dedupe
+// peers for cluster_size and to decide whether a group is a real cluster at
+// all.
+const PUB_SUFFIX_RE = /\s+(World|Politics|Business|Markets|Money|Tech(nology)?|Science|Health|Entertainment|Arts|Culture|Environment|Travel|Education|Sport(s)?( [A-Za-z0-9 ]+)?|US|News)$/i
+function pubKey(name) {
+  let k = (name || '').replace(/^The\s+/i, '').trim()
+  // Strip section suffixes to a fixed point: "Fox News Politics" -> "Fox News" -> "Fox"
+  for (let prev = null; prev !== k; ) { prev = k; k = k.replace(PUB_SUFFIX_RE, '').trim() }
+  k = k.toLowerCase()
+  if (k === 'nyt') k = 'new york times'
+  return k
+}
 const PEER_STORE_CAP     = num('PEER_STORE_CAP', 8)
 const DRY_RUN            = process.env.DRY_RUN === '1'
 
@@ -321,7 +335,20 @@ async function main() {
 
   const components = clustersRaw
     .map(c => capPerPublisher(c.memberIdx.map(ix => pool[ix])))
-    .filter(ms => new Set(ms.map(m => m.outlet_id)).size >= 2)
+    // 2+ distinct PUBLISHERS, not 2+ outlet rows. BBC World and BBC Sport are
+    // separate outlet_ids and one publisher, so requiring distinct outlet_ids
+    // let a single newsroom's own section feeds form a "cluster" with itself.
+    //
+    // Measured over 12,508 clusters in a week: 4,995 of them — 40% — had only
+    // ONE publisher. The Guardian 188, New York Post 175, BBC 170, The
+    // Independent 156, NYT 117, Fox News 113. There are 47 section feeds.
+    //
+    // Those clusters were junk: cluster_size deduped them back to 0 so no
+    // coverage strip ever rendered, but they still consumed writes, inflated
+    // the story count, and the Coverage Report counted every one as "a story
+    // covered by exactly one outlet" — which took that headline figure from
+    // 25% to 44% in a week and made it the report's lead sentence.
+    .filter(ms => new Set(ms.map(m => pubKey(m.outlets?.name))).size >= 2)
     .sort((a, b) => b.length - a.length)
 
   // Stable ids: reuse the cluster_id most members already carry (biggest
@@ -420,18 +447,7 @@ async function main() {
     const newestMember = members.reduce((a, b) => (b.published_at > a.published_at ? b : a), members[0])
     changedStoryUrls.push(`https://www.ratednews.com/story/${toArticleSlug(newestMember.title, newestMember.id)}`)
     for (const member of members) {
-      // "N sources" should mean publishers, not feeds — post-flattening,
-      // BBC World + BBC Politics are separate outlets but one publisher.
-      // Dedupe peers by normalised publisher key (keep the newest per publisher).
-      const SUFFIX_RE = /\s+(World|Politics|Business|Markets|Money|Tech(nology)?|Science|Health|Entertainment|Arts|Culture|Environment|Travel|Education|Sport(s)?( [A-Za-z0-9 ]+)?|US|News)$/i
-      const pubKey = name => {
-        let k = (name || '').replace(/^The\s+/i, '').trim()
-        // Strip section suffixes to a fixed point: "Fox News Politics" → "Fox News" → "Fox"
-        for (let prev = null; prev !== k; ) { prev = k; k = k.replace(SUFFIX_RE, '').trim() }
-        k = k.toLowerCase()
-        if (k === 'nyt') k = 'new york times'
-        return k
-      }
+      // Dedupe peers by publisher (keep the newest per publisher).
       const seenPubs = new Set([pubKey(member.outlets?.name)])
       const dedupedPeers = members
         .filter(m => m.id !== member.id)

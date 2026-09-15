@@ -1,11 +1,13 @@
 import React from 'react'
 import OutletLogo from './OutletLogo'
 import RatingDots from './RatingDots'
-import { isRankEligible } from '../utils/helpers'
+import { rollUpOutlets, isRankEligible } from '../utils/helpers'
 import TrendingStoriesWidget from './TrendingStoriesWidget'
 
 export default function Sidebar({ outlets, navigate }) {
-  const top5 = outlets
+  // Same roll-up as the rankings page, so the sidebar top 3 and the full
+  // rankings cannot disagree about who is first.
+  const top5 = rollUpOutlets(outlets)
     .filter(isRankEligible)
     .sort((a, b) => (b.community_score || 0) - (a.community_score || 0))
     .slice(0, 3)
