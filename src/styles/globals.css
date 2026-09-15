@@ -663,3 +663,9 @@ img, video, iframe, embed, object { max-width: 100%; }
   }
   .coverage-rail::-webkit-scrollbar { display: none; }
 }
+
+/* The article page's right rail. Present only where the grid actually reserves
+   a column for it — below 1024px the grid is a single column and this would
+   stack under the discussion as a leaderboard nobody asked for. */
+.article-rail { display: none; }
+@media (min-width: 1024px) { .article-rail { display: block; } }

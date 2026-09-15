@@ -5,6 +5,7 @@ import { toSlug } from '../utils/navigate'
 import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import TrendingStoriesWidget from '../components/TrendingStoriesWidget'
+import Sidebar from '../components/Sidebar'
 import OutletTrustRate from '../components/OutletTrustRate'
 import { track } from '../utils/track'
 import StoryIntelligence from '../components/StoryIntelligence'
@@ -716,11 +717,17 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
         </div>
         </div>
 
-        {/* No Sidebar here. It carried "Top rated outlets" — a global ranking
-            with no relationship to the article being read — and on mobile it
-            landed as an uncontained widget below the discussion with dead
-            space under it. The trending module below is the onward path; a
-            leaderboard is not. */}
+        {/* Desktop rail only. The grid reserves a 300px second column at
+            1024px+, so removing this outright left the article pinned left
+            with ~500px of nothing beside it.
+            Hidden below 1024px on purpose: on a phone this stacked UNDER the
+            discussion as an uncontained "Top rated outlets" widget — a global
+            leaderboard with no relationship to the article being read, with
+            dead space under it. The trending module above is the onward path
+            there; a leaderboard is not. */}
+        <div className="article-rail">
+          <Sidebar outlets={outlets} navigate={navigate} />
+        </div>
         </div>
       </div>
     </div>
