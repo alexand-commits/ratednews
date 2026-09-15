@@ -337,8 +337,9 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   // Rival outlets: show 6, expand in place for the rest.
   //
   // Measured over 2,040 stories in 24h via cluster_size: median 3 outlets,
-  // p75 4, p90 7, p95 10, p99 23, max 45. Half have exactly two. So 6 shows the
-  // TYPICAL story whole and only the big ones collapse — 11% of stories.
+  // p75 4, p90 7, p95 10, p99 23, max 45. Half have exactly two. 7 is p90, so
+  // nine stories in ten now show their coverage COMPLETE and only the genuinely
+  // big ones collapse.
   //
   // Expanding in place rather than linking away. A link to /story made the
   // reader load a page to see two more headlines, which is a poor trade for
@@ -348,7 +349,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
   // A proportional rule ("show half") was rejected: it scales up exactly where
   // it hurts, turning a 45-outlet story into 22 cards nobody reads at 12
   // seconds of engagement, while leaving the median 3-outlet story alone.
-  const PEER_COLLAPSED = 6
+  const PEER_COLLAPSED = 7
   const PEER_MAX = 30
 
   // cluster_peers caps at 8 (PEER_STORE_CAP in cluster.mjs) so it cannot feed a
@@ -365,6 +366,11 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
 
   const peerList = peersExpanded ? allPeers : allPeers.slice(0, PEER_COLLAPSED)
   const hiddenPeerCount = allPeers.length - peerList.length
+  // Count what we can actually show. cluster_size is a snapshot from the last
+  // clustering run and drifts from the live cluster query — the header read
+  // "23 other outlets" above a list offering 6 plus 18 more, which is 24.
+  // Prefer the live number; fall back to the snapshot when it hasn't loaded.
+  const peerTotal = allPeers.length || article.cluster_size || article.cluster_peers?.length || 0
 
   if (!article) return null
 
@@ -533,7 +539,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
                 color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 8,
               }}>
-                📰 Also covered by {(article.cluster_size || article.cluster_peers?.length || peerList.length)} other outlet{(article.cluster_size || article.cluster_peers?.length || peerList.length) !== 1 ? 's' : ''}
+                📰 Also covered by {peerTotal} other outlet{peerTotal !== 1 ? 's' : ''}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {peerList.map(a => {
