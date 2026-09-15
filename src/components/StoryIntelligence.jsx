@@ -130,8 +130,11 @@ export default function StoryIntelligence({ members = [], totalOutlets = null })
 
   return (
     <div style={{
-      background: 'var(--surface)', border: '0.5px solid var(--border)',
-      borderLeft: '2px solid var(--coral)',
+      // No left accent rule here. The article card this sits inside already
+      // has a coral left border, so a second one landed a few pixels away and
+      // read as an accident rather than a decision. A flat panel with a tinted
+      // ground separates it from the plain white peer cards below instead.
+      background: 'var(--bg2)', border: '0.5px solid var(--border)',
       borderRadius: 'var(--radius-sm)', padding: '14px 16px', marginBottom: 16,
     }}>
       <div style={{
@@ -144,14 +147,22 @@ export default function StoryIntelligence({ members = [], totalOutlets = null })
       {/* The finding, at the size of a finding. */}
       {heroIsOverlap && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{
-            fontFamily: 'var(--font-playfair), serif', fontSize: 26, fontWeight: 700,
-            color: 'var(--coral)', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums',
-          }}>
-            {overlap.matching} of {overlap.total}
+          {/* The number and what it means on one line. A bare coral fraction
+              left the reader guessing whether it was good or bad until they
+              reached the footnote. */}
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 9, flexWrap: 'wrap' }}>
+            <span style={{
+              fontFamily: 'var(--font-playfair), serif', fontSize: 26, fontWeight: 700,
+              color: 'var(--coral)', lineHeight: 1.1, fontVariantNumeric: 'tabular-nums',
+            }}>
+              {overlap.matching} of {overlap.total}
+            </span>
+            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', lineHeight: 1.3 }}>
+              headlines are near-identical
+            </span>
           </div>
-          <div style={{ fontSize: 13.5, color: 'var(--text2)', marginTop: 3, lineHeight: 1.5 }}>
-            headlines use near-identical wording
+          <div style={{ fontSize: 12.5, color: 'var(--text3)', marginTop: 4, lineHeight: 1.5 }}>
+            Much of this coverage is the same wording repeated, not {overlap.total} separate accounts.
           </div>
         </div>
       )}
