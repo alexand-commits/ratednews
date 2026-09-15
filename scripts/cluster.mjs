@@ -552,6 +552,50 @@ async function main() {
     process.exit(1)
   }
 
+  // ── Homepage invariant ──────────────────────────────────────────────────
+  //
+  // The homepage ranks over the newest 400 articles (pages/index.jsx,
+  // `.range(0, 399)`) and scores each on cluster coverage. If none of those 400
+  // carry a cluster_id, every article scores zero, "Top stories" silently
+  // degrades to plain recency, and the page loses every coverage badge and
+  // every internal link to a story page.
+  //
+  // That has now happened three times, each from a different cause: a pool
+  // narrower than the clustering lag, a shared select that dropped outlet_id,
+  // and a client-side refetch that replaced the ranked feed with raw recency.
+  // All three were found by a human noticing by eye, hours later.
+  //
+  // This checks the DATA invariant every run. It cannot catch the third case,
+  // which was a client-side render bug and needs a browser to see — Vercel Bot
+  // Protection 429s any non-browser request to the page, so a cron cannot fetch
+  // the HTML to check it. It does catch the other two, and it catches them
+  // within one cron tick instead of a working day.
+  //
+  // Healthy is 25-40%: the newest ~25 minutes are legitimately unclustered
+  // because clustering has not reached them yet. 5% is the floor below which
+  // something is broken rather than merely lagging.
+  const HOMEPAGE_POOL = 400
+  const MIN_CLUSTERED_PCT = 5
+  try {
+    const { data: pool, error: poolErr } = await supabase
+      .from('articles')
+      .select('cluster_id')
+      .order('published_at', { ascending: false })
+      .range(0, HOMEPAGE_POOL - 1)
+    if (!poolErr && pool?.length) {
+      const clustered = pool.filter(a => a.cluster_id).length
+      const pct = Math.round((clustered / pool.length) * 100)
+      console.log(`\n🏠 Homepage pool: ${clustered}/${pool.length} clustered (${pct}%)`)
+      if (pct < MIN_CLUSTERED_PCT) {
+        console.error(`\n❌ Homepage would render with no coverage badges — only ${pct}% of the newest ${pool.length} articles are clustered.`)
+        console.error('   Check: has the clustering cadence or the SSR pool size changed, and is publishing volume still within the window?')
+        process.exit(1)
+      }
+    }
+  } catch (err) {
+    console.error('Homepage invariant check skipped:', err.message)
+  }
+
   // Stamp the run so the cadence guard can skip the next tick. Written only
   // after a run that actually wrote something.
   if (MIN_RUN_INTERVAL_MIN > 0) {
