@@ -99,12 +99,21 @@ function StatBar({ report }) {
     { value: report.corpus.headlines?.toLocaleString(), label: 'headlines indexed' },
     { value: a.totalStories?.toLocaleString(), label: 'distinct stories' },
     { value: report.corpus.outlets?.toLocaleString(), label: 'outlets tracked' },
-    a.totalStories && a.singleOutletStories != null
+    // "Reported once" — an article no other outlet picked up. Prefer this over
+    // the old "covered by one outlet", which counted CLUSTERS resolving to one
+    // brand and was inflated to 44% by a publisher's own section feeds
+    // clustering with each other. Clusters now require two distinct publishers,
+    // so that figure is heading for zero and means nothing either way.
+    a.soloArticles != null && a.indexedArticles
       ? {
-          value: `${Math.round(a.singleOutletStories / a.totalStories * 100)}%`,
-          label: 'covered by one outlet',
+          value: `${Math.round(a.soloArticles / a.indexedArticles * 100)}%`,
+          label: 'reported once, by one outlet',
         }
-      : null,
+      // Archived weeks predate soloArticles and keep their original figure
+      // rather than losing a card.
+      : (a.totalStories && a.singleOutletStories != null
+          ? { value: `${Math.round(a.singleOutletStories / a.totalStories * 100)}%`, label: 'covered by one outlet' }
+          : null),
   ].filter(s => s && s.value != null)
   if (!stats.length) return null
   return (
@@ -312,54 +321,6 @@ function LanguageGroup({ group }) {
 // finding. A reader who never scrolls should still leave with the single most
 // striking thing in the data, and the most striking thing is consistently the
 // same: how much of the week's news only one newsroom bothered with.
-function Lead({ report }) {
-  const a = report.attention || {}
-  const biggest = a.biggest
-
-  // Lead with the framing split, not a percentage.
-  //
-  // This used to open on "44% of the 13,339 stories we grouped this week were
-  // carried by a single outlet" — a number that needed a paragraph of
-  // explanation, was inflated by a clustering bug, and told a reader nothing
-  // they could picture. Two words that real newsrooms chose for the same event
-  // need no explanation at all, and they are what the report is FOR.
-  //
-  // Picks the split covering the most outlets. Falls back to the week's biggest
-  // story when no split was found — 3 of 11,675 stories produce one, so the
-  // fallback is the common case and has to stand on its own.
-  const split = (report.framing || [])
-    .map(f => ({ ...f, reach: (f.usage || []).reduce((n, u) => n + u.outlets, 0) }))
-    .sort((x, y) => y.reach - x.reach)[0]
-  const top2 = split ? split.usage.slice(0, 2) : null
-
-  if (!top2 && !biggest?.outlets) return null
-
-  return (
-    <div style={{ borderLeft: '2px solid var(--coral)', paddingLeft: 14, marginBottom: 26 }}>
-      {top2 && top2.length === 2 ? (
-        <>
-          <p style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 21, lineHeight: 1.4, color: 'var(--text)', fontWeight: 500 }}>
-            <strong style={{ color: 'var(--coral)' }}>{top2[0].outlets}</strong> outlets called it
-            {' '}&ldquo;{top2[0].label}&rdquo;.{' '}
-            <strong style={{ color: 'var(--coral)' }}>{top2[1].outlets}</strong> called it
-            {' '}&ldquo;{top2[1].label}&rdquo;.
-          </p>
-          <p style={{ fontSize: 13, color: 'var(--text3)', marginTop: 8, lineHeight: 1.55 }}>
-            Same story, same week{split.story ? <> &mdash; &ldquo;{split.story.slice(0, 90)}{split.story.length > 90 ? '…' : ''}&rdquo;</> : null}.
-            {report.corpus?.headlines ? <> We read {report.corpus.headlines.toLocaleString()} headlines from {report.corpus.outlets} outlets to find it.</> : null}
-          </p>
-        </>
-      ) : (
-        <p style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 20, lineHeight: 1.45, color: 'var(--text)', fontWeight: 500 }}>
-          The week&rsquo;s most-covered story drew <strong style={{ color: 'var(--coral)' }}>{biggest.outlets} outlets</strong>
-          {biggest.story ? <> &mdash; &ldquo;{biggest.story.slice(0, 80)}{biggest.story.length > 80 ? '…' : ''}&rdquo;</> : null}.
-          {report.corpus?.headlines ? <> We read {report.corpus.headlines.toLocaleString()} headlines from {report.corpus.outlets} outlets this week.</> : null}
-        </p>
-      )}
-    </div>
-  )
-}
-
 function Section({ id, title, sub, children }) {
   return (
     // scroll-margin-top clears the sticky site header, so a jump link doesn't
@@ -395,7 +356,6 @@ export default function CoverageReportView({ report, eyebrow = null, footer = nu
           </div>
 
           {report && <StatBar report={report} />}
-          {report && <Lead report={report} />}
 
           {report && (
             <>
