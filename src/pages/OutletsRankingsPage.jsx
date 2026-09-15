@@ -258,8 +258,18 @@ export default function OutletsRankingsPage({
   // ── Sorted list ──────────────────────────────────────────────────────────────
   const activeTab = SCORE_TABS.find(t => t.id === tab)
 
-  const pool = outlets
-    .filter(o => !o.parent_outlet_id)
+  // Roll section feeds into their parent BEFORE filtering, not after.
+  //
+  // This used to drop children with `.filter(o => !o.parent_outlet_id)`, which
+  // kept feeds out of the rankings but threw their ratings away with them. Sky
+  // Sports had 3 ratings and Sky News 2, so Sky held five ratings from five
+  // real people and appeared nowhere — the child discarded, the parent below
+  // the threshold. rollUpOutlets folds each child into its parent and weights
+  // the score by rating count, so the brand carries all five and ranks 4.8.
+  //
+  // Running the roll-up AFTER the parent filter (as it was for an hour today)
+  // is a no-op: there are no children left in the list to merge.
+  const pool = rollUpOutlets(outlets)
     .filter(o => region === 'all' || (o.country || 'International') === region)
     .filter(o =>
       !search ||
@@ -270,10 +280,7 @@ export default function OutletsRankingsPage({
   // A 5.0 from one rating is noise, not a ranking. Only outlets with
   // MIN_RANK_RATINGS+ hold ranked positions; below-threshold scores render
   // as provisional, and the headline stats only speak for eligible outlets.
-  // Section feeds fold into their parent brand before ranking — see
-  // rollUpOutlets. Without it Sky Sports outranked Sky News, its own parent.
-  const rolled      = rollUpOutlets(pool)
-  const eligible    = rolled.filter(isRankEligible).sort((a, b) => (b[activeTab.key] || 0) - (a[activeTab.key] || 0))
+  const eligible    = pool.filter(isRankEligible).sort((a, b) => (b[activeTab.key] || 0) - (a[activeTab.key] || 0))
   const provisional = pool.filter(o => !isRankEligible(o) && (o.total_ratings || 0) > 0).sort((a, b) => (b.total_ratings || 0) - (a.total_ratings || 0))
   const unrated     = pool.filter(o => !isRankEligible(o) && !(o.total_ratings > 0)).sort((a, b) => (a.name || '').localeCompare(b.name || ''))
   const sorted      = [...eligible, ...provisional, ...unrated]

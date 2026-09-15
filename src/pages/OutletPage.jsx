@@ -169,11 +169,21 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
   if (!outlet) return null
 
   const [bg, fg] = outletColor(outlet.name)
-  const comScore = outlet.community_score || 0
   const similar = allOutlets.filter(o => o.id !== outletId && o.country === outlet?.country && !o.parent_outlet_id).slice(0, 4)
 
   // Parent / child outlet relationships
   const childOutlets  = allOutlets.filter(o => o.parent_outlet_id === outletId)
+
+  // Roll section feeds into the brand, the same way the rankings and the
+  // sidebar do. Without this the same outlet carried two different scores on
+  // two different pages: Sky News ranked 4.8 from 5 ratings while its own page
+  // said 4.5 from 2, because Sky Sports' three ratings sat on a child row.
+  // A trust site cannot publish two numbers for the same outlet.
+  const rated = [outlet, ...childOutlets].filter(o => (o?.total_ratings || 0) > 0)
+  const comRatings = rated.reduce((n, o) => n + (o.total_ratings || 0), 0)
+  const comScore = comRatings > 0
+    ? rated.reduce((n, o) => n + (o.community_score || 0) * (o.total_ratings || 0), 0) / comRatings
+    : (outlet.community_score || 0)
   const websiteUrl = outlet.website_url || (() => {
     if (!outlet.rss_url) return null
     try {
@@ -345,7 +355,13 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
               )}
               <div className="big-score-label">Community rating</div>
               <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 4 }}>
-                {outlet.total_ratings > 0 ? `${outlet.total_ratings} ${outlet.total_ratings === 1 ? 'rating' : 'ratings'}` : 'No ratings yet'}
+                {/* comRatings, not outlet.total_ratings — the score above is the
+                    rolled brand figure, so the count beside it has to be too.
+                    Otherwise the page reads "4.8" over "2 ratings" when the
+                    4.8 was computed from five. */}
+                {comRatings > 0
+                  ? `${comRatings} ${comRatings === 1 ? 'rating' : 'ratings'}${childOutlets.some(c => c.total_ratings > 0) ? ' across this brand' : ''}`
+                  : 'No ratings yet'}
               </div>
             </div>
             <div className="outlet-hero-score-divider" />
