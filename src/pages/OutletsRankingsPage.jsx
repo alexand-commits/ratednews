@@ -286,8 +286,17 @@ export default function OutletsRankingsPage({
   const sorted      = [...eligible, ...provisional, ...unrated]
 
   const ratedSorted = eligible
-  const topOutlet   = eligible[0]
   const maxScore    = tab === 'most_rated' ? Math.max(...eligible.map(o => o.total_ratings || 0), 1) : 100
+
+  // Outlets on the cusp of the ranking. Taken in the order they already arrive
+  // (community_score desc, from pages/outlets.jsx) rather than re-sorted —
+  // there is no publish-volume column on `outlets`, so any attempt to lead with
+  // the best-known names would be invented. Derived from `pool`, so the counts
+  // honour the region and search filters exactly as the list below does rather
+  // than quietly speaking for the whole board.
+  const nearMiss = n => pool.filter(o => (o.total_ratings || 0) === MIN_RANK_RATINGS - n)
+  const oneAway = nearMiss(1)
+  const twoAway = nearMiss(2)
 
   const parentCount = outlets.filter(o => !o.parent_outlet_id).length
 
@@ -346,42 +355,61 @@ export default function OutletsRankingsPage({
               <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--coral)', flexShrink: 0 }}>View →</span>
             </a>
 
-            {/* Summary chip */}
-            <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-              <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 80 }}>
-                <div style={{ fontSize: 11, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Top outlet</div>
-                {topOutlet ? (
-                  <>
-                    <div style={{ fontSize: 16, fontWeight: 700, lineHeight: 1.25, margin: '6px 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🥇 {topOutlet.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-                      {tab === 'community'
-                        ? `${((topOutlet.community_score || 0) / 20).toFixed(1)} community`
-                        : `${topOutlet.total_ratings || 0} ratings`}
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--text3)', margin: '6px 0 4px' }}>—</div>
-                    <div style={{ fontSize: 12, color: 'var(--text3)' }}>Needs {MIN_RANK_RATINGS}+ ratings to rank</div>
-                  </>
-                )}
+            {/* ── On the cusp ──────────────────────────────────────────────
+                Replaces the old "Top outlet" / "Avg score" cards. Both were
+                dead weight: the top outlet IS row one of the list six pixels
+                below it, and the average restated nothing a reader wanted.
+
+                The average was worse than redundant. Measured 2026-09-15:
+                176 ratings from EIGHT people, and every eligible outlet
+                scoring between 4.4 and 5.0. Printing "4.2" as a headline
+                figure publishes eight people's opinion as a finding, on a
+                page whose whole claim is that the numbers can be trusted.
+
+                What replaces it is the one fact the list cannot show. The
+                outlets sitting one rating below the threshold are scattered
+                through the provisional section, so nobody counts them and
+                nobody notices the Guardian and the FT are among them. It is
+                also the only ask on this page that produces the data the
+                page is short of, aimed at outlets people already have a
+                view on rather than a cold "rate something". */}
+            {(oneAway.length > 0 || twoAway.length > 0) && (
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap',
+                background: 'var(--surface)', border: '0.5px solid var(--border)',
+                borderRadius: 'var(--radius-sm)', padding: '11px 16px', marginBottom: 20,
+              }}>
+                <span style={{ fontSize: 13, lineHeight: 1.6, color: 'var(--text2)', flex: 1, minWidth: 220 }}>
+                  {oneAway.length > 0 ? (
+                    <>
+                      <strong style={{ color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>
+                        {oneAway.length} outlet{oneAway.length === 1 ? ' is' : 's are'}
+                      </strong>
+                      {' one rating away from the ranking — '}
+                      {/* "and" belongs before the last item the reader can SEE,
+                          and only when nothing follows it. Putting it before
+                          the third name while a "+14 more" tail was still to
+                          come produced "A, B and C, and 14 more." */}
+                      {oneAway.slice(0, 3).map((o, i, shown) => (
+                        <React.Fragment key={o.id}>
+                          {i > 0 && (i === shown.length - 1 && oneAway.length <= 3 ? ' and ' : ', ')}
+                          <a
+                            onClick={() => navigate('outlet', { outletId: o.id })}
+                            style={{ color: 'var(--coral)', fontWeight: 600, cursor: 'pointer' }}
+                          >{o.name}</a>
+                        </React.Fragment>
+                      ))}
+                      {oneAway.length > 3 ? ` and ${oneAway.length - 3} more.` : '.'}
+                    </>
+                  ) : (
+                    <>
+                      <strong style={{ color: 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{twoAway.length} outlets</strong>
+                      {` need two more ratings each to enter the ranking. Every outlet needs ${MIN_RANK_RATINGS} before it gets a rank.`}
+                    </>
+                  )}
+                </span>
               </div>
-              <div style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '10px 16px', flex: 1, minWidth: 140 }}>
-                <div style={{ fontSize: 11, color: 'var(--text3)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-                  {tab === 'community' ? 'Avg score' : 'Total ratings'}
-                </div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: ratedSorted.length ? (tab === 'community' ? 'var(--green-dark)' : 'var(--text)') : 'var(--text3)' }}>
-                  {ratedSorted.length
-                    ? tab === 'community'
-                      ? (ratedSorted.reduce((s, o) => s + (o.community_score || 0), 0) / ratedSorted.length / 20).toFixed(1)
-                      : ratedSorted.reduce((s, o) => s + (o.total_ratings || 0), 0).toLocaleString()
-                    : '—'}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text2)' }}>
-                  {ratedSorted.length ? `across ${ratedSorted.length} outlets` : 'No ratings yet'}
-                </div>
-              </div>
-            </div>
+            )}
 
             {/* Score tabs + compare toggle */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
