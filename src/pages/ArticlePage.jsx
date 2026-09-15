@@ -6,6 +6,7 @@ import { articleSlug, outletColor, timeAgo } from '../utils/helpers'
 import OutletLogo from '../components/OutletLogo'
 import TrendingStoriesWidget from '../components/TrendingStoriesWidget'
 import OutletTrustRate from '../components/OutletTrustRate'
+import { track } from '../utils/track'
 import Sidebar from '../components/Sidebar'
 
 // Extract meaningful initials from a username or email — avoids numbers/symbols
@@ -477,7 +478,10 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                   return (
                     <div
                       key={a.id}
-                      onClick={() => navigate('article', { articleId: a.id, title: a.title })}
+                      onClick={() => {
+                        track('peer_click', { from: 'article' })
+                        navigate('article', { articleId: a.id, title: a.title })
+                      }}
                       style={{
                         padding: '10px 12px',
                         background: 'var(--surface)',
@@ -506,6 +510,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               {(article.cluster_size || article.cluster_peers?.length || 0) > sameStoryArticles.length && (
                 <Link
                   href={`/story/${articleSlug(article.title, article.id)}`}
+                  onClick={() => track('story_open', { from: 'article' })}
                   style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--coral)', marginTop: 8, paddingLeft: 2, textDecoration: 'none' }}
                 >
                   See all {((article.cluster_size || article.cluster_peers.length) + 1)} outlets covering this story →
@@ -521,7 +526,11 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               outlets' headlines on the same story — is the reason to be here,
               so it goes first and the door comes after it. */}
           <div className="article-actions" style={{ marginBottom: 20 }}>
-            <button className="btn-primary" onClick={() => article.url && window.open(article.url, '_blank')}>
+            <button className="btn-primary" onClick={() => {
+              // Measures the cost side of moving this below the coverage.
+              track('source_click', { outlet: outlet.name || null })
+              if (article.url) window.open(article.url, '_blank')
+            }}>
               Read full article on {outlet.name || 'source'} ↗
             </button>
             <button className="btn-outline" onClick={async () => {

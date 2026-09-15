@@ -6,6 +6,7 @@ import { OutletTrustRateInline } from '../components/OutletTrustRate'
 import { articleSlug, timeAgo, outletColor } from '../utils/helpers'
 import { db } from '../lib/supabase'
 import { toSlug } from '../utils/navigate'
+import { track } from '../utils/track'
 import Sidebar from '../components/Sidebar'
 import TrendingStoriesWidget from '../components/TrendingStoriesWidget'
 
@@ -13,6 +14,17 @@ import TrendingStoriesWidget from '../components/TrendingStoriesWidget'
 // The differentiator surfaced as a first-class, shareable page: "this story,
 // N sources, here's each one — and rate the ones you trust in one tap."
 export default function StoryPage({ story, navigate, goBack, user, onLoginClick, showToast, outlets = [] }) {
+  // The event that proves the whole proposition landed: someone went from one
+  // outlet's article to the multi-outlet comparison. It was not tracked at all,
+  // so there was no way to tell whether any of the work driving people here
+  // was working.
+  useEffect(() => {
+    if (!story?.slug && !story?.anchor?.id) return
+    track('story_view', {
+      outlets: story?.members?.length ?? story?.outlets ?? null,
+    })
+  }, [story?.slug, story?.anchor?.id])
+
   const [heroFailed, setHeroFailed] = React.useState(false)
   const members = story?.members || []
   const count   = members.length
