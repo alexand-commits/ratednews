@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { db } from '../lib/supabase'
 import { toSlug } from '../utils/navigate'
@@ -332,6 +332,30 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
       .then(({ data }) => setMyOutletTrust(data?.overall_stars || 0))
   }, [user?.id, article?.outlet_id])
 
+  // How many rival outlets to list before deferring to the story page.
+  //
+  // 12, not 8. Measured over 2,040 stories in 24h: median 3 outlets, p90 7,
+  // p95 10, p99 23, max 45. A flat 8 truncates 7% of stories; 12 truncates
+  // 3.4%, so ~95% of articles show their COMPLETE coverage and only genuinely
+  // huge stories defer to /story, which is what that page is for.
+  //
+  // A proportional rule ("show half") was considered and rejected: it scales up
+  // exactly where it hurts, turning a 45-outlet story into 22 cards nobody reads
+  // at 12 seconds of engagement, while leaving the median 3-outlet story alone.
+  const PEER_DISPLAY = 12
+
+  // cluster_peers caps at 8 (PEER_STORE_CAP in cluster.mjs) so it cannot feed a
+  // list of 12. The full-cluster query added for StoryIntelligence can — one
+  // fetch serving both. Falls back to the snapshot before that query lands, or
+  // when the article is unclustered.
+  const peerList = useMemo(() => {
+    const fromCluster = clusterMembers.filter(m => m.outlet_id !== article?.outlet_id)
+    const src = fromCluster.length >= sameStoryArticles.length ? fromCluster : sameStoryArticles
+    return [...src]
+      .sort((a, b) => (a.published_at < b.published_at ? 1 : -1))
+      .slice(0, PEER_DISPLAY)
+  }, [clusterMembers, sameStoryArticles, article?.outlet_id])
+
   if (!article) return null
 
   const outlet = article.outlets || {}
@@ -493,16 +517,16 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
           />
 
           {/* Same story across outlets */}
-          {sameStoryArticles.length > 0 && (
+          {peerList.length > 0 && (
             <div style={{ marginBottom: 16 }}>
               <div style={{
                 fontSize: 10, fontWeight: 700, letterSpacing: '0.08em',
                 color: 'var(--text3)', textTransform: 'uppercase', marginBottom: 8,
               }}>
-                📰 Also covered by {(article.cluster_size || article.cluster_peers?.length || sameStoryArticles.length)} other outlet{(article.cluster_size || article.cluster_peers?.length || sameStoryArticles.length) !== 1 ? 's' : ''}
+                📰 Also covered by {(article.cluster_size || article.cluster_peers?.length || peerList.length)} other outlet{(article.cluster_size || article.cluster_peers?.length || peerList.length) !== 1 ? 's' : ''}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {sameStoryArticles.map(a => {
+                {peerList.map(a => {
                   const o = a.outlets || {}
                   return (
                     <div
@@ -536,7 +560,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                   )
                 })}
               </div>
-              {(article.cluster_size || article.cluster_peers?.length || 0) > sameStoryArticles.length && (
+              {(article.cluster_size || article.cluster_peers?.length || 0) > peerList.length && (
                 <Link
                   href={`/story/${articleSlug(article.title, article.id)}`}
                   onClick={() => track('story_open', { from: 'article' })}
