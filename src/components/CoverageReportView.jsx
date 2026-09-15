@@ -314,17 +314,41 @@ function LanguageGroup({ group }) {
 // same: how much of the week's news only one newsroom bothered with.
 function Lead({ report }) {
   const a = report.attention || {}
-  if (!a.totalStories || a.singleOutletStories == null) return null
-  const pct = Math.round((a.singleOutletStories / a.totalStories) * 100)
   const biggest = a.biggest
+
+  // Prefer the article-level figure. Clusters now require 2+ distinct
+  // publishers, so "stories carried by exactly one outlet" is approaching zero
+  // by construction — it was only ever a large number because a publisher's own
+  // section feeds were clustering with each other. An ARTICLE nobody else
+  // picked up is the real concentration story and survives that fix.
+  const solo = a.soloArticles != null && a.indexedArticles
+    ? { n: a.soloArticles, of: a.indexedArticles, pct: Math.round((a.soloArticles / a.indexedArticles) * 100) }
+    : null
+
+  // Archived weeks predate soloArticles; they keep their original lead rather
+  // than losing it.
+  const legacy = !solo && a.totalStories && a.singleOutletStories != null
+    ? { pct: Math.round((a.singleOutletStories / a.totalStories) * 100), of: a.totalStories }
+    : null
+
+  if (!solo && !legacy && !biggest?.outlets) return null
+
   return (
-    <div style={{
-      borderLeft: '2px solid var(--coral)', paddingLeft: 14, marginBottom: 26,
-    }}>
+    <div style={{ borderLeft: '2px solid var(--coral)', paddingLeft: 14, marginBottom: 26 }}>
       <p style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 19, lineHeight: 1.45, color: 'var(--text)', fontWeight: 500 }}>
-        <strong style={{ color: 'var(--coral)' }}>{pct}%</strong> of the {a.totalStories.toLocaleString()} stories
-        we indexed this week were carried by exactly one outlet.
-        {biggest?.outlets ? <> The most-covered was picked up by <strong>{biggest.outlets}</strong>.</> : null}
+        {solo && (
+          <>
+            <strong style={{ color: 'var(--coral)' }}>{solo.pct}%</strong> of the {solo.of.toLocaleString()} articles
+            we indexed this week were published by one outlet and picked up by nobody else.
+          </>
+        )}
+        {!solo && legacy && (
+          <>
+            <strong style={{ color: 'var(--coral)' }}>{legacy.pct}%</strong> of the {legacy.of.toLocaleString()} stories
+            we indexed this week were carried by exactly one outlet.
+          </>
+        )}
+        {biggest?.outlets ? <> The most-covered story drew <strong>{biggest.outlets}</strong>.</> : null}
       </p>
     </div>
   )

@@ -207,6 +207,17 @@ function attention(rows) {
   return {
     totalStories: clusters.size,
     biggest,
+    // Articles no other outlet touched. THIS is the concentration figure that
+    // means something: clustering requires 2+ distinct publishers, so a
+    // "cluster covered by one outlet" is close to impossible by construction
+    // and singleOutletStories is heading for zero. An article nobody else
+    // picked up is a real and measurable thing.
+    soloArticles: rows.filter(r => !r.cluster_id).length,
+    indexedArticles: rows.length,
+    // Kept for continuity with archived weeks, which lead on it. Do not build
+    // anything new on this: before 2026-09-15 it was inflated by one
+    // publisher's own section feeds clustering with each other, which took it
+    // from 25% to 44% in a week.
     singleOutletStories,
     firstToReport: [...firstWins.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8)
       .map(([outlet, wins]) => ({ outlet, wins })),
