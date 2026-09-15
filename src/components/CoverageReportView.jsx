@@ -335,20 +335,32 @@ function Lead({ report }) {
 
   return (
     <div style={{ borderLeft: '2px solid var(--coral)', paddingLeft: 14, marginBottom: 26 }}>
-      <p style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 19, lineHeight: 1.45, color: 'var(--text)', fontWeight: 500 }}>
+      {/* A sentence, not a stat readout. The previous version said "44% of the
+          13,339 stories we indexed this week were carried by exactly one
+          outlet. The most-covered story drew 55." — trade jargon ("indexed",
+          "carried"), and the last clause had no noun at all: drew 55 what.
+          A reader also had no way to tell whether 44% was a lot, so the number
+          led nowhere. Lead with what it means, then give the figures. */}
+      <p style={{ fontFamily: 'var(--font-playfair), serif', fontSize: 19, lineHeight: 1.5, color: 'var(--text)', fontWeight: 500 }}>
         {solo && (
           <>
-            <strong style={{ color: 'var(--coral)' }}>{solo.pct}%</strong> of the {solo.of.toLocaleString()} articles
-            we indexed this week were published by one outlet and picked up by nobody else.
+            Most news is reported once.{' '}
+            <strong style={{ color: 'var(--coral)' }}>{solo.n.toLocaleString()}</strong> of the{' '}
+            {solo.of.toLocaleString()} articles we read this week — <strong style={{ color: 'var(--coral)' }}>{solo.pct}%</strong> —
+            appeared in a single outlet and nowhere else.
+            {biggest?.outlets ? <> The week&rsquo;s biggest story was picked up by <strong>{biggest.outlets} outlets</strong>.</> : null}
           </>
         )}
         {!solo && legacy && (
           <>
-            <strong style={{ color: 'var(--coral)' }}>{legacy.pct}%</strong> of the {legacy.of.toLocaleString()} stories
-            we indexed this week were carried by exactly one outlet.
+            Coverage is lopsided. <strong style={{ color: 'var(--coral)' }}>{legacy.pct}%</strong> of
+            the {legacy.of.toLocaleString()} stories we grouped this week were carried by a single outlet
+            {biggest?.outlets ? <>, while the biggest drew <strong>{biggest.outlets} outlets</strong></> : null}.
           </>
         )}
-        {biggest?.outlets ? <> The most-covered story drew <strong>{biggest.outlets}</strong>.</> : null}
+        {!solo && !legacy && biggest?.outlets && (
+          <>The week&rsquo;s biggest story was picked up by <strong>{biggest.outlets} outlets</strong>.</>
+        )}
       </p>
     </div>
   )
