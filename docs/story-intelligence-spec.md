@@ -17,6 +17,71 @@ loaded, not new queries.
 
 ---
 
+## TESTED 2026-09-15 — what survived contact with the data
+
+Every idea below was measured against real clusters before building. Two of the
+four I was most confident about are dead. Recording the negatives so nobody
+re-attempts them.
+
+| Idea | Fires on | Verdict |
+|---|---|---|
+| Framing split (watchlist) | **0 of 606** stories | **DEAD** |
+| Generic word divergence | 92% — but wrong signal | **DEAD** |
+| Coverage velocity | 6 of 701 (0.9%) in its interesting form | **DEMOTED** |
+| Headline overlap | 61% any, 18% heavy | **BUILD** |
+| Still developing | 20% | **BUILD** |
+| Geographic spread | ~every multi-outlet story | keep, modest |
+
+### Why framing died
+`FRAMING_SETS` requires 2+ competing labels each used by 2+ distinct publishers
+inside one cluster. Across 606 recent clusters it fired **zero times**; the
+weekly report finds ~3 in 11,675. That is one article in four thousand — nobody
+would ever see it. Headlines are short and rarely carry a watchlist term at all.
+
+### Why the generic version also died
+Deriving distinctive words from the cluster itself (no watchlist) fires on 92%
+of stories, but produces DETAIL differences, not framing differences:
+
+```
+3/5 "moaning"  3/5 "myrtle"    <- character names
+8/16 "face"    8/16 "parents"  <- generic verbs
+3/4 "king"     3/4 "charles"   <- the story's own subject
+```
+
+Framing words are **substitutable** (protest <-> riot: same thing, different
+word). These are **additive** (extra facts). Telling them apart needs to know
+which words are alternatives for each other — i.e. a watchlist (starves, proven
+above) or a language model (off the table, and correctly so for this product).
+
+**"Same story, different words" is not achievable at headline level here.** It
+remains a fine idea for the weekly report over a whole corpus, where rarity is
+survivable because you only need a handful of examples.
+
+### Why velocity was demoted
+Median story: 0.4 outlets/hour over 18.7 hours. The compelling form — 8+ outlets
+inside 3 hours — is **6 of 701 stories**. "Covered over 19 hours" is true and
+boring. Same failure shape as framing, milder.
+
+### What worked: headline overlap
+Jaccard over tokenised headlines, 0.6 threshold. 61% of stories have at least one
+near-identical pair, 18% have 30%+ of pairs matching. Both ends inform:
+
+- Supreme Court mail-ballot ruling: **60 outlets, 40 near-identical**
+- Lane Kiffin / Ole Miss: **13 outlets, 0 matching** — all independently written
+
+**Never call it "syndication".** Outlets can land on the same words independently
+for a simple factual story. State the count, let the reader conclude — the house
+rule, and also the only defensible version.
+
+### Honest scope limit on all of it
+Median story is 3 outlets; half have exactly two. Everything here is a feature
+for the long tail of BIG stories. That happens to be where search traffic lands,
+so it is not as narrow as it sounds — but the typical article page shows none of
+it, and that should stay true rather than being padded out.
+
+
+---
+
 ## Phase 0 — timestamp provenance (blocks Phase 2)
 
 `scripts/ingest.mjs:1034` sets `published_at` to the feed's `pubDate` when it is
@@ -60,8 +125,9 @@ function against a smaller input, using `FRAMING_SETS` from
 
 Store on the cluster as `framing: [{subject, usage:[{label, outlets, sample}]}]`.
 
-**This is the one thing a reader genuinely cannot get at the source**, and it is
-the page's reason to exist.
+**SUPERSEDED — see TESTED above. This fires on 0 of 606 stories and should not
+be built for article pages.** Headline overlap is the feature that does what this
+was meant to do.
 
 **Cost: near zero.** Regex over ~30 titles already in memory, inside a write that
 already happens.
