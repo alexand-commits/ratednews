@@ -1,0 +1,49 @@
+-- Dead feeds retired 2026-09-16. Applied via the service-role client, recorded
+-- here because sql/ has drifted from the live schema before and an undocumented
+-- data change is the hardest kind to reverse.
+--
+-- REMOVES THE FEED, KEEPS THE OUTLET AND ITS ARTICLES. scripts/remove-outlet.mjs
+-- deletes every article too — 659 between these two — and those articles have
+-- live URLs that Google has indexed. Search is currently the only channel
+-- sending readers to this site, so turning 659 indexed pages into 404s to tidy
+-- up two RSS URLs is a bad trade. ingest.mjs selects on
+-- `.not('rss_url','is',null)`, so nulling the column stops ingestion cleanly and
+-- the archive stays readable.
+--
+-- Why each one:
+--
+--   Al Arabiya English  HTTP 403 on every fetch, last article 2026-09-08.
+--                       The publisher is blocking us outright.
+--
+--   SBS News            Feed parses and returns 25 items, but the newest is
+--                       21.5 days old — the publisher stopped updating it.
+--                       Worth checking whether they moved to a new feed URL
+--                       before writing the outlet off for good.
+--
+-- NOT retired, despite being listed as dead in an earlier pass of this audit:
+--
+--   Der Spiegel         Re-probed 2026-09-16: 20 items, newest 0.2 days old.
+--   Fox News World      Re-probed 2026-09-16: 25 items, newest 0.1 days old.
+--   Yahoo News          50 items, newest today; every item is rejected as
+--                       `syndicated`, which is the filter working as intended.
+--
+--   The first probe of Der Spiegel and Fox News World returned stale cached
+--   responses and I called both dead on that basis. They publish normally.
+--   Their articles are not reaching us for the same reason six other outlets'
+--   are not — see the feed audit: every affected feed sits behind Cloudflare or
+--   CloudFront, works from a residential IP, and appears to be challenged from
+--   GitHub Actions' datacentre ranges. That is an ingestion problem, not a dead
+--   feed, and deleting them would have destroyed working sources.
+--
+-- To restore either feed, put the URL back:
+--
+--   update outlets set rss_url = 'https://english.alarabiya.net/feed/rss2/en.xml'
+--     where name = 'Al Arabiya English';
+--   update outlets set rss_url = 'https://www.sbs.com.au/news/feed'
+--     where name = 'SBS News';
+
+update outlets set rss_url = null where name in ('Al Arabiya English', 'SBS News');
+
+-- Verify: expect 303 active feeds, and both names returning null.
+--   select count(*) from outlets where rss_url is not null;
+--   select name, rss_url from outlets where name in ('Al Arabiya English','SBS News');
