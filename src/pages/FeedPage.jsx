@@ -201,7 +201,10 @@ export default function FeedPage({
   // Debounced full-text DB search
   useEffect(() => {
     clearTimeout(searchTimer.current)
-    if (search.trim().length >= 2) setActiveTopic(null) // clear topic filter when searching
+    // The line that used to sit here called setActiveTopic(null) to clear the
+    // trending topic filter. That state went with the topic pill bar, and the
+    // call was left behind — so every keystroke past two characters threw
+    // "setActiveTopic is not defined" and took the whole feed down with it.
     if (search.trim().length < 2) {
       setDbResults(null)
       setDbLoading(false)

@@ -607,7 +607,18 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                 >
                   <span style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700, color: 'var(--coral)' }}>
-                      Compare all {(article.cluster_size || article.cluster_peers.length) + 1} outlets side by side
+                      {/* peerTotal, NOT cluster_size — the same drift the header
+                          above already guards against. This read "Compare all 23
+                          outlets" directly beneath "Also covered by 1 other
+                          outlet", because cluster_size is a snapshot from the
+                          last clustering run and is never decremented when the
+                          cluster shrinks (prune deletes members, a later run
+                          reassigns them). One number, one source.
+
+                          It also dropped the optional chain that the guard on
+                          this very block uses, so a row with no cluster_size and
+                          a null cluster_peers threw on .length. */}
+                      Compare all {peerTotal + 1} outlets side by side
                     </span>
                     <span style={{ display: 'block', fontSize: 11.5, color: 'var(--text3)', marginTop: 2 }}>
                       Every take on this story, on one page
