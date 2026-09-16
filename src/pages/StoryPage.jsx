@@ -9,6 +9,7 @@ import { toSlug } from '../utils/navigate'
 import { track } from '../utils/track'
 import Sidebar from '../components/Sidebar'
 import TrendingStoriesWidget from '../components/TrendingStoriesWidget'
+import StoryIntelligence from '../components/StoryIntelligence'
 
 // Full-coverage view of a single story — every outlet covering it, side by side.
 // The differentiator surfaced as a first-class, shareable page: "this story,
@@ -104,6 +105,15 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
             />
           </div>
         )}
+
+        {/* What this coverage looks like across every outlet carrying it.
+            This panel was built for the ARTICLE page and was missing here,
+            which had it exactly backwards: the article page shows one outlet's
+            borrowed headline, while this page is the only place on the site
+            holding every outlet's take. The analysis belongs where the
+            coverage is, and it now frames the list below it rather than
+            teasing a page the reader has already reached. */}
+        <StoryIntelligence members={members} />
 
         {/* Coverage list */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
