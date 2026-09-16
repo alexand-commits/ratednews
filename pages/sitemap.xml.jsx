@@ -21,6 +21,11 @@ const STATIC_PAGES = [
   { url: 'https://www.ratednews.com/coverage-report', priority: '0.7', changefreq: 'weekly' },
   { url: 'https://www.ratednews.com/about',       priority: '0.5', changefreq: 'monthly' },
   { url: 'https://www.ratednews.com/methodology', priority: '0.5', changefreq: 'monthly' },
+  // Low priority, but they must be discoverable: an AdSense review and a
+  // crawler both need to reach the privacy policy by URL.
+  { url: 'https://www.ratednews.com/privacy',     priority: '0.3', changefreq: 'yearly'  },
+  { url: 'https://www.ratednews.com/terms',       priority: '0.3', changefreq: 'yearly'  },
+  { url: 'https://www.ratednews.com/guidelines',  priority: '0.3', changefreq: 'yearly'  },
   ...CATEGORY_SLUGS.map(slug => ({
     url:        `https://www.ratednews.com/categories/${slug}`,
     priority:   '0.8',

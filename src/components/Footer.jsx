@@ -19,9 +19,14 @@ export default function Footer() {
         <Link href="/most-trusted-news-sources" style={link}>Most trusted sources</Link>
         <Link href="/coverage-report" style={link}>Coverage report</Link>
         <Link href="/categories" style={link}>Categories</Link>
-        <button onClick={() => setLegalDoc('privacy')} style={linkBtn}>Privacy</button>
-        <button onClick={() => setLegalDoc('terms')} style={linkBtn}>Terms</button>
-        <button onClick={() => setLegalDoc('guidelines')} style={linkBtn}>Guidelines</button>
+        {/* Real links, not modal buttons. A legal document with no URL cannot
+            be crawled, cited, bookmarked or checked by a reviewer — and an
+            AdSense review looks for exactly this. The modal still exists and
+            renders the same source (src/content/legal.js); these are simply
+            the addressable version. */}
+        <Link href="/privacy" style={link}>Privacy</Link>
+        <Link href="/terms" style={link}>Terms</Link>
+        <Link href="/guidelines" style={link}>Guidelines</Link>
         <a href="mailto:info@ratednews.com" style={link}>Contact</a>
         <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text3)' }}>
           Rate the source.
