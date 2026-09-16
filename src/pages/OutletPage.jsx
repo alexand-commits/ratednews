@@ -367,8 +367,11 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
             <div className="outlet-hero-score-divider" />
             {/* One-tap trust — the single, frictionless rating action */}
             <div style={{ display: 'flex', justifyContent: 'center', width: '100%' }}>
+              {/* Name included, not just the id — the signed-out prompt reads
+                  "Sign in to add it to The Times's score", and without a name it
+                  degrades to the vaguer "this outlet's score". */}
               <OutletTrustRate
-                outlet={{ id: outletId }}
+                outlet={{ id: outletId, name: outlet?.name }}
                 user={user}
                 onLoginClick={onLoginClick}
                 showToast={showToast}
