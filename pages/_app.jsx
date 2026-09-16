@@ -10,6 +10,7 @@ import Footer from '../src/components/Footer'
 import Toast from '../src/components/Toast'
 import AuthModal from '../src/components/AuthModal'
 import PasswordResetModal from '../src/components/PasswordResetModal'
+import { flushPendingRatings } from '../src/utils/pendingRatings'
 import ErrorBoundary from '../src/components/ErrorBoundary'
 import { createNavigate } from '../src/utils/navigate'
 import { track } from '../src/utils/track'
@@ -79,7 +80,18 @@ export default function App({ Component, pageProps }) {
         setShowPasswordReset(true)
         return
       }
-      if (session?.user) { loadFollows(session.user.id); loadSaves(session.user.id) }
+      if (session?.user) {
+        loadFollows(session.user.id); loadSaves(session.user.id)
+        // Ratings tapped before signing in are held on the device and written
+        // here, which is the only place they ever reach the database. Until
+        // this runs they count towards nothing. See src/utils/pendingRatings.js.
+        flushPendingRatings(db, session.user.id).then(saved => {
+          if (!saved) return
+          showToast(saved === 1 ? 'Your rating has been saved' : `Your ${saved} ratings have been saved`)
+          track('rate_outlet_reconciled', { count: saved })
+          refreshOutlets()
+        }).catch(() => { /* stays pending, retried on the next sign-in */ })
+      }
       else { setFollowedOutletIds(new Set()); setSavedArticleIds(new Set()) }
     })
     return () => subscription.unsubscribe()

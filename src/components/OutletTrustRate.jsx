@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { db } from '../lib/supabase'
 import RatingDots, { RatingDotsInput } from './RatingDots'
 import { track } from '../utils/track'
+import { stashRating, pendingStarsFor } from '../utils/pendingRatings'
 
 // One-tap outlet trust rating. Tapping a dot submits immediately — no modal,
 // no required accuracy/bias/headline fields. The detailed rating modal is still
@@ -23,11 +24,34 @@ export default function OutletTrustRate({
   const [stars, setStars]   = useState(initialStars)
   const [hover, setHover]   = useState(0)
   const [saving, setSaving] = useState(false)
+  // Whether the rating showing is held on this device rather than saved to an
+  // account. Drives the copy under the dots and nothing else.
+  const [held, setHeld]     = useState(false)
 
-  useEffect(() => { setStars(initialStars) }, [initialStars, outlet?.id])
+  // A signed-out reader who already tapped should see their own rating when
+  // they come back to the page, not an empty row asking again.
+  useEffect(() => {
+    if (user) { setStars(initialStars); setHeld(false); return }
+    const pending = pendingStarsFor(outlet?.id)
+    setStars(pending || initialStars)
+    setHeld(pending > 0)
+  }, [initialStars, outlet?.id, user])
 
   async function rate(n) {
-    if (!user) { onLoginClick?.(); return }
+    // Signed out: the tap LANDS. We used to open the auth modal here, which
+    // asked a stranger to create an account before they had done anything and
+    // converted 0 of 98 on 2026-09-16. The rating is held on the device and
+    // written to the account on sign-in — it does not touch the outlet's
+    // public score until then. See src/utils/pendingRatings.js.
+    if (!user) {
+      if (!outlet?.id) return
+      setStars(n)
+      setHeld(true)
+      stashRating(outlet.id, n)
+      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(25)
+      track('rate_outlet', { outlet_id: outlet.id, stars: n, pending: true })
+      return
+    }
     if (saving || !outlet?.id) return
     const prev = stars
     setStars(n)            // optimistic
@@ -52,7 +76,8 @@ export default function OutletTrustRate({
     }
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(25)
     onRated?.(n)
-    track('rate_outlet', { outlet_id: outlet?.id, stars: n })
+    setHeld(false)
+    track('rate_outlet', { outlet_id: outlet?.id, stars: n, pending: false })
   }
 
   const rated = stars > 0
@@ -64,9 +89,26 @@ export default function OutletTrustRate({
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <RatingDotsInput value={stars} hover={hover} onChange={rate} onHover={setHover} size={size} />
         <span style={{ fontSize: 11, color: 'var(--text3)' }}>
-          {rated ? 'Tap to change' : (user ? 'One tap to rate' : 'Sign in to rate')}
+          {rated ? 'Tap to change' : 'One tap to rate'}
         </span>
       </div>
+      {/* The ask, AFTER the tap. It names what signing in does for the rating
+          they have already given rather than demanding an account up front. */}
+      {held && (
+        <button
+          onClick={() => onLoginClick?.()}
+          style={{
+            background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+            font: 'inherit', fontSize: 11, color: 'var(--text3)', textAlign: 'left',
+            lineHeight: 1.45,
+          }}
+        >
+          Saved on this device.{' '}
+          <span style={{ color: 'var(--coral)', fontWeight: 600, textDecoration: 'underline' }}>
+            Sign in to add it to {outlet?.name || 'this outlet'}’s score
+          </span>
+        </button>
+      )}
     </div>
   )
 }
@@ -76,11 +118,24 @@ export function OutletTrustRateInline({ outlet, user, onLoginClick, onRated, sho
   const [stars, setStars]   = useState(initialStars)
   const [hover, setHover]   = useState(0)
   const [saving, setSaving] = useState(false)
-  useEffect(() => { setStars(initialStars) }, [initialStars, outlet?.id])
+  useEffect(() => {
+    if (user) { setStars(initialStars); return }
+    setStars(pendingStarsFor(outlet?.id) || initialStars)
+  }, [initialStars, outlet?.id, user])
 
   async function rate(e, n) {
     e.stopPropagation()
-    if (!user) { onLoginClick?.(); return }
+    // Same inversion as the full component above. No room for the "sign in to
+    // add it" line in a dense list row, so this variant just holds the tap —
+    // the prompt appears on the outlet and article pages where there is space.
+    if (!user) {
+      if (!outlet?.id) return
+      setStars(n)
+      stashRating(outlet.id, n)
+      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(25)
+      track('rate_outlet', { outlet_id: outlet.id, stars: n, pending: true })
+      return
+    }
     if (saving || !outlet?.id) return
     const prev = stars
     setStars(n); setSaving(true)
@@ -92,7 +147,7 @@ export function OutletTrustRateInline({ outlet, user, onLoginClick, onRated, sho
     if (error) { setStars(prev); showToast?.('Could not save'); return }
     if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(25)
     onRated?.(n)
-    track('rate_outlet', { outlet_id: outlet?.id, stars: n })
+    track('rate_outlet', { outlet_id: outlet?.id, stars: n, pending: false })
   }
 
   const active = hover || stars
