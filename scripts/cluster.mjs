@@ -333,7 +333,133 @@ async function main() {
     })
   }
 
-  const components = clustersRaw
+  // ── Merge pass ─────────────────────────────────────────────────────────────
+  // Anchor-star clustering fragments a big story: each anchor claims the
+  // articles that overlap IT, and an article already claimed can never be
+  // reconsidered. Measured 2026-09-16 — one Houthi/Mecca drone story was 35
+  // articles spread over TEN clusters, the largest holding 11.
+  //
+  // Neither existing tunable fixes it. MIN_OVERLAP=2 reassembles that story
+  // (8 -> 40 articles) but swallows the whole Yemen war beat with it — Taiz
+  // ground fighting, Gulf-Iran diplomacy — turning a story into a topic, with
+  // clusters spanning >24h jumping from 22% to 47%.
+  //
+  // So merge on DISTINCTIVE tokens only, and never on common ones. Two
+  // clusters join when they share MERGE_MIN_SHARED tokens that are rare in the
+  // corpus (document frequency <= MERGE_DF) and appear in 2+ members of each
+  // cluster, within MERGE_WINDOW_HOURS. "mecca"/"houthi" merge the ten Mecca
+  // clusters; "Yemen forces advance in Taiz" carries neither and stays out.
+  //
+  // Requiring a token in 2+ MEMBERS is what stops one stray headline's wording
+  // from dragging an unrelated cluster in.
+  //
+  // Runs BEFORE capPerPublisher so the per-publisher cap applies to the merged
+  // result rather than being defeated by it.
+  //
+  // DEFAULT OFF (MERGE_MIN_SHARED=0). Sweep with DRY_RUN before enabling —
+  // this file has broken the homepage twice.
+  const MERGE_MIN_SHARED  = num('MERGE_MIN_SHARED', 0)
+  const MERGE_DF          = num('MERGE_DF', 60)
+  const MERGE_WINDOW_HOURS = num('MERGE_WINDOW_HOURS', 48)
+
+  const mergeFragments = raw => {
+    if (MERGE_MIN_SHARED <= 0 || raw.length < 2) return raw
+
+    // Signature = rare tokens carried by at least two members of the cluster.
+    const sigs = raw.map(c => {
+      const freq = new Map()
+      for (const ix of c.memberIdx) {
+        for (const w of new Set(pool[ix].words)) freq.set(w, (freq.get(w) || 0) + 1)
+      }
+      const sig = new Set()
+      for (const [w, n] of freq) {
+        if (n >= 2 && (index.get(w)?.length || 0) <= MERGE_DF) sig.add(w)
+      }
+      return sig
+    })
+
+    const spans = raw.map(c => {
+      const ts = c.memberIdx.map(ix => +new Date(pool[ix].published_at)).filter(n => !isNaN(n))
+      return ts.length ? [Math.min(...ts), Math.max(...ts)] : null
+    })
+
+    // Only clusters sharing at least one signature token are ever compared, so
+    // this stays far away from O(clusters²).
+    const byToken = new Map()
+    sigs.forEach((s, i) => {
+      for (const w of s) {
+        if (!byToken.has(w)) byToken.set(w, [])
+        byToken.get(w).push(i)
+      }
+    })
+    const shared = new Map()
+    for (const idxs of byToken.values()) {
+      if (idxs.length < 2) continue
+      for (let a = 0; a < idxs.length; a++) {
+        for (let b = a + 1; b < idxs.length; b++) {
+          const k = `${idxs[a]}:${idxs[b]}`
+          shared.set(k, (shared.get(k) || 0) + 1)
+        }
+      }
+    }
+
+    // ONE HOP, NO CHAINS — the same rule the rescue pass above already needs.
+    //
+    // Union-find here was a bug: A and B share two rare tokens, B and C share
+    // two DIFFERENT ones, and A ends up merged with C having nothing in common
+    // with it. Measured at shared>=2/df<=60 that produced a single 228-article
+    // cluster holding Travis Kelce, Taylor Swift and an AI-actress story,
+    // against a baseline largest of 105.
+    //
+    // So: each cluster picks its single best partner, and merges are stars, not
+    // graphs. A cluster that has absorbed cannot itself be absorbed, and an
+    // absorbed cluster cannot absorb — so no merge is ever two hops from where
+    // it started.
+    const candidates = new Map() // i -> [{ j, n }]
+    for (const [k, n] of shared) {
+      if (n < MERGE_MIN_SHARED) continue
+      const [i, j] = k.split(':').map(Number)
+      const si = spans[i], sj = spans[j]
+      if (si && sj) {
+        // Gap between the two clusters' time ranges; 0 when they overlap.
+        const gap = Math.max(0, Math.max(si[0], sj[0]) - Math.min(si[1], sj[1]))
+        if (gap > MERGE_WINDOW_HOURS * 3600e3) continue
+      }
+      if (!candidates.has(i)) candidates.set(i, [])
+      if (!candidates.has(j)) candidates.set(j, [])
+      candidates.get(i).push({ j, n })
+      candidates.get(j).push({ j: i, n })
+    }
+
+    // Biggest clusters get to be hubs first — a fragment should join the main
+    // body of its story, not the other way round.
+    const order = raw.map((c, i) => i).sort((a, b) => raw[b].memberIdx.length - raw[a].memberIdx.length)
+    const absorbedInto = new Map() // absorbed cluster -> hub
+    const hasAbsorbed = new Set()
+    for (const j of order) {
+      if (hasAbsorbed.has(j) || absorbedInto.has(j)) continue
+      const best = (candidates.get(j) || [])
+        .filter(c => !absorbedInto.has(c.j))
+        .sort((x, y) => y.n - x.n || raw[y.j].memberIdx.length - raw[x.j].memberIdx.length)[0]
+      if (!best) continue
+      if (raw[best.j].memberIdx.length < raw[j].memberIdx.length) continue // hub must be the larger side
+      absorbedInto.set(j, best.j)
+      hasAbsorbed.add(best.j)
+    }
+
+    const groups = new Map()
+    raw.forEach((c, i) => {
+      const r = absorbedInto.has(i) ? absorbedInto.get(i) : i
+      const g = groups.get(r) || []
+      g.push(...c.memberIdx)
+      groups.set(r, g)
+    })
+    const merged = [...groups.values()].map(memberIdx => ({ memberIdx: [...new Set(memberIdx)] }))
+    console.log(`🔗 merge pass: ${raw.length} → ${merged.length} clusters (shared≥${MERGE_MIN_SHARED}, df≤${MERGE_DF})`)
+    return merged
+  }
+
+  const components = mergeFragments(clustersRaw)
     .map(c => capPerPublisher(c.memberIdx.map(ix => pool[ix])))
     // 2+ distinct PUBLISHERS, not 2+ outlet rows. BBC World and BBC Sport are
     // separate outlet_ids and one publisher, so requiring distinct outlet_ids
