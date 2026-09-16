@@ -115,7 +115,14 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
             teasing a page the reader has already reached. */}
         <StoryIntelligence members={members} />
 
-        {/* Coverage list */}
+        {/* Coverage list.
+            Every Link below carries prefetch={false}. Next prefetches links in
+            the viewport by default, and this list renders TWO per member — the
+            outlet and the article — so today's biggest story fired 138 data
+            prefetches, each one a serverless invocation running its own
+            Supabase query. Measured on the live page: 462 requests for a single
+            view, some returning 504. Nobody asked for any of those pages.
+            Navigation on click is unaffected. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {members.map(m => {
             const o = m.outlets || {}
@@ -125,7 +132,7 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
               <div key={m.id} style={{ background: 'var(--surface)', border: '0.5px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                   <OutletLogo name={o.name || 'X'} size={26} borderRadius={6} />
-                  <Link
+                  <Link prefetch={false}
                     href={`/outlet/${toSlug(o.name || '')}`}
                     style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }}
                   >
@@ -142,7 +149,7 @@ export default function StoryPage({ story, navigate, goBack, user, onLoginClick,
                   <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 'auto' }}>{timeAgo(m.published_at)}</span>
                 </div>
 
-                <Link href={`/article/${slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <Link prefetch={false} href={`/article/${slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                   <div className="news-headline" style={{ fontSize: 16, marginBottom: m.summary ? 6 : 10 }}>{m.title}</div>
                 </Link>
                 {m.summary && (

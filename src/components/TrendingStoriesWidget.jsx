@@ -19,7 +19,7 @@ export default function TrendingStoriesWidget({ variant = 'widget', title = 'ðŸ”
   const list = (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       {stories.slice(0, limit).map((t, i) => (
-        <Link
+        <Link prefetch={false}
           key={t.slug}
           href={`/story/${t.slug}`}
           onClick={() => track('trending_story_tap', { slug: t.slug })}

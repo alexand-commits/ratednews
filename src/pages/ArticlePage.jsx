@@ -501,7 +501,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
           <div className="article-outlet-row">
             <OutletLogo name={outlet.name || ''} size={32} borderRadius={8} />
             <div>
-              <Link
+              <Link prefetch={false}
                 href={`/outlet/${toSlug(outlet.name || '')}`}
                 style={{ display: 'block', fontSize: 13, fontWeight: 500, color: 'inherit', textDecoration: 'none' }}
               >
@@ -595,7 +595,7 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                   path that KEEPS them was the quietest thing on the page.
                   Sells what is actually there, and names the number. */}
               {(article.cluster_size || article.cluster_peers?.length || 0) > 0 && (
-                <Link
+                <Link prefetch={false}
                   href={`/story/${articleSlug(article.title, article.id)}`}
                   onClick={() => track('story_open', { from: 'article' })}
                   style={{

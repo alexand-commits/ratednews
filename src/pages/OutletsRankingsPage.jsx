@@ -507,7 +507,7 @@ export default function OutletsRankingsPage({
                         <OutletLogo name={o.name} size={isWide ? 44 : 36} borderRadius={isWide ? 10 : 9} />
 
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <Link
+                          <Link prefetch={false}
                             href={`/outlet/${toSlug(o.name)}`}
                             onClick={e => { if (compareMode) e.preventDefault(); else e.stopPropagation() }}
                             style={{ display: 'block', fontSize: isWide ? 16 : 14.5, fontWeight: 600, marginBottom: isWide ? 3 : 2, color: 'inherit', textDecoration: 'none' }}
