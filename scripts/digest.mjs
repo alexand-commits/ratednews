@@ -14,6 +14,20 @@ import 'dotenv/config'
 const db = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
 const SITE = 'https://www.ratednews.com'
 
+// Every link in the email carries UTMs. Without them the digest was
+// unmeasurable: mail clients strip the referrer, so a click on a bare URL
+// lands in GA as "direct" and is indistinguishable from someone typing the
+// address. 43 subscribers get this weekly and there was no way to tell whether
+// a single one ever came back — they were being counted inside the "returning
+// users" figure with no way to separate them out.
+//
+// `content` names WHICH link was clicked, so the lead story, the list items and
+// the footer button can be compared rather than lumped together.
+const tagged = (path, content) => {
+  const sep = path.includes('?') ? '&' : '?'
+  return `${SITE}${path}${sep}utm_source=digest&utm_medium=email&utm_campaign=weekly&utm_content=${content}`
+}
+
 const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 const slug = (title, id) => {
   const t = (title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60).replace(/-$/, '')
@@ -83,7 +97,7 @@ function renderEmail({ topStories, topOutlets }, unsubToken) {
   const [lead, ...rest] = topStories
   const leadHtml = lead ? `
     <tr><td style="padding:0 0 6px">
-      <a href="${SITE}/story/${slug(lead.title, lead.id)}" style="text-decoration:none">
+      <a href="${tagged(`/story/${slug(lead.title, lead.id)}`, 'lead')}" style="text-decoration:none">
         ${lead.image_url ? `<img src="${lead.image_url}" alt="" width="480" style="width:100%;max-width:480px;border-radius:10px;display:block;margin-bottom:12px" />` : ''}
         <span style="color:#1a1917;font-size:20px;font-weight:700;line-height:1.3;font-family:Georgia,serif">${esc(lead.title)}</span>
       </a>
@@ -94,10 +108,10 @@ function renderEmail({ topStories, topOutlets }, unsubToken) {
     <tr><td style="padding:12px 0;border-bottom:1px solid #eee">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
         <td valign="top">
-          <a href="${SITE}/story/${slug(a.title, a.id)}" style="color:#1a1917;text-decoration:none;font-size:15px;font-weight:600;line-height:1.4;font-family:Georgia,serif">${esc(a.title)}</a>
+          <a href="${tagged(`/story/${slug(a.title, a.id)}`, 'story')}" style="color:#1a1917;text-decoration:none;font-size:15px;font-weight:600;line-height:1.4;font-family:Georgia,serif">${esc(a.title)}</a>
           <div style="font-size:12px;color:#9e9b95;margin-top:5px">${esc(a.outlets?.name || '')} · ${(a.cluster_peers?.length || 0) + 1} sources</div>
         </td>
-        ${a.image_url ? `<td width="86" valign="top" style="padding-left:14px"><a href="${SITE}/story/${slug(a.title, a.id)}"><img src="${a.image_url}" alt="" width="72" height="72" style="border-radius:8px;object-fit:cover;display:block" /></a></td>` : ''}
+        ${a.image_url ? `<td width="86" valign="top" style="padding-left:14px"><a href="${tagged(`/story/${slug(a.title, a.id)}`, 'image')}"><img src="${a.image_url}" alt="" width="72" height="72" style="border-radius:8px;object-fit:cover;display:block" /></a></td>` : ''}
       </tr></table>
     </td></tr>`).join('')
 
@@ -113,7 +127,7 @@ function renderEmail({ topStories, topOutlets }, unsubToken) {
       <div style="font-size:12px;color:#9e9b95;margin:4px 0 20px">The week's most-covered stories · ${new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}</div>
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${leadHtml}${stories}</table>
       ${outlets}
-      <a href="${SITE}" style="display:inline-block;margin-top:24px;background:#d85a30;color:#fff;text-decoration:none;font-size:13px;font-weight:600;padding:10px 22px;border-radius:20px">Read this week's coverage →</a>
+      <a href="${tagged('/', 'footer-cta')}" style="display:inline-block;margin-top:24px;background:#d85a30;color:#fff;text-decoration:none;font-size:13px;font-weight:600;padding:10px 22px;border-radius:20px">Read this week's coverage →</a>
       <div style="font-size:11px;color:#9e9b95;margin-top:28px;border-top:1px solid #eee;padding-top:14px">
         You're receiving this because you have a RatedNews account.
         <a href="${SITE}/api/unsubscribe?token=${unsubToken}" style="color:#9e9b95">Unsubscribe</a>
