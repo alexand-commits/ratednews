@@ -356,14 +356,39 @@ async function main() {
   // Runs BEFORE capPerPublisher so the per-publisher cap applies to the merged
   // result rather than being defeated by it.
   //
-  // DEFAULT OFF (MERGE_MIN_SHARED=0). Sweep with DRY_RUN before enabling —
-  // this file has broken the homepage twice.
+  // DEFAULT OFF, AND MEASURED 2026-09-16 — LEAVE IT OFF. Audited with
+  // MERGE_LOG by judging merge DECISIONS rather than final clusters, which is
+  // the only way to see this: sampling the biggest clusters hides a bad
+  // absorbee behind a large correct hub, and that is how an earlier spot-check
+  // of four clusters passed this as clean.
+  //
+  //   shared>=2  471 merges, -15% fragmentation, precision ~40%
+  //   shared>=4   45 merges,  -1.5%,             precision ~80%
+  //
+  // At shared>=2 the wrong merges land on the LARGEST, highest-traffic
+  // clusters: Macklemore/Ed Sheeran (96 articles) absorbed a Ravens kicker
+  // story on ["loop","opener"]; the Lucy Letby inquiry (57) absorbed a Quebec
+  // assault conviction on ["doctor","convicted"]; King Charles (45) absorbed
+  // Uganda's Invictus Games withdrawal.
+  //
+  // The premise is what fails. A rare token does not imply a shared story —
+  // "kelce", "doctor", "walker", "loop" are all rare in a 24k corpus and all
+  // recur across many distinct stories inside one beat. No threshold separates
+  // the two: strict enough for precision means too few merges to matter.
+  //
+  // Fragmentation is still real (one story across 10 clusters). It needs
+  // same-event evidence this approach does not have — entity pairs, or
+  // agreement between cluster ANCHORS rather than any two members.
+  //
+  // Sweep with DRY_RUN before changing anything here; this file has broken the
+  // homepage twice.
   const MERGE_MIN_SHARED  = num('MERGE_MIN_SHARED', 0)
   const MERGE_DF          = num('MERGE_DF', 60)
   const MERGE_WINDOW_HOURS = num('MERGE_WINDOW_HOURS', 48)
 
   const mergeFragments = raw => {
     if (MERGE_MIN_SHARED <= 0 || raw.length < 2) return raw
+    const mergeLog = []
 
     // Signature = rare tokens carried by at least two members of the cluster.
     const sigs = raw.map(c => {
@@ -445,6 +470,23 @@ async function main() {
       if (raw[best.j].memberIdx.length < raw[j].memberIdx.length) continue // hub must be the larger side
       absorbedInto.set(j, best.j)
       hasAbsorbed.add(best.j)
+      // MERGE_LOG=<path> records every decision with the tokens that caused it,
+      // so the pass can be audited merge-by-merge instead of inferred from
+      // aggregate cluster counts. DRY_RUN only.
+      if (DRY_RUN && process.env.MERGE_LOG) {
+        mergeLog.push({
+          shared: best.n,
+          tokens: [...sigs[j]].filter(w => sigs[best.j].has(w)),
+          hubSize: raw[best.j].memberIdx.length,
+          absorbedSize: raw[j].memberIdx.length,
+          hub: raw[best.j].memberIdx.slice(0, 2).map(ix => pool[ix].title),
+          absorbed: raw[j].memberIdx.slice(0, 2).map(ix => pool[ix].title),
+        })
+      }
+    }
+    if (DRY_RUN && process.env.MERGE_LOG) {
+      fs.writeFileSync(process.env.MERGE_LOG, JSON.stringify(mergeLog, null, 1))
+      console.log(`📝 merge log: ${mergeLog.length} decisions → ${process.env.MERGE_LOG}`)
     }
 
     const groups = new Map()
