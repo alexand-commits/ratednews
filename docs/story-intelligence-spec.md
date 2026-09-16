@@ -31,6 +31,7 @@ re-attempts them.
 | Headline overlap | 61% any, 18% heavy | **BUILD** |
 | Still developing | 20% | **BUILD** |
 | Geographic spread | ~every multi-outlet story | keep, modest |
+| Numeric disagreement | **2 of 1,467** stories | **DEAD** (2026-09-16) |
 
 ### Why framing died
 `FRAMING_SETS` requires 2+ competing labels each used by 2+ distinct publishers
@@ -56,6 +57,41 @@ above) or a language model (off the table, and correctly so for this product).
 **"Same story, different words" is not achievable at headline level here.** It
 remains a fine idea for the weekly report over a whole corpus, where rarity is
 survivable because you only need a handful of examples.
+
+### Why numeric disagreement died (2026-09-16)
+
+The pitch: outlets disagree on casualty counts, and a reader understands a
+number instantly. No semantics needed — a regex for digits and number-words
+adjacent to a context term (`killed` / `injured` / `arrested` / `missing`).
+
+Measured over 1,467 clusters of 3+ members:
+
+| | headlines | + summaries |
+|---|---|---|
+| any extractable measure | 3.3% | 4.0% |
+| 2+ distinct values | 0.4% | 0.7% |
+| each value backed by 2+ publishers | **0.1%** | **0.1%** |
+
+Two stories in 1,467. Adding summaries moved nothing, which kills the obvious
+objection that headlines are simply too short.
+
+**And half of what fires is wrong.** One of the two hits was real — a Gaza
+building collapse reported as 10, 11, 12, 14 and 16 dead, exactly the intended
+output. The other was a mis-clustered pair of unrelated ferry sinkings,
+Indonesia (129 missing) and Vanuatu (30 missing), rendered as though outlets
+disagreed about one event. That is worse than a miss: it would publish a
+fabricated contradiction, on the page whose whole claim is trustworthy numbers.
+
+So the feature inherits every clustering error as a factual assertion. It would
+need a much stronger same-event guarantee than the clustering currently gives —
+and it would still only fire twice a week.
+
+**The pattern across all four dead ideas is now clear.** Framing 0/606, velocity
+6/701, numeric disagreement 2/1,467. The corpus is mostly small clusters, and a
+headline plus a two-line summary does not carry enough specific claim to compare
+across outlets. What survives (overlap, spread, still-developing) works because
+it measures the SHAPE of coverage rather than its CONTENT. Future ideas should
+be tested against that distinction first.
 
 ### Why velocity was demoted
 Median story: 0.4 outlets/hour over 18.7 hours. The compelling form — 8+ outlets
