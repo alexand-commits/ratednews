@@ -208,7 +208,10 @@ export default function FeedPage({
     if (search.trim().length < 2) {
       setDbResults(null)
       setDbLoading(false)
-      track('search', { source: 'feed' })
+      // No track() here. This branch is the EMPTY box — it runs on mount and
+      // again whenever the term is cleared, so firing 'search' from it counted
+      // page loads as searches. GA showed 13 "searches" against 1 real
+      // view_search_results. The event belongs where results come back.
       return
     }
     setDbLoading(true)
@@ -233,6 +236,7 @@ export default function FeedPage({
         .order('published_at', { ascending: false })
         .limit(50)
       setDbResults(data || [])
+      track('search', { source: 'feed', results: (data || []).length })
       setDbLoading(false)
       if (term.length >= 2) addToHistory(term)
     }, 400)
