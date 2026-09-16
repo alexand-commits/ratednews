@@ -601,12 +601,12 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                   style={{
                     display: 'flex', alignItems: 'center', gap: 10, marginTop: 10,
                     padding: '12px 14px', borderRadius: 10,
-                    border: '1px solid var(--coral)', background: 'rgba(216,90,48,0.07)',
+                    border: '1px solid var(--coral)', background: 'var(--coral)',
                     textDecoration: 'none',
                   }}
                 >
                   <span style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700, color: 'var(--coral)' }}>
+                    <span style={{ display: 'block', fontSize: 13.5, fontWeight: 700, color: '#fff' }}>
                       {/* peerTotal, NOT cluster_size — the same drift the header
                           above already guards against. This read "Compare all 23
                           outlets" directly beneath "Also covered by 1 other
@@ -620,11 +620,11 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
                           a null cluster_peers threw on .length. */}
                       Compare all {peerTotal + 1} outlets side by side
                     </span>
-                    <span style={{ display: 'block', fontSize: 11.5, color: 'var(--text3)', marginTop: 2 }}>
+                    <span style={{ display: 'block', fontSize: 11.5, color: 'rgba(255,255,255,0.82)', marginTop: 2 }}>
                       Every take on this story, on one page
                     </span>
                   </span>
-                  <span style={{ fontSize: 15, color: 'var(--coral)', flexShrink: 0 }}>→</span>
+                  <span style={{ fontSize: 15, color: '#fff', flexShrink: 0 }}>→</span>
                 </Link>
               )}
             </div>
@@ -635,9 +635,22 @@ export default function ArticlePage({ articleId, allArticles, navigate, goBack, 
               saturated element on the page, so a visitor arriving from search
               saw one obvious action and it was the exit. The comparison — other
               outlets' headlines on the same story — is the reason to be here,
-              so it goes first and the door comes after it. */}
+              so it goes first and the door comes after it.
+
+              btn-outline, not btn-primary, as of 2026-09-16. Ordering alone was
+              not enough: the compare link above was outlined while this one was
+              the only filled element on the page, and `story_open` fired ZERO
+              times across 98 visitors. Filling the compare link and outlining
+              this one swaps which is loudest.
+
+              This is still a full-size, clearly labelled button in the same
+              position — deliberately NOT demoted to a grey text link. We are an
+              aggregator; the credit and the click belong to the publisher, and
+              burying the way out would be the wrong kind of clever. Measured by
+              source_click, which was 9 of 98. If that collapses, this was too
+              far and the fill comes back. */}
           <div className="article-actions" style={{ marginBottom: 20 }}>
-            <button className="btn-primary" onClick={() => {
+            <button className="btn-outline" onClick={() => {
               // Measures the cost side of moving this below the coverage.
               track('source_click', { outlet: outlet.name || null })
               if (article.url) window.open(article.url, '_blank')
