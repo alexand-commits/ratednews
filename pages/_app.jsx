@@ -279,6 +279,27 @@ export default function App({ Component, pageProps }) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
       </Head>
 
+      {/* Google AdSense. Present so the site review can verify it, and so ads
+          serve the moment approval lands — the site currently sits at
+          "Requires review", which the WordPress-era approval does not satisfy.
+          Until then this loads and displays nothing.
+
+          afterInteractive, matching Analytics below: AdSense is third-party
+          JavaScript and must never block the first paint. Article pages hold a
+          reader for ~10 seconds, so anything that delays render is taken
+          straight out of the only attention the page gets.
+
+          Publisher ID is public — it appears in the page source of every site
+          running AdSense — so it is inlined rather than held as a secret. It
+          must match public/ads.txt exactly or the inventory reads as
+          unauthorised and most demand will not bid. */}
+      <Script
+        id="adsense"
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5069685437205817"
+        crossOrigin="anonymous"
+        strategy="afterInteractive"
+      />
+
       {/* Google Analytics — loaded after page is interactive, not render-blocking */}
       <Script src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} strategy="afterInteractive" />
       <Script id="ga-init" strategy="afterInteractive">{`
