@@ -1,0 +1,62 @@
+-- The Age retired as a feed, 2026-09-21, and folded into the Sydney Morning
+-- Herald. Applied via the service-role client; recorded here because sql/ has
+-- drifted from the live schema before and an undocumented data change is the
+-- hardest kind to reverse.
+--
+-- Both are Nine Entertainment mastheads publishing the same copy. Measured over
+-- seven days:
+--
+--   The Age            937 headlines
+--   SMH                945 headlines
+--   shared             924
+--   unique to The Age   13  (1%)
+--   unique to SMH       21  (2%)
+--
+-- 924 identical headlines a week, by far the worst pair in the corpus — more
+-- than double the next. The visible symptom was a story page listing "The Age"
+-- and "Sydney Morning Herald" as two separate sources under the same headline,
+-- which inflates every coverage count by one and makes one newsroom look like
+-- corroboration.
+--
+-- SMH kept: 17,391 articles against The Age's 11,480, and the better-known
+-- masthead. The cost of the choice is ~13 genuinely unique Age stories a week,
+-- mostly Melbourne local and ASX copy.
+--
+-- STOPS THE FEED, KEEPS THE ARCHIVE. scripts/remove-outlet.mjs would have
+-- deleted all 11,480 articles, and article URLs are ~65% of the site's Bing
+-- traffic — trading 924 duplicate rows a week for thousands of 404s on the only
+-- working acquisition channel is a bad deal. Nulling rss_url stops new
+-- duplicates at the next ingest (ingest.mjs selects on
+-- `.not('rss_url','is',null)`), and parent_outlet_id folds the existing rows
+-- into SMH so rollUpOutlets credits the brand with both outlets' ratings.
+--
+-- NOT applied to the other pairs in that measurement, deliberately:
+--
+--   Belfast Telegraph + Irish News       414x
+--   Belfast Telegraph + Evening Standard 377x
+--   AP News + Philadelphia Inquirer      332x
+--   Reuters + The Straits Times          154x
+--
+--   Those are WIRE SYNDICATION, not shared ownership — different newsrooms all
+--   running PA, AP or Reuters copy. "Twenty outlets ran the AP story" is a true
+--   and interesting fact about coverage, and collapsing it would delete a real
+--   finding. Only same-owner twins should be folded.
+--
+--   Sky Sports + Sky Sports Football (52x) already have parent_outlet_id set
+--   and still render separately, which shows parent_outlet_id alone does not
+--   dedupe the display — clustering keys on outlet name via pubKey(). Worth
+--   fixing there if this recurs.
+--
+-- To reverse:
+--   update outlets set rss_url = 'https://www.theage.com.au/rss/feed.xml',
+--                      parent_outlet_id = null
+--     where name = 'The Age';
+
+update outlets
+   set rss_url = null,
+       parent_outlet_id = (select id from outlets where name = 'Sydney Morning Herald')
+ where name = 'The Age';
+
+-- Verify: 302 active feeds, The Age with a null rss_url and SMH as its parent.
+--   select count(*) from outlets where rss_url is not null;
+--   select name, rss_url, parent_outlet_id from outlets where name = 'The Age';
