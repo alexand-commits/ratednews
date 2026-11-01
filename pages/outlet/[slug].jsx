@@ -242,7 +242,17 @@ export async function getStaticProps({ params }) {
   try {
     if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
       const { createClient } = await import('@supabase/supabase-js')
-      const svc = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+      // NEXT_PUBLIC_ first, VITE_ as the fallback — the same pair
+      // pages/sitemap.xml.jsx uses, and for the same reason: production is
+      // configured with the NEXT_PUBLIC_ names while the local .env carries the
+      // VITE_ ones. Reading only VITE_ here gave createClient an undefined URL
+      // in production, which threw into the catch below and left `coverage`
+      // null. It worked locally and failed live, silently, because the catch
+      // did its job.
+      const svc = createClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.VITE_SUPABASE_URL,
+        process.env.SUPABASE_SERVICE_ROLE_KEY,
+      )
       // JSON-path select, NOT `select('pack')`. The weekly pack is 590 KB —
       // 587 KB of it is `language`, which this page has no use for — and
       // there are 257 outlet pages, so fetching the whole pack per page cost
@@ -272,7 +282,12 @@ export async function getStaticProps({ params }) {
         }
       }
     }
-  } catch { /* stats are a bonus, never a reason for the page to fail */ }
+  } catch (err) {
+    // Stats are a bonus and must never take the page down — but a silent catch
+    // is how the env-name bug above survived a deploy and looked like "no data"
+    // instead of "misconfigured". Log it so the build output says which.
+    console.warn(`[outlet/${params.slug}] coverage stats unavailable:`, err?.message || err)
+  }
 
   return {
     props: { outlet, compareTargets, coverage },
