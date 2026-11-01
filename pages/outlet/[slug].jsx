@@ -51,7 +51,7 @@ function buildFaq(o) {
   return faq
 }
 
-export default function OutletDetail({ outlet, compareTargets = [] }) {
+export default function OutletDetail({ outlet, compareTargets = [], coverage = null }) {
   const router = useRouter()
   const { navigate, goBack, showToast, user, openAuthModal,
           followedOutletIds, toggleFollow, allOutlets } = useAppContext()
@@ -142,6 +142,7 @@ export default function OutletDetail({ outlet, compareTargets = [] }) {
         onLoginClick={openAuthModal}
         followedOutletIds={followedOutletIds}
         toggleFollow={toggleFollow}
+        coverage={coverage}
       />
 
       {/* FAQ + compare links — search-intent content below the app UI */}
@@ -226,8 +227,55 @@ export async function getStaticProps({ params }) {
     .slice(0, 4)
     .map(o => ({ id: o.id, name: o.name }))
 
+  // Weekly coverage stats for this outlet — the only original content on the
+  // page. Computed across the whole corpus in scripts/coverage-report.mjs and
+  // stored with the weekly pack; see docs/outlet-page-spec.md.
+  //
+  // Separate client: the packs live in social_drafts, which the anon key above
+  // rightly cannot read. Wrapped so a missing service key, a missing pack or a
+  // pack from before this field existed degrades to "no stats" rather than
+  // taking out the whole page.
+  //
+  // Children are summed in: /outlet/bbc-news presents BBC as a brand with
+  // sections, so its numbers must include BBC Sport and BBC World.
+  let coverage = null
+  try {
+    if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      const { createClient } = await import('@supabase/supabase-js')
+      const svc = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+      // JSON-path select, NOT `select('pack')`. The weekly pack is 590 KB —
+      // 587 KB of it is `language`, which this page has no use for — and
+      // there are 257 outlet pages, so fetching the whole pack per page cost
+      // ~150 MB of egress on every full rebuild to read one 67 KB object.
+      const { data: pack } = await svc.from('social_drafts')
+        .select('week:pack->>week, outletStats:pack->outletStats')
+        .eq('pack->>kind', 'coverage_report')
+        .order('created_at', { ascending: false }).limit(1).maybeSingle()
+      const stats = pack?.outletStats
+      if (stats?.outlets) {
+        const ids = [outlet.id, ...(stubs || []).filter(o => o.parent_outlet_id === outlet.id).map(o => o.id)]
+        const parts = ids.map(id => stats.outlets[id]).filter(Boolean)
+        if (parts.length) {
+          const sum = k => parts.reduce((s, p) => s + (p[k] || 0), 0)
+          coverage = {
+            week: pack.week || null,
+            articles: sum('articles'),
+            solo: sum('solo'),
+            firstWins: sum('firstWins'),
+            contested: sum('contested'),
+            // Rank belongs to the outlet itself, not the summed brand.
+            rank: stats.outlets[outlet.id]?.rank ?? null,
+            rankedOf: stats.rankedOf ?? null,
+            over: stats.outlets[outlet.id]?.over ?? [],
+            under: stats.outlets[outlet.id]?.under ?? [],
+          }
+        }
+      }
+    }
+  } catch { /* stats are a bonus, never a reason for the page to fail */ }
+
   return {
-    props: { outlet, compareTargets },
+    props: { outlet, compareTargets, coverage },
     revalidate: 21600, // regenerate every hour, matching the ingest schedule
   }
 }

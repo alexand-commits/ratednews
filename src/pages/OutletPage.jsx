@@ -7,6 +7,7 @@ import OutletLogo from '../components/OutletLogo'
 import RatingDots from '../components/RatingDots'
 import OutletTrustRate from '../components/OutletTrustRate'
 import OutletRatingModal from '../components/OutletRatingModal'
+import OutletCoverageStats from '../components/OutletCoverageStats'
 
 function getInitials(str) {
   if (!str) return '?'
@@ -59,7 +60,7 @@ function ArticleCard({ a, onClick }) {
 
 
 
-export default function OutletPage({ outletId, allOutlets, navigate, goBack, showToast, user, onLoginClick, followedOutletIds = new Set(), toggleFollow }) {
+export default function OutletPage({ outletId, allOutlets, navigate, goBack, showToast, user, onLoginClick, followedOutletIds = new Set(), toggleFollow, coverage = null }) {
   const [articles, setArticles] = useState([])
   const [activeTab, setActiveTab] = useState('overview')
   const [outletRatings, setOutletRatings] = useState([])
@@ -425,6 +426,12 @@ export default function OutletPage({ outletId, allOutlets, navigate, goBack, sho
         {activeTab === 'overview' && (
           <div className="grid">
             <div>
+              {/* The only content on this page the outlet could not publish
+                  itself — it needs every other outlet in the index to compute.
+                  Above "Coverage focus", which is this outlet measured against
+                  itself; this is it measured against the field. */}
+              <OutletCoverageStats coverage={coverage} outletName={outlet?.name || 'This outlet'} />
+
               {/* Category coverage */}
               {sortedCategories.length > 0 && (
                 <>
