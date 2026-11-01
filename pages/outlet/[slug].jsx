@@ -276,6 +276,12 @@ export async function getStaticProps({ params }) {
 
   return {
     props: { outlet, compareTargets, coverage },
-    revalidate: 21600, // regenerate every hour, matching the ingest schedule
+    // 21600s = SIX hours, not one — the old comment here said "every hour,
+    // matching the ingest schedule" and was wrong by a factor of six.
+    // Six is right for this page: its content moves on two clocks, the
+    // community score (rarely — 240 ratings all-time) and the weekly coverage
+    // stats (once a week). Nothing here changes hourly, and 257 pages
+    // regenerating more often is cost for no freshness.
+    revalidate: 21600,
   }
 }
