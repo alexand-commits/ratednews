@@ -19,6 +19,18 @@ import React from 'react'
 // false and trivially checkable.
 const INDEX_NOTE = 'Counted from the stories we indexed this week — an outlet’s RSS feed is a subset of everything it publishes.'
 
+// The "unmatched" figure needs this next to it, because the number reads as a
+// compliment and often isn't. The New York Post scores 52% — and inspecting
+// those 1,188 stories shows celebrity aggregation, listicles, state-politics
+// columns and "cockroach milk could be the next superfood", not scoops. An
+// outlet that files a lot of opinion and filler scores high for the same
+// reason a wire service scores low: nobody else wrote it.
+//
+// It is still worth showing. The spread between outlets is real and
+// informative — Reuters 25%, BBC News 28%, NY Post 52% — it just measures
+// "distinct from the rest of the index", not "exclusive".
+const UNMATCHED_NOTE = 'Unmatched means no other outlet we index ran a story we could match to it — that covers original reporting, opinion and filler alike, and stories worded too differently for us to match.'
+
 function Figure({ value, label, sub }) {
   return (
     <div style={{ flex: '1 1 150px', minWidth: 150 }}>
@@ -63,7 +75,7 @@ export default function OutletCoverageStats({ coverage, outletName }) {
         />
         <Figure
           value={`${soloPct}%`}
-          label="carried by no other outlet we track"
+          label="unmatched in our index"
           sub={`${solo.toLocaleString()} of ${articles.toLocaleString()}`}
         />
         {contested > 0 && (
@@ -97,7 +109,7 @@ export default function OutletCoverageStats({ coverage, outletName }) {
       )}
 
       <p style={{ fontSize: 10.5, color: 'var(--text3)', margin: 0, lineHeight: 1.5 }}>
-        {INDEX_NOTE}
+        {UNMATCHED_NOTE} {INDEX_NOTE}
         {coverage.week ? ` Week of ${coverage.week}.` : ''}
       </p>
     </section>
