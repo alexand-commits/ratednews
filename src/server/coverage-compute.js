@@ -40,7 +40,10 @@ export async function fetchHeadlines(db, sinceMs, untilMs) {
   const rows = []
   async function fetchChunk(fromMs, toMs, attempt = 0) {
     const { data, error } = await db.from('articles')
-      .select('id, title, outlet_id, cluster_id, published_at, outlets(name)')
+      // `category` added 2026-11-01 for outletStats' beat skew. WIDENING this
+      // select is safe; narrowing it is what caused the incident described
+      // above. Costs one short string per row on a ~76k-row weekly sweep.
+      .select('id, title, outlet_id, cluster_id, published_at, category, outlets(name)')
       .gte('published_at', new Date(fromMs).toISOString())
       .lt('published_at', new Date(toMs).toISOString())
       .limit(1000)
@@ -245,6 +248,95 @@ function attention(rows) {
  * Neither makes cross-region comparison meaningful, which the methodology says
  * out loud rather than hiding.
  */
+/**
+ * Per-outlet stats for the outlet pages. See docs/outlet-page-spec.md.
+ *
+ * Every figure here answers a question about ONE outlet that can only be
+ * answered by watching all ~292 at once — which is the point. An outlet page
+ * was 211 words of boilerplate and Google declined to index it.
+ *
+ * Keyed by outlet_id, not by brand: the outlet page knows its own id and its
+ * children's, and sums them itself. Keying by brand here would force the page
+ * to reimplement brandOf() and the two would drift.
+ *
+ * Computed inside the weekly coverage run because it needs the whole corpus —
+ * 75,904 rows for one week. Never move this to page render.
+ */
+function outletStats(rows, { minArticles = 20 } = {}) {
+  const byOutlet = new Map()
+  const catTotals = new Map()
+
+  for (const r of rows) {
+    if (!r.outlet_id) continue
+    let s = byOutlet.get(r.outlet_id)
+    if (!s) { s = { articles: 0, solo: 0, wins: 0, contested: 0, cats: new Map() }; byOutlet.set(r.outlet_id, s) }
+    s.articles++
+    if (!r.cluster_id) s.solo++
+    if (r.category) {
+      s.cats.set(r.category, (s.cats.get(r.category) || 0) + 1)
+      catTotals.set(r.category, (catTotals.get(r.category) || 0) + 1)
+    }
+  }
+
+  // First-to-report, and how many contested stories each outlet was even in —
+  // "first 10 times" is meaningless without the denominator.
+  const clusters = new Map()
+  for (const r of rows) {
+    if (!r.cluster_id) continue
+    const a = clusters.get(r.cluster_id) || []
+    a.push(r)
+    clusters.set(r.cluster_id, a)
+  }
+  for (const members of clusters.values()) {
+    const brands = new Set(members.map(m => brandOf(m.outlets?.name)))
+    if (brands.size < 3) continue
+    for (const id of new Set(members.map(m => m.outlet_id))) {
+      const s = byOutlet.get(id)
+      if (s) s.contested++
+    }
+    const byTime = members.slice().sort((a, b) => new Date(a.published_at) - new Date(b.published_at))
+    const firstBrand = brandOf(byTime[0].outlets?.name)
+    const second = byTime.find(m => brandOf(m.outlets?.name) !== firstBrand)
+    const gapMins = second ? (new Date(second.published_at) - new Date(byTime[0].published_at)) / 60000 : null
+    // Same ≥5 min clear lead as attention(): wire republishes carry the
+    // agency's original timestamp, so closer calls say nothing. ~33% of rows
+    // are ingest-stamped rather than feed-stamped — see the spec.
+    if (gapMins != null && gapMins >= 5) {
+      const s = byOutlet.get(byTime[0].outlet_id)
+      if (s) s.wins++
+    }
+  }
+
+  const ranked = [...byOutlet.entries()].sort((a, b) => b[1].articles - a[1].articles)
+  const corpusCatTotal = [...catTotals.values()].reduce((a, b) => a + b, 0)
+
+  const outlets = {}
+  ranked.forEach(([id, s], i) => {
+    // An outlet with four articles this week would render "100% exclusive",
+    // which is noise wearing a statistic's clothes.
+    if (s.articles < minArticles) return
+    const mineTotal = [...s.cats.values()].reduce((a, b) => a + b, 0) || 1
+    const skew = [...s.cats.entries()]
+      .filter(([, n]) => n / mineTotal >= 0.03)
+      .map(([category, n]) => ({
+        category,
+        share: +(n / mineTotal).toFixed(3),
+        ratio: +((n / mineTotal) / ((catTotals.get(category) || 1) / corpusCatTotal)).toFixed(2),
+      }))
+      .sort((a, b) => b.ratio - a.ratio)
+    outlets[id] = {
+      articles: s.articles,
+      solo: s.solo,
+      firstWins: s.wins,
+      contested: s.contested,
+      rank: i + 1,
+      over: skew.slice(0, 2),
+      under: skew.length > 2 ? skew.slice(-1) : [],
+    }
+  })
+  return { outlets, rankedOf: ranked.length, minArticles }
+}
+
 function coverageCompleteness(rows, { storyCount = 8, outletCount = 10, minOutlets = 15 } = {}) {
   const clusters = new Map()
   const volume = new Map()
@@ -379,6 +471,9 @@ export async function computeCoverageReport(db, opts = {}) {
     framing: framingSplits(rows),
     attention: attention(rows),
     completeness: coverageCompleteness(rows),
+    // Per-outlet stats for /outlet/[slug]. Stored with the weekly pack so the
+    // outlet pages read one small row instead of scanning the corpus.
+    outletStats: outletStats(rows),
   }
 }
 
