@@ -50,7 +50,34 @@ const GONE_HTML = `<!doctype html>
   <a href="/">Today's top stories</a><a class="alt" href="/explore">Browse by topic</a>
 </div></body></html>`
 
-export function middleware() {
+/**
+ * Old /media-ratings/<slug> pages that still have a real equivalent. These
+ * genuinely pass equity — a specific obsolete page to the specific page that
+ * replaced it — so they stay 301s.
+ *
+ * They live HERE rather than in next.config.js so one file decides what a
+ * legacy URL does. Splitting the decision between redirects and middleware
+ * meant the outcome depended on which ran first, and a slug missing from the
+ * map silently became a soft 404 instead of a 410 (see below).
+ *
+ * Keys are lowercased; the old site used mixed case and both /slug and /slug/.
+ */
+const LEGACY_OUTLET = {
+  'bbc-news': 'bbc-news',
+  'sky-news': 'sky-news',
+  'south-china-morning-post': 'south-china-morning-post',
+  'the-globe-and-mail': 'the-globe-and-mail',
+  'the-guardian': 'the-guardian',
+  'the-sydney-morning-herald': 'sydney-morning-herald',
+  'cnbc': 'cnbc',
+  'npr': 'npr',
+  'propublica': 'propublica',
+  'the-nation': 'the-guardian',
+  'la-times': 'los-angeles-times',
+  'new-york-post': 'new-york-post',
+}
+
+function gone() {
   return new NextResponse(GONE_HTML, {
     status: 410,
     headers: {
@@ -60,6 +87,26 @@ export function middleware() {
       'cache-control': 'public, max-age=3600, s-maxage=86400',
     },
   })
+}
+
+export function middleware(request) {
+  const path = request.nextUrl.pathname.replace(/\/+$/, '')
+  const m = path.match(/^\/media-(?:ratings|reviews)\/(.+)$/i)
+  if (m) {
+    const target = LEGACY_OUTLET[decodeURIComponent(m[1]).toLowerCase()]
+    // A real replacement exists — 301 and keep the equity.
+    if (target) {
+      return NextResponse.redirect(new URL(`/outlet/${target}`, request.url), 301)
+    }
+    // No replacement. This used to fall through to a catch-all 301 to
+    // /outlets, which is the exact soft-404 shape described above: a specific
+    // obsolete page redirected to a generic hub. Google never indexes those
+    // and never stops crawling them. GSC's "Crawled – currently not indexed"
+    // report on 2026-11-07 listed /media-ratings/The-Charlotte-Observer twice
+    // — with and without a trailing slash — among 42 affected URLs, and the
+    // fix validation that started 01/09 failed because of them.
+  }
+  return gone()
 }
 
 export const config = {
@@ -75,5 +122,13 @@ export const config = {
     '/page/:n(\\d+)',
     '/feed',
     '/comments/feed',
+    // Handled above: mapped slugs 301 to their outlet, the rest 410.
+    '/media-ratings/:path*',
+    '/media-reviews/:path*',
+    // Old section pages with no equivalent. These redirected to the homepage,
+    // which is the same soft-404 trade the top of this file rejects.
+    '/all-news',
+    '/egypt',
+    '/thailand',
   ],
 }
