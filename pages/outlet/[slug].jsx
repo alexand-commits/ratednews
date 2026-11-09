@@ -51,7 +51,7 @@ function buildFaq(o) {
   return faq
 }
 
-export default function OutletDetail({ outlet, compareTargets = [], coverage = null }) {
+export default function OutletDetail({ outlet, brandRating = null, compareTargets = [], coverage = null }) {
   const router = useRouter()
   const { navigate, goBack, showToast, user, openAuthModal,
           followedOutletIds, toggleFollow, allOutlets } = useAppContext()
@@ -62,7 +62,11 @@ export default function OutletDetail({ outlet, compareTargets = [], coverage = n
   }
 
   const canonicalSlug = toSlug(outlet.name)
-  const faq = buildFaq(outlet)
+  // Identity from the outlet row, RATINGS from the brand roll-up. Every
+  // consumer below (title, description, OG, FAQ, schema) then quotes the same
+  // number the page body shows.
+  const head = brandRating ? { ...outlet, ...brandRating } : outlet
+  const faq = buildFaq(head)
 
   return (
     <>
@@ -72,27 +76,27 @@ export default function OutletDetail({ outlet, compareTargets = [], coverage = n
         <title>{`Is ${outlet.name} Reliable? Community Trust Ratings — RatedNews`}</title>
         <meta
           name="description"
-          content={outlet.total_ratings > 0
-            ? `Is ${outlet.name} reliable or biased? Readers give it ${(outlet.community_score / 20).toFixed(1)}/5 from ${outlet.total_ratings} community ${outlet.total_ratings === 1 ? 'rating' : 'ratings'} for accuracy, bias and quality. See reviews and its latest articles on RatedNews.`
+          content={head.total_ratings > 0
+            ? `Is ${outlet.name} reliable or biased? Readers give it ${(head.community_score / 20).toFixed(1)}/5 from ${head.total_ratings} community ${head.total_ratings === 1 ? 'rating' : 'ratings'} for accuracy, bias and quality. See reviews and its latest articles on RatedNews.`
             : `Is ${outlet.name} reliable or biased? See how readers rate it for accuracy, bias and quality on RatedNews — community ratings, reviews and its latest articles.`}
         />
         <link rel="canonical" href={`https://www.ratednews.com/outlet/${canonicalSlug}`} />
         <meta property="og:title"       content={`${outlet.name} — Community Rating & Reviews`} />
-        <meta property="og:description" content={outlet.total_ratings > 0
-          ? `${outlet.name} has a community rating of ${(outlet.community_score / 20).toFixed(1)}/5 from ${outlet.total_ratings} reader ${outlet.total_ratings === 1 ? 'rating' : 'ratings'} on RatedNews.`
+        <meta property="og:description" content={head.total_ratings > 0
+          ? `${outlet.name} has a community rating of ${(head.community_score / 20).toFixed(1)}/5 from ${head.total_ratings} reader ${head.total_ratings === 1 ? 'rating' : 'ratings'} on RatedNews.`
           : `Rate ${outlet.name} on RatedNews and see its latest articles. Community ratings shape the rankings.`} />
         <meta property="og:url"         content={`https://www.ratednews.com/outlet/${canonicalSlug}`} />
         <meta property="og:type"        content="website" />
-        <meta property="og:image"       content={outletOgUrl(outlet)} />
+        <meta property="og:image"       content={outletOgUrl(head)} />
         <meta property="og:image:type"  content="image/png" />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
         <meta name="twitter:card"        content="summary_large_image" />
         <meta name="twitter:title"       content={`${outlet.name} — Community Rating & Reviews | RatedNews`} />
-        <meta name="twitter:description" content={outlet.total_ratings > 0
-          ? `${outlet.name} scores ${(outlet.community_score / 20).toFixed(1)}/5 from ${outlet.total_ratings} reader ${outlet.total_ratings === 1 ? 'rating' : 'ratings'} on RatedNews.`
+        <meta name="twitter:description" content={head.total_ratings > 0
+          ? `${outlet.name} scores ${(head.community_score / 20).toFixed(1)}/5 from ${head.total_ratings} reader ${head.total_ratings === 1 ? 'rating' : 'ratings'} on RatedNews.`
           : `Rate ${outlet.name} on RatedNews — community ratings shape the rankings.`} />
-        <meta name="twitter:image"       content={outletOgUrl(outlet)} />
+        <meta name="twitter:image"       content={outletOgUrl(head)} />
 
         {/* Organisation structured data — helps Google understand the page
             and can trigger rich results for outlet-related searches */}
@@ -108,12 +112,12 @@ export default function OutletDetail({ outlet, compareTargets = [], coverage = n
             ...(outlet.country === 'US' && { areaServed: 'US' }),
             // Only emit aggregateRating when real reader ratings exist — fabricated
             // review markup (e.g. ratingCount: 1) risks a Google structured-data penalty.
-            aggregateRating: (outlet.total_ratings > 0 && outlet.community_score > 0) ? {
+            aggregateRating: (head.total_ratings > 0 && head.community_score > 0) ? {
               '@type':      'AggregateRating',
-              ratingValue:  (outlet.community_score / 20).toFixed(1),
+              ratingValue:  (head.community_score / 20).toFixed(1),
               bestRating:   5,
               worstRating:  1,
-              ratingCount:  outlet.total_ratings,
+              ratingCount:  head.total_ratings,
             } : undefined,
           }).replace(/<\//g, '<\\/')}}
         />
@@ -207,13 +211,34 @@ export async function getStaticProps({ params }) {
 
   // Step 1: fetch only id + name to find the matching slug — avoids loading
   // every column of every outlet just to do a JS-side slug comparison
-  const { data: stubs } = await supabase.from('outlets').select('id, name, total_ratings, parent_outlet_id')
+  const { data: stubs } = await supabase.from('outlets').select('id, name, total_ratings, parent_outlet_id, community_score')
   const match = (stubs || []).find(o => toSlug(o.name) === params.slug)
   if (!match) return { notFound: true }
 
   // Step 2: fetch the full outlet row by ID
   const { data: outlet } = await supabase.from('outlets').select('*').eq('id', match.id).single()
   if (!outlet) return { notFound: true }
+
+  // Brand score — the parent plus its section feeds, weighted by rating count.
+  //
+  // Everything in <Head> below used to read outlet.community_score and
+  // outlet.total_ratings straight off the parent row, while the page BODY
+  // (src/pages/OutletPage.jsx) rolled the children in. Sky News therefore
+  // showed a reader "4.4 from 7" and told Google "4.5 from 2" in the meta
+  // description, the FAQ answers and the aggregateRating schema. One outlet,
+  // two numbers, and the wrong one was the machine-readable one.
+  //
+  // Same roll-up OutletPage does, computed here so the head and the body
+  // cannot drift again.
+  const kids = (stubs || []).filter(o => o.parent_outlet_id === outlet.id)
+  const ratedRows = [outlet, ...kids].filter(o => (o?.total_ratings || 0) > 0)
+  const brandRatings = ratedRows.reduce((n, o) => n + (o.total_ratings || 0), 0)
+  const brandRating = {
+    total_ratings: brandRatings,
+    community_score: brandRatings > 0
+      ? ratedRows.reduce((n, o) => n + (o.community_score || 0) * (o.total_ratings || 0), 0) / brandRatings
+      : (outlet.community_score || 0),
+  }
 
   // "Compare with" targets, resolved server-side so the /compare/* links are
   // in the prerendered HTML for crawlers (the client outlet context loads too
@@ -290,7 +315,7 @@ export async function getStaticProps({ params }) {
   }
 
   return {
-    props: { outlet, compareTargets, coverage },
+    props: { outlet, brandRating, compareTargets, coverage },
     // 21600s = SIX hours, not one — the old comment here said "every hour,
     // matching the ingest schedule" and was wrong by a factor of six.
     // Six is right for this page: its content moves on two clocks, the
